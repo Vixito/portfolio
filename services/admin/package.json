@@ -20,7 +20,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "next": "15.5.3"
+    "next": "16.0.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
