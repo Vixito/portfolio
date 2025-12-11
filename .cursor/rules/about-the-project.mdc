@@ -1,0 +1,69 @@
+---
+description: "Estándares del portafolio Deno+Vite+React+TS"
+alwaysApply: true
+---
+
+## Propósito
+
+- Portafolio y marca personal. Stack: Deno + Vite + React + TypeScript. Build estático para Deno Deploy.
+  Por qué: fija el objetivo y el target de despliegue para evitar desviaciones.
+
+## Comunicación
+
+- Solo pistas/feedback, no soluciones completas (excepto cuando es algo que veo por primera vez y no sé cómo hacerlo); explica el porqué de cada sugerencias. Soy yo quien va a hacer el trabajo, no tú; por lo tanto, cuando terminemos cada fase, te darás cuenta que no he conocido varias cosas y he cometido varios errores así que en cada fase del proyecto me muestras las experiencias que he tenido, para anotarlas y que no cometa los mismos errores.
+  Por qué: mantener control creativo y aprendizaje.
+
+## Tecnologías permitidas/prioritarias
+
+- Runtime/build: Deno; Vite para bundling.
+- UI: React + TS; Tailwind; Poppins; colores #331d83 y #2093c4.
+- Estado/server-state: Zustand; TanStack Query.
+- Forms: React Hook Form.
+- Gráficos: Recharts (en cliente).
+- Data/backend: Supabase (Auth/DB/Storage/Realtime, RLS, RPC), pg_cron, rate limiting manual.
+- Validación: Zod.
+- Importación: importmap + esm.sh (evitar resolver Node).
+  Por qué: garantiza compatibilidad con Deno Deploy y el diseño visual definido.
+
+## Prohibiciones
+
+- Gestores/comandos: sin npm, sin pnpm, sin npx.
+- Pasarela/pagos: sin Stripe, sin PayPal, sin MercadoPago, sin Whop.
+- Linter: sin ESLint (usar Biome).
+- Backend/protocolos: sin Express, sin REST, sin GraphQL.
+- Config: sin archivos .env, sin .env.local, sin .env.development, sin .env.production.
+- DB: sin PostgreSQL en desarrollo (usa alternativas o mocks); sin SQLite en producción.
+- Otros: sin Terraform, sin Jira, sin PowerShell scripts, sin Deel.
+  Por qué: respeta tus restricciones y evita dependencias no deseadas.
+
+## Rutas y páginas esperadas
+
+- Home, About, Blog, Clients, Socials, Studies, Studio, WorkExperience, SkillsAndTechnologies, Projects, Status, Store, Radio, Admin, NotFound.
+- Redirección `/contact` → `/socials`.
+  Por qué: mantener el mapa de navegación consistente.
+
+## Estilo/UI
+
+- Fondo cuadriculado con gradientes morados como capa absoluta.
+- Archivos: `globals.css`, `components.css`, `animations.css`.
+- Fuentes: Poppins. Colores base: #331d83, #2093c4.
+  Por qué: identidad visual coherente desde el inicio.
+
+## Build y deploy
+
+- Objetivo: build estático con Vite; servir `dist` en Deno Deploy.
+- Evitar Node APIs en runtime; depender de importmap + esm.sh.
+- Configurar `deno.json` con tareas dev/build/preview; `nodeModulesDir: false`.
+  Por qué: asegurar compatibilidad con Deno Deploy y flujo reproducible.
+
+## Testing/formatter
+
+- Testing: Playwright, Jest, Postman.
+- Formatter: Biome.js.
+  Por qué: validar calidad y formato sin ESLint.
+
+## Comportamiento del asistente
+
+- No dar código final; solo pasos o fragmentos orientativos con explicación.
+- Recordar prohibiciones y stack elegido en cada respuesta.
+  Por qué: mantener el proceso claro, evitar dependencias no deseadas y respetar las restricciones.

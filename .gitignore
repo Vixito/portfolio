@@ -1,59 +1,24 @@
-# Dependencies
-node_modules/
+# Logs
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Build outputs
-dist/
-build/
-.next/
-.astro/
-out/
+node_modules
+dist
+dist-ssr
+*.local
 
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Database
-*.db
-*.sqlite
-/prisma/migrations/
-
-# IDEs
-.vscode/settings.json
-.vscode/launch.json
-.idea/
-*.swp
-*.swo
-
-# OS
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Cache
-.cache/
-.parcel-cache/
-
-# Temporary files
-*.tmp
-*.temp
-
-# Runtime
-.pnp.*
-.yarn/
-
-# Testing
-coverage/
-.nyc_output/
-
-# Vercel
-.vercel/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

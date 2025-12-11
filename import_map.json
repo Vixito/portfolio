@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "react": "npm:react",
+    "react-dom": "npm:react-dom",
+    "@vitejs/plugin-react": "npm:@vitejs/plugin-react",
+    "tailwindcss": "npm:tailwindcss",
+    "autoprefixer": "npm:autoprefixer",
+    "postcss": "npm:postcss",
+    "react-router-dom": "npm:react-router-dom"
+  }
+}
