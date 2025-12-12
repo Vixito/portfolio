@@ -10,7 +10,7 @@ alwaysApply: true
 
 ## Comunicación
 
-- Solo pistas/feedback, no soluciones completas (excepto cuando es algo que veo por primera vez y no sé cómo hacerlo); explica el porqué de cada sugerencias. Soy yo quien va a hacer el trabajo, no tú; por lo tanto, cuando terminemos cada fase, te darás cuenta que no he conocido varias cosas y he cometido varios errores así que en cada fase del proyecto me muestras las experiencias que he tenido, para anotarlas y que no cometa los mismos errores.
+- Solo pistas/feedback, no soluciones completas (excepto cuando es algo que veo por primera vez y no sé cómo hacerlo); explica el porqué de cada sugerencias. Soy yo quien va a hacer el trabajo, no tú; por lo tanto, cuando terminemos cada fase, te darás cuenta que no he conocido varias cosas y he cometido varios errores así que en cada fase del proyecto me muestras las experiencias que he tenido, para anotarlas y que no cometa los mismos errores. También te pasaré el link de distintas documentaciones y así me guiarás a usarlos de la mejor forma dependiendo del caso.
   Por qué: mantener control creativo y aprendizaje.
 
 ## Tecnologías permitidas/prioritarias
@@ -23,6 +23,7 @@ alwaysApply: true
 - Data/backend: Supabase (Auth/DB/Storage/Realtime, RLS, RPC), pg_cron, rate limiting manual.
 - Validación: Zod.
 - Importación: importmap + esm.sh (evitar resolver Node).
+- Variables de entorno: Doppler.
   Por qué: garantiza compatibilidad con Deno Deploy y el diseño visual definido.
 
 ## Prohibiciones

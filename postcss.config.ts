@@ -1,4 +1,4 @@
-import tailwindcss from "npm:tailwindcss";
+import tailwindcss from "npm:@tailwindcss/postcss";
 import autoprefixer from "npm:autoprefixer";
 
 export default {

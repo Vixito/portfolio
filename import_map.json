@@ -3,9 +3,14 @@
     "react": "npm:react",
     "react-dom": "npm:react-dom",
     "@vitejs/plugin-react": "npm:@vitejs/plugin-react",
-    "tailwindcss": "npm:tailwindcss",
+    "@tailwindcss/postcss": "npm:@tailwindcss/postcss",
     "autoprefixer": "npm:autoprefixer",
     "postcss": "npm:postcss",
-    "react-router-dom": "npm:react-router-dom"
+    "react-router-dom": "npm:react-router-dom",
+    "recharts": "npm:recharts",
+    "react-hook-form": "npm:react-hook-form",
+    "@tanstack/react-query": "npm:@tanstack/react-query",
+    "zustand": "npm:zustand",
+    "@biomejs/biome": "npm:@biomejs/biome"
   }
 }

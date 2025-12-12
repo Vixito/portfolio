@@ -3,7 +3,10 @@
   "tasks": {
     "dev": "deno run -A npm:vite",
     "build": "deno run -A npm:vite build",
-    "preview": "deno run -A npm:vite preview"
+    "preview": "deno run -A npm:vite preview",
+    "format": "deno run -A npm:@biomejs/biome format --write .",
+    "lint": "deno run -A npm:@biomejs/biome lint .",
+    "check": "deno run -A npm:@biomejs/biome check --write ."
   },
   "nodeModulesDir": "auto"
 }
