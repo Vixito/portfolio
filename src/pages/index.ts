@@ -1,4 +1,5 @@
 import About from "./About";
+import Admin from "./Admin";
 import Blog from "./Blog";
 import Clients from "./Clients";
 import Home from "./Home";
@@ -15,6 +16,7 @@ import WorkExperience from "./Work-experience";
 
 export {
   About,
+  Admin,
   Blog,
   Clients,
   Home,

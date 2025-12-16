@@ -2,39 +2,96 @@
   "hash": "689835c5",
   "configHash": "3711da57",
   "lockfileHash": "e3b0c442",
-  "browserHash": "56b63ada",
+  "browserHash": "2f3e77e2",
   "optimized": {
     "react/jsx-dev-runtime": {
       "src": "../../node_modules/.deno/react@19.2.2/node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "07e50a13",
+      "fileHash": "07e733aa",
       "needsInterop": true
     },
     "react": {
       "src": "../../node_modules/.deno/react@19.2.2/node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "c223fc7d",
+      "fileHash": "88a5ecca",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../node_modules/.deno/react-dom@19.2.2/node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "d6d776a5",
+      "fileHash": "7a540fb9",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../node_modules/.deno/react-router-dom@7.10.1/node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "a3b26dcc",
+      "fileHash": "bd4beb24",
+      "needsInterop": false
+    },
+    "gsap": {
+      "src": "../../node_modules/.deno/gsap@3.14.2/node_modules/gsap/index.js",
+      "file": "gsap.js",
+      "fileHash": "465b00f2",
+      "needsInterop": false
+    },
+    "zustand": {
+      "src": "../../node_modules/.deno/zustand@5.0.9/node_modules/zustand/esm/index.mjs",
+      "file": "zustand.js",
+      "fileHash": "d34ee194",
+      "needsInterop": false
+    },
+    "gsap/ScrollTrigger": {
+      "src": "../../node_modules/.deno/gsap@3.14.2/node_modules/gsap/ScrollTrigger.js",
+      "file": "gsap_ScrollTrigger.js",
+      "fileHash": "99c97390",
+      "needsInterop": false
+    },
+    "react-hook-form": {
+      "src": "../../node_modules/.deno/react-hook-form@7.68.0/node_modules/react-hook-form/dist/index.esm.mjs",
+      "file": "react-hook-form.js",
+      "fileHash": "3591521a",
+      "needsInterop": false
+    },
+    "@hookform/resolvers/zod": {
+      "src": "../../node_modules/.deno/@hookform+resolvers@5.2.2/node_modules/@hookform/resolvers/zod/dist/zod.mjs",
+      "file": "@hookform_resolvers_zod.js",
+      "fileHash": "0e9b2422",
+      "needsInterop": false
+    },
+    "zod": {
+      "src": "../../node_modules/.deno/zod@4.1.13/node_modules/zod/index.js",
+      "file": "zod.js",
+      "fileHash": "1ca28732",
+      "needsInterop": false
+    },
+    "recharts": {
+      "src": "../../node_modules/.deno/recharts@3.5.1/node_modules/recharts/es6/index.js",
+      "file": "recharts.js",
+      "fileHash": "bc065b69",
+      "needsInterop": false
+    },
+    "framer-motion": {
+      "src": "../../node_modules/.deno/framer-motion@12.23.26/node_modules/framer-motion/dist/es/index.mjs",
+      "file": "framer-motion.js",
+      "fileHash": "289299f3",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-XTGMYR2W": {
-      "file": "chunk-XTGMYR2W.js"
+    "chunk-QTAGTGA6": {
+      "file": "chunk-QTAGTGA6.js"
     },
-    "chunk-DZSQPQPY": {
-      "file": "chunk-DZSQPQPY.js"
+    "chunk-PRO6R6VC": {
+      "file": "chunk-PRO6R6VC.js"
+    },
+    "chunk-TV6BZ5BX": {
+      "file": "chunk-TV6BZ5BX.js"
+    },
+    "chunk-YXBMOPTM": {
+      "file": "chunk-YXBMOPTM.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
     }
   }
 }

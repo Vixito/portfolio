@@ -2,6 +2,8 @@
   "imports": {
     "react": "npm:react",
     "react-dom": "npm:react-dom",
+    "@types/react": "npm:@types/react",
+    "@types/react-dom": "npm:@types/react-dom",
     "@vitejs/plugin-react": "npm:@vitejs/plugin-react",
     "@tailwindcss/postcss": "npm:@tailwindcss/postcss",
     "autoprefixer": "npm:autoprefixer",
@@ -11,6 +13,10 @@
     "react-hook-form": "npm:react-hook-form",
     "@tanstack/react-query": "npm:@tanstack/react-query",
     "zustand": "npm:zustand",
-    "@biomejs/biome": "npm:@biomejs/biome"
+    "@biomejs/biome": "npm:@biomejs/biome",
+    "framer-motion": "npm:framer-motion",
+    "gsap": "npm:gsap",
+    "zod": "npm:zod",
+    "@hookform/resolvers": "npm:@hookform/resolvers"
   }
 }
