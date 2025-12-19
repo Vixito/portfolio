@@ -1,4 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimit, getRequestIdentifier } from "../_shared/rate-limit.ts";
+import {
+  extractEventDataSchema,
+  validateRequest,
+} from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,11 +27,52 @@ serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
+    // Rate limiting: 10 requests por minuto por IP (más restrictivo porque hace scraping)
+    const identifier = getRequestIdentifier(req);
+    const rateLimit = checkRateLimit(identifier, {
+      maxRequests: 10,
+      windowMs: 60 * 1000, // 1 minuto
+    });
 
-    if (!url || typeof url !== "string") {
-      throw new Error("Se requiere una URL válida");
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: "Demasiadas solicitudes. Por favor, intenta más tarde.",
+          retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": Math.ceil(
+              (rateLimit.resetAt - Date.now()) / 1000
+            ).toString(),
+            "X-RateLimit-Limit": "10",
+            "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+            "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+          },
+        }
+      );
     }
+
+    // Parsear y validar request body
+    const body = await req.json();
+    const validation = validateRequest(extractEventDataSchema, body);
+
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": "10",
+          "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+        },
+      });
+    }
+
+    const { url } = validation.data;
 
     console.log(`Extrayendo datos del evento desde: ${url}`);
 
@@ -72,7 +118,13 @@ serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": "10",
+          "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+          "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+        },
       }
     );
   } catch (error) {

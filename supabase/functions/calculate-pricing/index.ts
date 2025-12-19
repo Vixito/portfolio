@@ -1,14 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-// Tipos para la request
-interface PricingRequest {
-  product_id: string;
-  base_currency: string; // 'USD', 'COP', etc.
-  target_currency: string;
-  region?: string;
-  quantity?: number;
-}
+import { checkRateLimit, getRequestIdentifier } from "../_shared/rate-limit.ts";
+import {
+  calculatePricingSchema,
+  validateRequest,
+} from "../_shared/validation.ts";
 
 interface ExchangeRateResponse {
   rates: Record<string, number>;
@@ -29,6 +25,35 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting: 20 requests por minuto por IP
+    const identifier = getRequestIdentifier(req);
+    const rateLimit = checkRateLimit(identifier, {
+      maxRequests: 20,
+      windowMs: 60 * 1000, // 1 minuto
+    });
+
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: "Demasiadas solicitudes. Por favor, intenta más tarde.",
+          retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": Math.ceil(
+              (rateLimit.resetAt - Date.now()) / 1000
+            ).toString(),
+            "X-RateLimit-Limit": "20",
+            "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+            "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+          },
+        }
+      );
+    }
+
     // Inicializar cliente de Supabase
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -40,28 +65,24 @@ serve(async (req) => {
       throw new Error("EXCHANGERATE_API_KEY no configurada");
     }
 
-    // Parsear request body
-    const body: PricingRequest = await req.json();
-    const {
-      product_id,
-      base_currency = "USD",
-      target_currency,
-      region,
-      quantity = 1,
-    } = body;
+    // Parsear y validar request body
+    const body = await req.json();
+    const validation = validateRequest(calculatePricingSchema, body);
 
-    // Validaciones
-    if (!product_id || !target_currency) {
-      return new Response(
-        JSON.stringify({
-          error: "product_id y target_currency son requeridos",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": "20",
+          "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+        },
+      });
     }
+
+    const { product_id, base_currency, target_currency, region, quantity } =
+      validation.data;
 
     // 1. Obtener producto de la base de datos
     const { data: product, error: productError } = await supabase
@@ -141,7 +162,13 @@ serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": "20",
+          "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+          "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+        },
       }
     );
   } catch (error) {

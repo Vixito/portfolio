@@ -1,4 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimit, getRequestIdentifier } from "../_shared/rate-limit.ts";
+import {
+  fetchBlogPostsSchema,
+  validateRequest,
+} from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,8 +28,52 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting: 30 requests por minuto por IP
+    const identifier = getRequestIdentifier(req);
+    const rateLimit = checkRateLimit(identifier, {
+      maxRequests: 30,
+      windowMs: 60 * 1000, // 1 minuto
+    });
+
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: "Demasiadas solicitudes. Por favor, intenta más tarde.",
+          retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": Math.ceil(
+              (rateLimit.resetAt - Date.now()) / 1000
+            ).toString(),
+            "X-RateLimit-Limit": "30",
+            "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+            "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+          },
+        }
+      );
+    }
+
+    // Parsear y validar request body
     const body = await req.json().catch(() => ({}));
-    const { platform = "all", username } = body;
+    const validation = validateRequest(fetchBlogPostsSchema, body);
+
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": "30",
+          "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+        },
+      });
+    }
+
+    const { platform, username } = validation.data;
 
     let posts: BlogPost[] = [];
 
@@ -82,7 +131,13 @@ serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": "30",
+          "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+          "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+        },
       }
     );
   } catch (error) {

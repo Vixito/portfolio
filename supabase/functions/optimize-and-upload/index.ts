@@ -1,5 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, getRequestIdentifier } from "../_shared/rate-limit.ts";
+import {
+  optimizeAndUploadSchema,
+  validateRequest,
+} from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +27,73 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting: 10 requests por minuto por IP (más restrictivo para uploads)
+    const identifier = getRequestIdentifier(req);
+    const rateLimit = checkRateLimit(identifier, {
+      maxRequests: 10,
+      windowMs: 60 * 1000, // 1 minuto
+    });
+
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: "Demasiadas solicitudes. Por favor, intenta más tarde.",
+          retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": Math.ceil(
+              (rateLimit.resetAt - Date.now()) / 1000
+            ).toString(),
+            "X-RateLimit-Limit": "10",
+            "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+            "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+          },
+        }
+      );
+    }
+
+    // Parsear y validar request body
+    const body = await req.json();
+    const validation = validateRequest(optimizeAndUploadSchema, body);
+
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": "10",
+          "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+        },
+      });
+    }
+
+    const { file, fileName, fileType, bucket, optimize } = validation.data;
+
+    // Validar tamaño del archivo base64 (máximo 15MB en base64 ≈ 10MB reales)
+    const base64Size = file.length;
+    const estimatedSize = (base64Size * 3) / 4; // Aproximación del tamaño real
+    if (estimatedSize > 10 * 1024 * 1024) {
+      return new Response(
+        JSON.stringify({
+          error: "El archivo es demasiado grande. Máximo 10MB.",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "X-RateLimit-Limit": "10",
+            "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+          },
+        }
+      );
+    }
+
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -33,16 +105,24 @@ serve(async (req) => {
       }
     );
 
-    const {
-      file,
-      fileName,
-      fileType,
-      bucket,
-      optimize = true,
-    }: UploadRequest = await req.json();
-
     // Decodificar base64
-    const fileBytes = Uint8Array.from(atob(file), (c) => c.charCodeAt(0));
+    let fileBytes: Uint8Array;
+    try {
+      fileBytes = Uint8Array.from(atob(file), (c) => c.charCodeAt(0));
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: "Formato base64 inválido" }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "X-RateLimit-Limit": "10",
+            "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+          },
+        }
+      );
+    }
 
     // Para imágenes, optimizar si está habilitado
     let finalBytes = fileBytes;
@@ -51,7 +131,7 @@ serve(async (req) => {
 
     if (optimize && fileType.startsWith("image/")) {
       try {
-        // Validar tamaño máximo antes de procesar
+        // Validar tamaño máximo antes de procesar (ya validado arriba, pero doble verificación)
         if (fileBytes.length > 10 * 1024 * 1024) {
           return new Response(
             JSON.stringify({
@@ -60,7 +140,12 @@ serve(async (req) => {
             }),
             {
               status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              headers: {
+                ...corsHeaders,
+                "Content-Type": "application/json",
+                "X-RateLimit-Limit": "10",
+                "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+              },
             }
           );
         }
@@ -163,7 +248,13 @@ serve(async (req) => {
         fileName: uniqueFileName,
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": "10",
+          "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+          "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+        },
       }
     );
   } catch (error) {
