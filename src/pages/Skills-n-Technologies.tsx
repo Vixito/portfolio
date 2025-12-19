@@ -1,10 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { getTechnologies } from "../lib/supabase-functions";
 
 interface Technology {
   id: string;
   name: string;
-  category: "language" | "framework" | "database" | "tool" | "cloud";
+  category:
+    | "language"
+    | "framework"
+    | "database"
+    | "tool"
+    | "cloud"
+    | "instrument"
+    | "music"
+    | "other";
   level: "beginner" | "intermediate" | "advanced" | "expert";
   icon?: string; // URL desde S3/CloudFront o nombre de icono
   yearsOfExperience?: number;
@@ -22,83 +31,31 @@ function SkillsNTechnologies() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const mockTechnologies: Technology[] = [
-      {
-        id: "1",
-        name: "TypeScript",
-        category: "language",
-        level: "expert",
-        yearsOfExperience: 4,
-      },
-      {
-        id: "2",
-        name: "JavaScript",
-        category: "language",
-        level: "expert",
-        yearsOfExperience: 6,
-      },
-      {
-        id: "3",
-        name: "Python",
-        category: "language",
-        level: "advanced",
-        yearsOfExperience: 3,
-      },
-      {
-        id: "4",
-        name: "React",
-        category: "framework",
-        level: "expert",
-        yearsOfExperience: 5,
-      },
-      {
-        id: "5",
-        name: "Node.js",
-        category: "framework",
-        level: "expert",
-        yearsOfExperience: 5,
-      },
-      {
-        id: "6",
-        name: "PostgreSQL",
-        category: "database",
-        level: "advanced",
-        yearsOfExperience: 4,
-      },
-      {
-        id: "7",
-        name: "MongoDB",
-        category: "database",
-        level: "intermediate",
-        yearsOfExperience: 2,
-      },
-      {
-        id: "8",
-        name: "Docker",
-        category: "tool",
-        level: "advanced",
-        yearsOfExperience: 3,
-      },
-      {
-        id: "9",
-        name: "AWS",
-        category: "cloud",
-        level: "advanced",
-        yearsOfExperience: 3,
-      },
-      {
-        id: "10",
-        name: "Supabase",
-        category: "cloud",
-        level: "expert",
-        yearsOfExperience: 2,
-      },
-    ];
+    const loadTechnologies = async () => {
+      try {
+        setLoading(true);
+        const data = await getTechnologies();
+        // Mapear datos de Supabase al formato de la interfaz
+        const mappedTechnologies: Technology[] = (data || []).map(
+          (tech: any) => ({
+            id: tech.id,
+            name: tech.name,
+            category: tech.category,
+            level: tech.level,
+            icon: tech.icon,
+            yearsOfExperience: tech.years_of_experience,
+          })
+        );
+        setTechnologies(mappedTechnologies);
+      } catch (error) {
+        console.error("Error al cargar tecnologías:", error);
+        setTechnologies([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setTimeout(() => {
-      setTechnologies(mockTechnologies);
-      setLoading(false);
-    }, 500);
+    loadTechnologies();
   }, []);
 
   // Animación de entrada
@@ -169,6 +126,9 @@ function SkillsNTechnologies() {
       database: "Bases de Datos",
       tool: "Herramientas",
       cloud: "Cloud",
+      instrument: "Instrumentos",
+      music: "Música",
+      other: "Otro",
     };
     return labels[category];
   };
@@ -296,6 +256,9 @@ function SkillsNTechnologies() {
                       <option value="database">Bases de Datos</option>
                       <option value="tool">Herramientas</option>
                       <option value="cloud">Cloud</option>
+                      <option value="instrument">Instrumentos</option>
+                      <option value="music">Música</option>
+                      <option value="other">Otro</option>
                     </select>
                   </div>
                 </th>

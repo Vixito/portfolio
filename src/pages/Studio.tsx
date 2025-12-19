@@ -4,7 +4,6 @@ import { gsap } from "gsap";
 function Studio() {
   const containerRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
-  const bannerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState<number | null>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -28,15 +27,6 @@ function Studio() {
       );
     }
 
-    if (bannerRef.current) {
-      tl.fromTo(
-        bannerRef.current,
-        { y: -100, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" },
-        "-=0.5"
-      );
-    }
-
     if (contentRef.current) {
       tl.fromTo(
         contentRef.current.children,
@@ -51,11 +41,11 @@ function Studio() {
   const slides = [
     {
       id: 1,
-      image:
-        "https://images.unsplash.com/photo-1617788138017-80ad40651399?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+      image: "https://cdn.vixis.dev/Vixis+Studio+-+Logo.webp",
       brand: "Vixis Studio",
-      name: "Vixito - Discord Bot",
-      subtitle: "Vixito is a Discord bot that helps you manage your server.",
+      name: "Misión",
+      subtitle:
+        "Nuestra misión es crear soluciones innovadoras y eficientes para nuestros clientes.",
       specs: [
         {
           label: "Tecnologías:",
@@ -65,6 +55,23 @@ function Studio() {
         { label: "Cliente:", value: "C2B Communities" },
       ],
       badges: [{ text: "Status: Activo" }, { text: "Prioridad: Alta" }],
+    },
+    {
+      id: 2,
+      image: "https://cdn.vixis.dev/Vixis+Studio+-+Logo.webp",
+      brand: "Vixis Studio",
+      name: "Visión",
+      subtitle:
+        "Nuestra visión es ser un referente y una agencia de desarrollo que crea arte que conecta con las comunidades a través de la automatización.",
+      specs: [
+        {
+          label: "Más tecnologías:",
+          value: "Deno + Tailwind CSS + AWS + Supabase",
+        },
+        { label: "Estado:", value: "Próximamente..." },
+        { label: "Cliente:", value: "B2B" },
+      ],
+      badges: [],
     },
     // Agregar más slides...
   ];
@@ -81,8 +88,7 @@ function Studio() {
     }
   }, [activeSlide]);
 
-  const logoUrl = "https://cdn.vixito.gg/Vixito+-+Logo.png";
-  const bannerUrl = "https://cdn.vixito.gg/Vixito+-+Logo.png";
+  const logoUrl = "https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp";
 
   return (
     <div
@@ -100,40 +106,27 @@ function Studio() {
         paddingBottom: "80px",
       }}
     >
-      {/* Banner de ancho completo desde arriba */}
-      <div
-        ref={bannerRef}
-        className="w-full h-64 md:h-96 border-b-7 border-[#19bfb7] overflow-hidden relative"
-      >
-        <img
-          src={bannerUrl}
-          alt="Vixis Studio Banner"
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.currentTarget.src = "https://cdn.vixito.gg/Vixito+-+Logo.png";
-          }}
-        />
-        {/* Logo posicionado encima del banner, abajo a la izquierda */}
-        <div ref={logoRef} className="absolute bottom-4 left-10">
-          <img
-            src={logoUrl}
-            alt="Vixis Studio Logo"
-            className="w-24 h-24 rounded-full object-cover border-4 shadow-lg"
-            style={{ borderColor: "#19BFB7" }}
-            onError={(e) => {
-              e.currentTarget.src =
-                "https://tu-cdn.cloudfront.net/default-logo.png";
-            }}
-          />
-        </div>
-      </div>
-
       {/* Contenido */}
       <div className="max-w-6xl mx-auto px-4 relative z-10">
         <div ref={contentRef} className="space-y-12 pt-12">
-          <div className="text-left space-y-4">
+          {/* Header con Logo, Título y Descripción */}
+          <div className="text-center space-y-6">
+            {/* Logo */}
+            <div ref={logoRef} className="flex justify-center">
+              <img
+                src={logoUrl}
+                alt="Vixis Studio Logo"
+                className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 shadow-lg"
+                style={{ borderColor: "#19BFB7" }}
+                onError={(e) => {
+                  e.currentTarget.src =
+                    "https://cdn.vixis.dev/Vixis+Studio+-+Logo.webp";
+                }}
+              />
+            </div>
+            {/* Título */}
             <h1
-              className="text-6xl md:text-7xl lg:text-7xl font-extrabold tracking-tight"
+              className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight"
               style={{
                 color: "#19BFB7",
                 textShadow:
@@ -143,6 +136,10 @@ function Studio() {
             >
               Vixis Studio
             </h1>
+            {/* Descripción */}
+            <p className="text-lg italic md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+              Creamos sistemas que piensan y arte que conecta.
+            </p>
           </div>
 
           {/* Slider Acordeón */}

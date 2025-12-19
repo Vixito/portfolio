@@ -2,96 +2,102 @@
   "hash": "689835c5",
   "configHash": "3711da57",
   "lockfileHash": "e3b0c442",
-  "browserHash": "2f3e77e2",
+  "browserHash": "26b40aee",
   "optimized": {
     "react/jsx-dev-runtime": {
       "src": "../../node_modules/.deno/react@19.2.2/node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "07e733aa",
+      "fileHash": "b285d048",
       "needsInterop": true
     },
     "react": {
       "src": "../../node_modules/.deno/react@19.2.2/node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "88a5ecca",
+      "fileHash": "bbe20d34",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../node_modules/.deno/react-dom@19.2.2/node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "7a540fb9",
+      "fileHash": "dfb6aefc",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../node_modules/.deno/react-router-dom@7.10.1/node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "bd4beb24",
+      "fileHash": "baebb725",
       "needsInterop": false
     },
     "gsap": {
       "src": "../../node_modules/.deno/gsap@3.14.2/node_modules/gsap/index.js",
       "file": "gsap.js",
-      "fileHash": "465b00f2",
+      "fileHash": "1c5a580c",
       "needsInterop": false
     },
     "zustand": {
       "src": "../../node_modules/.deno/zustand@5.0.9/node_modules/zustand/esm/index.mjs",
       "file": "zustand.js",
-      "fileHash": "d34ee194",
+      "fileHash": "53822af6",
       "needsInterop": false
     },
     "gsap/ScrollTrigger": {
       "src": "../../node_modules/.deno/gsap@3.14.2/node_modules/gsap/ScrollTrigger.js",
       "file": "gsap_ScrollTrigger.js",
-      "fileHash": "99c97390",
+      "fileHash": "b12bc1e4",
       "needsInterop": false
     },
     "react-hook-form": {
       "src": "../../node_modules/.deno/react-hook-form@7.68.0/node_modules/react-hook-form/dist/index.esm.mjs",
       "file": "react-hook-form.js",
-      "fileHash": "3591521a",
+      "fileHash": "5803820a",
       "needsInterop": false
     },
     "@hookform/resolvers/zod": {
       "src": "../../node_modules/.deno/@hookform+resolvers@5.2.2/node_modules/@hookform/resolvers/zod/dist/zod.mjs",
       "file": "@hookform_resolvers_zod.js",
-      "fileHash": "0e9b2422",
+      "fileHash": "b2de6515",
       "needsInterop": false
     },
     "zod": {
       "src": "../../node_modules/.deno/zod@4.1.13/node_modules/zod/index.js",
       "file": "zod.js",
-      "fileHash": "1ca28732",
+      "fileHash": "2889fdef",
       "needsInterop": false
     },
     "recharts": {
       "src": "../../node_modules/.deno/recharts@3.5.1/node_modules/recharts/es6/index.js",
       "file": "recharts.js",
-      "fileHash": "bc065b69",
+      "fileHash": "7587e113",
       "needsInterop": false
     },
     "framer-motion": {
       "src": "../../node_modules/.deno/framer-motion@12.23.26/node_modules/framer-motion/dist/es/index.mjs",
       "file": "framer-motion.js",
-      "fileHash": "289299f3",
+      "fileHash": "ac33310a",
+      "needsInterop": false
+    },
+    "@supabase/supabase-js": {
+      "src": "../../node_modules/.deno/@supabase+supabase-js@2.87.3/node_modules/@supabase/supabase-js/dist/esm/wrapper.mjs",
+      "file": "@supabase_supabase-js.js",
+      "fileHash": "bfc648d9",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-QTAGTGA6": {
-      "file": "chunk-QTAGTGA6.js"
+    "chunk-4RYP2MYI": {
+      "file": "chunk-4RYP2MYI.js"
     },
-    "chunk-PRO6R6VC": {
-      "file": "chunk-PRO6R6VC.js"
+    "chunk-BNGDR7UT": {
+      "file": "chunk-BNGDR7UT.js"
     },
-    "chunk-TV6BZ5BX": {
-      "file": "chunk-TV6BZ5BX.js"
+    "chunk-23S4LID5": {
+      "file": "chunk-23S4LID5.js"
     },
-    "chunk-YXBMOPTM": {
-      "file": "chunk-YXBMOPTM.js"
+    "chunk-TRUKBT7N": {
+      "file": "chunk-TRUKBT7N.js"
     },
-    "chunk-G3PMV62Z": {
-      "file": "chunk-G3PMV62Z.js"
+    "chunk-V4OQ3NZ2": {
+      "file": "chunk-V4OQ3NZ2.js"
     }
   }
 }

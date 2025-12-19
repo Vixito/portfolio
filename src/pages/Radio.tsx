@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { gsap } from "gsap";
+import { getUpcomingEvents } from "../lib/supabase-functions";
+import { supabase } from "../lib/supabase";
+import type { Tables } from "../types/supabase";
 
 interface Song {
   id: string;
@@ -17,16 +20,199 @@ function Radio() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
+  const [isLive, setIsLive] = useState(false); // Estado para saber si la radio está en vivo
+  const [events, setEvents] = useState<
+    Array<{
+      id: string;
+      title: string;
+      date: string;
+      passline_url: string | null;
+      thumbnail_url: string | null;
+      description: string | null;
+    }>
+  >([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
-  // Mock de canción actual (luego vendrá de Supabase)
+  // Estados del chat
+  const [messages, setMessages] = useState<Tables<"messages">[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(true);
+  const [username, setUsername] = useState<string>(() => {
+    // Cargar username del localStorage si existe
+    return localStorage.getItem("radio_username") || "";
+  });
+  const [usernameConfirmed, setUsernameConfirmed] = useState<boolean>(() => {
+    // Verificar si ya hay un username guardado
+    return !!localStorage.getItem("radio_username");
+  });
+  const [messageInput, setMessageInput] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [lastMessageTime, setLastMessageTime] = useState<number>(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
+
+  // URL del stream de Icecast (configurable desde variables de entorno)
+  const ICECAST_STREAM_URL =
+    import.meta.env.VITE_ICECAST_STREAM_URL ||
+    "http://localhost:8000/radiovixis";
+  const ICECAST_STATUS_URL =
+    import.meta.env.VITE_ICECAST_STATUS_URL ||
+    "http://localhost:8000/status-json.xsl";
+
+  // Cargar metadata del stream de Icecast y verificar si está en vivo
   useEffect(() => {
-    setCurrentSong({
-      id: "1",
-      title: "Canción de Ejemplo",
-      artist: "Artista Ejemplo",
-      url: "https://tu-cdn.cloudfront.net/radio/stream.mp3",
-    });
+    const fetchMetadata = async () => {
+      try {
+        const response = await fetch(ICECAST_STATUS_URL);
+        const data = await response.json();
+
+        // Buscar el mountpoint de la radio
+        const mountpoint = data.icestats?.source?.find(
+          (source: any) =>
+            source.server_name?.toLowerCase().includes("vixis") ||
+            source.listenurl?.includes("vixis") ||
+            source.mount?.includes("vixis")
+        );
+
+        if (mountpoint) {
+          // La radio está activa
+          setIsLive(true);
+          const title =
+            mountpoint.title || mountpoint.yp_currently_playing || "En vivo";
+          const artist = mountpoint.artist || "Radio Vixis";
+
+          setCurrentSong({
+            id: "live",
+            title: title,
+            artist: artist,
+            url: ICECAST_STREAM_URL,
+          });
+        } else {
+          // La radio no está activa
+          setIsLive(false);
+          setCurrentSong({
+            id: "offline",
+            title: "Radio fuera de línea",
+            artist: "Esperando transmisión...",
+            url: ICECAST_STREAM_URL,
+          });
+        }
+      } catch (error) {
+        console.error("Error al cargar metadata de Icecast:", error);
+        // Si no se puede conectar, asumir que está offline
+        setIsLive(false);
+        setCurrentSong({
+          id: "offline",
+          title: "Radio fuera de línea",
+          artist: "No se puede conectar al servidor",
+          url: ICECAST_STREAM_URL,
+        });
+      }
+    };
+
+    fetchMetadata();
+    // Actualizar metadata cada 10 segundos
+    const interval = setInterval(fetchMetadata, 10000);
+
+    return () => clearInterval(interval);
+  }, [ICECAST_STATUS_URL, ICECAST_STREAM_URL]);
+
+  // Reproducir automáticamente cuando la radio esté en vivo
+  useEffect(() => {
+    if (isLive && audioRef.current && !isPlaying) {
+      // Intentar reproducir automáticamente
+      audioRef.current.play().catch((error) => {
+        console.log(
+          "No se pudo reproducir automáticamente (puede requerir interacción del usuario):",
+          error
+        );
+      });
+    } else if (!isLive && audioRef.current && isPlaying) {
+      // Pausar si la radio se desconecta
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  }, [isLive, isPlaying]);
+
+  // Cargar eventos próximos
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        setEventsLoading(true);
+        const upcomingEvents = await getUpcomingEvents(5); // Obtener 5 eventos próximos
+        setEvents(upcomingEvents || []);
+      } catch (error) {
+        console.error("Error al cargar eventos:", error);
+        setEvents([]);
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+
+    loadEvents();
   }, []);
+
+  // Cargar mensajes iniciales
+  useEffect(() => {
+    const loadMessages = async () => {
+      try {
+        setMessagesLoading(true);
+        const { data, error } = await supabase
+          .from("messages")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+
+        // Invertir para mostrar los más antiguos arriba
+        setMessages((data || []).reverse());
+      } catch (error) {
+        console.error("Error al cargar mensajes:", error);
+        setMessages([]);
+      } finally {
+        setMessagesLoading(false);
+      }
+    };
+
+    loadMessages();
+  }, []);
+
+  // Suscripción Realtime para nuevos mensajes
+  useEffect(() => {
+    const channel = supabase
+      .channel("radio-chat")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const newMessage = payload.new as Tables<"messages">;
+          setMessages((prev) => [...prev, newMessage]);
+          // Auto-scroll al final
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          }, 100);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Auto-scroll cuando hay nuevos mensajes
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  }, [messages.length]);
 
   // Efecto marquee para el texto (desplazamiento continuo)
   useEffect(() => {
@@ -57,18 +243,44 @@ function Radio() {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
+    // Para streams en vivo, no hay duración definida
+    const updateTime = () => {
+      if (audio.currentTime && !isNaN(audio.currentTime)) {
+        setCurrentTime(audio.currentTime);
+      }
+    };
+
+    const updateDuration = () => {
+      // Para streams en vivo, duration puede ser Infinity
+      if (audio.duration && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      } else {
+        setDuration(0); // Stream en vivo
+      }
+    };
+
     const handleEnded = () => setIsPlaying(false);
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleError = (e: Event) => {
+      console.error("Error en el stream de audio:", e);
+      setIsPlaying(false);
+    };
 
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateDuration);
     audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("error", handleError);
 
     return () => {
       audio.removeEventListener("timeupdate", updateTime);
       audio.removeEventListener("loadedmetadata", updateDuration);
       audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("error", handleError);
     };
   }, []);
 
@@ -107,6 +319,117 @@ function Radio() {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Formatear tiempo relativo
+  const formatRelativeTime = (date: string) => {
+    const now = new Date();
+    const msgDate = new Date(date);
+    const diffSeconds = Math.floor((now.getTime() - msgDate.getTime()) / 1000);
+
+    if (diffSeconds < 60) return "ahora";
+    if (diffSeconds < 3600) return `hace ${Math.floor(diffSeconds / 60)}m`;
+    if (diffSeconds < 86400) return `hace ${Math.floor(diffSeconds / 3600)}h`;
+    return `hace ${Math.floor(diffSeconds / 86400)}d`;
+  };
+
+  // Validaciones anti-abuso
+  const bannedWords = [
+    "scam",
+    "hack",
+    "virus",
+    "malware",
+    "malparido",
+    "perro hp",
+    "triple cv",
+    // Agregar más según necesites
+  ];
+
+  const validateMessage = (user: string, msg: string): string | null => {
+    // Validar username
+    const trimmedUser = user.trim();
+    if (trimmedUser.length < 2 || trimmedUser.length > 20) {
+      return "El nombre debe tener entre 2 y 20 caracteres";
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmedUser)) {
+      return "El nombre solo puede contener letras, números, guiones y guiones bajos";
+    }
+
+    // Validar mensaje
+    const trimmedMsg = msg.trim();
+    if (trimmedMsg.length < 1 || trimmedMsg.length > 200) {
+      return "El mensaje debe tener entre 1 y 200 caracteres";
+    }
+
+    // Rate limiting (3 segundos mínimo entre mensajes)
+    const now = Date.now();
+    if (now - lastMessageTime < 3000) {
+      return "Espera un momento antes de enviar otro mensaje";
+    }
+
+    // Verificar palabras prohibidas
+    const lowerMsg = trimmedMsg.toLowerCase();
+    for (const word of bannedWords) {
+      if (lowerMsg.includes(word.toLowerCase())) {
+        return "El mensaje contiene palabras no permitidas";
+      }
+    }
+
+    return null;
+  };
+
+  // Enviar mensaje
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!username.trim()) {
+      alert("Por favor, ingresa un nombre de usuario");
+      return;
+    }
+
+    const validationError = validateMessage(username, messageInput);
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+
+    try {
+      setIsSending(true);
+
+      // Guardar username en localStorage
+      localStorage.setItem("radio_username", username.trim());
+
+      const trimmedMessage = messageInput.trim().replace(/\s+/g, " ");
+
+      // Insertar mensaje en la base de datos
+      const { data, error } = await supabase
+        .from("messages")
+        .insert({
+          username: username.trim(),
+          message: trimmedMessage,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Agregar el mensaje al estado local inmediatamente
+      if (data) {
+        setMessages((prev) => [...prev, data as Tables<"messages">]);
+        // Auto-scroll al final
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      }
+
+      setMessageInput("");
+      setLastMessageTime(Date.now());
+    } catch (error) {
+      console.error("Error al enviar mensaje:", error);
+      alert("Error al enviar el mensaje. Intenta de nuevo.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -175,28 +498,42 @@ function Radio() {
             </div>
           </div>
 
-          {/* Tiempo y barra de progreso */}
-          <div className="flex items-center gap-2 min-w-[200px]">
-            <span className="text-xs text-gray-400 min-w-[40px] text-right">
-              {formatTime(currentTime)}
-            </span>
-            <input
-              type="range"
-              min="0"
-              max={duration || 0}
-              value={currentTime}
-              onChange={handleSeek}
-              className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-white"
-              style={{
-                background: `linear-gradient(to right, white 0%, white ${
-                  (currentTime / duration) * 100
-                }%, #4b5563 ${(currentTime / duration) * 100}%, #4b5563 100%)`,
-              }}
-            />
-            <span className="text-xs text-gray-400 min-w-[40px]">
-              {formatTime(duration)}
-            </span>
-          </div>
+          {/* Tiempo y barra de progreso (oculto para streams en vivo) */}
+          {duration > 0 ? (
+            <div className="flex items-center gap-2 min-w-[200px]">
+              <span className="text-xs text-gray-400 min-w-[40px] text-right">
+                {formatTime(currentTime)}
+              </span>
+              <input
+                type="range"
+                min="0"
+                max={duration || 0}
+                value={currentTime}
+                onChange={handleSeek}
+                className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-white"
+                style={{
+                  background: `linear-gradient(to right, white 0%, white ${
+                    (currentTime / duration) * 100
+                  }%, #4b5563 ${
+                    (currentTime / duration) * 100
+                  }%, #4b5563 100%)`,
+                }}
+              />
+              <span className="text-xs text-gray-400 min-w-[40px]">
+                {formatTime(duration)}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 min-w-[100px]">
+              {isLive ? (
+                <span className="text-xs text-blue-400 font-semibold animate-pulse">
+                  ● EN VIVO
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400">○ OFFLINE</span>
+              )}
+            </div>
+          )}
 
           {/* Control de volumen */}
           <div className="flex items-center gap-2 min-w-[120px]">
@@ -254,32 +591,168 @@ function Radio() {
           {/* Placeholder para el chat en tiempo real */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Chat en Tiempo Real
+              <div
+                className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] p-4"
+                style={{ fontFamily: "'Press Start 2P', monospace" }}
+              >
+                <h2
+                  className="text-lg mb-4 text-gray-900"
+                  style={{ fontSize: "12px", lineHeight: "1.8" }}
+                >
+                  CHAT EN TIEMPO REAL
                 </h2>
-                <p className="text-gray-600">
-                  El chat se implementará con Supabase Realtime en la siguiente
-                  fase.
-                </p>
-                <div className="mt-4 space-y-2">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="p-3 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-gray-900">
-                          Usuario {i}
-                        </span>
-                        <span className="text-xs text-gray-500">hace 2m</span>
-                      </div>
-                      <p className="text-gray-700">
-                        Mensaje de ejemplo {i} del chat...
-                      </p>
+
+                {/* Contenedor de mensajes con scroll */}
+                <div
+                  ref={messagesContainerRef}
+                  className="bg-gray-50 border-2 border-black p-3 mb-4 overflow-y-auto"
+                  style={{
+                    maxHeight: "400px",
+                    minHeight: "200px",
+                    fontSize: "10px",
+                    lineHeight: "1.6",
+                  }}
+                >
+                  {messagesLoading ? (
+                    <div className="text-gray-600">Cargando...</div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-gray-500">
+                      No hay mensajes aún. ¡Sé el primero!
                     </div>
-                  ))}
+                  ) : (
+                    <div className="space-y-2">
+                      {messages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className="border-b border-gray-300 pb-2 last:border-0"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span
+                              className="text-gray-900 font-bold"
+                              style={{ color: "#331d83" }}
+                            >
+                              [{msg.username}]
+                            </span>
+                            <span
+                              className="text-gray-500"
+                              style={{ fontSize: "8px" }}
+                            >
+                              {formatRelativeTime(msg.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-gray-800 break-words">
+                            {msg.message}
+                          </p>
+                        </div>
+                      ))}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  )}
                 </div>
+
+                {/* Formulario de envío */}
+                {!usernameConfirmed ? (
+                  <div className="space-y-2">
+                    <label
+                      className="block text-gray-900 mb-2"
+                      style={{ fontSize: "8px" }}
+                    >
+                      INGRESA TU NOMBRE:
+                    </label>
+                    <input
+                      ref={usernameInputRef}
+                      type="text"
+                      value={username}
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        setUsername(newValue);
+                      }}
+                      maxLength={20}
+                      className="w-full border-2 border-black p-2 bg-white text-gray-900"
+                      style={{
+                        fontSize: "10px",
+                        fontFamily: "'Press Start 2P', monospace",
+                      }}
+                      placeholder="Usuario"
+                      onKeyDown={(e) => {
+                        // Solo confirmar username si presiona Enter Y tiene 2+ caracteres
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const currentValue =
+                            usernameInputRef.current?.value || "";
+                          if (currentValue.trim().length >= 2) {
+                            setUsernameConfirmed(true);
+                            localStorage.setItem(
+                              "radio_username",
+                              currentValue.trim()
+                            );
+                            setUsername(currentValue.trim());
+                            // Pequeño delay para asegurar que el estado se actualice
+                            setTimeout(() => {
+                              document
+                                .querySelector<HTMLInputElement>(
+                                  'input[name="message"]'
+                                )
+                                ?.focus();
+                            }, 100);
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <form onSubmit={handleSendMessage} className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="message"
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        maxLength={200}
+                        className="flex-1 border-2 border-black p-2 bg-white text-gray-900"
+                        style={{
+                          fontSize: "10px",
+                          fontFamily: "'Press Start 2P', monospace",
+                        }}
+                        placeholder="Escribe tu mensaje..."
+                        disabled={isSending}
+                      />
+                      <button
+                        type="submit"
+                        disabled={isSending || !messageInput.trim()}
+                        className="border-2 border-black bg-[#331d83] text-white px-4 py-2 hover:bg-[#2093c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        style={{
+                          fontSize: "8px",
+                          fontFamily: "'Press Start 2P', monospace",
+                          boxShadow: "2px 2px 0px #000",
+                        }}
+                      >
+                        {isSending ? "..." : "ENVIAR"}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between text-gray-500">
+                      <span style={{ fontSize: "7px" }}>
+                        Usuario: {username}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUsername("");
+                          setUsernameConfirmed(false);
+                          localStorage.removeItem("radio_username");
+                          // Focus en el input de username
+                          setTimeout(() => {
+                            usernameInputRef.current?.focus();
+                          }, 100);
+                        }}
+                        className="text-gray-600 hover:text-gray-900 underline"
+                        style={{ fontSize: "7px" }}
+                      >
+                        Cambiar
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
 
@@ -288,21 +761,53 @@ function Radio() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   Próximos Eventos
                 </h2>
-                <p className="text-gray-600 mb-4">Eventos desde passline.com</p>
-                <div className="space-y-3">
-                  <div className="p-3 bg-purple/10 rounded-lg border border-purple/20">
-                    <h3 className="font-semibold text-gray-900">
-                      Evento Ejemplo 1
-                    </h3>
-                    <p className="text-sm text-gray-600">15 de Enero, 2025</p>
+                {eventsLoading ? (
+                  <p className="text-gray-600">Cargando eventos...</p>
+                ) : events.length === 0 ? (
+                  <p className="text-gray-600">No hay eventos próximos</p>
+                ) : (
+                  <div className="space-y-3">
+                    {events.map((event) => {
+                      const eventDate = new Date(event.date);
+                      const formattedDate = eventDate.toLocaleDateString(
+                        "es-ES",
+                        {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        }
+                      );
+
+                      return (
+                        <div
+                          key={event.id}
+                          className="p-3 bg-purple/10 rounded-lg border border-purple/20 hover:bg-purple/20 transition-colors cursor-pointer"
+                          onClick={() => {
+                            if (event.passline_url) {
+                              window.open(
+                                event.passline_url,
+                                "_blank",
+                                "noopener,noreferrer"
+                              );
+                            }
+                          }}
+                        >
+                          <h3 className="font-semibold text-gray-900 mb-1">
+                            {event.title}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {formattedDate}
+                          </p>
+                          {event.description && (
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                              {event.description}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="p-3 bg-blue/10 rounded-lg border border-blue/20">
-                    <h3 className="font-semibold text-gray-900">
-                      Evento Ejemplo 2
-                    </h3>
-                    <p className="text-sm text-gray-600">20 de Enero, 2025</p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

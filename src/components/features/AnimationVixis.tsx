@@ -5,7 +5,7 @@ interface AnimationVixisProps {
 }
 
 function AnimationVixis({
-  imageUrl = "https://img.logo.dev/shopify.com?token=pk_Au6BgsgUQ5SltADJUPu63g&retina=true",
+  imageUrl = "https://cdn.vixis.dev/Foto+de+Perfil.webp",
 }: AnimationVixisProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);

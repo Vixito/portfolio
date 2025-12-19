@@ -23,6 +23,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { createRequest } from "../lib/supabase-functions";
 
 // Esquema de validación con Zod - mensajes mejorados para UX
 const requestSchema = z.object({
@@ -160,11 +161,28 @@ function Status() {
   }, [isFormOpen]);
 
   const onSubmit = async (data: RequestFormData) => {
-    console.log("Formulario enviado:", data);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    alert("¡Petición enviada con éxito! Te contactaré pronto.");
-    reset();
-    setIsFormOpen(false);
+    try {
+      // Llamar a la función RPC para crear la petición
+      const requestId = await createRequest({
+        name: data.name,
+        email: data.email,
+        request_type: data.requestType,
+        message: data.message,
+      });
+
+      // Éxito
+      alert("¡Petición enviada con éxito! Te contactaré pronto.");
+      reset();
+      setIsFormOpen(false);
+    } catch (error) {
+      // Error
+      console.error("Error al enviar petición:", error);
+      alert(
+        error instanceof Error
+          ? `Error: ${error.message}`
+          : "Hubo un error al enviar tu petición. Por favor, intenta de nuevo."
+      );
+    }
   };
 
   const handleCloseForm = () => {

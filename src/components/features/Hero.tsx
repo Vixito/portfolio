@@ -37,7 +37,7 @@ function Hero() {
   }, []);
 
   // URL de tu imagen desde S3/CloudFront
-  const profileImageUrl = "https://cdn.vixito.gg/Vixito+-+Logo.png";
+  const profileImageUrl = "https://cdn.vixis.dev/Foto+de+Perfil+2.webp";
 
   return (
     <section ref={heroRef} className="relative">

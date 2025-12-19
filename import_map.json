@@ -17,6 +17,7 @@
     "framer-motion": "npm:framer-motion",
     "gsap": "npm:gsap",
     "zod": "npm:zod",
-    "@hookform/resolvers": "npm:@hookform/resolvers"
+    "@hookform/resolvers": "npm:@hookform/resolvers",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2"
   }
 }

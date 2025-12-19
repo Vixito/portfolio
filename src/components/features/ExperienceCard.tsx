@@ -3,25 +3,25 @@ import { Link } from "react-router-dom";
 function ExperienceCard() {
   const experiences = [
     {
-      company: "Cinetic Digital",
-      role: "Diseñador Web y Frontend",
-      period: "2021 - Presente",
-      logo: "C",
-      color: "bg-red-500",
+      company: "Alcaldía Municipal de Pacho",
+      role: "Asistente Técnico de Sistemas",
+      period: "Marzo 2021 - Septiembre 2021",
+      logo: "https://cdn.vixis.dev/Alcald%C3%ADa+Municipal+de+Pacho.webp",
+      color: "bg-white",
     },
     {
-      company: "Ádraba",
-      role: "Diseñador Gráfico y Desarrollador Web",
-      period: "2018 - 2021",
-      logo: "a",
+      company: "Airtm",
+      role: "Discord Marketer",
+      period: "Abril 2025 - Octubre 2025",
+      logo: "https://cdn.vixis.dev/AirTM+Logo.webp",
+      color: "bg-white",
+    },
+    {
+      company: "Filippo Cucine",
+      role: "Full-Stack Developer",
+      period: "Diciembre 2025 - Presente",
+      logo: "https://cdn.vixis.dev/Filippo+Cucine+-+Logo.webp",
       color: "bg-black",
-    },
-    {
-      company: "Tantra",
-      role: "Diseñador Gráfico y Maquetador Web",
-      period: "2015 - 2019",
-      logo: "T",
-      color: "bg-gray-600",
     },
   ];
 
@@ -49,9 +49,28 @@ function ExperienceCard() {
         {experiences.map((exp, index) => (
           <div key={index} className="flex items-start gap-3">
             <div
-              className={`w-10 h-10 ${exp.color} rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0`}
+              className={`w-10 h-10 ${exp.color} rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden`}
             >
-              {exp.logo}
+              {exp.logo.startsWith("http") || exp.logo.startsWith("/") ? (
+                <img
+                  src={exp.logo}
+                  alt={`${exp.company} logo`}
+                  className="w-full h-full object-contain p-1"
+                  onError={(e) => {
+                    // Si la imagen falla, mostrar el texto como fallback
+                    const target = e.currentTarget;
+                    target.style.display = "none";
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = `<span class="text-white font-bold text-xs">${exp.company.charAt(
+                        0
+                      )}</span>`;
+                    }
+                  }}
+                />
+              ) : (
+                <span className="text-white font-bold text-xs">{exp.logo}</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-semibold text-gray-900 truncate">

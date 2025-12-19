@@ -7,6 +7,7 @@ interface Project {
   thumbnail?: string;
   month: string;
   year: number;
+  url: string;
 }
 
 function ScrollableCardStack() {
@@ -19,24 +20,15 @@ function ScrollableCardStack() {
       thumbnail: "https://cdn.vixito.gg/Vixito+-+Logo.png",
       month: "Diciembre",
       year: 2025,
+      url: "https://vixito.gg",
     },
     {
       id: "2",
       title: "Filippo Cucine",
+      thumbnail: "https://cdn.vixis.dev/Filippo+Cucine+-+Thumbnail.webp",
       month: "Diciembre",
       year: 2025,
-    },
-    {
-      id: "3",
-      title: "SmoothUI",
-      month: "Julio",
-      year: 2024,
-    },
-    {
-      id: "4",
-      title: "AdventJS 2024",
-      month: "Diciembre",
-      year: 2024,
+      url: "https://filippo-cucine.com",
     },
   ]);
 
@@ -101,6 +93,8 @@ function ScrollableCardStack() {
                 src={project.thumbnail}
                 alt={project.title}
                 className="w-full h-full object-cover"
+                onClick={() => window.open(project.url, "_blank")}
+                style={{ cursor: "pointer" }}
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">

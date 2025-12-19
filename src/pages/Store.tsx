@@ -2,15 +2,21 @@ import { useState, useEffect } from "react";
 import Pagination from "../components/ui/Pagination";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
+import { getProducts } from "../lib/supabase-functions";
 
 interface StoreItem {
   id: string;
   title: string;
-  description: string;
-  price: number;
-  thumbnail: string; // URL desde S3/CloudFront
-  fullDescription?: string;
-  images?: string[]; // Imágenes adicionales
+  description: string | null;
+  full_description: string | null;
+  base_price_usd: number;
+  thumbnail_url: string | null;
+  images: string[] | null;
+  // Campos configurables desde Admin
+  action_type?: "link" | "submit" | "schedule"; // Tipo de acción del botón
+  action_url?: string | null; // URL para redirección (si action_type es "link")
+  pricing_link?: string | null; // Link de pricing generado desde Admin
+  button_text?: string | null; // Texto personalizado del botón
 }
 
 function Store() {
@@ -22,38 +28,40 @@ function Store() {
   const itemsPerPage = 12;
 
   useEffect(() => {
-    // Datos de ejemplo - reemplaza con tus datos reales
-    const mockItems: StoreItem[] = [
-      {
-        id: "1",
-        title: "Consultoría Backend",
-        description:
-          "Servicio de consultoría especializada en desarrollo backend",
-        price: 50000,
-        thumbnail: "https://tu-cdn.cloudfront.net/store/consultoria.jpg",
-        fullDescription:
-          "Servicio completo de consultoría backend que incluye análisis, diseño de arquitectura, implementación y optimización de APIs. Ideal para proyectos que necesitan escalabilidad y rendimiento.",
-        images: [
-          "https://tu-cdn.cloudfront.net/store/consultoria-1.jpg",
-          "https://tu-cdn.cloudfront.net/store/consultoria-2.jpg",
-        ],
-      },
-      {
-        id: "2",
-        title: "Desarrollo de API REST",
-        description: "Desarrollo completo de API REST con documentación",
-        price: 30000,
-        thumbnail: "https://tu-cdn.cloudfront.net/store/api.jpg",
-        fullDescription:
-          "Desarrollo de API REST completa con autenticación, documentación Swagger, tests y deployment. Incluye integración con bases de datos y servicios externos.",
-      },
-      // Agrega más items aquí
-    ];
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        const products = await getProducts();
 
-    setTimeout(() => {
-      setItems(mockItems);
-      setLoading(false);
-    }, 500);
+        // Mapear productos de Supabase a StoreItem
+        const mappedItems: StoreItem[] = products.map((product: any) => ({
+          id: product.id,
+          title: product.title,
+          description: product.description,
+          full_description: product.full_description,
+          base_price_usd: Number(product.base_price_usd),
+          thumbnail_url: product.thumbnail_url,
+          images: product.images
+            ? Array.isArray(product.images)
+              ? product.images
+              : []
+            : null,
+          action_type: product.action_type || "link",
+          action_url: product.action_url || null,
+          pricing_link: product.pricing_link || null,
+          button_text: product.button_text || null,
+        }));
+
+        setItems(mappedItems);
+      } catch (error) {
+        console.error("Error al cargar productos:", error);
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
   }, []);
 
   const handleItemClick = (item: StoreItem) => {
@@ -61,11 +69,30 @@ function Store() {
     setIsModalOpen(true);
   };
 
-  const handleAddToCart = () => {
-    // Aquí implementarías la lógica del carrito
-    // Por ahora solo un alert
-    alert(`Agregado al carrito: ${selectedItem?.title}`);
-    // En producción, esto redirigiría a Airtm para el pago
+  const handleAction = (item: StoreItem) => {
+    if (item.action_type === "link") {
+      // Redirigir a la URL configurada (pricing_link o action_url)
+      const url = item.pricing_link || item.action_url;
+      if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    } else if (
+      item.action_type === "submit" ||
+      item.action_type === "schedule"
+    ) {
+      // Para submit/schedule, podría abrir un modal o redirigir a un formulario
+      // Por ahora, mostrar un mensaje o redirigir a action_url si existe
+      if (item.action_url) {
+        window.open(item.action_url, "_blank", "noopener,noreferrer");
+      } else {
+        // Aquí podrías abrir un modal de formulario para "Agéndalo"
+        alert(
+          item.action_type === "schedule"
+            ? "Funcionalidad de agendamiento próximamente disponible"
+            : "Enviando solicitud..."
+        );
+      }
+    }
   };
 
   // Calcular páginas
@@ -73,12 +100,29 @@ function Store() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentItems = items.slice(startIndex, startIndex + itemsPerPage);
 
-  // Formatear precio
+  // Formatear precio (mostrar precio base en USD)
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("es-CO", {
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "COP",
+      currency: "USD",
     }).format(price);
+  };
+
+  // Obtener texto del botón
+  const getButtonText = (item: StoreItem) => {
+    if (item.button_text) {
+      return item.button_text;
+    }
+    // Texto por defecto según el tipo de acción
+    switch (item.action_type) {
+      case "schedule":
+        return "Agéndalo";
+      case "submit":
+        return "Solicitar";
+      case "link":
+      default:
+        return "Comprar";
+    }
   };
 
   if (loading) {
@@ -97,41 +141,72 @@ function Store() {
         </h1>
 
         {/* Grid de productos */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {currentItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => handleItemClick(item)}
-              className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-xl transition-shadow border border-gray-200"
-            >
-              {/* Thumbnail */}
-              <div className="w-full h-48 bg-gray-200 overflow-hidden">
-                <img
-                  src={item.thumbnail}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      "https://tu-cdn.cloudfront.net/default-store-thumbnail.png";
-                  }}
-                />
-              </div>
+        {items.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-2xl text-gray-600 mb-4">
+              No hay productos disponibles
+            </p>
+            <p className="text-gray-500">
+              Vuelve pronto para ver mis productos
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {currentItems.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow border border-gray-200"
+              >
+                {/* Thumbnail */}
+                <div
+                  className="w-full h-48 bg-gray-200 overflow-hidden cursor-pointer"
+                  onClick={() => handleItemClick(item)}
+                >
+                  <img
+                    src={
+                      item.thumbnail_url ||
+                      "https://tu-cdn.cloudfront.net/default-store-thumbnail.png"
+                    }
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        "https://tu-cdn.cloudfront.net/default-store-thumbnail.png";
+                    }}
+                  />
+                </div>
 
-              {/* Contenido */}
-              <div className="p-4">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {item.description}
-                </p>
-                <p className="text-2xl font-bold text-purple">
-                  {formatPrice(item.price)}
-                </p>
+                {/* Contenido */}
+                <div className="p-4">
+                  <h3
+                    className="text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-purple transition-colors"
+                    onClick={() => handleItemClick(item)}
+                  >
+                    {item.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {item.description || "Sin descripción disponible"}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-2xl font-bold text-purple">
+                      {formatPrice(item.base_price_usd)}
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAction(item);
+                      }}
+                      className="px-4 py-2 cursor-pointer"
+                    >
+                      {getButtonText(item)}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Paginación */}
         {totalPages > 1 && (
@@ -156,7 +231,10 @@ function Store() {
               <div>
                 <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden mb-4">
                   <img
-                    src={selectedItem.thumbnail}
+                    src={
+                      selectedItem.thumbnail_url ||
+                      "https://tu-cdn.cloudfront.net/default-store-thumbnail.png"
+                    }
                     alt={selectedItem.title}
                     className="w-full h-full object-cover"
                   />
@@ -183,24 +261,41 @@ function Store() {
               <div>
                 <div className="mb-4">
                   <p className="text-3xl font-bold text-purple mb-2">
-                    {formatPrice(selectedItem.price)}
+                    {formatPrice(selectedItem.base_price_usd)}
                   </p>
                   <p className="text-gray-600">
-                    {selectedItem.fullDescription || selectedItem.description}
+                    {selectedItem.full_description ||
+                      selectedItem.description ||
+                      "Sin descripción disponible"}
                   </p>
                 </div>
 
                 <div className="space-y-3">
                   <Button
                     variant="primary"
-                    onClick={handleAddToCart}
+                    onClick={() => {
+                      handleAction(selectedItem);
+                      setIsModalOpen(false);
+                    }}
                     className="w-full"
                   >
-                    Agregar al Carrito
+                    {getButtonText(selectedItem)}
                   </Button>
-                  <Button variant="outline" className="w-full">
-                    Ver Detalles
-                  </Button>
+                  {selectedItem.pricing_link && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        window.open(
+                          selectedItem.pricing_link!,
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                      }}
+                      className="w-full"
+                    >
+                      Ver Pricing
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Pagination from "../components/ui/Pagination";
+import { fetchBlogPosts } from "../lib/supabase-functions";
 
 interface BlogPost {
   id: string;
@@ -18,35 +19,27 @@ function Blog() {
   const itemsPerPage = 6;
 
   useEffect(() => {
-    // Datos de ejemplo - reemplaza con tus datos reales
-    const mockPosts: BlogPost[] = [
-      {
-        id: "1",
-        title: "Cómo construir un portafolio moderno con Deno y React",
-        thumbnail: "https://tu-cdn.cloudfront.net/blog/thumbnail-1.jpg",
-        excerpt:
-          "En este artículo exploraremos cómo crear un portafolio moderno usando Deno como runtime y React para el frontend. Veremos las ventajas de usar Deno sobre Node.js y cómo configurar un proyecto desde cero...",
-        url: "https://medium.com/@vixis/articulo-1",
-        platform: "Medium",
-        date: "2025-01-15",
-      },
-      {
-        id: "2",
-        title: "Optimización de APIs con Supabase y RLS",
-        excerpt:
-          "Las Row Level Security (RLS) policies en Supabase son una herramienta poderosa para asegurar tus datos. En este post aprenderás cómo implementarlas correctamente y optimizar el rendimiento de tus consultas...",
-        thumbnail: "https://tu-cdn.cloudfront.net/blog/thumbnail-2.jpg",
-        url: "https://dev.to/tu-usuario/articulo-2",
-        platform: "Dev.to",
-        date: "2025-01-10",
-      },
-      // Agrega más posts aquí
-    ];
+    const loadPosts = async () => {
+      try {
+        setLoading(true);
+        const result = await fetchBlogPosts({
+          platform: "all", // Obtener posts de todas las plataformas
+        });
 
-    setTimeout(() => {
-      setPosts(mockPosts);
-      setLoading(false);
-    }, 500);
+        if (result && result.posts) {
+          setPosts(result.posts);
+        } else {
+          setPosts([]);
+        }
+      } catch (error) {
+        console.error("Error al cargar posts:", error);
+        setPosts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPosts();
   }, []);
 
   // Calcular páginas

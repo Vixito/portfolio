@@ -5,7 +5,7 @@ alwaysApply: true
 
 ## Propósito
 
-- Portafolio y marca personal. Stack: Deno + Vite + React + TypeScript. Build estático para Deno Deploy.
+- Portafolio y marca personal en un repositorio público de GitHub. Stack: Deno + Vite + React + TypeScript. Build estático para Deno Deploy.
   Por qué: fija el objetivo y el target de despliegue para evitar desviaciones.
 
 ## Comunicación

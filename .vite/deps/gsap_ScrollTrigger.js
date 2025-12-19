@@ -1,4 +1,4 @@
-import "./chunk-G3PMV62Z.js";
+import "./chunk-V4OQ3NZ2.js";
 
 // node_modules/.deno/gsap@3.14.2/node_modules/gsap/Observer.js
 function _defineProperties(target, props) {

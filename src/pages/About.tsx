@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import Button from "../components/ui/Button";
 
 function About() {
-  const aboutImageUrl = "https://tu-cdn.cloudfront.net/about.jpg";
+  const aboutImageUrl = "https://cdn.vixis.dev/Foto+de+Perfil+2.webp";
 
   return (
     <div className="h-screen overflow-hidden py-20 px-4">
@@ -35,10 +35,7 @@ function About() {
             </div>
             <div className="pt-4">
               <Link to="/socials" className="cursor-pointer">
-                <Button
-                  variant="outline"
-                  className="bg-transparent border-0 hover:bg-black/80 cursor-pointer"
-                >
+                <Button variant="outline" className="cursor-pointer">
                   Sígueme en las redes sociales
                 </Button>
               </Link>
@@ -50,7 +47,7 @@ function About() {
             <img
               src={aboutImageUrl}
               alt="Sobre mí"
-              className="w-full max-w-md rounded-lg shadow-lg object-cover"
+              className="w-full max-w-md aspect-square rounded-full shadow-lg object-cover border-10 border-black"
             />
           </div>
         </div>

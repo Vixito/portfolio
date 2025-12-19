@@ -27,19 +27,50 @@ function Navigation() {
   ];
 
   const simpleItems = [
-    { path: "/", label: language === "es" ? "Inicio" : "Home" },
-    { path: "/studio", label: "Studio" },
-    { path: "/about", label: language === "es" ? "Acerca de" : "About" },
+    {
+      path: "/",
+      label: language === "es" ? "Inicio" : "Home",
+      icon: "🏠",
+    },
+    {
+      path: "/studio",
+      label: "Studio",
+      icon: (
+        <img
+          src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
+          alt="Studio"
+          className="w-4 h-4"
+        />
+      ),
+    },
+    {
+      path: "/about",
+      label: language === "es" ? "Acerca de" : "About",
+      icon: "👤",
+    },
     {
       path: "/socials",
       label: language === "es" ? "Redes Sociales" : "Social Media",
+      icon: "📱",
     },
-    { path: "/store", label: language === "es" ? "Tienda" : "Store" },
+    {
+      path: "/store",
+      label: language === "es" ? "Tienda" : "Store",
+      icon: "🛒",
+    },
   ];
 
   const afterDividerItems = [
-    { path: "/radio", label: "Radio" },
-    { path: "/blog", label: "Blog" },
+    {
+      path: "/radio",
+      label: "Radio",
+      icon: "📻",
+    },
+    {
+      path: "/blog",
+      label: "Blog",
+      icon: "📝",
+    },
   ];
 
   const donations = [
@@ -144,7 +175,7 @@ function Navigation() {
       <ul className="links">
         {simpleItems.map((item) => (
           <li key={item.path}>
-            <Link to={item.path} title={item.label} />
+            <Link to={item.path} title={item.label} data-icon={item.icon} />
           </li>
         ))}
 
@@ -158,6 +189,7 @@ function Navigation() {
           <div
             className="nav-link-dropdown"
             title={language === "es" ? "Trabajo" : "Work"}
+            data-icon="💼"
           />
           {/* Área invisible de conexión */}
           <div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none" />
@@ -192,12 +224,13 @@ function Navigation() {
           <Link
             to="/studies"
             title={language === "es" ? "Estudios" : "Studies"}
+            data-icon="🎓"
           />
         </li>
 
         {afterDividerItems.map((item) => (
           <li key={item.path}>
-            <Link to={item.path} title={item.label} />
+            <Link to={item.path} title={item.label} data-icon={item.icon} />
           </li>
         ))}
 
@@ -211,6 +244,7 @@ function Navigation() {
           <div
             className="nav-link-dropdown"
             title={language === "es" ? "Ajustes" : "Settings"}
+            data-icon="⚙️"
           />
           {/* Área invisible de conexión */}
           <div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none" />
@@ -411,6 +445,21 @@ function Navigation() {
           top: 0;
           font-family: 'Nunito', sans-serif;
           font-weight: 400;
+        }
+        
+        /* Responsive: Mostrar íconos en móviles */
+        @media (max-width: 768px) {
+          #cubicle > .links a::before,
+          #cubicle > .links a::after {
+            content: attr(data-icon);
+            font-size: 1.2rem;
+          }
+          
+          #cubicle > .links .nav-link-dropdown::before,
+          #cubicle > .links .nav-link-dropdown::after {
+            content: attr(data-icon);
+            font-size: 1.2rem;
+          }
         }
         
         #cubicle > .links li:not(:first-child) a::before,

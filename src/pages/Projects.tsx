@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { getThumbnailFromUrl } from "../utils/getThumbnail";
 import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
+import { getProjects } from "../lib/supabase-functions";
 
 interface Project {
   id: string;
@@ -11,7 +12,7 @@ interface Project {
   month: string;
   year: number;
   thumbnail?: string;
-  isSpecial?: boolean; // Para proyectos con animación especial
+  is_special?: boolean;
 }
 
 function Projects() {
@@ -21,42 +22,47 @@ function Projects() {
   const itemsPerPage = 12;
 
   useEffect(() => {
-    // Datos de ejemplo - reemplaza con tus datos reales
-    const mockProjects: Project[] = [
-      {
-        id: "1",
-        title: "Vixito - Discord Bot",
-        url: "https://vixito.gg",
-        repository: "https://github.com/Vixito/vixito-bot",
-        month: "Diciembre",
-        year: 2025,
-        isSpecial: true,
-      },
-      {
-        id: "2",
-        title: "Filippo Cucine",
-        url: "https://filippocucine.com",
-        repository: "https://github.com/Vixito/filippo-cucine-sas-ecommerce",
-        month: "Diciembre",
-        year: 2025,
-      },
-      // Agrega más proyectos aquí
-    ];
+    const loadProjects = async () => {
+      try {
+        setLoading(true);
+        const projectsData = await getProjects();
 
-    // Generar thumbnails para cada proyecto
-    const loadThumbnails = async () => {
-      const projectsWithThumbnails = await Promise.all(
-        mockProjects.map(async (project) => {
-          const thumbnail = await getThumbnailFromUrl(project.url);
-          return { ...project, thumbnail };
-        })
-      );
+        // Generar thumbnails para cada proyecto
+        const projectsWithThumbnails = await Promise.all(
+          (projectsData || []).map(async (project: any) => {
+            const thumbnail = project.thumbnail
+              ? project.thumbnail
+              : await getThumbnailFromUrl(project.url);
+            return {
+              ...project,
+              thumbnail,
+              isSpecial: project.is_special || false,
+            };
+          })
+        );
 
-      setProjects(projectsWithThumbnails);
-      setLoading(false);
+        // Separar proyectos especiales y ordenar
+        // Los especiales van primero, luego los demás (ordenados del más nuevo al más antiguo)
+        const specialProjects = projectsWithThumbnails.filter(
+          (p) => p.isSpecial
+        );
+        const regularProjects = projectsWithThumbnails.filter(
+          (p) => !p.isSpecial
+        );
+
+        // Combinar: especiales primero, luego regulares
+        const sortedProjects = [...specialProjects, ...regularProjects];
+
+        setProjects(sortedProjects);
+      } catch (error) {
+        console.error("Error al cargar proyectos:", error);
+        setProjects([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    loadThumbnails();
+    loadProjects();
   }, []);
 
   // Calcular páginas
@@ -80,30 +86,32 @@ function Projects() {
         </h1>
 
         {/* Grid estilo Pinterest */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {currentProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
+        {projects.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-2xl text-gray-600 mb-4">
+              No hay proyectos disponibles
+            </p>
+            <p className="text-gray-500">
+              Vuelve pronto para ver mis proyectos
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {currentProjects.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </div>
+        )}
 
-        {/* Paginación (centrada arriba y abajo) */}
+        {/* Paginación */}
         {totalPages > 1 && (
-          <>
-            <div className="flex justify-center mb-8">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-            <div className="flex justify-center">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-          </>
+          <div className="flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
         )}
       </div>
     </div>
@@ -140,7 +148,7 @@ function ProjectCard({ project }: { project: Project }) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
-              Cargando...
+              Sin imagen
             </div>
           )}
 
@@ -179,7 +187,7 @@ function ProjectCard({ project }: { project: Project }) {
                   : "w-full cursor-pointer"
               }
             >
-              <Button variant="primary" className="w-full cursor-pointer">
+              <Button variant="secondary" className="w-full cursor-pointer">
                 Ver Proyecto
               </Button>
             </a>

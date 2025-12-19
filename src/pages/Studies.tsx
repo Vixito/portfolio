@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { gsap } from "gsap";
 import { useRef } from "react";
+import { getStudies } from "../lib/supabase-functions";
 
 interface Study {
   id: string;
@@ -28,47 +29,33 @@ function Studies() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const mockStudies: Study[] = [
-      {
-        id: "1",
-        title: "Ingeniería de Sistemas",
-        institution: "Fundación Universitaria del Área Andina",
-        type: "degree",
-        startDate: "2022-02",
-        endDate: "2025-08",
-        description:
-          "Carrera universitaria enfocada en desarrollo de software, arquitectura de sistemas y gestión de proyectos tecnológicos.",
-        logo: "https://img.logo.dev/name/Areandina?token=pk_Au6BgsgUQ5SltADJUPu63g&format=webp&retina=true",
-        status: "completed",
-      },
-      {
-        id: "2",
-        title: "Certificación AWS Solutions Architect",
-        institution: "Amazon Web Services",
-        type: "certification",
-        startDate: "2024-03",
-        endDate: "2027-03",
-        description:
-          "Certificación profesional en arquitectura de soluciones en la nube con AWS.",
-        certificateUrl: "https://example.com/certificate",
-        status: "completed",
-      },
-      {
-        id: "3",
-        title: "Curso Avanzado de TypeScript",
-        institution: "Platzi",
-        type: "course",
-        startDate: "2024-06",
-        description:
-          "Curso intensivo sobre TypeScript avanzado, tipos genéricos y mejores prácticas.",
-        status: "in-progress",
-      },
-    ];
+    const loadStudies = async () => {
+      try {
+        setLoading(true);
+        const data = await getStudies();
+        // Mapear datos de Supabase al formato de la interfaz
+        const mappedStudies: Study[] = (data || []).map((study: any) => ({
+          id: study.id,
+          title: study.title,
+          institution: study.institution,
+          type: study.type,
+          startDate: study.start_date,
+          endDate: study.end_date,
+          description: study.description,
+          logo: study.logo,
+          certificateUrl: study.certificate_url,
+          status: study.status,
+        }));
+        setStudies(mappedStudies);
+      } catch (error) {
+        console.error("Error al cargar estudios:", error);
+        setStudies([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setTimeout(() => {
-      setStudies(mockStudies);
-      setLoading(false);
-    }, 500);
+    loadStudies();
   }, []);
 
   // Animación de entrada

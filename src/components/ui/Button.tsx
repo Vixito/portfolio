@@ -19,10 +19,12 @@ function Button({
     "px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
 
   const variantStyles = {
-    primary: "bg-purple text-white hover:bg-purple/90 focus:ring-purple",
-    secondary: "bg-blue text-white hover:bg-blue/90 focus:ring-blue",
+    primary:
+      "border-2 border-purple-600 text-purple-600 hover:bg-purple-800/90 hover:text-white focus:ring-purple-400",
+    secondary:
+      "border-2 border-blue-600 text-blue-600 hover:bg-blue-800/90 hover:text-white focus:ring-blue-400",
     outline:
-      "border-2 border-purple text-purple hover:bg-purple hover:text-white focus:ring-purple",
+      "border-2 border-black text-black hover:bg-black/90 hover:text-white focus:ring-black",
   };
 
   const disabledStyles = "opacity-50 cursor-not-allowed";
