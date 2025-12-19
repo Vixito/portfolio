@@ -5,10 +5,11 @@ import RadioPlayer from "./RadioPlayer";
 import ContactSection from "./ContactSection";
 import LatestPostCard from "./LatestPostCard";
 import ExperienceCard from "./ExperienceCard";
+import { useTranslation } from "../../lib/i18n";
 
 function HomeSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
-
+  const { t } = useTranslation();
   useEffect(() => {
     if (!sectionRef.current) return;
 
@@ -61,7 +62,9 @@ function HomeSection() {
                   />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900">Proyectos</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {t("homeSection.projects")}
+              </h2>
             </div>
             <ScrollableCardStack />
           </div>

@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { optimizeAndUpload } from "../lib/storage-functions";
 import NotFound from "./NotFound";
+import { useTranslation } from "../lib/i18n";
 import {
   getProducts,
   createProduct,
@@ -45,6 +46,7 @@ import {
 } from "../lib/supabase-functions";
 
 function Admin() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -314,11 +316,11 @@ function Admin() {
           break;
       }
       await loadCRUDData();
-      alert("Elemento eliminado exitosamente");
+      alert(t("admin.deleteSuccess"));
     } catch (error) {
       alert(
-        `Error al eliminar: ${
-          error instanceof Error ? error.message : "Error desconocido"
+        `${t("admin.errorDeleting")}: ${
+          error instanceof Error ? error.message : t("admin.errorUnknown")
         }`
       );
     }
@@ -326,7 +328,7 @@ function Admin() {
 
   const handleExtractEventData = async () => {
     if (!eventUrl.trim()) {
-      alert("Por favor ingresa una URL válida");
+      alert(t("admin.pleaseEnterUrl"));
       return;
     }
 
@@ -561,14 +563,14 @@ function Admin() {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 py-20 px-4"
+      className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 py-12 md:py-20 px-2 md:px-4"
       style={{ "--blue-color": "#2093c4" } as React.CSSProperties}
     >
       <div className="max-w-7xl mx-auto">
         {/* Header estilo Jarvis */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <h1
-            className="text-6xl md:text-7xl font-extrabold tracking-tight mb-4"
+            className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-3 md:mb-4"
             style={{
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "#2093c4",
@@ -577,20 +579,24 @@ function Admin() {
           >
             JARVIS
           </h1>
-          <p className="text-gray-300 text-lg font-bold">
-            Panel de Administración - Vixis Portfolio
+          <p className="text-gray-300 text-base md:text-lg font-bold">
+            {t("admin.title")} - Vixis Portfolio
           </p>
-          <div className="mt-4 flex items-center justify-start gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-green-400 text-sm">Sistema Operativo</span>
+          <div className="mt-3 md:mt-4 flex items-center justify-center gap-2">
+            <div className="w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-green-400 text-xs md:text-sm">
+              Sistema Operativo
+            </span>
           </div>
         </div>
 
         {/* Plataformas externas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Analíticas */}
-          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-6 border border-white/20">
-            <h2 className="text-xl font-bold text-white mb-4">Analíticas</h2>
+          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">
+              Analíticas
+            </h2>
             <div className="space-y-3">
               <a
                 href="https://plausible.io"
@@ -662,8 +668,10 @@ function Admin() {
           </div>
 
           {/* Logs - Logtail */}
-          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-6 border border-white/20">
-            <h2 className="text-xl font-bold text-white mb-4">Logs</h2>
+          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">
+              Logs
+            </h2>
             <a
               href="https://logtail.com"
               target="_blank"
@@ -689,8 +697,10 @@ function Admin() {
           </div>
 
           {/* UX Research - Hotjar */}
-          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-6 border border-white/20">
-            <h2 className="text-xl font-bold text-white mb-4">UX Research</h2>
+          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">
+              UX Research
+            </h2>
             <a
               href="https://insights.hotjar.com/"
               target="_blank"
@@ -716,8 +726,8 @@ function Admin() {
           </div>
 
           {/* Estado del Proyecto - Better Uptime */}
-          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-6 border border-white/20">
-            <h2 className="text-xl font-bold text-white mb-4">
+          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">
               Estado del Proyecto
             </h2>
             <a
@@ -756,23 +766,23 @@ function Admin() {
         </div>
 
         {/* Sección CRUD */}
-        <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-6 border border-white/20 mt-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex-1">
+        <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20 mt-6 md:mt-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 md:mb-6">
+            <div className="flex-1 w-full">
               <button
                 onClick={handleCreate}
-                className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-white rounded-lg transition-colors cursor-pointer mb-4"
+                className="w-full sm:w-auto px-3 md:px-4 py-2 text-sm md:text-base bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-white rounded-lg transition-colors cursor-pointer mb-3 md:mb-4"
               >
-                + Crear Nuevo
+                + {t("admin.createNew")}
               </button>
-              <h2 className="text-2xl font-bold text-white">
-                Gestión de Contenido
+              <h2 className="text-xl md:text-2xl font-bold text-white">
+                {t("admin.contentManagement")}
               </h2>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-2 mb-6 border-b border-white/20">
+          <div className="flex flex-wrap gap-1 md:gap-2 mb-4 md:mb-6 border-b border-white/20 overflow-x-auto">
             {(
               [
                 "products",
@@ -789,7 +799,7 @@ function Admin() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 font-semibold transition-colors cursor-pointer ${
+                className={`px-2 md:px-4 py-1 md:py-2 text-xs md:text-base font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                   activeTab === tab
                     ? "text-white border-b-2"
                     : "text-gray-400 hover:text-white"
@@ -800,24 +810,26 @@ function Admin() {
                     : undefined
                 }
               >
-                {tab === "products" && "Productos"}
-                {tab === "projects" && "Proyectos"}
-                {tab === "clients" && "Clientes"}
-                {tab === "testimonials" && "Testimonios"}
-                {tab === "socials" && "Redes Sociales"}
-                {tab === "events" && "Eventos"}
-                {tab === "work_experiences" && "Experiencia Laboral"}
-                {tab === "technologies" && "Tecnologías"}
-                {tab === "studies" && "Estudios"}
+                {tab === "products" && t("admin.products")}
+                {tab === "projects" && t("admin.projects")}
+                {tab === "clients" && t("admin.clients")}
+                {tab === "testimonials" && t("admin.testimonials")}
+                {tab === "socials" && t("admin.socials")}
+                {tab === "events" && t("admin.events")}
+                {tab === "work_experiences" && t("admin.workExperiences")}
+                {tab === "technologies" && t("admin.technologies")}
+                {tab === "studies" && t("admin.studies")}
               </button>
             ))}
           </div>
 
           {/* Lista de items */}
           {loadingCRUD ? (
-            <div className="text-center py-8 text-gray-400">Cargando...</div>
+            <div className="text-center py-8 text-gray-400">
+              {t("common.loading")}
+            </div>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-2 md:space-y-3 max-h-96 overflow-y-auto">
               {(activeTab === "products"
                 ? products
                 : activeTab === "projects"
@@ -838,15 +850,15 @@ function Admin() {
               ).map((item: any) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-4 bg-black/20 rounded-lg border border-white/10 hover:border-white/20 transition-colors"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 p-3 md:p-4 bg-black/20 rounded-lg border border-white/10 hover:border-white/20 transition-colors"
                 >
-                  <div className="flex-1">
-                    <h3 className="text-white font-semibold">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-semibold text-sm md:text-base truncate">
                       {activeTab === "testimonials"
-                        ? item.name || item.title || "Cliente"
+                        ? item.name || item.title || t("admin.noClient")
                         : item.title || item.name}
                     </h3>
-                    <p className="text-gray-400 text-sm">
+                    <p className="text-gray-400 text-xs md:text-sm line-clamp-2">
                       {activeTab === "events"
                         ? item.date
                           ? new Date(item.date).toLocaleDateString("es-ES", {
@@ -854,28 +866,30 @@ function Admin() {
                               month: "long",
                               year: "numeric",
                             })
-                          : item.passline_url || "Sin fecha"
+                          : item.passline_url || t("admin.noDate")
                         : activeTab === "testimonials"
                         ? item.testimonial_content
                           ? item.testimonial_content.length > 50
                             ? item.testimonial_content.substring(0, 50) + "..."
                             : item.testimonial_content
-                          : "Sin testimonio"
-                        : item.description || item.url || "Sin descripción"}
+                          : t("admin.noTestimonial")
+                        : item.description ||
+                          item.url ||
+                          t("admin.noDescription")}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 w-full sm:w-auto">
                     <button
                       onClick={() => handleEdit(item)}
-                      className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-white rounded text-sm transition-colors cursor-pointer"
+                      className="flex-1 sm:flex-none px-2 md:px-3 py-1 text-xs md:text-sm bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-white rounded transition-colors cursor-pointer"
                     >
-                      Editar
+                      {t("common.edit")}
                     </button>
                     <button
                       onClick={() => handleDelete(item.id)}
-                      className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-white rounded text-sm transition-colors cursor-pointer"
+                      className="flex-1 sm:flex-none px-2 md:px-3 py-1 text-xs md:text-sm bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-white rounded transition-colors cursor-pointer"
                     >
-                      Eliminar
+                      {t("common.delete")}
                     </button>
                   </div>
                 </div>
@@ -900,42 +914,36 @@ function Admin() {
               ).length === 0 && (
                 <div className="text-center py-8 text-gray-400">
                   {activeTab === "products" && (
-                    <p className="text-lg mb-2">No hay productos disponibles</p>
+                    <p className="text-lg mb-2">{t("admin.noProducts")}</p>
                   )}
                   {activeTab === "projects" && (
-                    <p className="text-lg mb-2">No hay proyectos disponibles</p>
+                    <p className="text-lg mb-2">{t("admin.noProjects")}</p>
                   )}
                   {activeTab === "clients" && (
-                    <p className="text-lg mb-2">No hay clientes disponibles</p>
+                    <p className="text-lg mb-2">{t("admin.noClients")}</p>
                   )}
                   {activeTab === "testimonials" && (
-                    <p className="text-lg mb-2">
-                      No hay testimonios disponibles
-                    </p>
+                    <p className="text-lg mb-2">{t("admin.noTestimonials")}</p>
                   )}
                   {activeTab === "socials" && (
-                    <p className="text-lg mb-2">
-                      No hay redes sociales disponibles
-                    </p>
+                    <p className="text-lg mb-2">{t("admin.noSocials")}</p>
                   )}
                   {activeTab === "events" && (
-                    <p className="text-lg mb-2">No hay eventos disponibles</p>
+                    <p className="text-lg mb-2">{t("admin.noEvents")}</p>
                   )}
                   {activeTab === "work_experiences" && (
                     <p className="text-lg mb-2">
-                      No hay experiencias laborales disponibles
+                      {t("admin.noWorkExperiences")}
                     </p>
                   )}
                   {activeTab === "technologies" && (
-                    <p className="text-lg mb-2">
-                      No hay tecnologías disponibles
-                    </p>
+                    <p className="text-lg mb-2">{t("admin.noTechnologies")}</p>
                   )}
                   {activeTab === "studies" && (
-                    <p className="text-lg mb-2">No hay estudios disponibles</p>
+                    <p className="text-lg mb-2">{t("admin.noStudies")}</p>
                   )}
                   <p className="text-sm text-gray-500">
-                    Crea uno nuevo para comenzar.
+                    {t("admin.createNewToStart")}
                   </p>
                 </div>
               )}
@@ -957,9 +965,9 @@ function Admin() {
               }
             }}
           >
-            <div className="admin-card bg-gray-900 rounded-lg p-6 border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideUp">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">
+            <div className="admin-card bg-gray-900 rounded-lg p-4 md:p-6 border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideUp">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
+                <h2 className="text-xl md:text-2xl font-bold text-white">
                   Gestión de recursos multimedia
                 </h2>
                 <button
@@ -1202,27 +1210,44 @@ function Admin() {
               }
             }}
           >
-            <div className="admin-card bg-gray-900 rounded-lg p-6 border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideUp">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">
-                  {editingItem ? "Editar" : "Crear"}{" "}
+            <div className="admin-card bg-gray-900 rounded-lg p-4 md:p-6 border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideUp">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
+                <h2 className="text-xl md:text-2xl font-bold text-white">
                   {activeTab === "products"
-                    ? "Producto"
+                    ? editingItem
+                      ? t("admin.editProduct")
+                      : t("admin.createProduct")
                     : activeTab === "projects"
-                    ? "Proyecto"
+                    ? editingItem
+                      ? t("admin.editProject")
+                      : t("admin.createProject")
                     : activeTab === "clients"
-                    ? "Cliente"
+                    ? editingItem
+                      ? t("admin.editClient")
+                      : t("admin.createClient")
                     : activeTab === "testimonials"
-                    ? "Testimonio"
+                    ? editingItem
+                      ? t("admin.editTestimonial")
+                      : t("admin.createTestimonial")
                     : activeTab === "socials"
-                    ? "Red Social"
+                    ? editingItem
+                      ? t("admin.editSocial")
+                      : t("admin.createSocial")
                     : activeTab === "events"
-                    ? "Evento"
+                    ? editingItem
+                      ? t("admin.editEvent")
+                      : t("admin.createEvent")
                     : activeTab === "work_experiences"
-                    ? "Experiencia Laboral"
+                    ? editingItem
+                      ? t("admin.editWorkExperience")
+                      : t("admin.createWorkExperience")
                     : activeTab === "technologies"
-                    ? "Tecnología"
-                    : "Estudio"}
+                    ? editingItem
+                      ? t("admin.editTechnology")
+                      : t("admin.createTechnology")
+                    : editingItem
+                    ? t("admin.editStudy")
+                    : t("admin.createStudy")}
                 </h2>
                 <button
                   onClick={() => {
@@ -1242,7 +1267,7 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Título *
+                        {t("admin.fieldTitle")} *
                       </label>
                       <input
                         type="text"
@@ -1259,7 +1284,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Descripción
+                        {t("admin.fieldDescription")}
                       </label>
                       <textarea
                         value={crudFormData.description || ""}
@@ -1275,7 +1300,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Descripción Completa
+                        {t("admin.fieldFullDescription")}
                       </label>
                       <textarea
                         value={crudFormData.full_description || ""}
@@ -1291,7 +1316,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Precio Base (COP) *
+                        {t("admin.fieldBasePrice")} *
                       </label>
                       <input
                         type="number"
@@ -1309,7 +1334,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Thumbnail URL
+                        {t("admin.fieldThumbnailUrl")}
                       </label>
                       <input
                         type="url"
@@ -1325,7 +1350,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Tipo de Acción
+                        {t("admin.fieldActionType")}
                       </label>
                       <select
                         value={crudFormData.action_type || "link"}
@@ -1337,14 +1362,20 @@ function Admin() {
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                       >
-                        <option value="link">Link</option>
-                        <option value="submit">Submit</option>
-                        <option value="schedule">Schedule</option>
+                        <option value="link">
+                          {t("admin.actionTypeLink")}
+                        </option>
+                        <option value="submit">
+                          {t("admin.actionTypeSubmit")}
+                        </option>
+                        <option value="schedule">
+                          {t("admin.actionTypeSchedule")}
+                        </option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Action URL
+                        {t("admin.fieldActionUrl")}
                       </label>
                       <input
                         type="url"
@@ -1360,7 +1391,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Pricing Link
+                        {t("admin.fieldPricingLink")}
                       </label>
                       <div className="flex gap-2">
                         <input
@@ -1413,7 +1444,7 @@ function Admin() {
                                 "rgba(32, 147, 196, 0.2)";
                             }}
                           >
-                            Generar
+                            {t("admin.generateLink")}
                           </button>
                         )}
                       </div>
@@ -1432,7 +1463,7 @@ function Admin() {
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        placeholder="Ej: Comprar, Agéndalo, etc."
+                        placeholder={t("admin.buttonTextPlaceholder")}
                       />
                     </div>
                   </>
@@ -1442,7 +1473,7 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Título *
+                        {t("admin.fieldTitle")} *
                       </label>
                       <input
                         type="text"
@@ -1459,7 +1490,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        URL *
+                        {t("admin.fieldUrl")} *
                       </label>
                       <input
                         type="url"
@@ -1476,7 +1507,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Repositorio
+                        {t("admin.fieldRepository")}
                       </label>
                       <input
                         type="url"
@@ -1493,7 +1524,7 @@ function Admin() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-gray-300 text-sm mb-2">
-                          Mes *
+                          {t("admin.fieldMonth")} *
                         </label>
                         <input
                           type="text"
@@ -1510,7 +1541,7 @@ function Admin() {
                       </div>
                       <div>
                         <label className="block text-gray-300 text-sm mb-2">
-                          Año *
+                          {t("admin.fieldYear")} *
                         </label>
                         <input
                           type="number"
@@ -1528,7 +1559,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Thumbnail URL
+                        {t("admin.fieldThumbnailUrl")}
                       </label>
                       <input
                         type="url"
@@ -1555,7 +1586,7 @@ function Admin() {
                           }
                           className="w-4 h-4"
                         />
-                        Proyecto Especial
+                        {t("projects.special")}
                       </label>
                     </div>
                   </>
@@ -1582,7 +1613,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Logo URL *
+                        {t("admin.fieldLogo")} *
                       </label>
                       <input
                         type="url"
@@ -1616,7 +1647,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        URL *
+                        {t("admin.fieldUrl")} *
                       </label>
                       <input
                         type="url"
@@ -1638,7 +1669,7 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Cliente *
+                        {t("admin.clients")} *
                       </label>
                       <select
                         value={crudFormData.client_id || ""}
@@ -1652,7 +1683,7 @@ function Admin() {
                         required
                         disabled={!!editingItem}
                       >
-                        <option value="">Selecciona un cliente</option>
+                        <option value="">{t("common.selectOption")}</option>
                         {clients.map((client) => (
                           <option key={client.id} value={client.id}>
                             {client.name}
@@ -1661,13 +1692,13 @@ function Admin() {
                       </select>
                       {editingItem && (
                         <p className="text-xs text-gray-500 mt-1">
-                          El cliente no se puede cambiar al editar
+                          {t("admin.clientCannotChange")}
                         </p>
                       )}
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Contenido del Testimonio *
+                        {t("admin.fieldTestimonialContent")} *
                       </label>
                       <textarea
                         value={crudFormData.testimonial_content || ""}
@@ -1685,7 +1716,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Autor del Testimonio *
+                        {t("admin.fieldTestimonialAuthor")} *
                       </label>
                       <input
                         type="text"
@@ -1703,7 +1734,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Rol/Cargo del Autor
+                        {t("admin.fieldTestimonialRole")}
                       </label>
                       <input
                         type="text"
@@ -1720,7 +1751,8 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        URL del Testimonio (Opcional)
+                        {t("admin.fieldTestimonialUrl")} ({t("common.optional")}
+                        )
                       </label>
                       <input
                         type="url"
@@ -1742,7 +1774,7 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Título *
+                        {t("admin.fieldTitle")} *
                       </label>
                       <input
                         type="text"
@@ -1759,7 +1791,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Descripción *
+                        {t("admin.fieldDescription")} *
                       </label>
                       <textarea
                         value={crudFormData.description || ""}
@@ -1776,7 +1808,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Logo URL *
+                        {t("admin.fieldLogo")} *
                       </label>
                       <input
                         type="url"
@@ -1793,7 +1825,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        URL *
+                        {t("admin.fieldUrl")} *
                       </label>
                       <input
                         type="url"
@@ -1810,7 +1842,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Imagen URL
+                        {t("admin.fieldThumbnailUrl")}
                       </label>
                       <input
                         type="url"
@@ -1826,7 +1858,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Categoría
+                        {t("admin.fieldCategory")}
                       </label>
                       <input
                         type="text"
@@ -1848,7 +1880,7 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        URL del Evento *
+                        {t("admin.eventUrl")} *
                       </label>
                       <div className="flex gap-2">
                         <input
@@ -1866,18 +1898,17 @@ function Admin() {
                           className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {extractingEventData
-                            ? "Extrayendo..."
-                            : "Extraer Datos"}
+                            ? t("common.loading")
+                            : t("admin.extractEventData")}
                         </button>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        Soporta: Passline, start.gg y otras plataformas de
-                        eventos
+                        {t("admin.supportsEventPlatforms")}
                       </p>
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Título del Evento *
+                        {t("admin.fieldTitle")} *
                       </label>
                       <input
                         type="text"
@@ -1895,7 +1926,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Fecha del Evento *
+                        {t("admin.eventDate")} *
                       </label>
                       <input
                         type="date"
@@ -1912,7 +1943,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Descripción
+                        {t("admin.fieldDescription")}
                       </label>
                       <textarea
                         value={crudFormData.description || ""}
@@ -1929,7 +1960,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        URL de Imagen (Thumbnail)
+                        {t("admin.fieldThumbnailUrl")}
                       </label>
                       <input
                         type="url"
@@ -1968,7 +1999,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Empresa *
+                        {t("admin.fieldCompany")} *
                       </label>
                       <input
                         type="text"
@@ -1985,7 +2016,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        URL de la Empresa
+                        {t("admin.fieldCompanyUrl")}
                       </label>
                       <input
                         type="url"
@@ -2001,7 +2032,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Logo de la Empresa (URL)
+                        {t("admin.fieldCompanyLogo")}
                       </label>
                       <input
                         type="url"
@@ -2017,7 +2048,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Ubicación *
+                        {t("admin.fieldLocation")} *
                       </label>
                       <input
                         type="text"
@@ -2054,7 +2085,8 @@ function Admin() {
                       </div>
                       <div>
                         <label className="block text-gray-300 text-sm mb-2">
-                          Fecha de Fin (YYYY-MM) - Dejar vacío si es actual
+                          {t("admin.fieldEndDate")} (YYYY-MM) -{" "}
+                          {t("admin.leaveEmptyIfCurrent")}
                         </label>
                         <input
                           type="text"
@@ -2241,7 +2273,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Icono (URL)
+                        {t("admin.fieldIcon")}
                       </label>
                       <input
                         type="url"
@@ -2282,7 +2314,7 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Título *
+                        {t("admin.fieldTitle")} *
                       </label>
                       <input
                         type="text"
@@ -2299,7 +2331,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Institución *
+                        {t("admin.fieldInstitution")} {"*"}
                       </label>
                       <input
                         type="text"
@@ -2316,7 +2348,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Tipo *
+                        {t("admin.fieldType")} {"*"}
                       </label>
                       <select
                         value={crudFormData.type || "course"}
@@ -2329,15 +2361,21 @@ function Admin() {
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                         required
                       >
-                        <option value="degree">Título Universitario</option>
-                        <option value="certification">Certificación</option>
-                        <option value="course">Curso</option>
+                        <option value="degree">
+                          {t("admin.fieldTypeOptionDegree")}
+                        </option>
+                        <option value="certification">
+                          {t("admin.fieldTypeOptionCertification")}
+                        </option>
+                        <option value="course">
+                          {t("admin.fieldTypeOptionCourse")}
+                        </option>
                       </select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-gray-300 text-sm mb-2">
-                          Fecha de Inicio * (YYYY-MM)
+                          {t("admin.fieldStartDate")} {"*"} (YYYY-MM)
                         </label>
                         <input
                           type="text"
@@ -2355,7 +2393,7 @@ function Admin() {
                       </div>
                       <div>
                         <label className="block text-gray-300 text-sm mb-2">
-                          Fecha de Fin (YYYY-MM) - Dejar vacío si está en curso
+                          {t("admin.fieldEndDate")} {"*"} (YYYY-MM)
                         </label>
                         <input
                           type="text"
@@ -2373,7 +2411,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Descripción *
+                        {t("admin.fieldDescription")} {"*"}
                       </label>
                       <textarea
                         value={crudFormData.description || ""}
@@ -2390,7 +2428,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Logo (URL)
+                        {t("admin.fieldLogo")} {"*"}
                       </label>
                       <input
                         type="url"
@@ -2406,7 +2444,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        URL del Certificado
+                        {t("admin.fieldCertificateUrl")}
                       </label>
                       <input
                         type="url"
@@ -2422,7 +2460,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Estado *
+                        {t("admin.fieldStatus")} {"*"}
                       </label>
                       <select
                         value={crudFormData.status || "completed"}
@@ -2435,27 +2473,31 @@ function Admin() {
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                         required
                       >
-                        <option value="completed">Completado</option>
-                        <option value="in-progress">En curso</option>
+                        <option value="completed">
+                          {t("admin.completed")}
+                        </option>
+                        <option value="in-progress">
+                          {t("admin.inProgress")}
+                        </option>
                       </select>
                     </div>
                   </>
                 )}
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-2 md:gap-3 pt-4">
                   <button
                     onClick={() => {
                       setShowCRUDModal(false);
                       setEditingItem(null);
                       setCrudFormData({});
                     }}
-                    className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                    className="flex-1 sm:flex-none px-4 py-2 text-sm md:text-base bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
                   >
-                    Cancelar
+                    {t("common.cancel")}
                   </button>
                   <button
                     onClick={handleSave}
-                    className="flex-1 px-4 py-2 text-white rounded-lg transition-colors cursor-pointer"
+                    className="flex-1 sm:flex-none px-4 py-2 text-sm md:text-base text-white rounded-lg transition-colors cursor-pointer"
                     style={{
                       backgroundColor: "rgba(32, 147, 196, 0.2)",
                       borderColor: "rgba(32, 147, 196, 0.3)",
@@ -2471,7 +2513,7 @@ function Admin() {
                         "rgba(32, 147, 196, 0.2)";
                     }}
                   >
-                    {editingItem ? "Actualizar" : "Crear"}
+                    {editingItem ? t("common.update") : t("common.create")}
                   </button>
                 </div>
               </div>

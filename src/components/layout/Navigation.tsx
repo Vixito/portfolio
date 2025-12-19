@@ -35,13 +35,8 @@ function Navigation() {
     {
       path: "/studio",
       label: "Studio",
-      icon: (
-        <img
-          src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
-          alt="Studio"
-          className="w-4 h-4"
-        />
-      ),
+      icon: "🎨", // Emoji para móvil (se reemplazará por logo)
+      iconImage: "https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp", // Logo para móvil
     },
     {
       path: "/about",
@@ -175,7 +170,19 @@ function Navigation() {
       <ul className="links">
         {simpleItems.map((item) => (
           <li key={item.path}>
-            <Link to={item.path} title={item.label} data-icon={item.icon} />
+            <Link
+              to={item.path}
+              title={item.label}
+              data-icon={item.icon}
+              {...(item.iconImage
+                ? {
+                    "data-icon-image": item.iconImage,
+                    style: {
+                      "--studio-logo-url": `url(${item.iconImage})`,
+                    } as React.CSSProperties,
+                  }
+                : {})}
+            />
           </li>
         ))}
 
@@ -449,6 +456,16 @@ function Navigation() {
         
         /* Responsive: Mostrar íconos en móviles */
         @media (max-width: 768px) {
+          /* En móvil, mostrar logo de Studio cuando existe data-icon-image (debe ir primero para sobrescribir) */
+          #cubicle > .links a[data-icon-image]::before,
+          #cubicle > .links a[data-icon-image]::after {
+            content: "" !important;
+            background-image: var(--studio-logo-url) !important;
+            background-size: 20px 20px !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+          }
+          
           #cubicle > .links a::before,
           #cubicle > .links a::after {
             content: attr(data-icon);

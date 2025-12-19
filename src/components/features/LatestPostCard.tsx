@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "../../lib/i18n";
 
 function LatestPostCard() {
+  const { t } = useTranslation();
   // Datos del último post - puedes obtenerlos de tu API o estado
   const latestPost = {
     id: "1",
@@ -31,7 +33,9 @@ function LatestPostCard() {
             />
           </svg>
         </div>
-        <span className="text-sm font-semibold text-gray-600">Último Post</span>
+        <span className="text-sm font-semibold text-gray-600">
+          {t("latestPostCard.title")}
+        </span>
       </div>
       <p className="text-xs text-gray-500 mb-3">{latestPost.date}</p>
       <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-2">
@@ -54,7 +58,7 @@ function LatestPostCard() {
         to={latestPost.url}
         className="text-sm text-purple hover:text-blue transition-colors cursor-pointer inline-flex items-center gap-1"
       >
-        Leer más
+        {t("latestPostCard.readMore")}
         <svg
           className="w-4 h-4"
           fill="none"

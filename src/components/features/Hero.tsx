@@ -4,10 +4,12 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import StatusBadge from "./StatusBadge";
 import AnimationVixis from "./AnimationVixis";
 import HomeSection from "./HomeSection";
+import { useTranslation } from "../../lib/i18n";
 
 gsap.registerPlugin(ScrollTrigger);
 
 function Hero() {
+  const { t } = useTranslation();
   const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,12 +56,12 @@ function Hero() {
               />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 text-center md:text-left">
-              Carlos Andrés Vicioso Lara
+              {t("home.title")}
             </h1>
             <p className="text-lg text-gray-600 text-center md:text-left">
-              Ingeniero de Sistemas, Colombia.
+              {t("home.subtitle")}
               <br />
-              Especializado en el desarrollo backend.
+              {t("home.specialization")}
             </p>
             <div className="flex justify-center md:justify-start">
               <StatusBadge />

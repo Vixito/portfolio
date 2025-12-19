@@ -3,6 +3,7 @@ import Pagination from "../components/ui/Pagination";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import { getProducts } from "../lib/supabase-functions";
+import { useTranslation } from "../lib/i18n";
 
 interface StoreItem {
   id: string;
@@ -20,6 +21,7 @@ interface StoreItem {
 }
 
 function Store() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -88,8 +90,8 @@ function Store() {
         // Aquí podrías abrir un modal de formulario para "Agéndalo"
         alert(
           item.action_type === "schedule"
-            ? "Funcionalidad de agendamiento próximamente disponible"
-            : "Enviando solicitud..."
+            ? t("store.scheduleSoon")
+            : t("store.sendingRequest")
         );
       }
     }
@@ -116,19 +118,19 @@ function Store() {
     // Texto por defecto según el tipo de acción
     switch (item.action_type) {
       case "schedule":
-        return "Agéndalo";
+        return t("store.schedule");
       case "submit":
-        return "Solicitar";
+        return t("store.request");
       case "link":
       default:
-        return "Comprar";
+        return t("store.buy");
     }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Cargando productos...</div>
+        <div className="text-gray-600">{t("common.loading")}</div>
       </div>
     );
   }
@@ -137,18 +139,16 @@ function Store() {
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
-          Tienda
+          {t("store.title")}
         </h1>
 
         {/* Grid de productos */}
         {items.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-2xl text-gray-600 mb-4">
-              No hay productos disponibles
+              {t("store.noProducts")}
             </p>
-            <p className="text-gray-500">
-              Vuelve pronto para ver mis productos
-            </p>
+            <p className="text-gray-500">{t("store.noProductsDescription")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
@@ -185,7 +185,7 @@ function Store() {
                     {item.title}
                   </h3>
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {item.description || "Sin descripción disponible"}
+                    {item.description || t("common.noContent")}
                   </p>
                   <div className="flex items-center justify-between">
                     <p className="text-2xl font-bold text-purple">
@@ -266,7 +266,7 @@ function Store() {
                   <p className="text-gray-600">
                     {selectedItem.full_description ||
                       selectedItem.description ||
-                      "Sin descripción disponible"}
+                      t("common.noContent")}
                   </p>
                 </div>
 
@@ -293,7 +293,7 @@ function Store() {
                       }}
                       className="w-full"
                     >
-                      Ver Pricing
+                      {t("store.viewPricing")}
                     </Button>
                   )}
                 </div>

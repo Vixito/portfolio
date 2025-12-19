@@ -6,6 +6,7 @@ Por ahora, este código muestra una lista simple que puedes paginar después.
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { getSocials } from "../lib/supabase-functions";
+import { useTranslation } from "../lib/i18n";
 
 interface SocialLink {
   id: string;
@@ -18,6 +19,7 @@ interface SocialLink {
 }
 
 function Socials() {
+  const { t } = useTranslation();
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,7 +43,7 @@ function Socials() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Cargando...</div>
+        <div className="text-gray-600">{t("socials.loading")}</div>
       </div>
     );
   }
@@ -50,17 +52,15 @@ function Socials() {
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
-          Redes Sociales
+          {t("socials.title")}
         </h1>
 
         {socialLinks.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-2xl text-gray-600 mb-4">
-              No hay redes sociales disponibles
+              {t("socials.noSocials")}
             </p>
-            <p className="text-gray-500">
-              Vuelve pronto para ver mis redes sociales
-            </p>
+            <p className="text-gray-500">{t("socials.noSocialsDescription")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -91,7 +91,7 @@ function Socials() {
                       {social.title}
                     </h3>
 
-                    {/* Badge del logo + texto del enlace - SOLO ESTE ES CLICKEABLE */}
+                    {/* Badge del logo + texto del enlace */}
                     <a
                       href={social.url}
                       target="_blank"
@@ -106,7 +106,7 @@ function Socials() {
                         />
                       </div>
                       <span className="text-sm font-medium text-blue group-hover:text-blue transition-colors">
-                        Visitar
+                        {t("socials.visit")}
                       </span>
                     </a>
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import Button from "../components/ui/Button";
 import { getWorkExperiences } from "../lib/supabase-functions";
+import { useTranslation } from "../lib/i18n";
 
 interface WorkExperience {
   id: string;
@@ -20,6 +21,7 @@ interface WorkExperience {
 }
 
 function WorkExperience() {
+  const { t } = useTranslation();
   const [experiences, setExperiences] = useState<WorkExperience[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedExperience, setSelectedExperience] =
@@ -88,10 +90,10 @@ function WorkExperience() {
 
   const getTypeLabel = (type: WorkExperience["type"]) => {
     const labels = {
-      "full-time": "Tiempo Completo",
-      "part-time": "Medio Tiempo",
-      contract: "Contrato",
-      freelance: "Freelance",
+      "full-time": t("workExperience.fullTime"),
+      "part-time": t("workExperience.partTime"),
+      contract: t("workExperience.contract"),
+      freelance: t("workExperience.freelance"),
     };
     return labels[type];
   };
@@ -99,7 +101,7 @@ function WorkExperience() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Cargando experiencia...</div>
+        <div className="text-gray-600">{t("workExperience.loading")}</div>
       </div>
     );
   }
@@ -108,16 +110,16 @@ function WorkExperience() {
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
-          Experiencia Laboral
+          {t("workExperience.title")}
         </h1>
 
         {experiences.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-2xl text-gray-600 mb-4">
-              No hay experiencias laborales disponibles
+              {t("workExperience.noExperiences")}
             </p>
             <p className="text-gray-500">
-              Vuelve pronto para ver mi experiencia profesional
+              {t("workExperience.noExperiencesDescription")}
             </p>
           </div>
         ) : (
@@ -173,7 +175,7 @@ function WorkExperience() {
                             )}
                             {experience.status === "current" && (
                               <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Actual
+                                {t("workExperience.current")}
                               </span>
                             )}
                           </div>
@@ -217,19 +219,27 @@ function WorkExperience() {
                               <span>
                                 {new Date(
                                   experience.startDate
-                                ).toLocaleDateString("es-ES", {
-                                  year: "numeric",
-                                  month: "long",
-                                })}
+                                ).toLocaleDateString(
+                                  t("language") === "es" ? "es-ES" : "en-US",
+                                  {
+                                    year: "numeric",
+                                    month: "long",
+                                  }
+                                )}
                                 {" - "}
                                 {experience.endDate
                                   ? new Date(
                                       experience.endDate
-                                    ).toLocaleDateString("es-ES", {
-                                      year: "numeric",
-                                      month: "long",
-                                    })
-                                  : "Presente"}
+                                    ).toLocaleDateString(
+                                      t("language") === "es"
+                                        ? "es-ES"
+                                        : "en-US",
+                                      {
+                                        year: "numeric",
+                                        month: "long",
+                                      }
+                                    )
+                                  : t("workExperience.present")}
                               </span>
                             </div>
                             <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
@@ -246,7 +256,7 @@ function WorkExperience() {
                       {/* Responsabilidades */}
                       <div className="mb-4">
                         <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                          Responsabilidades:
+                          {t("workExperience.responsibilities")}:
                         </h3>
                         <ul className="list-disc list-inside space-y-1 text-gray-600 text-sm">
                           {experience.responsibilities.map((resp, index) => (
@@ -258,7 +268,7 @@ function WorkExperience() {
                       {/* Tecnologías */}
                       <div>
                         <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                          Tecnologías:
+                          {t("workExperience.technologies")}:
                         </h3>
                         <div className="flex flex-wrap gap-2">
                           {experience.technologies.map((tech) => (

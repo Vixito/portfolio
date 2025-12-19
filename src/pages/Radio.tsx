@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import { getUpcomingEvents } from "../lib/supabase-functions";
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
+import { useTranslation } from "../lib/i18n";
 
 interface Song {
   id: string;
@@ -13,6 +14,7 @@ interface Song {
 }
 
 function Radio() {
+  const { t, language } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const marqueeRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -78,8 +80,10 @@ function Radio() {
           // La radio está activa
           setIsLive(true);
           const title =
-            mountpoint.title || mountpoint.yp_currently_playing || "En vivo";
-          const artist = mountpoint.artist || "Radio Vixis";
+            mountpoint.title ||
+            mountpoint.yp_currently_playing ||
+            t("radio.liveTitle");
+          const artist = mountpoint.artist || t("radio.liveArtist");
 
           setCurrentSong({
             id: "live",
@@ -92,8 +96,8 @@ function Radio() {
           setIsLive(false);
           setCurrentSong({
             id: "offline",
-            title: "Radio fuera de línea",
-            artist: "Esperando transmisión...",
+            title: t("radio.offlineTitle"),
+            artist: t("radio.waiting"),
             url: ICECAST_STREAM_URL,
           });
         }
@@ -103,8 +107,8 @@ function Radio() {
         setIsLive(false);
         setCurrentSong({
           id: "offline",
-          title: "Radio fuera de línea",
-          artist: "No se puede conectar al servidor",
+          title: t("radio.offlineTitle"),
+          artist: t("radio.offlineArtist"),
           url: ICECAST_STREAM_URL,
         });
       }
@@ -115,24 +119,21 @@ function Radio() {
     const interval = setInterval(fetchMetadata, 10000);
 
     return () => clearInterval(interval);
-  }, [ICECAST_STATUS_URL, ICECAST_STREAM_URL]);
+  }, [ICECAST_STATUS_URL, ICECAST_STREAM_URL, t, language]);
 
   // Reproducir automáticamente cuando la radio esté en vivo
   useEffect(() => {
     if (isLive && audioRef.current && !isPlaying) {
       // Intentar reproducir automáticamente
       audioRef.current.play().catch((error) => {
-        console.log(
-          "No se pudo reproducir automáticamente (puede requerir interacción del usuario):",
-          error
-        );
+        console.log(t("radio.autoplayBlocked"), error);
       });
     } else if (!isLive && audioRef.current && isPlaying) {
       // Pausar si la radio se desconecta
       audioRef.current.pause();
       setIsPlaying(false);
     }
-  }, [isLive, isPlaying]);
+  }, [isLive, isPlaying, t]);
 
   // Cargar eventos próximos
   useEffect(() => {
@@ -327,10 +328,18 @@ function Radio() {
     const msgDate = new Date(date);
     const diffSeconds = Math.floor((now.getTime() - msgDate.getTime()) / 1000);
 
-    if (diffSeconds < 60) return "ahora";
-    if (diffSeconds < 3600) return `hace ${Math.floor(diffSeconds / 60)}m`;
-    if (diffSeconds < 86400) return `hace ${Math.floor(diffSeconds / 3600)}h`;
-    return `hace ${Math.floor(diffSeconds / 86400)}d`;
+    if (diffSeconds < 60) return t("radio.now");
+    if (diffSeconds < 3600)
+      return `${t("radio.ago")} ${Math.floor(diffSeconds / 60)} ${t(
+        "radio.minutes"
+      )}`;
+    if (diffSeconds < 86400)
+      return `${t("radio.ago")} ${Math.floor(diffSeconds / 3600)} ${t(
+        "radio.hours"
+      )}`;
+    return `${t("radio.ago")} ${Math.floor(diffSeconds / 86400)} ${t(
+      "radio.days"
+    )}`;
   };
 
   // Validaciones anti-abuso
@@ -349,29 +358,29 @@ function Radio() {
     // Validar username
     const trimmedUser = user.trim();
     if (trimmedUser.length < 2 || trimmedUser.length > 20) {
-      return "El nombre debe tener entre 2 y 20 caracteres";
+      return t("radio.usernameTooShort");
     }
     if (!/^[a-zA-Z0-9_-]+$/.test(trimmedUser)) {
-      return "El nombre solo puede contener letras, números, guiones y guiones bajos";
+      return t("radio.usernameInvalid");
     }
 
     // Validar mensaje
     const trimmedMsg = msg.trim();
     if (trimmedMsg.length < 1 || trimmedMsg.length > 200) {
-      return "El mensaje debe tener entre 1 y 200 caracteres";
+      return t("radio.messageTooLong");
     }
 
     // Rate limiting (3 segundos mínimo entre mensajes)
     const now = Date.now();
     if (now - lastMessageTime < 3000) {
-      return "Espera un momento antes de enviar otro mensaje";
+      return t("radio.rateLimit");
     }
 
     // Verificar palabras prohibidas
     const lowerMsg = trimmedMsg.toLowerCase();
     for (const word of bannedWords) {
       if (lowerMsg.includes(word.toLowerCase())) {
-        return "El mensaje contiene palabras no permitidas";
+        return t("radio.bannedWords");
       }
     }
 
@@ -383,7 +392,7 @@ function Radio() {
     e.preventDefault();
 
     if (!username.trim()) {
-      alert("Por favor, ingresa un nombre de usuario");
+      alert(t("radio.usernameRequired"));
       return;
     }
 
@@ -426,7 +435,7 @@ function Radio() {
       setLastMessageTime(Date.now());
     } catch (error) {
       console.error("Error al enviar mensaje:", error);
-      alert("Error al enviar el mensaje. Intenta de nuevo.");
+      alert(t("common.error"));
     } finally {
       setIsSending(false);
     }
@@ -436,20 +445,20 @@ function Radio() {
     <div className="min-h-screen flex flex-col">
       {/* Barra del reproductor (fija arriba, negra, h-10, sin animaciones) */}
       <div
-        className="fixed top-0 left-0 right-0 bg-black text-white z-40 h-10 flex items-center px-4"
+        className="fixed top-0 left-0 right-0 bg-black text-white z-40 h-10 md:h-12 flex items-center px-2 md:px-4"
         style={{ transform: "translateZ(0)", willChange: "auto" }}
       >
-        <div className="max-w-7xl mx-auto w-full flex items-center gap-4">
+        <div className="max-w-7xl mx-auto w-full flex items-center gap-1 md:gap-4">
           {/* Controles principales */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             <button
               onClick={togglePlayPause}
-              className="w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded transition-colors cursor-pointer"
-              aria-label={isPlaying ? "Pausar" : "Reproducir"}
+              className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center hover:bg-white/20 rounded transition-colors cursor-pointer flex-shrink-0"
+              aria-label={isPlaying ? t("radio.pause") : t("radio.play")}
             >
               {isPlaying ? (
                 <svg
-                  className="w-6 h-6"
+                  className="w-4 h-4 md:w-6 md:h-6"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
@@ -457,7 +466,7 @@ function Radio() {
                 </svg>
               ) : (
                 <svg
-                  className="w-6 h-6"
+                  className="w-4 h-4 md:w-6 md:h-6"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
@@ -467,8 +476,8 @@ function Radio() {
             </button>
 
             <button
-              className="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded transition-colors"
-              aria-label="Anterior"
+              className="hidden md:flex w-8 h-8 items-center justify-center hover:bg-white/20 rounded transition-colors"
+              aria-label={t("radio.previous")}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
@@ -476,8 +485,8 @@ function Radio() {
             </button>
 
             <button
-              className="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded transition-colors"
-              aria-label="Siguiente"
+              className="hidden md:flex w-8 h-8 items-center justify-center hover:bg-white/20 rounded transition-colors"
+              aria-label={t("radio.next")}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
@@ -486,21 +495,21 @@ function Radio() {
           </div>
 
           {/* Texto marquee (solo esto tiene animación) */}
-          <div className="flex-1 overflow-hidden relative h-8 flex items-center justify-center">
+          <div className="flex-1 overflow-hidden relative h-8 flex items-center justify-center min-w-0">
             <div
               ref={marqueeRef}
-              className="whitespace-nowrap text-sm font-medium"
+              className="whitespace-nowrap text-xs md:text-sm font-medium"
               style={{ willChange: "transform" }}
             >
               {currentSong
                 ? `${currentSong.title} - ${currentSong.artist}`
-                : "Cargando..."}
+                : t("radio.loading")}
             </div>
           </div>
 
           {/* Tiempo y barra de progreso (oculto para streams en vivo) */}
           {duration > 0 ? (
-            <div className="flex items-center gap-2 min-w-[200px]">
+            <div className="hidden md:flex items-center gap-2 min-w-[200px]">
               <span className="text-xs text-gray-400 min-w-[40px] text-right">
                 {formatTime(currentTime)}
               </span>
@@ -524,19 +533,21 @@ function Radio() {
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 min-w-[100px]">
+            <div className="flex items-center gap-2 min-w-[60px] md:min-w-[100px]">
               {isLive ? (
-                <span className="text-xs text-blue-400 font-semibold animate-pulse">
-                  ● EN VIVO
+                <span className="text-[10px] md:text-xs text-blue-400 font-semibold animate-pulse">
+                  ● {t("radio.live")}
                 </span>
               ) : (
-                <span className="text-xs text-gray-400">○ OFFLINE</span>
+                <span className="text-[10px] md:text-xs text-gray-400">
+                  ○ {t("radio.offline")}
+                </span>
               )}
             </div>
           )}
 
           {/* Control de volumen */}
-          <div className="flex items-center gap-2 min-w-[120px]">
+          <div className="hidden md:flex items-center gap-2 min-w-[120px]">
             <svg
               className="w-5 h-5 text-gray-400"
               fill="currentColor"
@@ -568,10 +579,14 @@ function Radio() {
 
           {/* Botón de ajustes/menú */}
           <button
-            className="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded transition-colors"
-            aria-label="Ajustes"
+            className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center hover:bg-white/20 rounded transition-colors flex-shrink-0"
+            aria-label={t("nav.settings")}
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-4 h-4 md:w-5 md:h-5"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
             </svg>
           </button>
@@ -582,10 +597,10 @@ function Radio() {
       <audio ref={audioRef} src={currentSong?.url} />
 
       {/* Contenido principal */}
-      <div className="pt-15 flex-1">
+      <div className="pt-10 md:pt-15 flex-1">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
-            Radio Vixis
+            {t("radio.title")}
           </h1>
 
           {/* Placeholder para el chat en tiempo real */}
@@ -599,7 +614,7 @@ function Radio() {
                   className="text-lg mb-4 text-gray-900"
                   style={{ fontSize: "12px", lineHeight: "1.8" }}
                 >
-                  CHAT EN TIEMPO REAL
+                  {t("radio.chat")}
                 </h2>
 
                 {/* Contenedor de mensajes con scroll */}
@@ -614,11 +629,11 @@ function Radio() {
                   }}
                 >
                   {messagesLoading ? (
-                    <div className="text-gray-600">Cargando...</div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-gray-500">
-                      No hay mensajes aún. ¡Sé el primero!
+                    <div className="text-gray-600">
+                      {t("radio.loadingMessages")}
                     </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-gray-500">{t("radio.noMessages")}</div>
                   ) : (
                     <div className="space-y-2">
                       {messages.map((msg) => (
@@ -657,7 +672,7 @@ function Radio() {
                       className="block text-gray-900 mb-2"
                       style={{ fontSize: "8px" }}
                     >
-                      INGRESA TU NOMBRE:
+                      {t("radio.username").toUpperCase()}:
                     </label>
                     <input
                       ref={usernameInputRef}
@@ -673,7 +688,7 @@ function Radio() {
                         fontSize: "10px",
                         fontFamily: "'Press Start 2P', monospace",
                       }}
-                      placeholder="Usuario"
+                      placeholder={t("radio.username")}
                       onKeyDown={(e) => {
                         // Solo confirmar username si presiona Enter Y tiene 2+ caracteres
                         if (e.key === "Enter") {
@@ -714,7 +729,7 @@ function Radio() {
                           fontSize: "10px",
                           fontFamily: "'Press Start 2P', monospace",
                         }}
-                        placeholder="Escribe tu mensaje..."
+                        placeholder={t("radio.chatPlaceholder")}
                         disabled={isSending}
                       />
                       <button
@@ -727,12 +742,14 @@ function Radio() {
                           boxShadow: "2px 2px 0px #000",
                         }}
                       >
-                        {isSending ? "..." : "ENVIAR"}
+                        {isSending
+                          ? t("radio.sending")
+                          : t("radio.send").toUpperCase()}
                       </button>
                     </div>
                     <div className="flex items-center justify-between text-gray-500">
                       <span style={{ fontSize: "7px" }}>
-                        Usuario: {username}
+                        {t("radio.username")}: {username}
                       </span>
                       <button
                         type="button"
@@ -748,7 +765,7 @@ function Radio() {
                         className="text-gray-600 hover:text-gray-900 underline"
                         style={{ fontSize: "7px" }}
                       >
-                        Cambiar
+                        {t("common.update")}
                       </button>
                     </div>
                   </form>
@@ -759,18 +776,18 @@ function Radio() {
             <div>
               <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Próximos Eventos
+                  {t("radio.events")}
                 </h2>
                 {eventsLoading ? (
-                  <p className="text-gray-600">Cargando eventos...</p>
+                  <p className="text-gray-600">{t("radio.loadingEvents")}</p>
                 ) : events.length === 0 ? (
-                  <p className="text-gray-600">No hay eventos próximos</p>
+                  <p className="text-gray-600">{t("radio.noEvents")}</p>
                 ) : (
                   <div className="space-y-3">
                     {events.map((event) => {
                       const eventDate = new Date(event.date);
                       const formattedDate = eventDate.toLocaleDateString(
-                        "es-ES",
+                        language === "es" ? "es-ES" : "en-US",
                         {
                           day: "numeric",
                           month: "long",

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { getTechnologies } from "../lib/supabase-functions";
+import { useTranslation } from "../lib/i18n";
 
 interface Technology {
   id: string;
@@ -20,6 +21,7 @@ interface Technology {
 }
 
 function SkillsNTechnologies() {
+  const { t } = useTranslation();
   const [technologies, setTechnologies] = useState<Technology[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -145,10 +147,10 @@ function SkillsNTechnologies() {
 
   const getLevelLabel = (level: Technology["level"]) => {
     const labels = {
-      beginner: "Principiante",
-      intermediate: "Intermedio",
-      advanced: "Avanzado",
-      expert: "Experto",
+      beginner: t("skills.beginner"),
+      intermediate: t("skills.intermediate"),
+      advanced: t("skills.advanced"),
+      expert: t("skills.expert"),
     };
     return labels[level];
   };
@@ -166,7 +168,7 @@ function SkillsNTechnologies() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Cargando tecnologías...</div>
+        <div className="text-gray-600">{t("skills.loading")}</div>
       </div>
     );
   }
@@ -183,7 +185,7 @@ function SkillsNTechnologies() {
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
-          Habilidades y Tecnologías
+          {t("skills.title")}
         </h1>
 
         {/* Tabla de tecnologías */}
@@ -207,11 +209,11 @@ function SkillsNTechnologies() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900">
-                      Tecnología
+                      {t("skills.title")}
                     </span>
                     <input
                       type="text"
-                      placeholder="Buscar..."
+                      placeholder={t("skills.namePlaceholder")}
                       value={filters.name}
                       onChange={(e) =>
                         setFilters({ ...filters, name: e.target.value })
@@ -236,7 +238,7 @@ function SkillsNTechnologies() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900">
-                      Categoría
+                      {t("skills.category")}
                     </span>
                     <select
                       value={filters.category}
@@ -250,15 +252,17 @@ function SkillsNTechnologies() {
                       }
                       className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
-                      <option value="all">Todas</option>
-                      <option value="language">Lenguajes</option>
-                      <option value="framework">Frameworks</option>
-                      <option value="database">Bases de Datos</option>
-                      <option value="tool">Herramientas</option>
-                      <option value="cloud">Cloud</option>
-                      <option value="instrument">Instrumentos</option>
-                      <option value="music">Música</option>
-                      <option value="other">Otro</option>
+                      <option value="all">{t("skills.all")}</option>
+                      <option value="language">{t("skills.language")}</option>
+                      <option value="framework">{t("skills.framework")}</option>
+                      <option value="database">{t("skills.database")}</option>
+                      <option value="tool">{t("skills.tool")}</option>
+                      <option value="cloud">{t("skills.cloud")}</option>
+                      <option value="instrument">
+                        {t("skills.instrument")}
+                      </option>
+                      <option value="music">{t("skills.music")}</option>
+                      <option value="other">{t("skills.other")}</option>
                     </select>
                   </div>
                 </th>
@@ -278,7 +282,7 @@ function SkillsNTechnologies() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900">
-                      Nivel
+                      {t("skills.level")}
                     </span>
                     <select
                       value={filters.level}
@@ -290,11 +294,13 @@ function SkillsNTechnologies() {
                       }
                       className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
-                      <option value="all">Todos</option>
-                      <option value="beginner">Principiante</option>
-                      <option value="intermediate">Intermedio</option>
-                      <option value="advanced">Avanzado</option>
-                      <option value="expert">Experto</option>
+                      <option value="all">{t("skills.all")}</option>
+                      <option value="beginner">{t("skills.beginner")}</option>
+                      <option value="intermediate">
+                        {t("skills.intermediate")}
+                      </option>
+                      <option value="advanced">{t("skills.advanced")}</option>
+                      <option value="expert">{t("skills.expert")}</option>
                     </select>
                   </div>
                 </th>
@@ -314,7 +320,7 @@ function SkillsNTechnologies() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900">
-                      Experiencia
+                      {t("skills.experience")}
                     </span>
                     <select
                       value={filters.experience}
@@ -330,10 +336,10 @@ function SkillsNTechnologies() {
                       }
                       className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
-                      <option value="all">Todas</option>
-                      <option value="1-2">1-2 años</option>
-                      <option value="3-4">3-4 años</option>
-                      <option value="5+">5+ años</option>
+                      <option value="all">{t("skills.all")}</option>
+                      <option value="1-2">1-2 {t("skills.years")}</option>
+                      <option value="3-4">3-4 {t("skills.years")}</option>
+                      <option value="5+">5+ {t("skills.years")}</option>
                     </select>
                   </div>
                 </th>
@@ -399,8 +405,7 @@ function SkillsNTechnologies() {
                   <td className="px-6 py-4">
                     {tech.yearsOfExperience ? (
                       <span className="text-sm text-gray-600">
-                        {tech.yearsOfExperience} año
-                        {tech.yearsOfExperience > 1 ? "s" : ""}
+                        {tech.yearsOfExperience} {t("skills.years")}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>
@@ -431,7 +436,7 @@ function SkillsNTechnologies() {
         {sortedTechnologies.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-600 text-lg">
-              No se encontraron tecnologías con los filtros aplicados.
+              {t("skills.noTechnologies")}
             </p>
           </div>
         )}

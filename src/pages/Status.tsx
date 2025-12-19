@@ -24,22 +24,23 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { createRequest } from "../lib/supabase-functions";
-
-// Esquema de validación con Zod - mensajes mejorados para UX
-const requestSchema = z.object({
-  name: z.string().min(2, "Por favor, ingresa tu nombre completo"),
-  email: z.string().email("Por favor, ingresa un email válido"),
-  requestType: z.enum(["job", "collaboration", "consultation", "other"], {
-    required_error: "Por favor, selecciona un tipo de petición",
-  }),
-  message: z.string().min(10, "Por favor, escribe un mensaje más detallado"),
-});
-
-type RequestFormData = z.infer<typeof requestSchema>;
+import { useTranslation } from "../lib/i18n";
+// Esquema de validación con Zod - se actualizará dinámicamente con traducciones
+const createRequestSchema = (t: (key: string) => string) =>
+  z.object({
+    name: z.string().min(2, t("status.namePlaceholder")),
+    email: z.string().email(t("status.emailPlaceholder")),
+    requestType: z.enum(["job", "collaboration", "consultation", "other"], {
+      error: t("status.typePlaceholder"),
+    }),
+    message: z.string().min(10, t("status.messagePlaceholder")),
+  });
 
 function Status() {
-  const { status } = useStatusStore();
-  const { language } = useLanguageStore();
+  const { t, language } = useTranslation();
+
+  const requestSchema = createRequestSchema(t);
+  type RequestFormData = z.infer<typeof requestSchema>;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>("");
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -171,16 +172,14 @@ function Status() {
       });
 
       // Éxito
-      alert("¡Petición enviada con éxito! Te contactaré pronto.");
+      alert(t("status.success"));
       reset();
       setIsFormOpen(false);
     } catch (error) {
       // Error
-      console.error("Error al enviar petición:", error);
+      console.error(t("status.error"), error);
       alert(
-        error instanceof Error
-          ? `Error: ${error.message}`
-          : "Hubo un error al enviar tu petición. Por favor, intenta de nuevo."
+        error instanceof Error ? `Error: ${error.message}` : t("status.error")
       );
     }
   };
@@ -205,25 +204,25 @@ function Status() {
 
   // Datos mock para los gráficos
   const timeData = [
-    { date: "Lun", available: 8, away: 2, busy: 0 },
-    { date: "Mar", available: 7, away: 1, busy: 2 },
-    { date: "Mié", available: 6, away: 3, busy: 1 },
-    { date: "Jue", available: 8, away: 0, busy: 2 },
-    { date: "Vie", available: 5, away: 2, busy: 3 },
+    { date: t("status.mon"), available: 8, away: 2, busy: 0 },
+    { date: t("status.tue"), available: 7, away: 1, busy: 2 },
+    { date: t("status.wed"), available: 6, away: 3, busy: 1 },
+    { date: t("status.thu"), available: 8, away: 0, busy: 2 },
+    { date: t("status.fri"), available: 5, away: 2, busy: 3 },
   ];
 
   const statusDistribution = [
-    { name: "Disponible", value: 34, color: "#10b981" },
-    { name: "Ausente", value: 8, color: "#f59e0b" },
-    { name: "Ocupado", value: 8, color: "#ef4444" },
+    { name: t("status.available"), value: 34, color: "#10b981" },
+    { name: t("status.away"), value: 8, color: "#f59e0b" },
+    { name: t("status.busy"), value: 8, color: "#ef4444" },
   ];
 
   const weeklyStats = [
-    { day: "Lunes", hours: 8 },
-    { day: "Martes", hours: 7 },
-    { day: "Miércoles", hours: 6 },
-    { day: "Jueves", hours: 8 },
-    { day: "Viernes", hours: 5 },
+    { day: t("status.monday"), hours: 8 },
+    { day: t("status.tuesday"), hours: 7 },
+    { day: t("status.wednesday"), hours: 6 },
+    { day: t("status.thursday"), hours: 8 },
+    { day: t("status.friday"), hours: 5 },
   ];
 
   return (
@@ -233,19 +232,19 @@ function Status() {
           {/* Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
-              Estado Profesional
+              {t("status.title")}
             </h1>
           </div>
 
           {/* Botones alineados a la izquierda encima de las gráficas */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
               <StatusBadge />
               <button
                 onClick={() => setIsFormOpen(true)}
-                className="px-6 py-1.5 rounded-lg border border-blue-500/50 bg-blue-100/50 text-black font-semibold hover:bg-blue-100/80 transition-all cursor-pointer"
+                className="px-4 md:px-6 py-1.5 text-sm md:text-base rounded-lg border border-blue-500/50 bg-blue-100/50 text-black font-semibold hover:bg-blue-100/80 transition-all cursor-pointer"
               >
-                Enviar una Petición
+                {t("status.sendRequest")}
               </button>
             </div>
             <a
@@ -254,20 +253,20 @@ function Status() {
               }
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-black pr-7 hover:text-purple transition-colors cursor-pointer font-mono"
+              className="text-xs md:text-sm text-black pr-7 hover:text-purple transition-colors cursor-pointer font-mono"
             >
               {currentTime}
             </a>
           </div>
 
           {/* Estadísticas y Gráficos */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-12">
             {/* Gráfico de líneas - Tiempo por día */}
-            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                Horas por Estado (Semana)
+            <div className="bg-white rounded-lg shadow-md p-4 md:p-6 border border-gray-200">
+              <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">
+                {t("status.hoursByStatus")}
               </h2>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={timeData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
@@ -279,32 +278,32 @@ function Status() {
                     dataKey="available"
                     stroke="#10b981"
                     strokeWidth={2}
-                    name="Disponible"
+                    name={t("status.available")}
                   />
                   <Line
                     type="monotone"
                     dataKey="away"
                     stroke="#f59e0b"
                     strokeWidth={2}
-                    name="Ausente"
+                    name={t("status.away")}
                   />
                   <Line
                     type="monotone"
                     dataKey="busy"
                     stroke="#ef4444"
                     strokeWidth={2}
-                    name="Ocupado"
+                    name={t("status.busy")}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
 
             {/* Gráfico de barras - Horas semanales */}
-            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                Horas Disponibles (Semana)
+            <div className="bg-white rounded-lg shadow-md p-4 md:p-6 border border-gray-200">
+              <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">
+                {t("status.availableHours")}
               </h2>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={weeklyStats}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="day" />
@@ -317,11 +316,11 @@ function Status() {
           </div>
 
           {/* Gráfico de pastel - Distribución de estados */}
-          <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 mb-12">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">
-              Distribución de Estados (Total)
+          <div className="bg-white rounded-lg shadow-md p-4 md:p-6 border border-gray-200 mb-8 md:mb-12">
+            <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4 text-center">
+              {t("status.statusDistribution")}
             </h2>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={statusDistribution}
@@ -348,15 +347,17 @@ function Status() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
               <div className="text-3xl font-bold text-green-700 mb-2">34h</div>
-              <div className="text-gray-600">Disponible esta semana</div>
+              <div className="text-gray-600">
+                {t("status.availableThisWeek")}
+              </div>
             </div>
             <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-6 border border-yellow-200">
               <div className="text-3xl font-bold text-yellow-700 mb-2">8h</div>
-              <div className="text-gray-600">Ausente esta semana</div>
+              <div className="text-gray-600">{t("status.awayThisWeek")}</div>
             </div>
             <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-6 border border-red-200">
               <div className="text-3xl font-bold text-red-700 mb-2">8h</div>
-              <div className="text-gray-600">Ocupado esta semana</div>
+              <div className="text-gray-600">{t("status.busyThisWeek")}</div>
             </div>
           </div>
         </div>
@@ -378,16 +379,16 @@ function Status() {
           <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
             <div>
               <h2 className="text-2xl font-semibold text-gray-900">
-                Enviar Petición
+                {t("status.requestForm")}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
-                Completa el formulario para enviar tu petición
+                {t("status.formDescription")}
               </p>
             </div>
             <button
               onClick={handleCloseForm}
               className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer p-1 rounded-sm hover:bg-gray-100"
-              aria-label="Cerrar"
+              aria-label={t("common.close")}
             >
               <svg
                 className="w-5 h-5"
@@ -416,8 +417,8 @@ function Status() {
               <div className="space-y-2">
                 <AnimatedInput
                   type="text"
-                  label="Nombre *"
-                  placeholder="Tu nombre completo"
+                  label={`${t("status.name")} *`}
+                  placeholder={t("status.namePlaceholder")}
                   {...register("name")}
                   error={!!errors.name}
                   id="name"
@@ -433,8 +434,8 @@ function Status() {
               <div className="space-y-2">
                 <AnimatedInput
                   type="email"
-                  label="Email *"
-                  placeholder="tu@email.com"
+                  label={`${t("status.email")} *`}
+                  placeholder={t("status.emailPlaceholder")}
                   {...register("email")}
                   error={!!errors.email}
                   id="email"
@@ -449,7 +450,7 @@ function Status() {
               {/* Tipo de Petición */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-900">
-                  Tipo de Petición *
+                  {t("status.type")} *
                 </label>
                 <select
                   {...register("requestType")}
@@ -457,11 +458,13 @@ function Status() {
                     errors.requestType ? "border-red-500" : "border-gray-300"
                   }`}
                 >
-                  <option value="">Selecciona una opción</option>
-                  <option value="job">Oferta de Trabajo</option>
-                  <option value="collaboration">Colaboración</option>
-                  <option value="consultation">Consultoría</option>
-                  <option value="other">Otro</option>
+                  <option value="">{t("status.typePlaceholder")}</option>
+                  <option value="job">{t("status.jobOffer")}</option>
+                  <option value="collaboration">
+                    {t("status.collaboration")}
+                  </option>
+                  <option value="consultation">{t("status.project")}</option>
+                  <option value="other">{t("status.other")}</option>
                 </select>
                 {errors.requestType && (
                   <p className="text-sm text-red-600 mt-1">
@@ -473,10 +476,10 @@ function Status() {
               {/* Mensaje */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-900">
-                  Mensaje *
+                  {t("status.message")} *
                 </label>
                 <Textarea
-                  placeholder="Cuéntame sobre tu petición..."
+                  placeholder={t("status.messagePlaceholder")}
                   rows={4}
                   {...register("message")}
                   className={`w-full ${errors.message ? "border-red-500" : ""}`}
@@ -491,21 +494,15 @@ function Status() {
               {/* Ejemplo de petición */}
               <div className="pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-400 mb-2">
-                  Ejemplo de petición:
+                  {t("status.example")}:
                 </p>
                 <div className="text-xs text-gray-500 space-y-1 leading-relaxed">
-                  <p>Nombre: Juan Pérez</p>
-                  <p>Email: juan.perez@ejemplo.com</p>
-                  <p>Tipo: Oferta de Trabajo</p>
-                  <p className="mt-2">
-                    Mensaje: Hola, me gustaría ofrecerte una posición como
-                    desarrollador backend en nuestra empresa. El proyecto
-                    involucra tecnologías modernas y un equipo dinámico. ¿Te
-                    interesaría conocer más detalles?
-                  </p>
+                  <p>{t("status.exampleName")}</p>
+                  <p>{t("status.exampleEmail")}</p>
+                  <p>{t("status.exampleType")}</p>
+                  <p className="mt-2">{t("status.exampleMessage")}</p>
                   <p className="mt-3 text-gray-400 italic">
-                    Al enviar, recibirás una confirmación y te contactaré pronto
-                    para discutir los detalles.
+                    {t("status.exampleNote")}
                   </p>
                 </div>
               </div>
@@ -536,14 +533,14 @@ function Status() {
                   disabled={isSubmitting}
                   className="flex-1 px-4 py-2.5 bg-green-500 text-white font-medium rounded-md hover:bg-green-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? "Enviando..." : "Enviar"}
+                  {isSubmitting ? t("common.loading") : t("status.submit")}
                 </button>
                 <button
                   type="button"
                   onClick={handleCloseForm}
                   className="flex-1 px-4 py-2.5 bg-red-500 text-white font-medium rounded-md hover:bg-red-600 transition-colors cursor-pointer"
                 >
-                  Cancelar
+                  {t("status.cancel")}
                 </button>
               </div>
             </div>

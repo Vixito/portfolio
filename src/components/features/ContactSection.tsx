@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "../../lib/i18n";
 
 function ContactSection() {
+  const { t } = useTranslation();
   return (
     <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
       <div className="flex items-center gap-2 mb-4">
@@ -19,25 +21,26 @@ function ContactSection() {
             />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-gray-900">Contactar</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          {t("contactSection.title")}
+        </h2>
       </div>
       <p className="text-gray-600 mb-6 text-sm">
-        Creando experiencias digitales únicas. ¡Hablemos sobre tu próximo
-        proyecto!
+        {t("contactSection.description")}
       </p>
       <div className="flex flex-row gap-3">
         <Link
           to="/status"
           className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-900 font-medium transition-colors cursor-pointer text-center text-sm"
         >
-          Envíame tu propuesta
+          {t("contactSection.sendRequest")}
         </Link>
         <a
           href="https://vixis.dev/socials"
           rel="noopener noreferrer"
           className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-900 font-medium transition-colors cursor-pointer text-center text-sm"
         >
-          Contáctame en redes
+          {t("contactSection.contact")}
         </a>
       </div>
     </div>

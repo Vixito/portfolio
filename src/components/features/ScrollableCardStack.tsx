@@ -1,5 +1,6 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { gsap } from "gsap";
+import { useTranslation } from "../../lib/i18n";
 
 interface Project {
   id: string;
@@ -13,24 +14,28 @@ interface Project {
 function ScrollableCardStack() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [projects] = useState<Project[]>([
-    {
-      id: "1",
-      title: "Vixito - Discord Bot",
-      thumbnail: "https://cdn.vixito.gg/Vixito+-+Logo.png",
-      month: "Diciembre",
-      year: 2025,
-      url: "https://vixito.gg",
-    },
-    {
-      id: "2",
-      title: "Filippo Cucine",
-      thumbnail: "https://cdn.vixis.dev/Filippo+Cucine+-+Thumbnail.webp",
-      month: "Diciembre",
-      year: 2025,
-      url: "https://filippo-cucine.com",
-    },
-  ]);
+  const { t, language } = useTranslation();
+  const projects = useMemo<Project[]>(
+    () => [
+      {
+        id: "1",
+        title: "Vixito - Discord Bot",
+        thumbnail: "https://cdn.vixito.gg/Vixito+-+Logo.png",
+        month: t("homeSection.december"),
+        year: 2025,
+        url: "https://vixito.gg",
+      },
+      {
+        id: "2",
+        title: "Filippo Cucine",
+        thumbnail: "https://cdn.vixis.dev/Filippo+Cucine+-+Thumbnail.webp",
+        month: t("homeSection.december"),
+        year: 2025,
+        url: "https://filippo-cucine.com",
+      },
+    ],
+    [t, language]
+  );
 
   useEffect(() => {
     if (!containerRef.current) return;

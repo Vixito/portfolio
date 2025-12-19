@@ -2,8 +2,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { gsap } from "gsap";
 import { useRef, useEffect } from "react";
 import { useStatusStore } from "../../stores/useStatusStore";
+import { useTranslation } from "../../lib/i18n";
 
 function StatusBadge() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const badgeRef = useRef<HTMLButtonElement>(null);
@@ -47,9 +49,7 @@ function StatusBadge() {
     if (status === "available") {
       navigate("/status");
     } else if (status === "away") {
-      const confirmed = window.confirm(
-        "¿Estás seguro de que quieres continuar? Puede que yo no te responda debido a diversas razones..."
-      );
+      const confirmed = window.confirm(t("statusBadge.confirm"));
       if (confirmed) {
         navigate("/status");
       }
@@ -60,15 +60,15 @@ function StatusBadge() {
   const statusConfig = {
     available: {
       indicatorColor: "bg-green-500",
-      text: "Disponible para nuevos proyectos",
+      text: t("statusBadge.available"),
     },
     away: {
       indicatorColor: "bg-yellow-500",
-      text: "Ausente",
+      text: t("statusBadge.away"),
     },
     busy: {
       indicatorColor: "bg-red-700",
-      text: "No disponible",
+      text: t("statusBadge.busy"),
     },
   };
 

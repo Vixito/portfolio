@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Pagination from "../components/ui/Pagination";
 import { fetchBlogPosts } from "../lib/supabase-functions";
+import { useTranslation } from "../lib/i18n";
 
 interface BlogPost {
   id: string;
@@ -17,6 +18,7 @@ function Blog() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
+  const { t, language } = useTranslation();
 
   useEffect(() => {
     const loadPosts = async () => {
@@ -50,7 +52,7 @@ function Blog() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Cargando posts...</div>
+        <div className="text-gray-600">{t("blog.loading")}</div>
       </div>
     );
   }
@@ -59,7 +61,7 @@ function Blog() {
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
-          Blog
+          {t("blog.title")}
         </h1>
 
         {/* Lista vertical de posts */}
@@ -98,11 +100,14 @@ function Blog() {
                         {post.platform}
                       </span>
                       <span className="text-xs text-gray-500">
-                        {new Date(post.date).toLocaleDateString("es-ES", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        {new Date(post.date).toLocaleDateString(
+                          language === "es" ? "es-ES" : "en-US",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )}
                       </span>
                     </div>
 
@@ -132,7 +137,7 @@ function Blog() {
                       rel="noopener noreferrer"
                       className="text-purple font-semibold hover:text-blue transition-colors inline-flex items-center gap-2"
                     >
-                      Leer más
+                      {t("blog.readMore")}
                       <svg
                         className="w-4 h-4"
                         fill="none"

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
+import { useTranslation } from "../lib/i18n";
 
 function Studio() {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -43,33 +45,34 @@ function Studio() {
       id: 1,
       image: "https://cdn.vixis.dev/Vixis+Studio+-+Logo.webp",
       brand: "Vixis Studio",
-      name: "Misión",
-      subtitle:
-        "Nuestra misión es crear soluciones innovadoras y eficientes para nuestros clientes.",
+      name: t("studio.mission"),
+      subtitle: t("studio.missionDescription"),
       specs: [
         {
-          label: "Tecnologías:",
+          label: t("studio.technologies"),
           value: "Next.js + Python + React + TypeScript",
         },
-        { label: "Estado:", value: "En desarrollo" },
-        { label: "Cliente:", value: "C2B Communities" },
+        { label: t("studio.status"), value: t("studio.active") },
+        { label: t("studio.client"), value: "C2B Communities" },
       ],
-      badges: [{ text: "Status: Activo" }, { text: "Prioridad: Alta" }],
+      badges: [
+        { text: t("studio.activeStatus") },
+        { text: t("studio.highPriority") },
+      ],
     },
     {
       id: 2,
       image: "https://cdn.vixis.dev/Vixis+Studio+-+Logo.webp",
       brand: "Vixis Studio",
-      name: "Visión",
-      subtitle:
-        "Nuestra visión es ser un referente y una agencia de desarrollo que crea arte que conecta con las comunidades a través de la automatización.",
+      name: t("studio.vision"),
+      subtitle: t("studio.visionDescription"),
       specs: [
         {
-          label: "Más tecnologías:",
+          label: t("studio.technologies"),
           value: "Deno + Tailwind CSS + AWS + Supabase",
         },
-        { label: "Estado:", value: "Próximamente..." },
-        { label: "Cliente:", value: "B2B" },
+        { label: t("studio.status"), value: t("studio.comingSoon") },
+        { label: t("studio.client"), value: "B2B" },
       ],
       badges: [],
     },
@@ -134,11 +137,11 @@ function Studio() {
                 letterSpacing: "-0.02em",
               }}
             >
-              Vixis Studio
+              {t("studio.title")}
             </h1>
             {/* Descripción */}
             <p className="text-lg italic md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-              Creamos sistemas que piensan y arte que conecta.
+              {t("studio.description")}
             </p>
           </div>
 

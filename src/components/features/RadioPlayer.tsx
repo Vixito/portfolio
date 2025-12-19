@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "../../lib/i18n";
 
 function RadioPlayer() {
+  const { t } = useTranslation();
   const [isPlaying, setIsPlaying] = useState(false);
 
   return (
@@ -24,8 +26,10 @@ function RadioPlayer() {
           </svg>
         </div>
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">Radio Vixis</h3>
-          <p className="text-sm text-gray-600">En vivo</p>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {t("radio.title")}
+          </h3>
+          <p className="text-sm text-gray-600">{t("radio.live_home")}</p>
         </div>
         <button
           onClick={() => setIsPlaying(!isPlaying)}
@@ -45,7 +49,7 @@ function RadioPlayer() {
           to="/radio"
           className="text-sm text-purple hover:text-blue transition-colors cursor-pointer inline-flex items-center gap-1 ml-2"
         >
-          Ver más
+          {t("radio.viewMore")}
           <svg
             className="w-4 h-4"
             fill="none"

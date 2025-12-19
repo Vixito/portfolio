@@ -1,25 +1,33 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "../../lib/i18n";
 
 function ExperienceCard() {
+  const { t } = useTranslation();
   const experiences = [
     {
       company: "Alcaldía Municipal de Pacho",
-      role: "Asistente Técnico de Sistemas",
-      period: "Marzo 2021 - Septiembre 2021",
+      role: t("workExperience.assistant"),
+      period: `${t("workExperience.march")} 2021 - ${t(
+        "workExperience.september"
+      )} 2021`,
       logo: "https://cdn.vixis.dev/Alcald%C3%ADa+Municipal+de+Pacho.webp",
       color: "bg-white",
     },
     {
       company: "Airtm",
-      role: "Discord Marketer",
-      period: "Abril 2025 - Octubre 2025",
+      role: t("workExperience.discordMarketer"),
+      period: `${t("workExperience.april")} 2025 - ${t(
+        "workExperience.october"
+      )} 2025`,
       logo: "https://cdn.vixis.dev/AirTM+Logo.webp",
       color: "bg-white",
     },
     {
       company: "Filippo Cucine",
-      role: "Full-Stack Developer",
-      period: "Diciembre 2025 - Presente",
+      role: t("workExperience.fullStackDeveloper"),
+      period: `${t("workExperience.december")} 2025 - ${t(
+        "workExperience.present"
+      )}`,
       logo: "https://cdn.vixis.dev/Filippo+Cucine+-+Logo.webp",
       color: "bg-black",
     },
@@ -43,7 +51,9 @@ function ExperienceCard() {
             />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-gray-900">Experiencia</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          {t("workExperience.title")}
+        </h2>
       </div>
       <div className="flex-1 space-y-4 mb-6">
         {experiences.map((exp, index) => (
@@ -99,7 +109,7 @@ function ExperienceCard() {
             d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        Descargar cv
+        {t("workExperience.downloadCV")}
       </Link>
     </div>
   );

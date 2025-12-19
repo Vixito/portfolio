@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Pagination from "../components/ui/Pagination";
 import { getClients } from "../lib/supabase-functions";
+import { useTranslation } from "../lib/i18n";
 
 interface Client {
   id: string;
@@ -26,6 +27,7 @@ interface Testimonial {
 }
 
 function Clients() {
+  const { t } = useTranslation();
   const [clients, setClients] = useState<Client[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,7 @@ function Clients() {
           }));
         setTestimonials(testimonialsData);
       } catch (error) {
-        console.error("Error al cargar clientes:", error);
+        console.error(t("clients.errorLoadingClients"), error);
         setClients([]);
         setTestimonials([]);
       } finally {
@@ -80,7 +82,7 @@ function Clients() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Cargando clientes...</div>
+        <div className="text-gray-600">{t("clients.loading")}</div>
       </div>
     );
   }
@@ -89,15 +91,15 @@ function Clients() {
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-6">
-          Clientes
+          {t("clients.title")}
         </h1>
 
         {clients.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-2xl text-gray-600 mb-4">
-              No hay clientes disponibles
+              {t("clients.noClients")}
             </p>
-            <p className="text-gray-500">Vuelve pronto para ver mis clientes</p>
+            <p className="text-gray-500">{t("clients.noClientsDescription")}</p>
           </div>
         ) : (
           <>
@@ -267,7 +269,7 @@ function Clients() {
             {/* Lista de clientes */}
             <div className="mb-16">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Clientes
+                {t("clients.title")}
               </h2>
               <div className="space-y-6">
                 {currentClients.map((client) => (
@@ -326,7 +328,7 @@ function Clients() {
                             e.currentTarget.style.transform = "translate(0, 0)";
                           }}
                         >
-                          Ir al enlace
+                          {t("clients.viewLink")}
                         </a>
                       </div>
                     )}
@@ -350,7 +352,7 @@ function Clients() {
             {testimonials.length > 0 && (
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  Testimonios
+                  {t("clients.testimonials")}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {testimonials.map((testimonial) => (
@@ -416,7 +418,7 @@ function Clients() {
                                 "translate(0, 0)";
                             }}
                           >
-                            Ver testimonio
+                            {t("clients.viewTestimonial")}
                           </a>
                         )}
                       </div>

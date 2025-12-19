@@ -3,6 +3,7 @@ import { getThumbnailFromUrl } from "../utils/getThumbnail";
 import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
 import { getProjects } from "../lib/supabase-functions";
+import { useTranslation } from "../lib/i18n";
 
 interface Project {
   id: string;
@@ -16,6 +17,7 @@ interface Project {
 }
 
 function Projects() {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -73,7 +75,7 @@ function Projects() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Cargando proyectos...</div>
+        <div className="text-gray-600">{t("projects.loading")}</div>
       </div>
     );
   }
@@ -82,17 +84,17 @@ function Projects() {
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
-          Proyectos
+          {t("projects.title")}
         </h1>
 
         {/* Grid estilo Pinterest */}
         {projects.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-2xl text-gray-600 mb-4">
-              No hay proyectos disponibles
+              {t("projects.noProjects")}
             </p>
             <p className="text-gray-500">
-              Vuelve pronto para ver mis proyectos
+              {t("projects.noProjectsDescription")}
             </p>
           </div>
         ) : (
@@ -120,6 +122,7 @@ function Projects() {
 
 // Componente de tarjeta de proyecto
 function ProjectCard({ project }: { project: Project }) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -172,7 +175,7 @@ function ProjectCard({ project }: { project: Project }) {
               className="flex-1 cursor-pointer"
             >
               <Button variant="outline" className="w-full cursor-pointer">
-                Repositorio
+                {t("projects.repository")}
               </Button>
             </a>
           )}
@@ -188,7 +191,7 @@ function ProjectCard({ project }: { project: Project }) {
               }
             >
               <Button variant="secondary" className="w-full cursor-pointer">
-                Ver Proyecto
+                {t("projects.visit")}
               </Button>
             </a>
           )}

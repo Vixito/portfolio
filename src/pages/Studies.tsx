@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { gsap } from "gsap";
 import { useRef } from "react";
 import { getStudies } from "../lib/supabase-functions";
+import { useTranslation } from "../lib/i18n";
 
 interface Study {
   id: string;
@@ -17,6 +18,7 @@ interface Study {
 }
 
 function Studies() {
+  const { t } = useTranslation();
   const [studies, setStudies] = useState<Study[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -124,9 +126,9 @@ function Studies() {
 
   const getTypeLabel = (type: Study["type"]) => {
     const labels = {
-      degree: "Título Universitario",
-      certification: "Certificación",
-      course: "Curso",
+      degree: t("studies.degree"),
+      certification: t("studies.certification"),
+      course: t("studies.course"),
     };
     return labels[type];
   };
@@ -143,7 +145,7 @@ function Studies() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Cargando estudios...</div>
+        <div className="text-gray-600">{t("studies.loading")}</div>
       </div>
     );
   }
@@ -152,7 +154,7 @@ function Studies() {
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-[95vw] mx-auto">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
-          Estudios
+          {t("studies.title")}
         </h1>
 
         {/* Tabla de estudios */}
@@ -176,11 +178,11 @@ function Studies() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900">
-                      Título
+                      {t("studies.title")}
                     </span>
                     <input
                       type="text"
-                      placeholder="Buscar..."
+                      placeholder={t("studies.titlePlaceholder")}
                       value={filters.title}
                       onChange={(e) =>
                         setFilters({ ...filters, title: e.target.value })
@@ -205,11 +207,11 @@ function Studies() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900">
-                      Institución
+                      {t("studies.institution")}
                     </span>
                     <input
                       type="text"
-                      placeholder="Buscar..."
+                      placeholder={t("studies.institutionPlaceholder")}
                       value={filters.institution}
                       onChange={(e) =>
                         setFilters({ ...filters, institution: e.target.value })
@@ -234,7 +236,7 @@ function Studies() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900">
-                      Tipo
+                      {t("studies.type")}
                     </span>
                     <select
                       value={filters.type}
@@ -246,10 +248,12 @@ function Studies() {
                       }
                       className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
-                      <option value="all">Todos</option>
-                      <option value="degree">Título Universitario</option>
-                      <option value="certification">Certificación</option>
-                      <option value="course">Curso</option>
+                      <option value="all">{t("studies.all")}</option>
+                      <option value="degree">{t("studies.degree")}</option>
+                      <option value="certification">
+                        {t("studies.certification")}
+                      </option>
+                      <option value="course">{t("studies.course")}</option>
                     </select>
                   </div>
                 </th>
@@ -269,7 +273,7 @@ function Studies() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900">
-                      Estado
+                      {t("studies.status")}
                     </span>
                     <select
                       value={filters.status}
@@ -281,9 +285,13 @@ function Studies() {
                       }
                       className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
-                      <option value="all">Todos</option>
-                      <option value="completed">Completado</option>
-                      <option value="in-progress">En curso</option>
+                      <option value="all">{t("studies.all")}</option>
+                      <option value="completed">
+                        {t("studies.completed")}
+                      </option>
+                      <option value="in-progress">
+                        {t("studies.inProgress")}
+                      </option>
                     </select>
                   </div>
                 </th>
@@ -303,7 +311,7 @@ function Studies() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900">
-                      Fechas
+                      {t("studies.period")}
                     </span>
                   </div>
                 </th>
@@ -323,7 +331,7 @@ function Studies() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900">
-                      Certificado
+                      {t("studies.hasCertificate")}
                     </span>
                     <select
                       value={filters.hasCertificate}
@@ -338,9 +346,9 @@ function Studies() {
                       }
                       className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
-                      <option value="all">Todos</option>
-                      <option value="yes">Con certificado</option>
-                      <option value="no">Sin certificado</option>
+                      <option value="all">{t("studies.all")}</option>
+                      <option value="yes">{t("studies.yes")}</option>
+                      <option value="no">{t("studies.no")}</option>
                     </select>
                   </div>
                 </th>
@@ -403,27 +411,32 @@ function Studies() {
                           : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
-                      {study.status === "completed" ? "Completado" : "En curso"}
+                      {study.status === "completed"
+                        ? t("studies.completed")
+                        : t("studies.inProgress")}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-600">
                       <div>
-                        {new Date(study.startDate).toLocaleDateString("es-ES", {
-                          year: "numeric",
-                          month: "short",
-                        })}
+                        {new Date(study.startDate).toLocaleDateString(
+                          t("language") === "es" ? "es-ES" : "en-US",
+                          {
+                            year: "numeric",
+                            month: "short",
+                          }
+                        )}
                       </div>
                       <div className="text-xs text-gray-400">
                         {study.endDate
                           ? new Date(study.endDate).toLocaleDateString(
-                              "es-ES",
+                              t("language") === "es" ? "es-ES" : "en-US",
                               {
                                 year: "numeric",
                                 month: "short",
                               }
                             )
-                          : "Presente"}
+                          : t("studies.present")}
                       </div>
                     </div>
                   </td>
@@ -448,7 +461,7 @@ function Studies() {
                             d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                           />
                         </svg>
-                        Ver Certificado
+                        {t("studies.viewCertificate")}
                       </a>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>
@@ -462,9 +475,7 @@ function Studies() {
 
         {filteredStudies.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-600 text-lg">
-              No se encontraron estudios con los filtros aplicados.
-            </p>
+            <p className="text-gray-600 text-lg">{t("studies.noStudies")}</p>
           </div>
         )}
       </div>
