@@ -18,6 +18,7 @@
     "@biomejs/biome": "npm:@biomejs/biome",
     "framer-motion": "npm:framer-motion",
     "gsap": "npm:gsap",
+    "gsap/ScrollTrigger": "npm:gsap/ScrollTrigger",
     "zod": "npm:zod",
     "@hookform/resolvers": "npm:@hookform/resolvers",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2"
