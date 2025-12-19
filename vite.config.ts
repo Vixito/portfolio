@@ -14,4 +14,15 @@ export default defineConfig({
       usePolling: true,
     },
   },
+  resolve: {
+    dedupe: ["react", "react-dom"],
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
+    rollupOptions: {
+      external: [],
+    },
+  },
 });

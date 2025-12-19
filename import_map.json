@@ -1,7 +1,8 @@
 {
   "imports": {
-    "react": "npm:react",
-    "react-dom": "npm:react-dom",
+    "react": "npm:react@18.3.1",
+    "react-dom": "npm:react-dom@18.3.1",
+    "react-dom/client": "npm:react-dom@18.3.1/client",
     "@types/react": "npm:@types/react",
     "@types/react-dom": "npm:@types/react-dom",
     "@vitejs/plugin-react": "npm:@vitejs/plugin-react",
