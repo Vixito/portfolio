@@ -8,7 +8,8 @@
     "preview": "deno run -A npm:vite preview",
     "format": "deno run -A npm:@biomejs/biome format --write .",
     "lint": "deno run -A npm:@biomejs/biome lint .",
-    "check": "deno run -A npm:@biomejs/biome check --write ."
+    "check": "deno run -A npm:@biomejs/biome check --write .",
+    "deploy": "deno task build && deno deploy --project=vixis-portfolio dist/index.html"
   },
   "nodeModulesDir": "auto"
 }
