@@ -16,13 +16,38 @@ export default defineConfig({
   },
   resolve: {
     dedupe: ["react", "react-dom"],
+    // Asegurar que Vite pueda resolver módulos npm desde node_modules
+    // En Deno, node_modules se crea automáticamente con nodeModulesDir: "auto"
+    conditions: ["import", "module", "browser", "default"],
+  },
+  optimizeDeps: {
+    include: [
+      "gsap",
+      "framer-motion",
+      "zod",
+      "zustand",
+      "recharts",
+      "react-hook-form",
+      "@tanstack/react-query",
+      "@hookform/resolvers",
+      "@supabase/supabase-js",
+      "react-router-dom",
+    ],
+    esbuildOptions: {
+      // Asegurar que esbuild pueda resolver módulos npm
+      conditions: ["import", "module", "browser", "default"],
+    },
   },
   build: {
     commonjsOptions: {
       transformMixedEsModules: true,
     },
     rollupOptions: {
-      external: [],
+      // Asegurar que Rollup pueda resolver módulos npm
+      // En Deno, los módulos npm están en node_modules (creado por nodeModulesDir: "auto")
+      output: {
+        // No externalizar módulos npm, deben ser incluidos en el bundle
+      },
     },
   },
 });
