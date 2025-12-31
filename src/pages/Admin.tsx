@@ -51,6 +51,9 @@ function Admin() {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminKey, setAdminKey] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Estados para gestión de recursos multimedia
@@ -95,7 +98,7 @@ function Admin() {
   const [extractingEventData, setExtractingEventData] = useState(false);
   const [eventUrl, setEventUrl] = useState("");
 
-  // Verificar key de autenticación
+  // Verificar key de autenticación inicial
   useEffect(() => {
     const key = searchParams.get("key");
     const validKey = import.meta.env.VITE_ADMIN_KEY; // Variable de entorno desde Doppler
@@ -104,14 +107,45 @@ function Admin() {
       console.error(
         "VITE_ADMIN_KEY no está configurada en las variables de entorno"
       );
-      alert("Error de configuración: VITE_ADMIN_KEY no está definida");
       return;
     }
 
+    // Solo autenticar automáticamente si hay key válida en URL
     if (key === validKey) {
       setIsAuthenticated(true);
     }
   }, [searchParams]);
+
+  // Función de login con usuario y contraseña
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+
+    const validKey = import.meta.env.VITE_ADMIN_KEY;
+    const validUsername = import.meta.env.VITE_ADMIN_USERNAME;
+    const validPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+
+    if (!validKey || !validUsername || !validPassword) {
+      setLoginError("Error de configuración: Credenciales no configuradas");
+      return;
+    }
+
+    // Verificar key de URL primero
+    const key = searchParams.get("key");
+    if (key !== validKey) {
+      setLoginError("Key de acceso inválida");
+      return;
+    }
+
+    // Verificar usuario y contraseña
+    if (username === validUsername && password === validPassword) {
+      setIsAuthenticated(true);
+      setUsername("");
+      setPassword("");
+    } else {
+      setLoginError("Usuario o contraseña incorrectos");
+    }
+  };
 
   // Animación de entrada
   useEffect(() => {
@@ -557,7 +591,77 @@ function Admin() {
   };
 
   if (!isAuthenticated) {
-    return <NotFound />;
+    const key = searchParams.get("key");
+    const validKey = import.meta.env.VITE_ADMIN_KEY;
+
+    // Si no hay key válida, mostrar NotFound
+    if (!key || key !== validKey) {
+      return <NotFound />;
+    }
+
+    // Si hay key válida pero no está autenticado, mostrar formulario de login
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 px-4">
+        <div className="max-w-md w-full bg-white/10 backdrop-blur-lg rounded-lg p-8 border border-white/20">
+          <h2 className="text-2xl font-bold text-white mb-6 text-center">
+            {t("admin.login") || "Iniciar Sesión"}
+          </h2>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-white text-sm font-medium mb-2">
+                {t("admin.username") || "Usuario"}
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={t("admin.username") || "Usuario"}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-white text-sm font-medium mb-2">
+                {t("admin.password") || "Contraseña"}
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={t("admin.password") || "Contraseña"}
+                required
+              />
+            </div>
+            {loginError && (
+              <div className="text-red-400 text-sm text-center">
+                {loginError}
+              </div>
+            )}
+            <button
+              type="submit"
+              className="w-full px-6 py-3 font-semibold rounded-lg transition-all duration-300 cursor-pointer text-white"
+              style={{
+                backgroundColor: "#10b981",
+                boxShadow: "0 0 20px rgba(16, 185, 129, 0.5)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#059669";
+                e.currentTarget.style.boxShadow =
+                  "0 0 30px rgba(16, 185, 129, 0.7)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#10b981";
+                e.currentTarget.style.boxShadow =
+                  "0 0 20px rgba(16, 185, 129, 0.5)";
+              }}
+            >
+              {t("admin.login") || "Iniciar Sesión"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (

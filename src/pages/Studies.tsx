@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
-import { useRef } from "react";
 import { getStudies } from "../lib/supabase-functions";
 import { useTranslation } from "../lib/i18n";
 

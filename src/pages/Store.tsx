@@ -184,9 +184,12 @@ function Store() {
                   >
                     {item.title}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {item.description || t("common.noContent")}
-                  </p>
+                  <div
+                    className="text-gray-600 text-sm mb-4 line-clamp-2 prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{
+                      __html: item.description || t("common.noContent"),
+                    }}
+                  />
                   <div className="flex items-center justify-between">
                     <p className="text-2xl font-bold text-purple">
                       {formatPrice(item.base_price_usd)}
@@ -263,39 +266,40 @@ function Store() {
                   <p className="text-3xl font-bold text-purple mb-2">
                     {formatPrice(selectedItem.base_price_usd)}
                   </p>
-                  <p className="text-gray-600">
-                    {selectedItem.full_description ||
-                      selectedItem.description ||
-                      t("common.noContent")}
-                  </p>
+                  <div
+                    className="text-gray-600 prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        selectedItem.full_description ||
+                        selectedItem.description ||
+                        t("common.noContent"),
+                    }}
+                  />
                 </div>
 
                 <div className="space-y-3">
                   <Button
                     variant="primary"
                     onClick={() => {
-                      handleAction(selectedItem);
+                      // Si tiene pricing_link y action_type es "link", usar pricing_link
+                      if (
+                        selectedItem.action_type === "link" &&
+                        selectedItem.pricing_link
+                      ) {
+                        window.open(
+                          selectedItem.pricing_link,
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                      } else {
+                        handleAction(selectedItem);
+                      }
                       setIsModalOpen(false);
                     }}
                     className="w-full"
                   >
                     {getButtonText(selectedItem)}
                   </Button>
-                  {selectedItem.pricing_link && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        window.open(
-                          selectedItem.pricing_link!,
-                          "_blank",
-                          "noopener,noreferrer"
-                        );
-                      }}
-                      className="w-full"
-                    >
-                      {t("store.viewPricing")}
-                    </Button>
-                  )}
                 </div>
               </div>
             </div>

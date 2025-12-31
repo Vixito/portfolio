@@ -20,9 +20,9 @@ function Button({
 
   const variantStyles = {
     primary:
-      "border-2 border-purple-600 text-purple-600 hover:bg-purple-800/90 hover:text-white focus:ring-purple-400",
+      "border-2 border-purple-800 text-purple-800 hover:bg-purple-800 hover:text-white focus:ring-purple-600",
     secondary:
-      "border-2 border-blue-600 text-blue-600 hover:bg-blue-800/90 hover:text-white focus:ring-blue-400",
+      "border-2 border-sky-600 text-sky-600 hover:bg-sky-700 hover:text-white focus:ring-sky-400",
     outline:
       "border-2 border-black text-black hover:bg-black/90 hover:text-white focus:ring-black",
   };

@@ -34,7 +34,7 @@ function ExperienceCard() {
   ];
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg shadow-md p-6 border border-gray-200 h-full flex flex-col">
+    <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 h-full flex flex-col">
       <div className="flex items-center gap-2 mb-6">
         <div className="w-8 h-8 rounded-lg bg-white/80 flex items-center justify-center">
           <svg

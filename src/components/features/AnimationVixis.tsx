@@ -305,11 +305,11 @@ function AnimationVixis({
   }, [imageUrl]);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full">
+    <div ref={containerRef} className="relative w-full h-full bg-transparent">
       <canvas
         ref={canvasRef}
         className="w-full h-full"
-        style={{ display: "block" }}
+        style={{ display: "block", backgroundColor: "transparent" }}
       />
     </div>
   );

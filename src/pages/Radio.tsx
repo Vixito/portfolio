@@ -4,6 +4,7 @@ import { getUpcomingEvents } from "../lib/supabase-functions";
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
 import { useTranslation } from "../lib/i18n";
+import AdSpace from "../components/features/AdSpace";
 
 interface Song {
   id: string;
@@ -52,6 +53,9 @@ function Radio() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const usernameInputRef = useRef<HTMLInputElement>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const volumeThrottleRef = useRef<NodeJS.Timeout | null>(null);
 
   // URL del stream de Icecast (configurable desde variables de entorno)
   const ICECAST_STREAM_URL =
@@ -285,12 +289,31 @@ function Radio() {
     };
   }, []);
 
-  // Control de volumen
+  // Cerrar menú al hacer click fuera
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
     }
-  }, [volume]);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showMenu]);
+
+  // Limpiar throttle al desmontar
+  useEffect(() => {
+    return () => {
+      if (volumeThrottleRef.current) {
+        clearTimeout(volumeThrottleRef.current);
+      }
+    };
+  }, []);
 
   const togglePlayPause = () => {
     if (!audioRef.current) return;
@@ -305,7 +328,20 @@ function Radio() {
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);
+
+    // Actualizar el estado inmediatamente para feedback visual
     setVolume(newVolume);
+
+    // Throttle: actualizar el audio solo cada 50ms para evitar bloqueos
+    if (volumeThrottleRef.current) {
+      clearTimeout(volumeThrottleRef.current);
+    }
+
+    volumeThrottleRef.current = setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.volume = newVolume;
+      }
+    }, 100); // Aumentado a 100ms para mejor rendimiento
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -446,7 +482,11 @@ function Radio() {
       {/* Barra del reproductor (fija arriba, negra, h-10, sin animaciones) */}
       <div
         className="fixed top-0 left-0 right-0 bg-black text-white z-40 h-10 md:h-12 flex items-center px-2 md:px-4"
-        style={{ transform: "translateZ(0)", willChange: "auto" }}
+        style={{
+          transform: "translateZ(0)",
+          willChange: "auto",
+          cursor: "default",
+        }}
       >
         <div className="max-w-7xl mx-auto w-full flex items-center gap-1 md:gap-4">
           {/* Controles principales */}
@@ -577,19 +617,59 @@ function Radio() {
             />
           </div>
 
-          {/* Botón de ajustes/menú */}
-          <button
-            className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center hover:bg-white/20 rounded transition-colors flex-shrink-0"
-            aria-label={t("nav.settings")}
-          >
-            <svg
-              className="w-4 h-4 md:w-5 md:h-5"
-              fill="currentColor"
-              viewBox="0 0 24 24"
+          {/* Botón de ajustes/menú con dropdown */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center hover:bg-white/20 rounded transition-colors flex-shrink-0 cursor-pointer"
+              aria-label={t("nav.settings")}
             >
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-            </svg>
-          </button>
+              <svg
+                className="w-4 h-4 md:w-5 md:h-5"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+              </svg>
+            </button>
+
+            {/* Menú dropdown */}
+            {showMenu && (
+              <div className="absolute bottom-full right-0 mb-2 bg-black border border-white/20 rounded-lg shadow-lg min-w-[180px] z-50">
+                <button
+                  onClick={() => {
+                    const typeformUrl =
+                      import.meta.env.VITE_TYPEFORM_SONG_REQUEST_URL || "";
+                    if (typeformUrl) {
+                      window.open(typeformUrl, "_blank", "noopener,noreferrer");
+                    } else {
+                      alert(
+                        t("radio.songRequestUrlNotConfigured") ||
+                          "URL de Typeform no configurada"
+                      );
+                    }
+                    setShowMenu(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-white hover:bg-white/20 transition-colors cursor-pointer flex items-center gap-2 text-sm"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                    />
+                  </svg>
+                  {t("radio.requestSong") || "Pide tu canción"}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -598,7 +678,7 @@ function Radio() {
 
       {/* Contenido principal */}
       <div className="pt-10 md:pt-15 flex-1">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto px-4 py-12">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
             {t("radio.title")}
           </h1>
@@ -608,7 +688,10 @@ function Radio() {
             <div className="lg:col-span-2">
               <div
                 className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] p-4"
-                style={{ fontFamily: "'Press Start 2P', monospace" }}
+                style={{
+                  fontFamily: "'Press Start 2P', monospace",
+                  cursor: "default",
+                }}
               >
                 <h2
                   className="text-lg mb-4 text-gray-900"
@@ -683,7 +766,7 @@ function Radio() {
                         setUsername(newValue);
                       }}
                       maxLength={20}
-                      className="w-full border-2 border-black p-2 bg-white text-gray-900"
+                      className="w-full border-2 border-black p-2 bg-white text-gray-900 cursor-text"
                       style={{
                         fontSize: "10px",
                         fontFamily: "'Press Start 2P', monospace",
@@ -724,13 +807,14 @@ function Radio() {
                         value={messageInput}
                         onChange={(e) => setMessageInput(e.target.value)}
                         maxLength={200}
-                        className="flex-1 border-2 border-black p-2 bg-white text-gray-900"
+                        className="flex-1 border-2 border-black p-2 bg-white text-gray-900 cursor-text"
                         style={{
                           fontSize: "10px",
                           fontFamily: "'Press Start 2P', monospace",
                         }}
                         placeholder={t("radio.chatPlaceholder")}
                         disabled={isSending}
+                        autoComplete="off"
                       />
                       <button
                         type="submit"
@@ -826,6 +910,8 @@ function Radio() {
                   </div>
                 )}
               </div>
+              {/* Anuncio debajo de Próximos Eventos */}
+              <AdSpace className="mt-6" />
             </div>
           </div>
         </div>

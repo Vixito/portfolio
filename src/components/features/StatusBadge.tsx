@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import { useRef, useEffect } from "react";
 import { useStatusStore } from "../../stores/useStatusStore";
 import { useTranslation } from "../../lib/i18n";
+import confetti from "canvas-confetti";
 
 function StatusBadge() {
   const { t } = useTranslation();
@@ -34,27 +35,122 @@ function StatusBadge() {
     }
   }, [status]);
 
-  // Animación de shake cuando está en rojo
+  // Animación de shake con bordes rojos cuando está en rojo
   useEffect(() => {
     if (status === "busy" && badgeRef.current) {
+      // Shake del botón
       gsap.to(badgeRef.current, {
         x: [-10, 10, -10, 10, 0],
         duration: 0.5,
         ease: "power2.out",
       });
+
+      // Efecto de bordes rojos en la pantalla
+      const redBorder = document.createElement("div");
+      redBorder.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 4px solid #ef4444;
+        pointer-events: none;
+        z-index: 9999;
+        animation: shake-border 0.5s ease-out;
+      `;
+      document.body.appendChild(redBorder);
+
+      const style = document.createElement("style");
+      style.textContent = `
+        @keyframes shake-border {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(-5px, -5px); }
+          50% { transform: translate(5px, 5px); }
+          75% { transform: translate(-5px, 5px); }
+        }
+      `;
+      document.head.appendChild(style);
+
+      setTimeout(() => {
+        if (document.body.contains(redBorder)) {
+          document.body.removeChild(redBorder);
+        }
+        if (document.head.contains(style)) {
+          document.head.removeChild(style);
+        }
+      }, 500);
     }
   }, [status]);
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (status === "available") {
-      navigate("/status");
+      // Confetti desde la posición del mouse
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = (e.clientX / window.innerWidth) * 100;
+      const y = (e.clientY / window.innerHeight) * 100;
+
+      // Disparar confetti siempre, tanto en /status como en otras páginas
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { x: x / 100, y: y / 100 },
+        colors: ["#10b981", "#34d399", "#6ee7b7"],
+      });
+
+      if (!isStatusPage) {
+        navigate("/status");
+      }
     } else if (status === "away") {
       const confirmed = window.confirm(t("statusBadge.confirm"));
       if (confirmed) {
-        navigate("/status");
+        if (!isStatusPage) {
+          navigate("/status");
+        }
+      }
+    } else if (status === "busy" && isStatusPage) {
+      // Shake con bordes rojos cuando está en rojo y se hace click en /status
+      if (badgeRef.current) {
+        gsap.to(badgeRef.current, {
+          x: [-10, 10, -10, 10, 0],
+          duration: 0.5,
+          ease: "power2.out",
+        });
+
+        const redBorder = document.createElement("div");
+        redBorder.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          border: 4px solid #ef4444;
+          pointer-events: none;
+          z-index: 9999;
+          animation: shake-border 0.5s ease-out;
+        `;
+        document.body.appendChild(redBorder);
+
+        const style = document.createElement("style");
+        style.textContent = `
+          @keyframes shake-border {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-5px, -5px); }
+            50% { transform: translate(5px, 5px); }
+            75% { transform: translate(-5px, 5px); }
+          }
+        `;
+        document.head.appendChild(style);
+
+        setTimeout(() => {
+          if (document.body.contains(redBorder)) {
+            document.body.removeChild(redBorder);
+          }
+          if (document.head.contains(style)) {
+            document.head.removeChild(style);
+          }
+        }, 500);
       }
     }
-    // Si está "busy", no hace nada
   };
 
   const statusConfig = {
@@ -78,7 +174,7 @@ function StatusBadge() {
     <button
       ref={badgeRef}
       onClick={handleClick}
-      disabled={status === "busy"}
+      disabled={false}
       className={`flex items-center gap-3 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 font-medium transition-all ${
         status === "busy" ? "opacity-75" : "hover:bg-gray-50"
       } ${isStatusPage ? "" : "cursor-pointer"}`}

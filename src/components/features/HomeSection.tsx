@@ -5,6 +5,7 @@ import RadioPlayer from "./RadioPlayer";
 import ContactSection from "./ContactSection";
 import LatestPostCard from "./LatestPostCard";
 import ExperienceCard from "./ExperienceCard";
+import AdSpace from "./AdSpace";
 import { useTranslation } from "../../lib/i18n";
 
 function HomeSection() {
@@ -78,6 +79,11 @@ function HomeSection() {
         {/* Contactar */}
         <div className="home-card">
           <ContactSection />
+        </div>
+
+        {/* Anuncio al lado de Contactar */}
+        <div className="home-card md:col-span-2 lg:col-span-1">
+          <AdSpace className="h-full" />
         </div>
       </div>
     </div>

@@ -69,8 +69,8 @@ function Hero() {
           </div>
 
           {/* Lado derecho: Animación pixel art */}
-          <div className="hidden md:flex items-center justify-center">
-            <AnimationVixis />
+          <div className="hidden md:flex items-center justify-center bg-transparent">
+            {/* <AnimationVixis /> */}
           </div>
         </div>
       </div>

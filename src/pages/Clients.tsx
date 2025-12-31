@@ -35,12 +35,12 @@ function Clients() {
   const itemsPerPage = 10;
 
   // Constantes para la animación (estilo SmoothUI)
-  const ANIMATION_DURATION = 25;
+  const ANIMATION_DURATION = 10;
   const STAGGER_DELAY = 0.1;
   const HOVER_SCALE = 1.2;
   const HOVER_ROTATE = 5;
-  const SPRING_STIFFNESS = 300;
-  const SCROLL_DISTANCE_FACTOR = 33.333;
+  const SPRING_STIFFNESS = 100;
+  const SCROLL_DISTANCE_FACTOR = 93.333;
 
   useEffect(() => {
     const loadClients = async () => {

@@ -190,7 +190,7 @@ function ProjectCard({ project }: { project: Project }) {
                   : "w-full cursor-pointer"
               }
             >
-              <Button variant="secondary" className="w-full cursor-pointer">
+              <Button variant="primary" className="w-full cursor-pointer">
                 {t("projects.visit")}
               </Button>
             </a>

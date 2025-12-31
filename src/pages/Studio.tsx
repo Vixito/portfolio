@@ -7,7 +7,7 @@ function Studio() {
   const containerRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [activeSlide, setActiveSlide] = useState<number | null>(null);
+  const [activeSlide, setActiveSlide] = useState<number | null>(0); // Misión abierta por defecto
   const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

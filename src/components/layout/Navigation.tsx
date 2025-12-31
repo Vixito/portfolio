@@ -204,7 +204,7 @@ function Navigation() {
           <div
             ref={dropdownRef}
             style={{ display: "none" }}
-            className={`dropdown-menu absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-black min-w-[180px] z-50 mb-0 ${
+            className={`dropdown-menu absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-black min-w-[220px] z-50 mb-0 ${
               isStudioPage ? "studio-dropdown" : ""
             }`}
             onMouseEnter={() => handleMouseEnter("trabajo")}
@@ -214,7 +214,7 @@ function Navigation() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 transition-colors cursor-pointer text-black ${
+                className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 transition-colors cursor-pointer text-black whitespace-nowrap ${
                   isActive(item.path)
                     ? "bg-purple/20 text-purple font-semibold"
                     : ""

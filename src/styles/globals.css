@@ -1,7 +1,7 @@
+@import "./components.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import "./components.css";
 
 /* Animaciones para modales */
 @keyframes fadeIn {
