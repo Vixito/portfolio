@@ -25,10 +25,7 @@ jobs:
         with:
           doppler-token: ${{ secrets.DOPPLER_TOKEN }}
 
-      - name: Setup Deno node_modules for app dependencies
-        run: doppler run -- deno cache --reload --node-modules-dir=auto src/main.tsx vite.config.ts
-
-      - name: Install Vite and plugins with npm
+      - name: Install dependencies with npm
         run: npm install
 
       - name: Build with Vite
@@ -37,7 +34,7 @@ jobs:
       - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: tu-proyecto-en-deno-deploy
+          project: vixis-portfolio
           entrypoint: dist/index.html
         env:
           DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
