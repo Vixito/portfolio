@@ -1,4 +1,4 @@
-FROM savonet/liquidsoap:rolling-release-v2.4.x
+FROM savonet/liquidsoap:35660b4
 
 # Cambiar a root para instalar dependencias
 USER root
@@ -9,7 +9,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # La imagen base de Liquidsoap usa el usuario 'liquidsoap' (UID 1000)
-# Verificar el usuario con: docker run --rm savonet/liquidsoap:v2.3.1 id
+# Verificar el usuario con: docker run --rm savonet/liquidsoap:35660b4 id
 USER 1000:1000
 
 # Crear directorio de trabajo

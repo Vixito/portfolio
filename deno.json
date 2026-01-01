@@ -9,7 +9,7 @@
     "format": "deno run -A npm:@biomejs/biome format --write .",
     "lint": "deno run -A npm:@biomejs/biome lint .",
     "check": "deno run -A npm:@biomejs/biome check --write .",
-    "deploy": "deno task build && deno deploy --project=vixis-portfolio dist/index.html"
+    "deploy": "deno task build && deno deploy --project=vixis-portfolio main.ts"
   },
   "nodeModulesDir": "auto"
 }
