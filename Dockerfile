@@ -26,5 +26,5 @@ RUN chmod +x /radio/start.sh /radio/healthcheck.py
 USER 1000:1000
 
 # Ejecutar script de inicio que lanza ambos servicios
-# Usar shell form para que interprete comandos como nohup, &, etc.
-CMD ["/bin/sh", "/radio/start.sh"]
+# Usar shell form explícito para evitar problemas de parseo
+CMD /bin/sh /radio/start.sh
