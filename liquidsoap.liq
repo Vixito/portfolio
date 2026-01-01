@@ -2,16 +2,25 @@
 # Configuración optimizada para 256MB RAM (eNano en Koyeb)
 
 # URL del CDN con la playlist (desde variable de entorno)
-# getenv() retorna "" si no existe, usar operador ternario para default
-playlist_url = if getenv("PLAYLIST_URL") == "" then "https://cdn.vixis.dev/music/playlist.m3u" else getenv("PLAYLIST_URL")
+playlist_url_env = getenv("PLAYLIST_URL")
+playlist_url = if playlist_url_env == "" then "https://cdn.vixis.dev/music/playlist.m3u" else playlist_url_env
 
 # Configuración de Icecast (desde variables de entorno)
-icecast_host = if getenv("ICECAST_HOST") == "" then "radio.vixis.dev" else getenv("ICECAST_HOST")
-icecast_port_str = if getenv("ICECAST_PORT") == "" then "443" else getenv("ICECAST_PORT")
+icecast_host_env = getenv("ICECAST_HOST")
+icecast_host = if icecast_host_env == "" then "radio.vixis.dev" else icecast_host_env
+
+icecast_port_env = getenv("ICECAST_PORT")
+icecast_port_str = if icecast_port_env == "" then "443" else icecast_port_env
 icecast_port = int_of_string(icecast_port_str)
-icecast_mount = if getenv("ICECAST_MOUNT") == "" then "/vixis" else getenv("ICECAST_MOUNT")
-icecast_user = if getenv("ICECAST_USER") == "" then "source" else getenv("ICECAST_USER")
-icecast_password = if getenv("ICECAST_PASSWORD") == "" then "" else getenv("ICECAST_PASSWORD")
+
+icecast_mount_env = getenv("ICECAST_MOUNT")
+icecast_mount = if icecast_mount_env == "" then "/vixis" else icecast_mount_env
+
+icecast_user_env = getenv("ICECAST_USER")
+icecast_user = if icecast_user_env == "" then "source" else icecast_user_env
+
+icecast_password_env = getenv("ICECAST_PASSWORD")
+icecast_password = if icecast_password_env == "" then "" else icecast_password_env
 
 # Nombre de la radio
 radio_name = "Radio Vixis"
