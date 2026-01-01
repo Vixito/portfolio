@@ -30,6 +30,7 @@ jobs:
         run: doppler run -- npm run build
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+          DOPPLER_PROJECT: ${{ secrets.DOPPLER_PROJECT }}
 
       - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1

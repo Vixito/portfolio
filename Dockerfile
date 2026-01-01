@@ -1,4 +1,4 @@
-FROM savonet/liquidsoap:latest
+FROM savonet/liquidsoap:v2.3.1
 
 # Instalar dependencias para descargar desde URLs
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*

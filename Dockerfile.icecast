@@ -5,11 +5,19 @@ RUN apt-get update && \
     apt-get install -y icecast2 && \
     rm -rf /var/lib/apt/lists/*
 
-# Crear directorio de configuración
-RUN mkdir -p /etc/icecast2
+# Crear usuario no-root para ejecutar Icecast
+RUN useradd -m -u 1000 icecast && \
+    mkdir -p /etc/icecast2 /var/log/icecast2 /usr/share/icecast2 && \
+    chown -R icecast:icecast /etc/icecast2 /var/log/icecast2 /usr/share/icecast2
 
 # Copiar configuración
 COPY icecast.xml /etc/icecast2/icecast.xml
+
+# Cambiar propiedad de la configuración
+RUN chown icecast:icecast /etc/icecast2/icecast.xml
+
+# Cambiar a usuario no-root
+USER icecast
 
 # Exponer puerto
 EXPOSE 8000
