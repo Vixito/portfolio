@@ -1,5 +1,6 @@
 {
   "name": "portfolio-build",
+  "author": "Vixis",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -23,6 +24,7 @@
     "zod": "^3.23.8",
     "@hookform/resolvers": "^3.9.0",
     "@supabase/supabase-js": "^2.45.0",
+    "@supabase/auth-js": "^2.45.0",
     "canvas-confetti": "^1.9.3"
   },
   "devDependencies": {
