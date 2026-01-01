@@ -1,4 +1,4 @@
-FROM savonet/liquidsoap:35660b4
+FROM savonet/liquidsoap:rolling-release-v2.4.x
 
 # Cambiar a root para instalar dependencias
 USER root
