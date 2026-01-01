@@ -51,6 +51,7 @@ function Admin() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasValidKey, setHasValidKey] = useState(false);
   const [adminKey, setAdminKey] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -103,8 +104,15 @@ function Admin() {
   const [extractingEventData, setExtractingEventData] = useState(false);
   const [eventUrl, setEventUrl] = useState("");
 
-  // Verificar key de autenticación inicial
+  // Verificar key de autenticación inicial (solo para permitir mostrar el formulario)
   useEffect(() => {
+    // Verificar que esté en admin.vixis.dev
+    const hostname = window.location.hostname;
+    if (hostname !== "admin.vixis.dev") {
+      setHasValidKey(false);
+      return;
+    }
+
     const key = searchParams.get("key");
     const validKey = import.meta.env.VITE_ADMIN_KEY; // Variable de entorno desde Doppler
 
@@ -112,12 +120,16 @@ function Admin() {
       console.error(
         "VITE_ADMIN_KEY no está configurada en las variables de entorno"
       );
+      setHasValidKey(false);
       return;
     }
 
-    // Solo autenticar automáticamente si hay key válida en URL
+    // Verificar si la key es válida, pero NO autenticar automáticamente
+    // La key solo permite mostrar el formulario de login
     if (key === validKey) {
-      setIsAuthenticated(true);
+      setHasValidKey(true);
+    } else {
+      setHasValidKey(false);
     }
   }, [searchParams]);
 
@@ -645,11 +657,8 @@ function Admin() {
   };
 
   if (!isAuthenticated) {
-    const key = searchParams.get("key");
-    const validKey = import.meta.env.VITE_ADMIN_KEY;
-
     // Si no hay key válida, mostrar NotFound
-    if (!key || key !== validKey) {
+    if (!hasValidKey) {
       return <NotFound />;
     }
 

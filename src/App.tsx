@@ -88,32 +88,125 @@ function App() {
     <BrowserRouter>
       <AnimatedTitle />
       <ScrollToTop />
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Home />}></Route>
-          <Route path="/about" element={<About />}></Route>
-          <Route path="/admin" element={<Admin />}></Route>
-          <Route path="/blog" element={<Blog />}></Route>
-          <Route path="/clients" element={<Clients />}></Route>
-          <Route path="/socials" element={<Socials />}></Route>
-          <Route path="/studies" element={<Studies />}></Route>
-          <Route path="/studio" element={<Studio />}></Route>
-          <Route path="/projects" element={<Projects />}></Route>
-          <Route path="/workxp" element={<WorkExperience />}></Route>
-          <Route
-            path="/skills-n-technologies"
-            element={<SkillsNTechnologies />}
-          ></Route>
-          <Route path="/status" element={<Status />}></Route>
-          <Route path="/store" element={<Store />}></Route>
-          <Route path="/radio" element={<Radio />}></Route>
-          <Route path="*" element={<NotFound />}></Route>
-          <Route
-            path="/contact"
-            element={<Navigate to="/socials" replace />}
-          ></Route>
-        </Routes>
-      </Layout>
+      <Routes>
+        <Route path="*" element={<NotFound />}></Route>
+        <Route
+          path="/contact"
+          element={<Navigate to="/socials" replace />}
+        ></Route>
+        <Route
+          path="/"
+          element={
+            <Layout>
+              <Home />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/about"
+          element={
+            <Layout>
+              <About />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/admin"
+          element={
+            <Layout>
+              <Admin />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/blog"
+          element={
+            <Layout>
+              <Blog />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/clients"
+          element={
+            <Layout>
+              <Clients />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/socials"
+          element={
+            <Layout>
+              <Socials />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/studies"
+          element={
+            <Layout>
+              <Studies />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/studio"
+          element={
+            <Layout>
+              <Studio />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/projects"
+          element={
+            <Layout>
+              <Projects />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/workxp"
+          element={
+            <Layout>
+              <WorkExperience />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/skills-n-technologies"
+          element={
+            <Layout>
+              <SkillsNTechnologies />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/status"
+          element={
+            <Layout>
+              <Status />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/store"
+          element={
+            <Layout>
+              <Store />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/radio"
+          element={
+            <Layout>
+              <Radio />
+            </Layout>
+          }
+        ></Route>
+      </Routes>
     </BrowserRouter>
   );
 }

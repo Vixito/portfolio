@@ -31,6 +31,14 @@
     </mount>
 
     <fileserve>1</fileserve>
+    
+    <!-- Configuración CORS para permitir peticiones desde el frontend -->
+    <http-headers>
+        <header name="Access-Control-Allow-Origin" value="*" />
+        <header name="Access-Control-Allow-Methods" value="GET, POST, OPTIONS" />
+        <header name="Access-Control-Allow-Headers" value="Content-Type, Authorization" />
+        <header name="Access-Control-Max-Age" value="86400" />
+    </http-headers>
     <paths>
         <basedir>/usr/share/icecast2</basedir>
         <logdir>/var/log/icecast2</logdir>
