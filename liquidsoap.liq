@@ -7,7 +7,8 @@ playlist_url = if getenv("PLAYLIST_URL") == "" then "https://cdn.vixis.dev/music
 
 # Configuración de Icecast (desde variables de entorno)
 icecast_host = if getenv("ICECAST_HOST") == "" then "radio.vixis.dev" else getenv("ICECAST_HOST")
-icecast_port = int_of_string(if getenv("ICECAST_PORT") == "" then "443" else getenv("ICECAST_PORT"))
+icecast_port_str = if getenv("ICECAST_PORT") == "" then "443" else getenv("ICECAST_PORT")
+icecast_port = int_of_string(icecast_port_str)
 icecast_mount = if getenv("ICECAST_MOUNT") == "" then "/vixis" else getenv("ICECAST_MOUNT")
 icecast_user = if getenv("ICECAST_USER") == "" then "source" else getenv("ICECAST_USER")
 icecast_password = if getenv("ICECAST_PASSWORD") == "" then "" else getenv("ICECAST_PASSWORD")
