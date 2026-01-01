@@ -25,6 +25,6 @@ USER root
 RUN chmod +x /radio/start.sh /radio/healthcheck.py
 USER 1000:1000
 
-# Ejecutar ambos servicios directamente sin script intermedio
-# Health check en background, luego Liquidsoap en foreground
-CMD sh -c "python3 /radio/healthcheck.py > /dev/null 2>&1 & sleep 2 && exec liquidsoap --debug 1 /radio/liquidsoap.liq"
+# Ejecutar solo Liquidsoap primero para verificar que funciona
+# TODO: Agregar health check después de verificar que Liquidsoap funciona
+CMD ["liquidsoap", "--debug", "1", "/radio/liquidsoap.liq"]
