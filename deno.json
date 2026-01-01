@@ -3,7 +3,7 @@
   "tasks": {
     "dev": "deno run -A npm:vite",
     "dev:doppler": "echo 'Use: doppler run -- deno task dev'",
-    "build": "deno cache --reload --node-modules-dir=auto src/main.tsx vite.config.ts && deno run --allow-all --node-modules-dir=auto npm:vite build",
+    "build": "deno cache --reload --node-modules-dir=auto src/main.tsx vite.config.ts && DENO_NO_PACKAGE_JSON=1 deno run --allow-all --node-modules-dir=auto npm:vite build",
     "build:doppler": "echo 'Use: doppler run -- deno task build'",
     "preview": "deno run -A npm:vite preview",
     "format": "deno run -A npm:@biomejs/biome format --write .",
