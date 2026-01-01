@@ -106,9 +106,11 @@ function Admin() {
 
   // Verificar key de autenticación inicial (solo para permitir mostrar el formulario)
   useEffect(() => {
-    // Verificar que esté en admin.vixis.dev
+    // Verificar que esté en admin.vixis.dev y en la ruta raíz
     const hostname = window.location.hostname;
-    if (hostname !== "admin.vixis.dev") {
+    const pathname = window.location.pathname;
+
+    if (hostname !== "admin.vixis.dev" || pathname !== "/") {
       setHasValidKey(false);
       return;
     }

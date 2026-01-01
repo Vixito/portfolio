@@ -83,38 +83,38 @@ function ScrollToTop() {
   return null;
 }
 
+// Componente wrapper para la ruta raíz que verifica el hostname
+function RootRoute() {
+  const hostname =
+    typeof window !== "undefined" ? window.location.hostname : "";
+
+  if (hostname === "admin.vixis.dev") {
+    return <Admin />;
+  }
+
+  return (
+    <Layout>
+      <Home />
+    </Layout>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
       <AnimatedTitle />
       <ScrollToTop />
       <Routes>
-        <Route path="*" element={<NotFound />}></Route>
         <Route
           path="/contact"
           element={<Navigate to="/socials" replace />}
         ></Route>
-        <Route
-          path="/"
-          element={
-            <Layout>
-              <Home />
-            </Layout>
-          }
-        ></Route>
+        <Route path="/" element={<RootRoute />}></Route>
         <Route
           path="/about"
           element={
             <Layout>
               <About />
-            </Layout>
-          }
-        ></Route>
-        <Route
-          path="/admin"
-          element={
-            <Layout>
-              <Admin />
             </Layout>
           }
         ></Route>
@@ -206,6 +206,7 @@ function App() {
             </Layout>
           }
         ></Route>
+        <Route path="*" element={<NotFound />}></Route>
       </Routes>
     </BrowserRouter>
   );
