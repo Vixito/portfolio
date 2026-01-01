@@ -21,6 +21,7 @@
     "gsap/ScrollTrigger": "npm:gsap/ScrollTrigger",
     "zod": "npm:zod",
     "@hookform/resolvers": "npm:@hookform/resolvers",
+    "@hookform/resolvers/zod": "npm:@hookform/resolvers/zod",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
     "canvas-confetti": "npm:canvas-confetti@1.9.3"
   }
