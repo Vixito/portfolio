@@ -29,7 +29,14 @@ jobs:
         run: doppler run -- deno cache --reload --node-modules-dir=auto src/main.tsx vite.config.ts
 
       - name: Build with Vite (Node.js)
-        run: doppler run -- node node_modules/.deno/vite@*/node_modules/vite/dist/node/cli.js build
+        run: |
+          VITE_PATH=$(find node_modules/.deno -name "cli.js" -path "*/vite/dist/node/cli.js" | head -1)
+          if [ -z "$VITE_PATH" ]; then
+            echo "Vite CLI not found, using npx"
+            doppler run -- npx vite build
+          else
+            doppler run -- node "$VITE_PATH" build
+          fi
 
       - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1
