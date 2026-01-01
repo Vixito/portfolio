@@ -1,5 +1,5 @@
-import tailwindcss from "npm:tailwindcss@3.4.1";
-import autoprefixer from "npm:autoprefixer";
+import tailwindcss from "tailwindcss";
+import autoprefixer from "autoprefixer";
 
 export default {
   plugins: [tailwindcss, autoprefixer],
