@@ -5,8 +5,8 @@ RUN apt-get update && \
     apt-get install -y icecast2 gettext-base && \
     rm -rf /var/lib/apt/lists/*
 
-# Crear usuario no-root para ejecutar Icecast
-RUN useradd -m -u 1000 icecast && \
+# Crear usuario no-root para ejecutar Icecast (el grupo icecast ya existe)
+RUN (id -u icecast >/dev/null 2>&1 || useradd -m -u 1000 -g icecast icecast) && \
     mkdir -p /etc/icecast2 /var/log/icecast2 /usr/share/icecast2 /tmp/icecast2 && \
     chown -R icecast:icecast /etc/icecast2 /var/log/icecast2 /usr/share/icecast2 /tmp/icecast2 && \
     chmod 755 /etc/icecast2

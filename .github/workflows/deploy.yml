@@ -31,6 +31,7 @@ jobs:
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
           DOPPLER_PROJECT: ${{ secrets.DOPPLER_PROJECT }}
+          DOPPLER_CONFIG: ${{ secrets.DOPPLER_CONFIG }}
 
       - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1
