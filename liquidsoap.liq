@@ -39,4 +39,14 @@ music = mksafe(music)
 
 # Conectar a Icecast con bitrate reducido para menos memoria
 # Bitrate 96kbps en lugar de 128kbps reduce el uso de CPU y memoria
-output.icecast(%mp3(bitrate=96, samplerate=44100, stereo=true), music, host=icecast_host, port=icecast_port, mount=icecast_mount, user=icecast_user, password=icecast_password, name=radio_name, description=radio_description)
+output.icecast(
+  %mp3(bitrate=96, samplerate=44100, stereo=true),
+  host=icecast_host,
+  port=icecast_port,
+  mount=icecast_mount,
+  user=icecast_user,
+  password=icecast_password,
+  name=radio_name,
+  description=radio_description,
+  music
+)
