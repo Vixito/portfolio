@@ -25,18 +25,14 @@ jobs:
         with:
           doppler-token: ${{ secrets.DOPPLER_TOKEN }}
 
-      - name: Setup Deno node_modules
+      - name: Setup Deno node_modules for app dependencies
         run: doppler run -- deno cache --reload --node-modules-dir=auto src/main.tsx vite.config.ts
 
-      - name: Build with Vite (Node.js)
-        run: |
-          VITE_PATH=$(find node_modules/.deno -name "cli.js" -path "*/vite/dist/node/cli.js" | head -1)
-          if [ -z "$VITE_PATH" ]; then
-            echo "Vite CLI not found, using npx"
-            doppler run -- npx vite build
-          else
-            doppler run -- node "$VITE_PATH" build
-          fi
+      - name: Install Vite and plugins with npm
+        run: npm install
+
+      - name: Build with Vite
+        run: doppler run -- npm run build
 
       - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1
