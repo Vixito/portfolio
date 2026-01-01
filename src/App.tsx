@@ -206,7 +206,14 @@ function App() {
             </Layout>
           }
         ></Route>
-        <Route path="*" element={<NotFound />}></Route>
+        <Route
+          path="*"
+          element={
+            <Layout>
+              <NotFound />
+            </Layout>
+          }
+        ></Route>
       </Routes>
     </BrowserRouter>
   );
