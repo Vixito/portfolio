@@ -106,7 +106,11 @@ function Radio() {
           });
         }
       } catch (error) {
-        console.error("Error al cargar metadata de Icecast:", error);
+        // Silenciar errores de conexión en producción (NetworkError, CORS, etc.)
+        // Solo loggear en desarrollo
+        if (import.meta.env.DEV) {
+          console.debug("Error al cargar metadata de Icecast:", error);
+        }
         // Si no se puede conectar, asumir que está offline
         setIsLive(false);
         setCurrentSong({
@@ -332,16 +336,22 @@ function Radio() {
     // Actualizar el estado inmediatamente para feedback visual
     setVolume(newVolume);
 
-    // Throttle: actualizar el audio solo cada 50ms para evitar bloqueos
+    // Throttle: actualizar el audio solo cada 100ms para evitar bloqueos
     if (volumeThrottleRef.current) {
       clearTimeout(volumeThrottleRef.current);
     }
 
     volumeThrottleRef.current = setTimeout(() => {
-      if (audioRef.current) {
-        audioRef.current.volume = newVolume;
+      // Actualizar el volumen del audio si está disponible, pero no bloquear si no lo está
+      try {
+        if (audioRef.current) {
+          audioRef.current.volume = newVolume;
+        }
+      } catch (error) {
+        // Ignorar errores silenciosamente para no bloquear la UI
+        console.debug("Error al cambiar volumen:", error);
       }
-    }, 100); // Aumentado a 100ms para mejor rendimiento
+    }, 100);
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -576,7 +586,7 @@ function Radio() {
             <div className="flex items-center gap-2 min-w-[60px] md:min-w-[100px]">
               {isLive ? (
                 <span className="text-[10px] md:text-xs text-blue-400 font-semibold animate-pulse">
-                  ● {t("radio.live")}
+                  ● {t("radio.online")}
                 </span>
               ) : (
                 <span className="text-[10px] md:text-xs text-gray-400">
@@ -635,7 +645,7 @@ function Radio() {
 
             {/* Menú dropdown */}
             {showMenu && (
-              <div className="absolute bottom-full right-0 mb-2 bg-black border border-white/20 rounded-lg shadow-lg min-w-[180px] z-50">
+              <div className="absolute top-full right-0 mt-2 bg-black shadow-lg min-w-[180px] z-[9999]">
                 <button
                   onClick={() => {
                     const typeformUrl =

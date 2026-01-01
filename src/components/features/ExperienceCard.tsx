@@ -25,7 +25,7 @@ function ExperienceCard() {
     {
       company: "Filippo Cucine",
       role: t("workExperience.fullStackDeveloper"),
-      period: `${t("workExperience.december")} 2025 - ${t(
+      period: `${t("workExperience.january")} 2026 - ${t(
         "workExperience.present"
       )}`,
       logo: "https://cdn.vixis.dev/Filippo+Cucine+-+Logo.webp",

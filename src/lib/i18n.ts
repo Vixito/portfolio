@@ -125,11 +125,18 @@ export const translations = {
       assistant: "Asistente Técnico de Sistemas",
       discordMarketer: "Marketer de Discord",
       fullStackDeveloper: "Desarrollador Full-Stack",
+      january: "Enero",
+      february: "Febrero",
       march: "Marzo",
       april: "Abril",
-      december: "Diciembre",
-      october: "Octubre",
+      may: "Mayo",
+      june: "Junio",
+      july: "Julio",
+      august: "Agosto",
       september: "Septiembre",
+      october: "Octubre",
+      november: "Noviembre",
+      december: "Diciembre",
     },
     // Studies
     studies: {
@@ -370,6 +377,10 @@ export const translations = {
       invalidCredentials: "Usuario o contraseña incorrectos",
       contentManagement: "Gestión de Contenido",
       mediaManagement: "Gestión de Recursos Multimedia",
+      show: "Mostrar",
+      hide: "Ocultar",
+      mediaResources: "recursos multimedia",
+      changeStatus: "Cambiar Estado",
       products: "Productos",
       projects: "Proyectos",
       clients: "Clientes",
@@ -524,7 +535,6 @@ export const translations = {
     // Home Section
     homeSection: {
       projects: "Proyectos",
-      december: "Diciembre",
     },
     // Latest Post Card
     latestPostCard: {
@@ -655,11 +665,18 @@ export const translations = {
       assistant: "Systems Technical Assistant",
       discordMarketer: "Discord Marketer",
       fullStackDeveloper: "Full-Stack Developer",
+      january: "January",
+      february: "February",
       march: "March",
+      may: "May",
       april: "April",
-      december: "December",
-      october: "October",
+      june: "June",
+      july: "July",
+      august: "August",
       september: "September",
+      october: "October",
+      november: "November",
+      december: "December",
     },
     // Studies
     studies: {
@@ -899,6 +916,10 @@ export const translations = {
       invalidCredentials: "Invalid username or password",
       contentManagement: "Content Management",
       mediaManagement: "Media Resources Management",
+      show: "Show",
+      hide: "Hide",
+      mediaResources: "media resources",
+      changeStatus: "Change Status",
       products: "Products",
       projects: "Projects",
       clients: "Clients",
@@ -1052,7 +1073,6 @@ export const translations = {
     // Home Section
     homeSection: {
       projects: "Projects",
-      december: "December",
     },
     // Latest Post Card
     latestPostCard: {

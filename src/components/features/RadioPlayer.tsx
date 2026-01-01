@@ -57,7 +57,10 @@ function RadioPlayer() {
         await audioRef.current.play();
         setIsPlaying(true);
       } catch (error) {
-        console.error("Error al reproducir la radio:", error);
+        // Silenciar errores en producción
+        if (import.meta.env.DEV) {
+          console.debug("Error al reproducir la radio:", error);
+        }
         setIsPlaying(false);
       }
     }
@@ -77,10 +80,9 @@ function RadioPlayer() {
         {/* Botón de play a la izquierda */}
         <button
           onClick={togglePlayPause}
-          disabled={!isLive}
           className={`w-16 h-16 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center overflow-hidden flex-shrink-0 transition-all cursor-pointer ${
             isPlaying ? "animate-spin" : ""
-          } ${!isLive ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
+          } hover:opacity-90`}
           style={{
             animationDuration: "3s",
           }}
@@ -111,7 +113,7 @@ function RadioPlayer() {
           {isLive ? (
             <p className="text-xs text-blue-400 font-semibold animate-pulse flex items-center gap-1">
               <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-              {t("radio.live")}
+              {t("radio.online")}
             </p>
           ) : (
             <p className="text-xs text-gray-400 flex items-center gap-1">

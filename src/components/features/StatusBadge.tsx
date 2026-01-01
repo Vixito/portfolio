@@ -35,121 +35,68 @@ function StatusBadge() {
     }
   }, [status]);
 
-  // Animación de shake con bordes rojos cuando está en rojo
-  useEffect(() => {
-    if (status === "busy" && badgeRef.current) {
-      // Shake del botón
-      gsap.to(badgeRef.current, {
-        x: [-10, 10, -10, 10, 0],
-        duration: 0.5,
-        ease: "power2.out",
-      });
+  // Función para aplicar parpadeo del borde rojo (solo cuando se hace click en /status)
+  const applyRedBorderBlink = () => {
+    const redBorder = document.createElement("div");
+    redBorder.id = "status-red-border";
+    redBorder.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border: 4px solid #ef4444;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 1;
+    `;
+    document.body.appendChild(redBorder);
 
-      // Efecto de bordes rojos en la pantalla
-      const redBorder = document.createElement("div");
-      redBorder.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        border: 4px solid #ef4444;
-        pointer-events: none;
-        z-index: 9999;
-        animation: shake-border 0.5s ease-out;
-      `;
-      document.body.appendChild(redBorder);
-
-      const style = document.createElement("style");
-      style.textContent = `
-        @keyframes shake-border {
-          0%, 100% { transform: translate(0, 0); }
-          25% { transform: translate(-5px, -5px); }
-          50% { transform: translate(5px, 5px); }
-          75% { transform: translate(-5px, 5px); }
-        }
-      `;
-      document.head.appendChild(style);
-
-      setTimeout(() => {
+    // Parpadeo usando GSAP
+    const blinkAnimation = gsap.to(redBorder, {
+      opacity: 0,
+      duration: 0.15,
+      repeat: 7, // 8 parpadeos totales (0-7)
+      yoyo: true,
+      ease: "power2.inOut",
+      onComplete: () => {
         if (document.body.contains(redBorder)) {
           document.body.removeChild(redBorder);
         }
-        if (document.head.contains(style)) {
-          document.head.removeChild(style);
-        }
-      }, 500);
-    }
-  }, [status]);
+      },
+    });
+
+    // Eliminar después de ~3 segundos por seguridad
+    setTimeout(() => {
+      blinkAnimation.kill();
+      if (document.body.contains(redBorder)) {
+        document.body.removeChild(redBorder);
+      }
+    }, 3000);
+  };
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Si no estamos en /status, solo navegar
+    if (!isStatusPage) {
+      navigate("/status");
+      return;
+    }
+
+    // Efectos según el estado (solo en /status y solo cuando se hace clic en el badge)
     if (status === "available") {
       // Confetti desde la posición del mouse
-      const rect = e.currentTarget.getBoundingClientRect();
       const x = (e.clientX / window.innerWidth) * 100;
       const y = (e.clientY / window.innerHeight) * 100;
 
-      // Disparar confetti siempre, tanto en /status como en otras páginas
       confetti({
         particleCount: 100,
         spread: 70,
         origin: { x: x / 100, y: y / 100 },
         colors: ["#10b981", "#34d399", "#6ee7b7"],
       });
-
-      if (!isStatusPage) {
-        navigate("/status");
-      }
-    } else if (status === "away") {
-      const confirmed = window.confirm(t("statusBadge.confirm"));
-      if (confirmed) {
-        if (!isStatusPage) {
-          navigate("/status");
-        }
-      }
-    } else if (status === "busy" && isStatusPage) {
-      // Shake con bordes rojos cuando está en rojo y se hace click en /status
-      if (badgeRef.current) {
-        gsap.to(badgeRef.current, {
-          x: [-10, 10, -10, 10, 0],
-          duration: 0.5,
-          ease: "power2.out",
-        });
-
-        const redBorder = document.createElement("div");
-        redBorder.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          border: 4px solid #ef4444;
-          pointer-events: none;
-          z-index: 9999;
-          animation: shake-border 0.5s ease-out;
-        `;
-        document.body.appendChild(redBorder);
-
-        const style = document.createElement("style");
-        style.textContent = `
-          @keyframes shake-border {
-            0%, 100% { transform: translate(0, 0); }
-            25% { transform: translate(-5px, -5px); }
-            50% { transform: translate(5px, 5px); }
-            75% { transform: translate(-5px, 5px); }
-          }
-        `;
-        document.head.appendChild(style);
-
-        setTimeout(() => {
-          if (document.body.contains(redBorder)) {
-            document.body.removeChild(redBorder);
-          }
-          if (document.head.contains(style)) {
-            document.head.removeChild(style);
-          }
-        }, 500);
-      }
+    } else if (status === "busy") {
+      // Parpadeo del borde rojo solo cuando se hace click en el badge en /status
+      applyRedBorderBlink();
     }
   };
 

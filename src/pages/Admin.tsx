@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 import { optimizeAndUpload } from "../lib/storage-functions";
 import NotFound from "./NotFound";
 import { useTranslation } from "../lib/i18n";
+import { useStatusStore } from "../stores/useStatusStore";
 import {
   getProducts,
   createProduct,
@@ -55,6 +56,10 @@ function Admin() {
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const { status: currentStatus, setStatus } = useStatusStore();
+  const [showStatusSelector, setShowStatusSelector] = useState(false);
+  const statusSelectorRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   // Estados para gestión de recursos multimedia
   const [showMediaManager, setShowMediaManager] = useState(false);
@@ -182,6 +187,55 @@ function Admin() {
       getClients().catch(console.error);
     }
   }, [isAuthenticated, activeTab]);
+
+  // Animación del dropdown de estado
+  useEffect(() => {
+    if (statusDropdownRef.current) {
+      if (showStatusSelector) {
+        statusDropdownRef.current.style.display = "block";
+        gsap.fromTo(
+          statusDropdownRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "power2.out" }
+        );
+      } else {
+        if (statusDropdownRef.current.style.display !== "none") {
+          gsap.to(statusDropdownRef.current, {
+            opacity: 0,
+            y: -10,
+            scale: 0.95,
+            duration: 0.2,
+            ease: "power2.in",
+            onComplete: () => {
+              if (statusDropdownRef.current) {
+                statusDropdownRef.current.style.display = "none";
+              }
+            },
+          });
+        }
+      }
+    }
+  }, [showStatusSelector]);
+
+  // Cerrar selector de estado al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        statusSelectorRef.current &&
+        !statusSelectorRef.current.contains(event.target as Node)
+      ) {
+        setShowStatusSelector(false);
+      }
+    };
+
+    if (showStatusSelector) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showStatusSelector]);
 
   // Permitir scroll del body incluso cuando el modal está abierto
   // El modal tiene su propio scroll interno
@@ -859,14 +913,93 @@ function Admin() {
           </div>
         </div>
 
-        {/* Botón de Recursos Multimedia */}
-        <div className="mb-8">
+        {/* Botones de Recursos Multimedia y Estado */}
+        <div className="mb-8 flex flex-wrap gap-4">
           <button
             onClick={() => setShowMediaManager(!showMediaManager)}
             className="px-6 py-3 bg-cyan/20 hover:bg-cyan/30 rounded-lg border border-cyan/30 text-white transition-colors cursor-pointer font-semibold"
           >
-            {showMediaManager ? "Ocultar" : "Mostrar"} recursos multimedia
+            {showMediaManager ? t("admin.hide") : t("admin.show")}{" "}
+            {t("admin.mediaResources")}
           </button>
+
+          {/* Selector de Estado */}
+          <div className="relative" ref={statusSelectorRef}>
+            <button
+              onClick={() => setShowStatusSelector(!showStatusSelector)}
+              className="px-6 py-3 rounded-lg border text-white transition-colors cursor-pointer font-semibold flex items-center gap-2"
+              style={{
+                backgroundColor: "rgba(51, 29, 131, 0.3)",
+                borderColor: "rgba(51, 29, 131, 0.5)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  "rgba(51, 29, 131, 0.4)";
+                e.currentTarget.style.borderColor = "rgba(51, 29, 131, 0.6)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  "rgba(51, 29, 131, 0.3)";
+                e.currentTarget.style.borderColor = "rgba(51, 29, 131, 0.5)";
+              }}
+            >
+              {t("admin.changeStatus")}: {t(`statusBadge.${currentStatus}`)}
+              <svg
+                className={`w-4 h-4 transition-transform ${
+                  showStatusSelector ? "rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            <div
+              ref={statusDropdownRef}
+              style={{
+                display: "none",
+                borderColor: "rgba(51, 29, 131, 0.5)",
+              }}
+              className="absolute top-full left-0 mt-2 bg-black/90 backdrop-blur-lg rounded-lg border shadow-lg z-50 min-w-[200px]"
+            >
+              {(["available", "away", "busy"] as const).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => {
+                    setStatus(status);
+                    setShowStatusSelector(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-white transition-colors cursor-pointer first:rounded-t-lg last:rounded-b-lg`}
+                  style={{
+                    backgroundColor:
+                      currentStatus === status
+                        ? "rgba(51, 29, 131, 0.4)"
+                        : "transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentStatus !== status) {
+                      e.currentTarget.style.backgroundColor =
+                        "rgba(51, 29, 131, 0.2)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentStatus !== status) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }
+                  }}
+                >
+                  {t(`statusBadge.${status}`)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Sección CRUD */}

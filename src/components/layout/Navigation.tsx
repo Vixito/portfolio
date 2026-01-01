@@ -165,7 +165,7 @@ function Navigation() {
     <nav
       id="cubicle"
       className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-gray-200 z-50 w-full"
-      style={{ padding: 0, margin: 0 }}
+      style={{ padding: 0, margin: 0, transform: "translateY(0)", opacity: 1 }}
     >
       <ul className="links">
         {simpleItems.map((item) => (
