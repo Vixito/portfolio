@@ -26,6 +26,7 @@
     "@supabase/supabase-js": "^2.45.0",
     "@supabase/auth-js": "^2.45.0",
     "@supabase/postgrest-js": "^2.45.0",
+    "@supabase/functions-js": "^2.45.0",
     "canvas-confetti": "^1.9.3"
   },
   "devDependencies": {
