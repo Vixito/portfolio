@@ -10,6 +10,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
@@ -20,8 +25,11 @@ jobs:
         with:
           doppler-token: ${{ secrets.DOPPLER_TOKEN }}
 
-      - name: Build
-        run: doppler run -- deno task build
+      - name: Setup Deno node_modules
+        run: doppler run -- deno cache --reload --node-modules-dir=auto src/main.tsx vite.config.ts
+
+      - name: Build with Vite (Node.js)
+        run: doppler run -- node node_modules/.deno/vite@*/node_modules/vite/dist/node/cli.js build
 
       - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1
