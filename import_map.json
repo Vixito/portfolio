@@ -10,6 +10,7 @@
     "tailwindcss": "npm:tailwindcss@3.4.1",
     "autoprefixer": "npm:autoprefixer",
     "postcss": "npm:postcss",
+    "react-router": "npm:react-router",
     "react-router-dom": "npm:react-router-dom",
     "recharts": "npm:recharts",
     "react-hook-form": "npm:react-hook-form",
