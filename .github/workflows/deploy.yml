@@ -22,14 +22,14 @@ jobs:
 
       - name: Install Doppler CLI
         uses: dopplerhq/cli-action@v3
-        with:
-          doppler-token: ${{ secrets.DOPPLER_TOKEN }}
 
       - name: Install dependencies with npm
         run: npm install
 
       - name: Build with Vite
         run: doppler run -- npm run build
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
       - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1
