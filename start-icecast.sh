@@ -9,8 +9,8 @@ if [ -z "$ICECAST_SOURCE_PASSWORD" ] || [ -z "$ICECAST_RELAY_PASSWORD" ] || [ -z
     exit 1
 fi
 
-# Generar icecast.xml desde el template
-envsubst < /etc/icecast2/icecast.xml.template > /etc/icecast2/icecast.xml
+# Generar icecast.xml desde el template en un directorio con permisos de escritura
+envsubst < /etc/icecast2/icecast.xml.template > /tmp/icecast2/icecast.xml
 
-# Iniciar Icecast
-exec icecast2 -c /etc/icecast2/icecast.xml
+# Iniciar Icecast con el archivo generado
+exec icecast2 -c /tmp/icecast2/icecast.xml

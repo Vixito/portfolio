@@ -1,20 +1,26 @@
 FROM ubuntu:22.04
 
-# Instalar Icecast
+# Instalar Icecast y gettext-base (para envsubst)
 RUN apt-get update && \
-    apt-get install -y icecast2 && \
+    apt-get install -y icecast2 gettext-base && \
     rm -rf /var/lib/apt/lists/*
 
 # Crear usuario no-root para ejecutar Icecast
 RUN useradd -m -u 1000 icecast && \
-    mkdir -p /etc/icecast2 /var/log/icecast2 /usr/share/icecast2 && \
-    chown -R icecast:icecast /etc/icecast2 /var/log/icecast2 /usr/share/icecast2
+    mkdir -p /etc/icecast2 /var/log/icecast2 /usr/share/icecast2 /tmp/icecast2 && \
+    chown -R icecast:icecast /etc/icecast2 /var/log/icecast2 /usr/share/icecast2 /tmp/icecast2 && \
+    chmod 755 /etc/icecast2
 
-# Copiar configuración
-COPY icecast.xml /etc/icecast2/icecast.xml
+# Copiar configuración como template
+COPY icecast.xml /etc/icecast2/icecast.xml.template
+
+# Copiar script de inicio
+COPY start-icecast.sh /usr/local/bin/start-icecast.sh
+RUN chmod +x /usr/local/bin/start-icecast.sh && \
+    chown icecast:icecast /usr/local/bin/start-icecast.sh
 
 # Cambiar propiedad de la configuración
-RUN chown icecast:icecast /etc/icecast2/icecast.xml
+RUN chown icecast:icecast /etc/icecast2/icecast.xml.template
 
 # Cambiar a usuario no-root
 USER icecast
@@ -22,5 +28,5 @@ USER icecast
 # Exponer puerto
 EXPOSE 8000
 
-# Iniciar Icecast
-CMD ["icecast2", "-c", "/etc/icecast2/icecast.xml"]
+# Iniciar Icecast usando el script que reemplaza variables de entorno
+CMD ["/usr/local/bin/start-icecast.sh"]
