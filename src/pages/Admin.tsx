@@ -145,23 +145,8 @@ function Admin() {
     const validUsername = import.meta.env.VITE_ADMIN_USERNAME;
     const validPassword = import.meta.env.VITE_ADMIN_PASSWORD;
 
-    // Verificar qué variable falta para dar un mensaje más específico
-    if (!validKey) {
-      setLoginError(
-        "Error de configuración: VITE_ADMIN_KEY no está configurada"
-      );
-      return;
-    }
-    if (!validUsername) {
-      setLoginError(
-        "Error de configuración: VITE_ADMIN_USERNAME no está configurada"
-      );
-      return;
-    }
-    if (!validPassword) {
-      setLoginError(
-        "Error de configuración: VITE_ADMIN_PASSWORD no está configurada"
-      );
+    if (!validKey || !validUsername || !validPassword) {
+      setLoginError("Error de configuración: Credenciales no configuradas");
       return;
     }
 
