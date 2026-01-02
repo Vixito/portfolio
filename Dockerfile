@@ -1,30 +1,27 @@
-FROM savonet/liquidsoap:35660b4
+FROM ubuntu:22.04
 
-# Cambiar a root para instalar dependencias
-USER root
-
-# Instalar dependencias para descargar desde URLs y Python para health check
+# Instalar FFmpeg y dependencias
 RUN apt-get update && \
-    apt-get install -y curl python3 && \
+    apt-get install -y ffmpeg curl python3 && \
     rm -rf /var/lib/apt/lists/*
 
-# La imagen base de Liquidsoap usa el usuario 'liquidsoap' (UID 1000)
-# Verificar el usuario con: docker run --rm savonet/liquidsoap:35660b4 id
-USER 1000:1000
+# Crear usuario no-root
+RUN useradd -m -u 1000 radio && \
+    mkdir -p /radio && \
+    chown -R radio:radio /radio
 
-# Crear directorio de trabajo
+USER radio
 WORKDIR /radio
 
 # Copiar scripts
-COPY liquidsoap.liq /radio/liquidsoap.liq
-COPY healthcheck.py /radio/healthcheck.py
+COPY stream.sh /radio/stream.sh
 COPY start.sh /radio/start.sh
+COPY healthcheck.py /radio/healthcheck.py
 
-# Hacer ejecutable el script de inicio
+# Hacer ejecutables
 USER root
-RUN chmod +x /radio/start.sh /radio/healthcheck.py
-USER 1000:1000
+RUN chmod +x /radio/stream.sh /radio/start.sh /radio/healthcheck.py
+USER radio
 
-# Ejecutar solo Liquidsoap primero para verificar que funciona
-# TODO: Agregar health check después de verificar que Liquidsoap funciona
-CMD ["liquidsoap", "--debug", "1", "/radio/liquidsoap.liq"]
+# Ejecutar script de inicio (que maneja health check y streaming)
+CMD ["/radio/start.sh"]
