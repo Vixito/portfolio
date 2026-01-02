@@ -13,10 +13,18 @@ ICECAST_PASSWORD="${ICECAST_PASSWORD:-}"
 
 # Codificar contraseña para URL (manejar caracteres especiales)
 # FFmpeg requiere que la contraseña esté codificada en la URL
+# Usar urllib.parse.quote con safe='' para codificar todos los caracteres especiales
 ICECAST_PASSWORD_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$ICECAST_PASSWORD")
 
-# URL de Icecast con contraseña codificada
+# Construir URL de Icecast
+# El formato icecast:// de FFmpeg funciona con HTTP/HTTPS
+# Si el puerto es 443, Koyeb está exponiendo Icecast a través de HTTPS
+# FFmpeg debería manejar esto automáticamente con icecast://
 ICECAST_URL="icecast://${ICECAST_USER}:${ICECAST_PASSWORD_ENCODED}@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
+
+# Debug: mostrar URL sin contraseña para logs
+ICECAST_URL_DEBUG="icecast://${ICECAST_USER}:***@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
+echo "URL de Icecast (sin contraseña): ${ICECAST_URL_DEBUG}"
 
 echo "Iniciando streaming a Icecast..."
 echo "Host: ${ICECAST_HOST}"

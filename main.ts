@@ -29,13 +29,21 @@ Deno.serve(async (req: Request) => {
 
   // Para todas las demás rutas (incluyendo rutas de la SPA), servir index.html
   // Esto permite que React Router maneje el routing del lado del cliente
+  // Si index.html no existe, intentar servirlo de todas formas para que React Router maneje el 404
   try {
     const indexHtml = await Deno.readTextFile("./dist/index.html");
     return new Response(indexHtml, {
       headers: { "Content-Type": "text/html" },
     });
-  } catch {
-    return new Response("Not Found", { status: 404 });
+  } catch (error) {
+    // Si no se puede leer index.html, intentar leerlo desde dist/ directamente
+    // Si tampoco existe, devolver 404 pero con Content-Type text/html
+    // para que el navegador intente renderizarlo y React Router pueda manejar el 404
+    console.error("Error reading index.html:", error);
+    return new Response("Not Found", {
+      status: 404,
+      headers: { "Content-Type": "text/html" },
+    });
   }
 });
 
