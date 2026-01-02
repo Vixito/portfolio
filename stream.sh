@@ -16,30 +16,16 @@ ICECAST_PASSWORD="${ICECAST_PASSWORD:-}"
 # Usar urllib.parse.quote con safe='' para codificar todos los caracteres especiales
 ICECAST_PASSWORD_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$ICECAST_PASSWORD")
 
-# Determinar protocolo y puerto
-# Si el puerto es 443, usar el puerto interno 8000 con HTTP
-# ya que HTTPS puede causar problemas TLS y ambos servicios están en Koyeb
-if [ "$ICECAST_PORT" = "443" ]; then
-    # Usar puerto interno 8000 con HTTP para evitar problemas TLS
-    # Si ambos servicios están en Koyeb, pueden comunicarse internamente
-    ICECAST_PROTOCOL="http"
-    ICECAST_PORT_INTERNAL="8000"
-    echo "Advertencia: Puerto 443 detectado, usando puerto interno 8000 con HTTP"
-else
-    ICECAST_PROTOCOL="http"
-    ICECAST_PORT_INTERNAL="$ICECAST_PORT"
-fi
-
 # Construir URL de Icecast
-# Intentar primero con protocolo icecast:// que maneja mejor la autenticación
-# Si el puerto es 443, usar el puerto interno 8000
-ICECAST_URL="icecast://${ICECAST_USER}:${ICECAST_PASSWORD_ENCODED}@${ICECAST_HOST}:${ICECAST_PORT_INTERNAL}${ICECAST_MOUNT}"
+# Usar el puerto y host configurados (443 es el puerto público de Koyeb)
+# El protocolo icecast:// maneja automáticamente HTTP/HTTPS según el puerto
+ICECAST_URL="icecast://${ICECAST_USER}:${ICECAST_PASSWORD_ENCODED}@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
 
 # Debug: mostrar URL sin contraseña para logs
-ICECAST_URL_DEBUG="icecast://${ICECAST_USER}:***@${ICECAST_HOST}:${ICECAST_PORT_INTERNAL}${ICECAST_MOUNT}"
+ICECAST_URL_DEBUG="icecast://${ICECAST_USER}:***@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
 echo "URL de Icecast (sin contraseña): ${ICECAST_URL_DEBUG}"
 echo "Protocolo: icecast://"
-echo "Puerto: ${ICECAST_PORT_INTERNAL}"
+echo "Puerto: ${ICECAST_PORT}"
 
 echo "Iniciando streaming a Icecast..."
 echo "Host: ${ICECAST_HOST}"
@@ -71,6 +57,8 @@ play_url() {
     # Icecast requiere método PUT para recibir streams
     # Nota: Si el puerto es 443 y falla, puede ser necesario usar el puerto interno 8000
     # Para eso, configura ICECAST_PORT=8000 en las variables de entorno de Koyeb
+    # Intentar con protocolo icecast:// primero
+    # Si falla, el error se mostrará en los logs
     ffmpeg -re \
         -user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
         -headers "Referer: https://vixis.dev/\r\n" \
@@ -79,10 +67,10 @@ play_url() {
         -f mp3 \
         -content_type audio/mpeg \
         -loglevel error \
-        -timeout 5000000 \
+        -timeout 10000000 \
         -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
         -fflags +genpts \
-        "$ICECAST_URL" 2>&1
+        "$ICECAST_URL" 2>&1 | head -50
 }
 
 # Loop infinito para reproducir la playlist continuamente
