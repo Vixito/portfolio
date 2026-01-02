@@ -1033,17 +1033,26 @@ function Admin() {
                 {(["available", "away", "busy"] as const).map((status) => (
                   <button
                     key={status}
-                    onClick={() => {
-                      // Actualizar el store inmediatamente
+                    onClick={async () => {
+                      // Actualizar el store inmediatamente (como loadCRUDData)
                       setStatus(status);
                       setShowStatusSelector(false);
-                      // Forzar actualización del componente
-                      // El store de Zustand debería actualizar automáticamente, pero forzamos un re-render
+
+                      // Guardar en localStorage
                       if (typeof window !== "undefined") {
                         localStorage.setItem("user_status", status);
-                        // Disparar un evento personalizado para forzar actualización
-                        window.dispatchEvent(new Event("statusChanged"));
                       }
+
+                      // Forzar actualización inmediata del store (como loadCRUDData)
+                      // Esto es similar a cómo loadCRUDData recarga los datos después de guardar
+                      const { setStatus: updateStatus } =
+                        useStatusStore.getState();
+                      updateStatus(status);
+
+                      // Disparar evento para notificar a todos los componentes
+                      window.dispatchEvent(
+                        new CustomEvent("statusChanged", { detail: status })
+                      );
                     }}
                     className={`w-full px-4 py-2 text-left text-white transition-colors cursor-pointer first:rounded-t-lg last:rounded-b-lg`}
                     style={{

@@ -16,23 +16,31 @@ function StatusBadge() {
 
   // Escuchar cambios en localStorage y eventos personalizados para actualizar el estado
   useEffect(() => {
-    const handleStatusChange = () => {
-      const saved = localStorage.getItem("user_status");
-      if (saved && ["available", "away", "busy"].includes(saved)) {
+    const handleStatusChange = ((
+      e: CustomEvent<"available" | "away" | "busy">
+    ) => {
+      const newStatus = e.detail;
+      if (["available", "away", "busy"].includes(newStatus)) {
         const store = useStatusStore.getState();
-        if (store.status !== saved) {
-          setStatus(saved as "available" | "away" | "busy");
+        if (store.status !== newStatus) {
+          setStatus(newStatus);
         }
       }
-    };
+    }) as EventListener;
 
-    // Escuchar eventos personalizados
+    // Escuchar eventos personalizados con detail
     window.addEventListener("statusChanged", handleStatusChange);
 
     // Escuchar cambios en localStorage (desde otras pestañas)
     window.addEventListener("storage", (e) => {
       if (e.key === "user_status" && e.newValue) {
-        handleStatusChange();
+        const saved = e.newValue;
+        if (["available", "away", "busy"].includes(saved)) {
+          const store = useStatusStore.getState();
+          if (store.status !== saved) {
+            setStatus(saved as "available" | "away" | "busy");
+          }
+        }
       }
     });
 

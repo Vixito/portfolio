@@ -49,7 +49,9 @@ play_url() {
     # -i: input (URL del archivo)
     # -user_agent: usar User-Agent de navegador para evitar bloqueos de CloudFront
     # -headers: agregar headers adicionales
-    # -acodec libmp3lame: codec MP3
+    # -f mp3: forzar formato de entrada MP3 (evita detección incorrecta de formato)
+    # -acodec copy: copiar el codec sin re-encodificar (más eficiente, menos memoria)
+    # Si el archivo no es MP3, usar libmp3lame para re-encodificar
     # -ab 96k: bitrate 96kbps (optimizado para memoria)
     # -ar 44100: sample rate 44.1kHz
     # -ac 2: stereo
@@ -60,11 +62,13 @@ play_url() {
     # -timeout 10000000: timeout para conexiones (microsegundos)
     # -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1: reconectar automáticamente
     # Usar HTTP/HTTPS directo con autenticación básica en la URL y método PUT explícito
-    ffmpeg -re \
+    # Intentar primero con copy (sin re-encodificar), si falla, re-encodificar
+    if ! ffmpeg -re \
         -user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
         -headers "Referer: https://vixis.dev/\r\n" \
+        -f mp3 \
         -i "$url" \
-        -acodec libmp3lame -ab 96k -ar 44100 -ac 2 \
+        -acodec copy \
         -f mp3 \
         -content_type audio/mpeg \
         -method PUT \
@@ -72,7 +76,22 @@ play_url() {
         -timeout 10000000 \
         -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
         -fflags +genpts \
-        "$ICECAST_URL" 2>&1 | head -20
+        "$ICECAST_URL" 2>&1; then
+        # Si falla con copy, intentar re-encodificar
+        ffmpeg -re \
+            -user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
+            -headers "Referer: https://vixis.dev/\r\n" \
+            -i "$url" \
+            -acodec libmp3lame -ab 96k -ar 44100 -ac 2 \
+            -f mp3 \
+            -content_type audio/mpeg \
+            -method PUT \
+            -loglevel fatal \
+            -timeout 10000000 \
+            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
+            -fflags +genpts \
+            "$ICECAST_URL" 2>&1
+    fi
 }
 
 # Loop infinito para reproducir la playlist continuamente
@@ -98,10 +117,11 @@ while true; do
             URL="https://cdn.vixis.dev/music/$line"
         fi
         
-        # Verificar que la URL sea accesible antes de intentar reproducir
+        # Verificar que la URL sea accesible y sea un archivo MP3
         # Usar User-Agent de navegador para evitar bloqueos de CloudFront
         # Aumentar timeout para CloudFront (puede tardar más en responder)
-        HTTP_CODE=$(curl -s --max-time 15 -o /dev/null -w "%{http_code}" \
+        # Usar HEAD request primero para verificar que existe y es MP3
+        HTTP_CODE=$(curl -s --max-time 15 -I -o /dev/null -w "%{http_code}" \
             -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
             -H "Referer: https://vixis.dev/" \
             "$URL" 2>/dev/null || echo "000")
@@ -109,6 +129,18 @@ while true; do
         if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "206" ]; then
             echo "Advertencia: URL no accesible (HTTP $HTTP_CODE): $URL, saltando..."
             # Esperar un poco antes de continuar para evitar spam de logs
+            sleep 2
+            continue
+        fi
+        
+        # Verificar que el Content-Type sea audio/mpeg o audio/mp3
+        CONTENT_TYPE=$(curl -s --max-time 15 -I \
+            -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
+            -H "Referer: https://vixis.dev/" \
+            "$URL" 2>/dev/null | grep -i "content-type:" | cut -d' ' -f2 | tr -d '\r' || echo "")
+        
+        if [[ ! "$CONTENT_TYPE" =~ ^audio/(mpeg|mp3|mpeg3) ]]; then
+            echo "Advertencia: URL no es un archivo MP3 válido (Content-Type: $CONTENT_TYPE): $URL, saltando..."
             sleep 2
             continue
         fi

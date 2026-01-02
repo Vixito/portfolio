@@ -49,25 +49,40 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // Si no se encuentra index.html en ninguna ruta, devolver HTML básico
-  // que cargará la aplicación React desde el CDN
-  const fallbackHtml = `<!DOCTYPE html>
+  // Si no se encuentra index.html, intentar leerlo desde la raíz del proyecto
+  // En Deno Deploy, los archivos estáticos están en el directorio de trabajo
+  try {
+    // Intentar leer desde la raíz (Deno Deploy puede servir desde aquí)
+    const indexHtml = await Deno.readTextFile("./index.html");
+    return new Response(indexHtml, {
+      headers: { "Content-Type": "text/html" },
+    });
+  } catch {
+    // Si todo falla, devolver HTML mínimo que redirige a la raíz
+    // Esto permite que React Router maneje el routing
+    const fallbackHtml = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vixis | Portfolio</title>
+  <script>
+    // Redirigir a la raíz para que React Router maneje el routing
+    if (window.location.pathname !== '/') {
+      window.location.href = '/';
+    }
+  </script>
 </head>
 <body>
   <div id="root"></div>
-  <script type="module" crossorigin src="/assets/index.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index.css">
+  <noscript>Por favor, habilita JavaScript para ver este sitio.</noscript>
 </body>
 </html>`;
 
-  return new Response(fallbackHtml, {
-    headers: { "Content-Type": "text/html" },
-  });
+    return new Response(fallbackHtml, {
+      headers: { "Content-Type": "text/html" },
+    });
+  }
 });
 
 function getContentType(ext: string): string {

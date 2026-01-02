@@ -50,16 +50,15 @@ if (typeof window !== "undefined") {
     }
   });
 
-  // También escuchar eventos personalizados
-  window.addEventListener("statusChanged", () => {
+  // También escuchar eventos personalizados (como CustomEvent con detail)
+  window.addEventListener("statusChanged", ((e: CustomEvent<Status>) => {
+    const newStatus = e.detail;
     const store = useStatusStore.getState();
-    const saved = localStorage.getItem("user_status");
     if (
-      saved &&
-      ["available", "away", "busy"].includes(saved) &&
-      store.status !== saved
+      store.status !== newStatus &&
+      ["available", "away", "busy"].includes(newStatus)
     ) {
-      store.setStatus(saved as Status);
+      store.setStatus(newStatus);
     }
-  });
+  }) as EventListener);
 }
