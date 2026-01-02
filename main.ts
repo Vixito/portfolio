@@ -29,22 +29,45 @@ Deno.serve(async (req: Request) => {
 
   // Para todas las demás rutas (incluyendo rutas de la SPA), servir index.html
   // Esto permite que React Router maneje el routing del lado del cliente
-  // Si index.html no existe, intentar servirlo de todas formas para que React Router maneje el 404
-  try {
-    const indexHtml = await Deno.readTextFile("./dist/index.html");
-    return new Response(indexHtml, {
-      headers: { "Content-Type": "text/html" },
-    });
-  } catch (error) {
-    // Si no se puede leer index.html, intentar leerlo desde dist/ directamente
-    // Si tampoco existe, devolver 404 pero con Content-Type text/html
-    // para que el navegador intente renderizarlo y React Router pueda manejar el 404
-    console.error("Error reading index.html:", error);
-    return new Response("Not Found", {
-      status: 404,
-      headers: { "Content-Type": "text/html" },
-    });
+  // Intentar múltiples rutas posibles para index.html
+  const possiblePaths = [
+    "./dist/index.html",
+    "./index.html",
+    "dist/index.html",
+    "index.html",
+  ];
+
+  for (const path of possiblePaths) {
+    try {
+      const indexHtml = await Deno.readTextFile(path);
+      return new Response(indexHtml, {
+        headers: { "Content-Type": "text/html" },
+      });
+    } catch {
+      // Continuar con el siguiente path
+      continue;
+    }
   }
+
+  // Si no se encuentra index.html en ninguna ruta, devolver HTML básico
+  // que cargará la aplicación React desde el CDN
+  const fallbackHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vixis | Portfolio</title>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" crossorigin src="/assets/index.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index.css">
+</body>
+</html>`;
+
+  return new Response(fallbackHtml, {
+    headers: { "Content-Type": "text/html" },
+  });
 });
 
 function getContentType(ext: string): string {

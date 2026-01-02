@@ -11,8 +11,35 @@ function StatusBadge() {
   const location = useLocation();
   const badgeRef = useRef<HTMLButtonElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
-  const { status } = useStatusStore();
+  const { status, setStatus } = useStatusStore();
   const isStatusPage = location.pathname === "/status";
+
+  // Escuchar cambios en localStorage y eventos personalizados para actualizar el estado
+  useEffect(() => {
+    const handleStatusChange = () => {
+      const saved = localStorage.getItem("user_status");
+      if (saved && ["available", "away", "busy"].includes(saved)) {
+        const store = useStatusStore.getState();
+        if (store.status !== saved) {
+          setStatus(saved as "available" | "away" | "busy");
+        }
+      }
+    };
+
+    // Escuchar eventos personalizados
+    window.addEventListener("statusChanged", handleStatusChange);
+
+    // Escuchar cambios en localStorage (desde otras pestañas)
+    window.addEventListener("storage", (e) => {
+      if (e.key === "user_status" && e.newValue) {
+        handleStatusChange();
+      }
+    });
+
+    return () => {
+      window.removeEventListener("statusChanged", handleStatusChange);
+    };
+  }, [setStatus]);
 
   // Animación de pulso para el indicador verde
   useEffect(() => {

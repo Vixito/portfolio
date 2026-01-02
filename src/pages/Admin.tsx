@@ -1033,16 +1033,16 @@ function Admin() {
                 {(["available", "away", "busy"] as const).map((status) => (
                   <button
                     key={status}
-                    onClick={async () => {
+                    onClick={() => {
+                      // Actualizar el store inmediatamente
                       setStatus(status);
                       setShowStatusSelector(false);
-                      // Guardar en localStorage para persistencia
-                      try {
+                      // Forzar actualización del componente
+                      // El store de Zustand debería actualizar automáticamente, pero forzamos un re-render
+                      if (typeof window !== "undefined") {
                         localStorage.setItem("user_status", status);
-                        // Opcional: aquí podrías guardar en Supabase si tienes una tabla de perfil
-                        // await supabase.from('profiles').update({ status }).eq('id', userId);
-                      } catch (error) {
-                        console.error("Error al guardar estado:", error);
+                        // Disparar un evento personalizado para forzar actualización
+                        window.dispatchEvent(new Event("statusChanged"));
                       }
                     }}
                     className={`w-full px-4 py-2 text-left text-white transition-colors cursor-pointer first:rounded-t-lg last:rounded-b-lg`}

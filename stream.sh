@@ -16,15 +16,21 @@ ICECAST_PASSWORD="${ICECAST_PASSWORD:-}"
 # Usar urllib.parse.quote con safe='' para codificar todos los caracteres especiales
 ICECAST_PASSWORD_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$ICECAST_PASSWORD")
 
-# Construir URL de Icecast usando protocolo icecast://
-# El protocolo icecast:// maneja automáticamente HTTP/HTTPS y la autenticación
-# Es más robusto que HTTP directo para streaming a Icecast
-ICECAST_URL="icecast://${ICECAST_USER}:${ICECAST_PASSWORD_ENCODED}@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
+# Determinar protocolo según el puerto
+if [ "$ICECAST_PORT" = "443" ]; then
+    PROTOCOL="https"
+else
+    PROTOCOL="http"
+fi
+
+# Construir URL de Icecast usando HTTP/HTTPS directo con autenticación básica
+# Usar HTTP directo es más confiable que icecast:// para FFmpeg
+ICECAST_URL="${PROTOCOL}://${ICECAST_USER}:${ICECAST_PASSWORD_ENCODED}@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
 
 # Debug: mostrar URL sin contraseña para logs
-ICECAST_URL_DEBUG="icecast://${ICECAST_USER}:***@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
+ICECAST_URL_DEBUG="${PROTOCOL}://${ICECAST_USER}:***@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
 echo "URL de Icecast (sin contraseña): ${ICECAST_URL_DEBUG}"
-echo "Protocolo: icecast://"
+echo "Protocolo: ${PROTOCOL}"
 echo "Puerto: ${ICECAST_PORT}"
 
 echo "Iniciando streaming a Icecast..."
@@ -38,7 +44,7 @@ play_url() {
     local url="$1"
     echo "Reproduciendo: $url"
     
-    # Stream con FFmpeg
+    # Stream con FFmpeg usando HTTP/HTTPS directo con método PUT
     # -re: leer a velocidad real (importante para streaming)
     # -i: input (URL del archivo)
     # -user_agent: usar User-Agent de navegador para evitar bloqueos de CloudFront
@@ -50,17 +56,10 @@ play_url() {
     # -f mp3: formato de salida MP3
     # -content_type audio/mpeg: tipo de contenido para Icecast
     # -method PUT: usar método PUT para enviar el stream (requerido por Icecast)
-    # -loglevel error: solo mostrar errores
-    # -timeout 5000000: timeout para conexiones (microsegundos)
+    # -loglevel fatal: solo mostrar errores fatales (reduce logs)
+    # -timeout 10000000: timeout para conexiones (microsegundos)
     # -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1: reconectar automáticamente
-    # Usar formato HTTP/HTTPS directo con autenticación básica en la URL
-    # Icecast requiere método PUT para recibir streams
-    # Nota: Si el puerto es 443 y falla, puede ser necesario usar el puerto interno 8000
-    # Para eso, configura ICECAST_PORT=8000 en las variables de entorno de Koyeb
-    # Intentar con protocolo icecast:// primero
-    # Si falla, el error se mostrará en los logs
-    # Usar protocolo icecast:// que maneja automáticamente método PUT y autenticación
-    # No necesitamos especificar -method PUT con icecast://
+    # Usar HTTP/HTTPS directo con autenticación básica en la URL y método PUT explícito
     ffmpeg -re \
         -user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
         -headers "Referer: https://vixis.dev/\r\n" \
@@ -68,11 +67,12 @@ play_url() {
         -acodec libmp3lame -ab 96k -ar 44100 -ac 2 \
         -f mp3 \
         -content_type audio/mpeg \
-        -loglevel error \
+        -method PUT \
+        -loglevel fatal \
         -timeout 10000000 \
         -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
         -fflags +genpts \
-        "$ICECAST_URL" 2>&1 | head -50
+        "$ICECAST_URL" 2>&1 | head -20
 }
 
 # Loop infinito para reproducir la playlist continuamente
