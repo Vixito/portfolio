@@ -1021,8 +1021,55 @@ function Admin() {
                   />
                 </svg>
               </button>
+
+              <div
+                ref={statusDropdownRef}
+                style={{
+                  display: "none",
+                  borderColor: "rgba(51, 29, 131, 0.5)",
+                }}
+                className="absolute top-full left-0 mt-2 bg-black/90 backdrop-blur-lg rounded-lg border shadow-lg z-50 min-w-[200px]"
+              >
+                {(["available", "away", "busy"] as const).map((status) => (
+                  <button
+                    key={status}
+                    onClick={async () => {
+                      setStatus(status);
+                      setShowStatusSelector(false);
+                      // Guardar en localStorage para persistencia
+                      try {
+                        localStorage.setItem("user_status", status);
+                        // Opcional: aquí podrías guardar en Supabase si tienes una tabla de perfil
+                        // await supabase.from('profiles').update({ status }).eq('id', userId);
+                      } catch (error) {
+                        console.error("Error al guardar estado:", error);
+                      }
+                    }}
+                    className={`w-full px-4 py-2 text-left text-white transition-colors cursor-pointer first:rounded-t-lg last:rounded-b-lg`}
+                    style={{
+                      backgroundColor:
+                        currentStatus === status
+                          ? "rgba(51, 29, 131, 0.4)"
+                          : "transparent",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (currentStatus !== status) {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(51, 29, 131, 0.2)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (currentStatus !== status) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }
+                    }}
+                  >
+                    {t(`statusBadge.${status}`)}
+                  </button>
+                ))}
+              </div>
             </div>
-            
+
             <button
               onClick={() => {
                 setIsAuthenticated(false);
@@ -1036,11 +1083,13 @@ function Admin() {
                 borderColor: "rgba(220, 38, 38, 0.5)",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "rgba(220, 38, 38, 0.4)";
+                e.currentTarget.style.backgroundColor =
+                  "rgba(220, 38, 38, 0.4)";
                 e.currentTarget.style.borderColor = "rgba(220, 38, 38, 0.6)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "rgba(220, 38, 38, 0.3)";
+                e.currentTarget.style.backgroundColor =
+                  "rgba(220, 38, 38, 0.3)";
                 e.currentTarget.style.borderColor = "rgba(220, 38, 38, 0.5)";
               }}
             >
@@ -1059,54 +1108,6 @@ function Admin() {
                 />
               </svg>
             </button>
-          </div>
-
-            <div
-              ref={statusDropdownRef}
-              style={{
-                display: "none",
-                borderColor: "rgba(51, 29, 131, 0.5)",
-              }}
-              className="absolute top-full left-0 mt-2 bg-black/90 backdrop-blur-lg rounded-lg border shadow-lg z-50 min-w-[200px]"
-            >
-              {(["available", "away", "busy"] as const).map((status) => (
-                <button
-                  key={status}
-                  onClick={async () => {
-                    setStatus(status);
-                    setShowStatusSelector(false);
-                    // Guardar en localStorage para persistencia
-                    try {
-                      localStorage.setItem("user_status", status);
-                      // Opcional: aquí podrías guardar en Supabase si tienes una tabla de perfil
-                      // await supabase.from('profiles').update({ status }).eq('id', userId);
-                    } catch (error) {
-                      console.error("Error al guardar estado:", error);
-                    }
-                  }}
-                  className={`w-full px-4 py-2 text-left text-white transition-colors cursor-pointer first:rounded-t-lg last:rounded-b-lg`}
-                  style={{
-                    backgroundColor:
-                      currentStatus === status
-                        ? "rgba(51, 29, 131, 0.4)"
-                        : "transparent",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (currentStatus !== status) {
-                      e.currentTarget.style.backgroundColor =
-                        "rgba(51, 29, 131, 0.2)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (currentStatus !== status) {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }
-                  }}
-                >
-                  {t(`statusBadge.${status}`)}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 

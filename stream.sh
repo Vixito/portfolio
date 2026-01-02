@@ -16,21 +16,15 @@ ICECAST_PASSWORD="${ICECAST_PASSWORD:-}"
 # Usar urllib.parse.quote con safe='' para codificar todos los caracteres especiales
 ICECAST_PASSWORD_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$ICECAST_PASSWORD")
 
-# Construir URL de Icecast usando HTTP directo con método PUT
-# El protocolo icecast:// puede fallar con HTTPS, usar HTTP directo
-# Si el puerto es 443, usar HTTPS; de lo contrario HTTP
-if [ "$ICECAST_PORT" = "443" ]; then
-    ICECAST_PROTOCOL="https"
-else
-    ICECAST_PROTOCOL="http"
-fi
-
-ICECAST_URL="${ICECAST_PROTOCOL}://${ICECAST_USER}:${ICECAST_PASSWORD_ENCODED}@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
+# Construir URL de Icecast usando protocolo icecast://
+# El protocolo icecast:// maneja automáticamente HTTP/HTTPS y la autenticación
+# Es más robusto que HTTP directo para streaming a Icecast
+ICECAST_URL="icecast://${ICECAST_USER}:${ICECAST_PASSWORD_ENCODED}@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
 
 # Debug: mostrar URL sin contraseña para logs
-ICECAST_URL_DEBUG="${ICECAST_PROTOCOL}://${ICECAST_USER}:***@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
+ICECAST_URL_DEBUG="icecast://${ICECAST_USER}:***@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
 echo "URL de Icecast (sin contraseña): ${ICECAST_URL_DEBUG}"
-echo "Protocolo: ${ICECAST_PROTOCOL}://"
+echo "Protocolo: icecast://"
 echo "Puerto: ${ICECAST_PORT}"
 
 echo "Iniciando streaming a Icecast..."
@@ -65,8 +59,8 @@ play_url() {
     # Para eso, configura ICECAST_PORT=8000 en las variables de entorno de Koyeb
     # Intentar con protocolo icecast:// primero
     # Si falla, el error se mostrará en los logs
-    # Usar HTTP directo con método PUT (requerido por Icecast)
-    # El método PUT debe especificarse explícitamente para streams
+    # Usar protocolo icecast:// que maneja automáticamente método PUT y autenticación
+    # No necesitamos especificar -method PUT con icecast://
     ffmpeg -re \
         -user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
         -headers "Referer: https://vixis.dev/\r\n" \
@@ -74,7 +68,6 @@ play_url() {
         -acodec libmp3lame -ab 96k -ar 44100 -ac 2 \
         -f mp3 \
         -content_type audio/mpeg \
-        -method PUT \
         -loglevel error \
         -timeout 10000000 \
         -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
