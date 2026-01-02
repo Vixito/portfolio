@@ -44,6 +44,8 @@ import {
   createStudy,
   updateStudy,
   deleteStudy,
+  getUserStatus,
+  updateUserStatus,
 } from "../lib/supabase-functions";
 
 function Admin() {
@@ -185,12 +187,13 @@ function Admin() {
     }
   }, [isAuthenticated]);
 
-  // Cargar datos CRUD
+  // Cargar datos CRUD y status
   useEffect(() => {
     if (isAuthenticated) {
       loadCRUDData();
+      loadStatus(); // Cargar status desde base de datos
     }
-  }, [isAuthenticated, activeTab]);
+  }, [isAuthenticated, activeTab, loadStatus]);
 
   // Cargar clientes cuando se selecciona el tab de testimonios (para el selector)
   useEffect(() => {
@@ -1034,25 +1037,33 @@ function Admin() {
                   <button
                     key={status}
                     onClick={async () => {
-                      // Actualizar el store inmediatamente (como loadCRUDData)
-                      setStatus(status);
-                      setShowStatusSelector(false);
+                      try {
+                        // Guardar en base de datos (como loadCRUDData)
+                        await updateUserStatus(status);
 
-                      // Guardar en localStorage
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("user_status", status);
+                        // Actualizar el store inmediatamente
+                        setStatus(status);
+                        setShowStatusSelector(false);
+
+                        // Forzar actualización inmediata del store
+                        const { setStatus: updateStatus } =
+                          useStatusStore.getState();
+                        updateStatus(status);
+
+                        // Disparar evento para notificar a todos los componentes
+                        window.dispatchEvent(
+                          new CustomEvent("statusChanged", { detail: status })
+                        );
+                      } catch (error) {
+                        console.error("Error al actualizar status:", error);
+                        alert(
+                          `Error al actualizar status: ${
+                            error instanceof Error
+                              ? error.message
+                              : "Error desconocido"
+                          }`
+                        );
                       }
-
-                      // Forzar actualización inmediata del store (como loadCRUDData)
-                      // Esto es similar a cómo loadCRUDData recarga los datos después de guardar
-                      const { setStatus: updateStatus } =
-                        useStatusStore.getState();
-                      updateStatus(status);
-
-                      // Disparar evento para notificar a todos los componentes
-                      window.dispatchEvent(
-                        new CustomEvent("statusChanged", { detail: status })
-                      );
                     }}
                     className={`w-full px-4 py-2 text-left text-white transition-colors cursor-pointer first:rounded-t-lg last:rounded-b-lg`}
                     style={{

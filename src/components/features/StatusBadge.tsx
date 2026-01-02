@@ -11,8 +11,13 @@ function StatusBadge() {
   const location = useLocation();
   const badgeRef = useRef<HTMLButtonElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
-  const { status, setStatus } = useStatusStore();
+  const { status, setStatus, loadStatus, isLoading } = useStatusStore();
   const isStatusPage = location.pathname === "/status";
+
+  // Cargar status desde la base de datos al montar el componente
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
 
   // Escuchar cambios en localStorage y eventos personalizados para actualizar el estado
   useEffect(() => {

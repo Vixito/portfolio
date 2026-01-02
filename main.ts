@@ -29,60 +29,41 @@ Deno.serve(async (req: Request) => {
 
   // Para todas las demás rutas (incluyendo rutas de la SPA), servir index.html
   // Esto permite que React Router maneje el routing del lado del cliente
-  // Intentar múltiples rutas posibles para index.html
+  // CRÍTICO: Siempre devolver index.html para rutas no estáticas
+  // React Router se encargará de mostrar NotFound.tsx para rutas inválidas
   const possiblePaths = [
-    "./dist/index.html",
-    "./index.html",
+    "./dist/index.html", // Build de producción
+    "./index.html", // Fallback
     "dist/index.html",
     "index.html",
   ];
 
+  let indexHtml: string | null = null;
   for (const path of possiblePaths) {
     try {
-      const indexHtml = await Deno.readTextFile(path);
-      return new Response(indexHtml, {
-        headers: { "Content-Type": "text/html" },
-      });
-    } catch {
+      indexHtml = await Deno.readTextFile(path);
+      break;
+    } catch (error) {
       // Continuar con el siguiente path
       continue;
     }
   }
 
-  // Si no se encuentra index.html, intentar leerlo desde la raíz del proyecto
-  // En Deno Deploy, los archivos estáticos están en el directorio de trabajo
-  try {
-    // Intentar leer desde la raíz (Deno Deploy puede servir desde aquí)
-    const indexHtml = await Deno.readTextFile("./index.html");
+  // Si encontramos index.html, servirlo
+  // Esto permite que React Router maneje TODAS las rutas (válidas e inválidas)
+  if (indexHtml) {
     return new Response(indexHtml, {
       headers: { "Content-Type": "text/html" },
     });
-  } catch {
-    // Si todo falla, devolver HTML mínimo que redirige a la raíz
-    // Esto permite que React Router maneje el routing
-    const fallbackHtml = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vixis | Portfolio</title>
-  <script>
-    // Redirigir a la raíz para que React Router maneje el routing
-    if (window.location.pathname !== '/') {
-      window.location.href = '/';
-    }
-  </script>
-</head>
-<body>
-  <div id="root"></div>
-  <noscript>Por favor, habilita JavaScript para ver este sitio.</noscript>
-</body>
-</html>`;
-
-    return new Response(fallbackHtml, {
-      headers: { "Content-Type": "text/html" },
-    });
   }
+
+  // Si no se encuentra index.html, esto es un error crítico de configuración
+  // En producción, esto NUNCA debe pasar si el build está correcto
+  console.error("ERROR CRÍTICO: No se pudo encontrar index.html");
+  return new Response("Error interno: No se pudo cargar la aplicación", {
+    status: 500,
+    headers: { "Content-Type": "text/plain" },
+  });
 });
 
 function getContentType(ext: string): string {

@@ -1,37 +1,64 @@
 import { create } from "zustand";
+import { getUserStatus, updateUserStatus } from "../lib/supabase-functions";
 
 type Status = "available" | "away" | "busy";
 
 interface StatusState {
   status: Status;
   setStatus: (status: Status) => void;
+  loadStatus: () => Promise<void>;
+  isLoading: boolean;
 }
 
-// Función para cargar el estado desde localStorage
-const loadStatusFromStorage = (): Status => {
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem("user_status");
-    if (saved && ["available", "away", "busy"].includes(saved)) {
-      return saved as Status;
+// Función para cargar el estado desde la base de datos
+const loadStatusFromDatabase = async (): Promise<Status> => {
+  try {
+    const status = await getUserStatus();
+    return status as Status;
+  } catch (error) {
+    console.error("Error al cargar status desde base de datos:", error);
+    // Fallback a localStorage si falla la BD
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("user_status");
+      if (saved && ["available", "away", "busy"].includes(saved)) {
+        return saved as Status;
+      }
     }
+    return "busy";
   }
-  return "busy";
 };
 
 export const useStatusStore = create<StatusState>((set, get) => ({
-  status: loadStatusFromStorage(),
-  setStatus: (status: Status) => {
-    set({ status });
-    // Guardar en localStorage inmediatamente para persistencia
+  status: "busy",
+  isLoading: true,
+  loadStatus: async () => {
+    set({ isLoading: true });
+    const status = await loadStatusFromDatabase();
+    set({ status, isLoading: false });
+    // Sincronizar con localStorage como backup
     if (typeof window !== "undefined") {
       localStorage.setItem("user_status", status);
+    }
+  },
+  setStatus: async (status: Status) => {
+    set({ status });
+    // Guardar en base de datos
+    try {
+      await updateUserStatus(status);
+      // Sincronizar con localStorage como backup
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user_status", status);
+      }
       // Disparar evento para notificar cambios
       window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: "user_status",
-          newValue: status,
-        })
+        new CustomEvent("statusChanged", { detail: status })
       );
+    } catch (error) {
+      console.error("Error al guardar status en base de datos:", error);
+      // Fallback a localStorage si falla la BD
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user_status", status);
+      }
     }
   },
 }));

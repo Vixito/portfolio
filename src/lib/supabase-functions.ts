@@ -671,3 +671,35 @@ export async function deleteStudy(id: string) {
   const { error } = await supabase.from("studies").delete().eq("id", id);
   if (error) throw new Error(`Error al eliminar estudio: ${error.message}`);
 }
+
+// ========== USER STATUS ==========
+export async function getUserStatus() {
+  // Obtener el status del usuario (solo hay un registro)
+  const { data, error } = await supabase
+    .from("user_status")
+    .select("*")
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    // PGRST116 = no rows returned, es normal si no existe registro
+    throw new Error(`Error al obtener status: ${error.message}`);
+  }
+
+  // Si no existe, retornar "busy" por defecto
+  return data?.status || "busy";
+}
+
+export async function updateUserStatus(status: "available" | "away" | "busy") {
+  // Upsert: actualizar si existe, crear si no existe
+  const { data, error } = await supabase
+    .from("user_status")
+    .upsert(
+      { id: 1, status, updated_at: new Date().toISOString() },
+      { onConflict: "id" }
+    )
+    .select()
+    .single();
+
+  if (error) throw new Error(`Error al actualizar status: ${error.message}`);
+  return data;
+}

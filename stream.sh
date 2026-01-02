@@ -11,7 +11,12 @@ ICECAST_MOUNT="${ICECAST_MOUNT:-/vixis}"
 ICECAST_USER="${ICECAST_USER:-source}"
 ICECAST_PASSWORD="${ICECAST_PASSWORD:-}"
 # Host interno de Koyeb (si los servicios pueden comunicarse entre sí)
+# IMPORTANTE: Debe ser el nombre EXACTO del servicio de Icecast en Koyeb
 ICECAST_INTERNAL_HOST="${ICECAST_INTERNAL_HOST:-}"
+# Supabase Storage (requerido para leer archivos directamente)
+SUPABASE_URL="${SUPABASE_URL:-}"
+SUPABASE_STORAGE_BUCKET="${SUPABASE_STORAGE_BUCKET:-music}"
+SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
 
 # Codificar contraseña para URL (manejar caracteres especiales)
 # FFmpeg requiere que la contraseña esté codificada en la URL
@@ -20,35 +25,25 @@ ICECAST_PASSWORD_ENCODED=$(python3 -c "import urllib.parse; import sys; print(ur
 
 # Intentar usar host interno con puerto 8000 si está configurado
 # Esto evita problemas de TLS al usar HTTP directo entre servicios
-# En Koyeb, los servicios pueden comunicarse usando el nombre del servicio como hostname
+# IMPORTANTE: En Koyeb, el host interno debe ser el nombre EXACTO del servicio
+# No uses "cool-lorne" (ese es el nombre del servicio FFmpeg, no Icecast)
 if [ -n "$ICECAST_INTERNAL_HOST" ]; then
     ICECAST_HOST_FINAL="$ICECAST_INTERNAL_HOST"
     ICECAST_PORT_FINAL="8000"
     PROTOCOL="http"
     echo "Usando host interno de Koyeb: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL}"
 else
-    # Si no hay host interno configurado, intentar detectar automáticamente
-    # En Koyeb, el nombre del servicio de Icecast puede estar en una variable de entorno
-    # o podemos intentar usar el hostname del servicio directamente
-    if [ -n "$KOYEB_SERVICE_NAME" ]; then
-        # Si el servicio de Icecast tiene un nombre conocido, usarlo
-        # Por ejemplo, si se llama "icecast" o "radio"
-        ICECAST_SERVICE_NAME="${ICECAST_SERVICE_NAME:-icecast}"
-        ICECAST_HOST_FINAL="${ICECAST_SERVICE_NAME}.koyeb.app"
-        ICECAST_PORT_FINAL="8000"
-        PROTOCOL="http"
-        echo "Intentando usar servicio interno detectado: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL}"
+    # Si no hay host interno, usar host público (HTTPS)
+    ICECAST_HOST_FINAL="$ICECAST_HOST"
+    ICECAST_PORT_FINAL="$ICECAST_PORT"
+    # Determinar protocolo según el puerto
+    if [ "$ICECAST_PORT" = "443" ]; then
+        PROTOCOL="https"
     else
-        ICECAST_HOST_FINAL="$ICECAST_HOST"
-        ICECAST_PORT_FINAL="$ICECAST_PORT"
-        # Determinar protocolo según el puerto
-        if [ "$ICECAST_PORT" = "443" ]; then
-            PROTOCOL="https"
-        else
-            PROTOCOL="http"
-        fi
-        echo "Usando host público: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (${PROTOCOL})"
+        PROTOCOL="http"
     fi
+    echo "Usando host público: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (${PROTOCOL})"
+    echo "NOTA: Si tienes problemas de TLS, configura ICECAST_INTERNAL_HOST con el nombre del servicio de Icecast en Koyeb"
 fi
 
 # Construir URL de Icecast usando HTTP/HTTPS directo con autenticación básica
@@ -66,7 +61,18 @@ echo "Iniciando streaming a Icecast..."
 echo "Host: ${ICECAST_HOST_FINAL}"
 echo "Port: ${ICECAST_PORT_FINAL}"
 echo "Mount: ${ICECAST_MOUNT}"
-echo "Playlist: ${PLAYLIST_URL}"
+
+# Verificar que Supabase esté configurado
+if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+    echo "ERROR: SUPABASE_URL y SUPABASE_ANON_KEY deben estar configurados"
+    echo "Configura estas variables de entorno en Koyeb:"
+    echo "  SUPABASE_URL=https://rshlpiottljwhyxmcxjn.supabase.co"
+    echo "  SUPABASE_ANON_KEY=[tu_anon_key]"
+    exit 1
+fi
+
+echo "Usando Supabase Storage: ${SUPABASE_URL}"
+echo "Bucket: ${SUPABASE_STORAGE_BUCKET}"
 
 # Función para reproducir una URL con FFmpeg
 play_url() {
@@ -154,76 +160,95 @@ play_url() {
     fi
 }
 
-# Loop infinito para reproducir la playlist continuamente
-while true; do
-    # Descargar playlist con headers de navegador
-    PLAYLIST=$(curl -s \
-        -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
-        -H "Referer: https://vixis.dev/" \
-        "${PLAYLIST_URL}")
+# Función para listar archivos MP3 desde Supabase Storage
+list_mp3_files() {
+    echo "Listando archivos MP3 desde Supabase Storage..."
     
-    if [ -z "$PLAYLIST" ]; then
-        echo "Error: No se pudo descargar la playlist, reintentando en 10 segundos..."
+    # Usar la API de Supabase Storage para listar archivos
+    # POST /storage/v1/object/list/{bucket_id}
+    LIST_RESPONSE=$(curl -s --max-time 15 \
+        -X POST \
+        -H "apikey: ${SUPABASE_ANON_KEY}" \
+        -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+        -H "Content-Type: application/json" \
+        -d '{"prefix":"","limit":1000,"offset":0,"sortBy":{"column":"name","order":"asc"},"search":""}' \
+        "${SUPABASE_URL}/storage/v1/object/list/${SUPABASE_STORAGE_BUCKET}")
+    
+    if [ -z "$LIST_RESPONSE" ]; then
+        echo "Error: No se pudo listar archivos desde Supabase Storage"
+        return 1
+    fi
+    
+    # Extraer nombres de archivos MP3 del JSON usando python3
+    # El formato de respuesta es: [{"name":"archivo.mp3",...},...]
+    MP3_FILES=$(echo "$LIST_RESPONSE" | python3 -c "
+import sys
+import json
+try:
+    data = json.load(sys.stdin)
+    if isinstance(data, list):
+        mp3_files = [item['name'] for item in data if isinstance(item, dict) and item.get('name', '').lower().endswith('.mp3')]
+        print('\n'.join(mp3_files))
+    else:
+        print('', file=sys.stderr)
+        sys.exit(1)
+except Exception as e:
+    print('', file=sys.stderr)
+    sys.exit(1)
+")
+    
+    if [ -z "$MP3_FILES" ]; then
+        echo "Advertencia: No se encontraron archivos MP3 en el bucket"
+        return 1
+    fi
+    
+    echo "$MP3_FILES"
+    return 0
+}
+
+# Loop infinito para reproducir archivos continuamente
+while true; do
+    # Listar archivos MP3 desde Supabase Storage
+    MP3_FILES=$(list_mp3_files)
+    
+    if [ -z "$MP3_FILES" ]; then
+        echo "Error: No se pudieron obtener archivos MP3, reintentando en 10 segundos..."
         sleep 10
         continue
     fi
     
-    # Procesar playlist y mezclar aleatoriamente
-    echo "$PLAYLIST" | grep -v "^#" | grep -v "^$" | shuf | while IFS= read -r line; do
-        # Determinar URL completa
-        if [[ "$line" =~ ^https?:// ]]; then
-            URL="$line"
-        else
-            URL="https://cdn.vixis.dev/music/$line"
-        fi
+    # Contar archivos
+    FILE_COUNT=$(echo "$MP3_FILES" | wc -l)
+    echo "Encontrados ${FILE_COUNT} archivos MP3"
+    
+    # Procesar archivos y mezclar aleatoriamente
+    echo "$MP3_FILES" | shuf | while IFS= read -r filename; do
+        # Construir URL pública de Supabase Storage
+        # Codificar el nombre del archivo para URL (manejar espacios y caracteres especiales)
+        FILENAME_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$filename")
+        URL="${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${FILENAME_ENCODED}"
+        
+        echo "Verificando: $filename"
         
         # Verificar que la URL sea accesible y sea un archivo MP3
-        # Usar User-Agent de navegador para evitar bloqueos de CloudFront
-        # Aumentar timeout para CloudFront (puede tardar más en responder)
-        # Usar HEAD request primero para verificar que existe y es MP3
         HTTP_CODE=$(curl -s --max-time 15 -I -o /dev/null -w "%{http_code}" \
             -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
-            -H "Referer: https://vixis.dev/" \
-            "$URL" 2>&1 | tail -1)
+            "$URL" 2>/dev/null || echo "000")
         
-        # Si curl falla, HTTP_CODE será "000" o un mensaje de error
-        if [ -z "$HTTP_CODE" ] || [ "$HTTP_CODE" = "000" ] || ! [[ "$HTTP_CODE" =~ ^[0-9]{3}$ ]]; then
-            echo "Advertencia: No se pudo acceder a la URL (código: $HTTP_CODE): $URL, saltando..."
-            # Intentar con URL directa de S3 si es CloudFront
-            if [[ "$URL" == *"cdn.vixis.dev"* ]]; then
-                S3_URL=$(echo "$URL" | sed 's|https://cdn.vixis.dev/|https://vixis-portfolio.s3.us-east-1.amazonaws.com/|')
-                echo "Intentando con URL directa de S3: $S3_URL"
-                HTTP_CODE_S3=$(curl -s --max-time 15 -I -o /dev/null -w "%{http_code}" \
-                    -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
-                    "$S3_URL" 2>/dev/null || echo "000")
-                if [ "$HTTP_CODE_S3" = "200" ] || [ "$HTTP_CODE_S3" = "206" ]; then
-                    URL="$S3_URL"
-                    HTTP_CODE="$HTTP_CODE_S3"
-                    echo "URL de S3 accesible, usando: $URL"
-                else
-                    echo "URL de S3 tampoco accesible (HTTP $HTTP_CODE_S3), saltando..."
-                    sleep 2
-                    continue
-                fi
-            else
-                sleep 2
-                continue
-            fi
-        elif [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "206" ]; then
+        if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "206" ]; then
             echo "Advertencia: URL no accesible (HTTP $HTTP_CODE): $URL, saltando..."
-            sleep 2
+            sleep 1
             continue
         fi
         
         # Verificar que el Content-Type sea audio/mpeg o audio/mp3
         CONTENT_TYPE=$(curl -s --max-time 15 -I \
             -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
-            -H "Referer: https://vixis.dev/" \
             "$URL" 2>/dev/null | grep -i "content-type:" | cut -d' ' -f2 | tr -d '\r' || echo "")
         
         if [[ ! "$CONTENT_TYPE" =~ ^audio/(mpeg|mp3|mpeg3) ]]; then
             echo "Advertencia: URL no es un archivo MP3 válido (Content-Type: $CONTENT_TYPE): $URL, saltando..."
-            sleep 2
+            sleep 1
             continue
         fi
         
@@ -234,6 +259,6 @@ while true; do
         }
     done
     
-    echo "Playlist terminada, reiniciando..."
+    echo "Todos los archivos reproducidos, reiniciando lista..."
     sleep 2
 done
