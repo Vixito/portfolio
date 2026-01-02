@@ -2470,7 +2470,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Descripción *
+                        Descripción
                       </label>
                       <textarea
                         value={crudFormData.description || ""}
@@ -2482,12 +2482,11 @@ function Admin() {
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                         rows={3}
-                        required
                       />
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Responsabilidades (JSON Array) *
+                        Responsabilidades (JSON Array)
                       </label>
                       <textarea
                         value={crudFormData.responsibilities || "[]"}
@@ -2500,7 +2499,6 @@ function Admin() {
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-sm"
                         rows={5}
                         placeholder='["Responsabilidad 1", "Responsabilidad 2", ...]'
-                        required
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Formato JSON: ["Item 1", "Item 2", "Item 3"]

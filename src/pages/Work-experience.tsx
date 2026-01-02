@@ -249,38 +249,58 @@ function WorkExperience() {
                         </div>
                       </div>
 
-                      <p className="text-gray-700 mb-4 leading-relaxed">
-                        {experience.description}
-                      </p>
+                      {/* Descripción - Solo mostrar si hay descripción */}
+                      {experience.description &&
+                        experience.description.trim() !== "" && (
+                          <p className="text-gray-700 mb-4 leading-relaxed">
+                            {experience.description}
+                          </p>
+                        )}
 
-                      {/* Responsabilidades */}
-                      <div className="mb-4">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                          {t("workExperience.responsibilities")}:
-                        </h3>
-                        <ul className="list-disc list-inside space-y-1 text-gray-600 text-sm">
-                          {experience.responsibilities.map((resp, index) => (
-                            <li key={index}>{resp}</li>
-                          ))}
-                        </ul>
-                      </div>
+                      {/* Responsabilidades - Solo mostrar si hay responsabilidades */}
+                      {experience.responsibilities &&
+                        experience.responsibilities.length > 0 &&
+                        experience.responsibilities.some(
+                          (resp) => resp && resp.trim() !== ""
+                        ) && (
+                          <div className="mb-4">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                              {t("workExperience.responsibilities")}:
+                            </h3>
+                            <ul className="list-disc list-inside space-y-1 text-gray-600 text-sm">
+                              {experience.responsibilities
+                                .filter((resp) => resp && resp.trim() !== "")
+                                .map((resp, index) => (
+                                  <li key={index}>{resp}</li>
+                                ))}
+                            </ul>
+                          </div>
+                        )}
 
-                      {/* Tecnologías */}
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                          {t("workExperience.technologies")}:
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {experience.technologies.map((tech) => (
-                            <span
-                              key={tech}
-                              className="px-3 py-1 rounded-full text-xs font-medium bg-purple/10 text-purple border border-purple/20"
-                            >
-                              {tech}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                      {/* Tecnologías - Solo mostrar si hay tecnologías */}
+                      {experience.technologies &&
+                        experience.technologies.length > 0 &&
+                        experience.technologies.some(
+                          (tech) => tech && tech.trim() !== ""
+                        ) && (
+                          <div>
+                            <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                              {t("workExperience.technologies")}:
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {experience.technologies
+                                .filter((tech) => tech && tech.trim() !== "")
+                                .map((tech) => (
+                                  <span
+                                    key={tech}
+                                    className="px-3 py-1 rounded-full text-xs font-medium bg-purple/10 text-purple border border-purple/20"
+                                  >
+                                    {tech}
+                                  </span>
+                                ))}
+                            </div>
+                          </div>
+                        )}
                     </div>
                   </div>
                 </div>

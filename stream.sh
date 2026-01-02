@@ -197,7 +197,7 @@ list_mp3_files() {
         "${SUPABASE_URL}/storage/v1/object/list/${SUPABASE_STORAGE_BUCKET}")
     
     if [ -z "$LIST_RESPONSE" ]; then
-        echo "Error: No se pudo listar archivos desde Supabase Storage" >&2
+        echo "Error: No se pudo listar archivos desde Supabase Storage (respuesta vacía)" >&2
         # Si hay cache antiguo, usarlo como fallback
         if [ -f "$CACHE_FILE" ]; then
             echo "Usando cache antiguo como fallback..." >&2
@@ -207,21 +207,60 @@ list_mp3_files() {
         return 1
     fi
     
+    # Debug: mostrar primeros 200 caracteres de la respuesta (solo si hay error)
+    # Esto nos ayuda a entender el formato de la respuesta
+    RESPONSE_PREVIEW=$(echo "$LIST_RESPONSE" | head -c 200)
+    
     # Extraer nombres de archivos MP3 del JSON usando python3
-    # El formato de respuesta es: [{"name":"archivo.mp3",...},...]
+    # El formato de respuesta puede ser:
+    # 1. Array directo: [{"name":"archivo.mp3",...},...]
+    # 2. Objeto con campo data: {"data":[{"name":"archivo.mp3",...},...]}
+    # 3. Objeto con error: {"error":"mensaje"}
     MP3_FILES=$(echo "$LIST_RESPONSE" | python3 -c "
 import sys
 import json
 try:
     data = json.load(sys.stdin)
-    if isinstance(data, list):
-        mp3_files = [item['name'] for item in data if isinstance(item, dict) and item.get('name', '').lower().endswith('.mp3')]
+    
+    # Si es un objeto con error
+    if isinstance(data, dict) and 'error' in data:
+        print(f\"Error de Supabase: {data.get('error', 'Unknown error')}\", file=sys.stderr)
+        sys.exit(1)
+    
+    # Si es un objeto con campo 'data'
+    if isinstance(data, dict) and 'data' in data:
+        file_list = data['data']
+    # Si es un array directo
+    elif isinstance(data, list):
+        file_list = data
+    else:
+        print(f\"Formato de respuesta inesperado: {type(data)}\", file=sys.stderr)
+        sys.exit(1)
+    
+    # Filtrar archivos MP3
+    mp3_files = []
+    for item in file_list:
+        if isinstance(item, dict):
+            name = item.get('name', '')
+            if name and name.lower().endswith('.mp3'):
+                mp3_files.append(name)
+    
+    # Imprimir lista de archivos (solo nombres, uno por línea)
+    if mp3_files:
         print('\n'.join(mp3_files))
     else:
-        print('', file=sys.stderr)
+        print(f\"No se encontraron archivos MP3. Total de archivos en respuesta: {len(file_list)}\", file=sys.stderr)
+        # Mostrar primeros archivos para debugging
+        if file_list:
+            print(f\"Primeros archivos encontrados: {[item.get('name', 'N/A') for item in file_list[:5]]}\", file=sys.stderr)
         sys.exit(1)
+        
+except json.JSONDecodeError as e:
+    print(f\"Error al parsear JSON: {e}\", file=sys.stderr)
+    print(f\"Respuesta recibida (primeros 200 chars): {sys.stdin.read(200) if hasattr(sys.stdin, 'read') else 'N/A'}\", file=sys.stderr)
+    sys.exit(1)
 except Exception as e:
-    print('', file=sys.stderr)
+    print(f\"Error inesperado: {e}\", file=sys.stderr)
     sys.exit(1)
 ")
     
