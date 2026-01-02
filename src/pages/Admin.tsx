@@ -983,31 +983,70 @@ function Admin() {
             {t("admin.mediaResources")}
           </button>
 
-          {/* Selector de Estado */}
-          <div className="relative" ref={statusSelectorRef}>
+          {/* Selector de Estado y Botón de Cerrar Sesión */}
+          <div className="flex items-center gap-3">
+            <div className="relative" ref={statusSelectorRef}>
+              <button
+                onClick={() => setShowStatusSelector(!showStatusSelector)}
+                className="px-6 py-3 rounded-lg border text-white transition-colors cursor-pointer font-semibold flex items-center gap-2"
+                style={{
+                  backgroundColor: "rgba(51, 29, 131, 0.3)",
+                  borderColor: "rgba(51, 29, 131, 0.5)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    "rgba(51, 29, 131, 0.4)";
+                  e.currentTarget.style.borderColor = "rgba(51, 29, 131, 0.6)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    "rgba(51, 29, 131, 0.3)";
+                  e.currentTarget.style.borderColor = "rgba(51, 29, 131, 0.5)";
+                }}
+              >
+                {t("admin.changeStatus")}: {t(`statusBadge.${currentStatus}`)}
+                <svg
+                  className={`w-4 h-4 transition-transform ${
+                    showStatusSelector ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+            </div>
+            
             <button
-              onClick={() => setShowStatusSelector(!showStatusSelector)}
+              onClick={() => {
+                setIsAuthenticated(false);
+                setHasValidKey(false);
+                // Limpiar cualquier estado relacionado
+                window.location.href = "/";
+              }}
               className="px-6 py-3 rounded-lg border text-white transition-colors cursor-pointer font-semibold flex items-center gap-2"
               style={{
-                backgroundColor: "rgba(51, 29, 131, 0.3)",
-                borderColor: "rgba(51, 29, 131, 0.5)",
+                backgroundColor: "rgba(220, 38, 38, 0.3)",
+                borderColor: "rgba(220, 38, 38, 0.5)",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  "rgba(51, 29, 131, 0.4)";
-                e.currentTarget.style.borderColor = "rgba(51, 29, 131, 0.6)";
+                e.currentTarget.style.backgroundColor = "rgba(220, 38, 38, 0.4)";
+                e.currentTarget.style.borderColor = "rgba(220, 38, 38, 0.6)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  "rgba(51, 29, 131, 0.3)";
-                e.currentTarget.style.borderColor = "rgba(51, 29, 131, 0.5)";
+                e.currentTarget.style.backgroundColor = "rgba(220, 38, 38, 0.3)";
+                e.currentTarget.style.borderColor = "rgba(220, 38, 38, 0.5)";
               }}
             >
-              {t("admin.changeStatus")}: {t(`statusBadge.${currentStatus}`)}
+              {t("admin.logout") || "Cerrar Sesión"}
               <svg
-                className={`w-4 h-4 transition-transform ${
-                  showStatusSelector ? "rotate-180" : ""
-                }`}
+                className="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1016,10 +1055,11 @@ function Admin() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                 />
               </svg>
             </button>
+          </div>
 
             <div
               ref={statusDropdownRef}
@@ -1032,9 +1072,17 @@ function Admin() {
               {(["available", "away", "busy"] as const).map((status) => (
                 <button
                   key={status}
-                  onClick={() => {
+                  onClick={async () => {
                     setStatus(status);
                     setShowStatusSelector(false);
+                    // Guardar en localStorage para persistencia
+                    try {
+                      localStorage.setItem("user_status", status);
+                      // Opcional: aquí podrías guardar en Supabase si tienes una tabla de perfil
+                      // await supabase.from('profiles').update({ status }).eq('id', userId);
+                    } catch (error) {
+                      console.error("Error al guardar estado:", error);
+                    }
                   }}
                   className={`w-full px-4 py-2 text-left text-white transition-colors cursor-pointer first:rounded-t-lg last:rounded-b-lg`}
                   style={{
