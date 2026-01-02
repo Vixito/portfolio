@@ -129,19 +129,14 @@ function Radio() {
     return () => clearInterval(interval);
   }, [ICECAST_STATUS_URL, ICECAST_STREAM_URL, t, language]);
 
-  // Reproducir automáticamente cuando la radio esté en vivo
+  // Pausar automáticamente si la radio se desconecta (pero no reproducir automáticamente)
   useEffect(() => {
-    if (isLive && audioRef.current && !isPlaying) {
-      // Intentar reproducir automáticamente
-      audioRef.current.play().catch((error) => {
-        console.log(t("radio.autoplayBlocked"), error);
-      });
-    } else if (!isLive && audioRef.current && isPlaying) {
+    if (!isLive && audioRef.current && isPlaying) {
       // Pausar si la radio se desconecta
       audioRef.current.pause();
       setIsPlaying(false);
     }
-  }, [isLive, isPlaying, t]);
+  }, [isLive, isPlaying]);
 
   // Cargar eventos próximos
   useEffect(() => {
@@ -319,15 +314,37 @@ function Radio() {
     };
   }, []);
 
-  const togglePlayPause = () => {
+  const togglePlayPause = async () => {
     if (!audioRef.current) return;
 
     if (isPlaying) {
       audioRef.current.pause();
+      setIsPlaying(false);
     } else {
-      audioRef.current.play();
+      // Solo intentar reproducir si la radio está en vivo
+      if (!isLive) {
+        return;
+      }
+
+      try {
+        // Asegurar que el src esté configurado
+        if (
+          !audioRef.current.src ||
+          audioRef.current.src !== currentSong?.url
+        ) {
+          audioRef.current.src = currentSong?.url || ICECAST_STREAM_URL;
+        }
+
+        await audioRef.current.play();
+        setIsPlaying(true);
+      } catch (error) {
+        // Si falla la reproducción, mantener el estado en false
+        setIsPlaying(false);
+        if (import.meta.env.DEV) {
+          console.debug("Error al reproducir la radio:", error);
+        }
+      }
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {

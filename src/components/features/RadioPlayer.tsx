@@ -49,13 +49,42 @@ function RadioPlayer() {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
+      // Solo intentar reproducir si la radio está en vivo
+      if (!isLive) {
+        return;
+      }
+
       try {
         // Si no hay src, establecerlo
         if (!audioRef.current.src) {
           audioRef.current.src = ICECAST_STREAM_URL;
         }
+
+        // Agregar event listeners para manejar errores
+        const handleError = () => {
+          setIsPlaying(false);
+          if (audioRef.current) {
+            audioRef.current.src = "";
+          }
+        };
+
+        const handleCanPlay = () => {
+          // Solo establecer isPlaying cuando realmente puede reproducir
+        };
+
+        audioRef.current.addEventListener("error", handleError);
+        audioRef.current.addEventListener("canplay", handleCanPlay);
+
         await audioRef.current.play();
         setIsPlaying(true);
+
+        // Limpiar listeners después de un tiempo
+        setTimeout(() => {
+          if (audioRef.current) {
+            audioRef.current.removeEventListener("error", handleError);
+            audioRef.current.removeEventListener("canplay", handleCanPlay);
+          }
+        }, 1000);
       } catch (error) {
         // Silenciar errores en producción
         if (import.meta.env.DEV) {
@@ -66,13 +95,13 @@ function RadioPlayer() {
     }
   };
 
-  // Pausar si la radio se desconecta
+  // Pausar si la radio se desconecta (solo si realmente se desconecta, no en el primer render)
   useEffect(() => {
     if (!isLive && audioRef.current && isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     }
-  }, [isLive, isPlaying]);
+  }, [isLive]);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">

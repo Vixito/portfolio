@@ -73,10 +73,11 @@ play_url() {
         -f mp3 \
         -content_type audio/mpeg \
         -method PUT \
-        -loglevel error \
+        -loglevel fatal \
         -timeout 5000000 \
         -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
-        "$ICECAST_URL" 2>&1
+        -fflags +genpts \
+        "$ICECAST_URL" 2>/dev/null || echo "Error al reproducir $url"
 }
 
 # Loop infinito para reproducir la playlist continuamente
