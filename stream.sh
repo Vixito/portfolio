@@ -169,11 +169,33 @@ while true; do
         HTTP_CODE=$(curl -s --max-time 15 -I -o /dev/null -w "%{http_code}" \
             -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
             -H "Referer: https://vixis.dev/" \
-            "$URL" 2>/dev/null || echo "000")
+            "$URL" 2>&1 | tail -1)
         
-        if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "206" ]; then
+        # Si curl falla, HTTP_CODE será "000" o un mensaje de error
+        if [ -z "$HTTP_CODE" ] || [ "$HTTP_CODE" = "000" ] || ! [[ "$HTTP_CODE" =~ ^[0-9]{3}$ ]]; then
+            echo "Advertencia: No se pudo acceder a la URL (código: $HTTP_CODE): $URL, saltando..."
+            # Intentar con URL directa de S3 si es CloudFront
+            if [[ "$URL" == *"cdn.vixis.dev"* ]]; then
+                S3_URL=$(echo "$URL" | sed 's|https://cdn.vixis.dev/|https://vixis-portfolio.s3.us-east-1.amazonaws.com/|')
+                echo "Intentando con URL directa de S3: $S3_URL"
+                HTTP_CODE_S3=$(curl -s --max-time 15 -I -o /dev/null -w "%{http_code}" \
+                    -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
+                    "$S3_URL" 2>/dev/null || echo "000")
+                if [ "$HTTP_CODE_S3" = "200" ] || [ "$HTTP_CODE_S3" = "206" ]; then
+                    URL="$S3_URL"
+                    HTTP_CODE="$HTTP_CODE_S3"
+                    echo "URL de S3 accesible, usando: $URL"
+                else
+                    echo "URL de S3 tampoco accesible (HTTP $HTTP_CODE_S3), saltando..."
+                    sleep 2
+                    continue
+                fi
+            else
+                sleep 2
+                continue
+            fi
+        elif [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "206" ]; then
             echo "Advertencia: URL no accesible (HTTP $HTTP_CODE): $URL, saltando..."
-            # Esperar un poco antes de continuar para evitar spam de logs
             sleep 2
             continue
         fi

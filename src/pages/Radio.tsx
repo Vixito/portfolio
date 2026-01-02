@@ -67,10 +67,25 @@ function Radio() {
 
   // Cargar metadata del stream de Icecast y verificar si está en vivo
   useEffect(() => {
+    let isMounted = true;
+
     const fetchMetadata = async () => {
+      if (!isMounted) return;
+
       try {
-        const response = await fetch(ICECAST_STATUS_URL);
+        // Crear AbortController para timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch(ICECAST_STATUS_URL, {
+          cache: "no-cache",
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
         const data = await response.json();
+
+        if (!isMounted) return;
 
         // Buscar el mountpoint de la radio
         const mountpoint = data.icestats?.source?.find(
@@ -106,6 +121,8 @@ function Radio() {
           });
         }
       } catch (error) {
+        if (!isMounted) return;
+
         // Silenciar errores de conexión en producción (NetworkError, CORS, etc.)
         // Solo loggear en desarrollo
         if (import.meta.env.DEV) {
@@ -123,11 +140,18 @@ function Radio() {
     };
 
     fetchMetadata();
-    // Actualizar metadata cada 10 segundos
-    const interval = setInterval(fetchMetadata, 10000);
+    // Actualizar metadata cada 10 segundos (no más frecuente para evitar spam)
+    const interval = setInterval(() => {
+      if (isMounted) {
+        fetchMetadata();
+      }
+    }, 10000);
 
-    return () => clearInterval(interval);
-  }, [ICECAST_STATUS_URL, ICECAST_STREAM_URL, t, language]);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [ICECAST_STATUS_URL, ICECAST_STREAM_URL]); // Removido t y language para evitar re-renders constantes
 
   // Pausar automáticamente si la radio se desconecta (pero no reproducir automáticamente)
   useEffect(() => {
