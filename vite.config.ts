@@ -131,9 +131,21 @@ export default defineConfig({
     },
   },
   resolve: {
-    dedupe: ["react", "react-dom"],
-    preserveSymlinks: true, // Cambiar a true para que Vite siga los symlinks
+    dedupe: [
+      "react",
+      "react-dom",
+      "framer-motion",
+      "motion-dom",
+      "motion-utils",
+    ],
+    preserveSymlinks: false, // Cambiar a false para que Vite resuelva los symlinks a sus rutas reales
     conditions: ["import", "module", "browser", "default"],
+    alias: {
+      // Forzar uso de framer-motion 11.x y sus dependencias
+      "framer-motion": "framer-motion",
+      "motion-dom": "motion-dom",
+      "motion-utils": "motion-utils",
+    },
   },
   optimizeDeps: {
     include: [
@@ -148,6 +160,7 @@ export default defineConfig({
       "@supabase/supabase-js",
       "react-router-dom",
     ],
+    exclude: ["motion-dom"],
     esbuildOptions: {
       conditions: ["import", "module", "browser", "default"],
     },
@@ -158,6 +171,63 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {},
+      external: (id) => {
+        // No externalizar nada, queremos que Vite procese todo
+        return false;
+      },
+      plugins: [
+        // Plugin para resolver motion-dom correctamente
+        {
+          name: "resolve-motion-dom",
+          resolveId(source, importer) {
+            // Si framer-motion está importando motion-dom, forzar la versión 11.18.1
+            if (source === "motion-dom") {
+              // Buscar la ruta real de motion-dom@11.18.1
+              const path11 = resolve(
+                process.cwd(),
+                "node_modules/.deno/motion-dom@11.18.1/node_modules/motion-dom"
+              );
+              if (existsSync(path11)) {
+                // Si el importador es framer-motion, usar la versión 11.x
+                if (importer?.includes("framer-motion")) {
+                  return path11;
+                }
+                // Para otros importadores, también usar 11.x si existe
+                return path11;
+              }
+            }
+            // Similar para motion-utils
+            if (source === "motion-utils") {
+              const path11 = resolve(
+                process.cwd(),
+                "node_modules/.deno/motion-utils@11.18.1/node_modules/motion-utils"
+              );
+              if (existsSync(path11)) {
+                return path11;
+              }
+            }
+            return null;
+          },
+        },
+      ],
+      onwarn(warning, warn) {
+        // Suprimir advertencias específicas de módulos
+        if (
+          warning.code === "UNRESOLVED_IMPORT" ||
+          warning.code === "MISSING_EXPORT"
+        ) {
+          // Solo mostrar si no es de framer-motion o supabase
+          if (
+            !warning.id?.includes("framer-motion") &&
+            !warning.id?.includes("motion-dom") &&
+            !warning.id?.includes("@supabase")
+          ) {
+            warn(warning);
+          }
+        } else {
+          warn(warning);
+        }
+      },
     },
   },
 });

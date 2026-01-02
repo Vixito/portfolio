@@ -57,28 +57,29 @@ export const useStatusStore = create<StatusState>((set, get) => {
         set({ isLoading: false });
       }
     },
-  setStatus: async (status: Status) => {
-    set({ status });
-    // Guardar en base de datos
-    try {
-      await updateUserStatus(status);
-      // Sincronizar con localStorage como backup
-      if (typeof window !== "undefined") {
-        localStorage.setItem("user_status", status);
+    setStatus: async (status: Status) => {
+      set({ status });
+      // Guardar en base de datos
+      try {
+        await updateUserStatus(status);
+        // Sincronizar con localStorage como backup
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user_status", status);
+        }
+        // Disparar evento para notificar cambios
+        window.dispatchEvent(
+          new CustomEvent("statusChanged", { detail: status })
+        );
+      } catch (error) {
+        console.error("Error al guardar status en base de datos:", error);
+        // Fallback a localStorage si falla la BD
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user_status", status);
+        }
       }
-      // Disparar evento para notificar cambios
-      window.dispatchEvent(
-        new CustomEvent("statusChanged", { detail: status })
-      );
-    } catch (error) {
-      console.error("Error al guardar status en base de datos:", error);
-      // Fallback a localStorage si falla la BD
-      if (typeof window !== "undefined") {
-        localStorage.setItem("user_status", status);
-      }
-    }
-  },
-}));
+    },
+  };
+});
 
 // Suscribirse a cambios en localStorage desde otras pestañas/ventanas
 if (typeof window !== "undefined") {
