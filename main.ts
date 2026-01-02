@@ -53,16 +53,37 @@ Deno.serve(async (req: Request) => {
   // Esto permite que React Router maneje TODAS las rutas (válidas e inválidas)
   if (indexHtml) {
     return new Response(indexHtml, {
-      headers: { "Content-Type": "text/html" },
+      headers: {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
     });
   }
 
-  // Si no se encuentra index.html, esto es un error crítico de configuración
-  // En producción, esto NUNCA debe pasar si el build está correcto
-  console.error("ERROR CRÍTICO: No se pudo encontrar index.html");
-  return new Response("Error interno: No se pudo cargar la aplicación", {
-    status: 500,
-    headers: { "Content-Type": "text/plain" },
+  // Si no se encuentra index.html, construir HTML mínimo que carga la app
+  // Esto NUNCA debe pasar en producción, pero es un fallback crítico
+  // para evitar mostrar "Not Found" como texto plano
+  const fallbackHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vixis | Portfolio</title>
+  <link rel="icon" type="image/svg+xml" href="https://cdn.vixis.dev/Foto+de+Perfil+2.webp" />
+</head>
+<body>
+  <div id="root"></div>
+  <noscript>Por favor, habilita JavaScript para ver este sitio.</noscript>
+  <script type="module" crossorigin src="/assets/index.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index.css">
+</body>
+</html>`;
+
+  return new Response(fallbackHtml, {
+    headers: {
+      "Content-Type": "text/html",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+    },
   });
 });
 

@@ -60,7 +60,7 @@ function Admin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
-  const { status: currentStatus, setStatus } = useStatusStore();
+  const { status: currentStatus, setStatus, loadStatus } = useStatusStore();
   const [showStatusSelector, setShowStatusSelector] = useState(false);
   const statusSelectorRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);

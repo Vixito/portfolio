@@ -28,18 +28,35 @@ const loadStatusFromDatabase = async (): Promise<Status> => {
   }
 };
 
-export const useStatusStore = create<StatusState>((set, get) => ({
-  status: "busy",
-  isLoading: true,
-  loadStatus: async () => {
-    set({ isLoading: true });
-    const status = await loadStatusFromDatabase();
-    set({ status, isLoading: false });
-    // Sincronizar con localStorage como backup
+export const useStatusStore = create<StatusState>((set, get) => {
+  // Cargar status inicial desde localStorage mientras se carga desde BD
+  const initialStatus: Status = (() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("user_status", status);
+      const saved = localStorage.getItem("user_status");
+      if (saved && ["available", "away", "busy"].includes(saved)) {
+        return saved as Status;
+      }
     }
-  },
+    return "busy";
+  })();
+
+  return {
+    status: initialStatus,
+    isLoading: false,
+    loadStatus: async () => {
+      set({ isLoading: true });
+      try {
+        const status = await loadStatusFromDatabase();
+        set({ status, isLoading: false });
+        // Sincronizar con localStorage como backup
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user_status", status);
+        }
+      } catch (error) {
+        console.error("Error al cargar status:", error);
+        set({ isLoading: false });
+      }
+    },
   setStatus: async (status: Status) => {
     set({ status });
     // Guardar en base de datos

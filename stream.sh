@@ -160,9 +160,31 @@ play_url() {
     fi
 }
 
+# Cache para la lista de archivos MP3 (para reducir solicitudes analíticas)
+# Cache válido por 5 minutos (300 segundos)
+CACHE_FILE="/tmp/mp3_files_cache.txt"
+CACHE_TIMESTAMP="/tmp/mp3_files_cache_timestamp.txt"
+CACHE_DURATION=300
+
 # Función para listar archivos MP3 desde Supabase Storage
+# Con cache para reducir solicitudes analíticas
 list_mp3_files() {
-    echo "Listando archivos MP3 desde Supabase Storage..."
+    # Verificar si el cache es válido
+    if [ -f "$CACHE_FILE" ] && [ -f "$CACHE_TIMESTAMP" ]; then
+        CURRENT_TIME=$(date +%s)
+        CACHE_TIME=$(cat "$CACHE_TIMESTAMP" 2>/dev/null || echo "0")
+        TIME_DIFF=$((CURRENT_TIME - CACHE_TIME))
+        
+        if [ "$TIME_DIFF" -lt "$CACHE_DURATION" ]; then
+            # Cache válido, usar archivos cacheados
+            echo "Usando lista de archivos en cache (${TIME_DIFF}s de antigüedad)..." >&2
+            cat "$CACHE_FILE"
+            return 0
+        fi
+    fi
+    
+    # Cache expirado o no existe, obtener lista fresca
+    echo "Listando archivos MP3 desde Supabase Storage..." >&2
     
     # Usar la API de Supabase Storage para listar archivos
     # POST /storage/v1/object/list/{bucket_id}
@@ -175,7 +197,13 @@ list_mp3_files() {
         "${SUPABASE_URL}/storage/v1/object/list/${SUPABASE_STORAGE_BUCKET}")
     
     if [ -z "$LIST_RESPONSE" ]; then
-        echo "Error: No se pudo listar archivos desde Supabase Storage"
+        echo "Error: No se pudo listar archivos desde Supabase Storage" >&2
+        # Si hay cache antiguo, usarlo como fallback
+        if [ -f "$CACHE_FILE" ]; then
+            echo "Usando cache antiguo como fallback..." >&2
+            cat "$CACHE_FILE"
+            return 0
+        fi
         return 1
     fi
     
@@ -198,9 +226,20 @@ except Exception as e:
 ")
     
     if [ -z "$MP3_FILES" ]; then
-        echo "Advertencia: No se encontraron archivos MP3 en el bucket"
+        echo "Advertencia: No se encontraron archivos MP3 en el bucket" >&2
+        # Si hay cache antiguo, usarlo como fallback
+        if [ -f "$CACHE_FILE" ]; then
+            echo "Usando cache antiguo como fallback..." >&2
+            cat "$CACHE_FILE"
+            return 0
+        fi
         return 1
     fi
+    
+    # Guardar en cache
+    echo "$MP3_FILES" > "$CACHE_FILE"
+    date +%s > "$CACHE_TIMESTAMP"
+    echo "Lista de archivos actualizada y guardada en cache" >&2
     
     echo "$MP3_FILES"
     return 0
@@ -222,37 +261,20 @@ while true; do
     echo "Encontrados ${FILE_COUNT} archivos MP3"
     
     # Procesar archivos y mezclar aleatoriamente
+    # OPTIMIZACIÓN: No verificar cada URL antes de reproducirla
+    # Asumimos que los archivos en Supabase Storage son válidos
+    # Solo verificamos si falla la reproducción
     echo "$MP3_FILES" | shuf | while IFS= read -r filename; do
         # Construir URL pública de Supabase Storage
         # Codificar el nombre del archivo para URL (manejar espacios y caracteres especiales)
         FILENAME_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$filename")
         URL="${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${FILENAME_ENCODED}"
         
-        echo "Verificando: $filename"
+        echo "Reproduciendo: $filename"
         
-        # Verificar que la URL sea accesible y sea un archivo MP3
-        HTTP_CODE=$(curl -s --max-time 15 -I -o /dev/null -w "%{http_code}" \
-            -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
-            "$URL" 2>/dev/null || echo "000")
-        
-        if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "206" ]; then
-            echo "Advertencia: URL no accesible (HTTP $HTTP_CODE): $URL, saltando..."
-            sleep 1
-            continue
-        fi
-        
-        # Verificar que el Content-Type sea audio/mpeg o audio/mp3
-        CONTENT_TYPE=$(curl -s --max-time 15 -I \
-            -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
-            "$URL" 2>/dev/null | grep -i "content-type:" | cut -d' ' -f2 | tr -d '\r' || echo "")
-        
-        if [[ ! "$CONTENT_TYPE" =~ ^audio/(mpeg|mp3|mpeg3) ]]; then
-            echo "Advertencia: URL no es un archivo MP3 válido (Content-Type: $CONTENT_TYPE): $URL, saltando..."
-            sleep 1
-            continue
-        fi
-        
-        # Reproducir URL
+        # Reproducir directamente sin verificación previa
+        # Esto reduce significativamente las solicitudes analíticas
+        # Si el archivo no es accesible, FFmpeg fallará y continuaremos con el siguiente
         play_url "$URL" || {
             echo "Error al reproducir $URL, continuando con siguiente..."
             sleep 1
