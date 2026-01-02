@@ -16,24 +16,30 @@ ICECAST_PASSWORD="${ICECAST_PASSWORD:-}"
 # Usar urllib.parse.quote con safe='' para codificar todos los caracteres especiales
 ICECAST_PASSWORD_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$ICECAST_PASSWORD")
 
-# Determinar protocolo basado en el puerto
-# Si el puerto es 443, usar HTTPS; de lo contrario, HTTP
+# Determinar protocolo y puerto
+# Si el puerto es 443, usar el puerto interno 8000 con HTTP
+# ya que HTTPS puede causar problemas TLS y ambos servicios están en Koyeb
 if [ "$ICECAST_PORT" = "443" ]; then
-    ICECAST_PROTOCOL="https"
+    # Usar puerto interno 8000 con HTTP para evitar problemas TLS
+    # Si ambos servicios están en Koyeb, pueden comunicarse internamente
+    ICECAST_PROTOCOL="http"
+    ICECAST_PORT_INTERNAL="8000"
+    echo "Advertencia: Puerto 443 detectado, usando puerto interno 8000 con HTTP"
 else
     ICECAST_PROTOCOL="http"
+    ICECAST_PORT_INTERNAL="$ICECAST_PORT"
 fi
 
-# Construir URL de Icecast usando formato HTTP/HTTPS directo
-# El protocolo icecast:// puede no funcionar bien con HTTPS
-# Usar formato HTTP directo: http://user:pass@host:port/mount
-# FFmpeg soporta autenticación básica HTTP en URLs
-ICECAST_URL="${ICECAST_PROTOCOL}://${ICECAST_USER}:${ICECAST_PASSWORD_ENCODED}@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
+# Construir URL de Icecast
+# Intentar primero con protocolo icecast:// que maneja mejor la autenticación
+# Si el puerto es 443, usar el puerto interno 8000
+ICECAST_URL="icecast://${ICECAST_USER}:${ICECAST_PASSWORD_ENCODED}@${ICECAST_HOST}:${ICECAST_PORT_INTERNAL}${ICECAST_MOUNT}"
 
 # Debug: mostrar URL sin contraseña para logs
-ICECAST_URL_DEBUG="${ICECAST_PROTOCOL}://${ICECAST_USER}:***@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}"
+ICECAST_URL_DEBUG="icecast://${ICECAST_USER}:***@${ICECAST_HOST}:${ICECAST_PORT_INTERNAL}${ICECAST_MOUNT}"
 echo "URL de Icecast (sin contraseña): ${ICECAST_URL_DEBUG}"
-echo "Protocolo: ${ICECAST_PROTOCOL}"
+echo "Protocolo: icecast://"
+echo "Puerto: ${ICECAST_PORT_INTERNAL}"
 
 echo "Iniciando streaming a Icecast..."
 echo "Host: ${ICECAST_HOST}"
@@ -72,12 +78,11 @@ play_url() {
         -acodec libmp3lame -ab 96k -ar 44100 -ac 2 \
         -f mp3 \
         -content_type audio/mpeg \
-        -method PUT \
-        -loglevel fatal \
+        -loglevel error \
         -timeout 5000000 \
         -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
         -fflags +genpts \
-        "$ICECAST_URL" 2>/dev/null || echo "Error al reproducir $url"
+        "$ICECAST_URL" 2>&1
 }
 
 # Loop infinito para reproducir la playlist continuamente
