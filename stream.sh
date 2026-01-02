@@ -49,6 +49,7 @@ play_url() {
     # -i: input (URL del archivo)
     # -user_agent: usar User-Agent de navegador para evitar bloqueos de CloudFront
     # -headers: agregar headers adicionales
+    # -map 0:a:0: SOLO usar el primer stream de audio (ignorar portadas/video embebidos)
     # -f mp3: forzar formato de entrada MP3 (evita detección incorrecta de formato)
     # -acodec copy: copiar el codec sin re-encodificar (más eficiente, menos memoria)
     # Si el archivo no es MP3, usar libmp3lame para re-encodificar
@@ -61,6 +62,7 @@ play_url() {
     # -loglevel fatal: solo mostrar errores fatales (reduce logs)
     # -timeout 10000000: timeout para conexiones (microsegundos)
     # -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1: reconectar automáticamente
+    # -tls_verify 0: deshabilitar verificación TLS (evita errores de certificado)
     # Usar HTTP/HTTPS directo con autenticación básica en la URL y método PUT explícito
     # Intentar primero con copy (sin re-encodificar), si falla, re-encodificar
     if ! ffmpeg -re \
@@ -68,24 +70,28 @@ play_url() {
         -headers "Referer: https://vixis.dev/\r\n" \
         -f mp3 \
         -i "$url" \
+        -map 0:a:0 \
         -acodec copy \
         -f mp3 \
         -content_type audio/mpeg \
         -method PUT \
+        -tls_verify 0 \
         -loglevel fatal \
         -timeout 10000000 \
         -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
         -fflags +genpts \
         "$ICECAST_URL" 2>&1; then
-        # Si falla con copy, intentar re-encodificar
+        # Si falla con copy, intentar re-encodificar (solo audio)
         ffmpeg -re \
             -user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
             -headers "Referer: https://vixis.dev/\r\n" \
             -i "$url" \
+            -map 0:a:0 \
             -acodec libmp3lame -ab 96k -ar 44100 -ac 2 \
             -f mp3 \
             -content_type audio/mpeg \
             -method PUT \
+            -tls_verify 0 \
             -loglevel fatal \
             -timeout 10000000 \
             -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
