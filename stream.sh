@@ -20,19 +20,34 @@ ICECAST_PASSWORD_ENCODED=$(python3 -c "import urllib.parse; import sys; print(ur
 
 # Intentar usar host interno con puerto 8000 si está configurado
 # Esto evita problemas de TLS al usar HTTP directo entre servicios
+# En Koyeb, los servicios pueden comunicarse usando el nombre del servicio como hostname
 if [ -n "$ICECAST_INTERNAL_HOST" ]; then
     ICECAST_HOST_FINAL="$ICECAST_INTERNAL_HOST"
     ICECAST_PORT_FINAL="8000"
     PROTOCOL="http"
     echo "Usando host interno de Koyeb: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL}"
 else
-    ICECAST_HOST_FINAL="$ICECAST_HOST"
-    ICECAST_PORT_FINAL="$ICECAST_PORT"
-    # Determinar protocolo según el puerto
-    if [ "$ICECAST_PORT" = "443" ]; then
-        PROTOCOL="https"
-    else
+    # Si no hay host interno configurado, intentar detectar automáticamente
+    # En Koyeb, el nombre del servicio de Icecast puede estar en una variable de entorno
+    # o podemos intentar usar el hostname del servicio directamente
+    if [ -n "$KOYEB_SERVICE_NAME" ]; then
+        # Si el servicio de Icecast tiene un nombre conocido, usarlo
+        # Por ejemplo, si se llama "icecast" o "radio"
+        ICECAST_SERVICE_NAME="${ICECAST_SERVICE_NAME:-icecast}"
+        ICECAST_HOST_FINAL="${ICECAST_SERVICE_NAME}.koyeb.app"
+        ICECAST_PORT_FINAL="8000"
         PROTOCOL="http"
+        echo "Intentando usar servicio interno detectado: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL}"
+    else
+        ICECAST_HOST_FINAL="$ICECAST_HOST"
+        ICECAST_PORT_FINAL="$ICECAST_PORT"
+        # Determinar protocolo según el puerto
+        if [ "$ICECAST_PORT" = "443" ]; then
+            PROTOCOL="https"
+        else
+            PROTOCOL="http"
+        fi
+        echo "Usando host público: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (${PROTOCOL})"
     fi
 fi
 
@@ -93,7 +108,7 @@ play_url() {
         -f mp3
         -content_type audio/mpeg
         -method PUT
-        -loglevel fatal
+        -loglevel error
         -timeout 10000000
         -rw_timeout 10000000
         -reconnect 1
@@ -121,7 +136,7 @@ play_url() {
             -f mp3
             -content_type audio/mpeg
             -method PUT
-            -loglevel fatal
+            -loglevel error
             -timeout 10000000
             -rw_timeout 10000000
             -reconnect 1
