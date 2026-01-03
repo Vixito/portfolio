@@ -569,6 +569,7 @@ export async function createTechnology(technology: {
   level: "beginner" | "intermediate" | "advanced" | "expert";
   icon?: string;
   years_of_experience?: number;
+  start_year?: number;
 }) {
   const { data, error } = await supabase
     .from("technologies")
@@ -595,6 +596,7 @@ export async function updateTechnology(
     level: "beginner" | "intermediate" | "advanced" | "expert";
     icon: string;
     years_of_experience: number;
+    start_year?: number;
   }>
 ) {
   const { data, error } = await supabase

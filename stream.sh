@@ -125,8 +125,14 @@ play_url() {
     )
     
     # Agregar opciones TLS solo si usamos HTTPS
+    # Deshabilitar completamente la verificación TLS para evitar errores
     if [ "$PROTOCOL" = "https" ]; then
-        FFMPEG_OPTS+=(-tls_verify 0 -multiple_requests 1)
+        FFMPEG_OPTS+=(
+            -tls_verify 0
+            -tls_allow_insecure 1
+            -multiple_requests 1
+            -protocol_whitelist file,http,https,tcp,tls
+        )
     fi
     
     # Intentar con copy primero
@@ -153,7 +159,12 @@ play_url() {
         )
         
         if [ "$PROTOCOL" = "https" ]; then
-            FFMPEG_OPTS_REENCODE+=(-tls_verify 0 -multiple_requests 1)
+            FFMPEG_OPTS_REENCODE+=(
+                -tls_verify 0
+                -tls_allow_insecure 1
+                -multiple_requests 1
+                -protocol_whitelist file,http,https,tcp,tls
+            )
         fi
         
         ffmpeg "${FFMPEG_OPTS_REENCODE[@]}" "$ICECAST_URL" 2>&1

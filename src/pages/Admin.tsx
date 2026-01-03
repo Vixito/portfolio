@@ -534,7 +534,15 @@ function Admin() {
             await updateWorkExperience(editingItem.id, workExpData);
             break;
           case "technologies":
-            await updateTechnology(editingItem.id, crudFormData);
+            // Calcular años de experiencia automáticamente desde start_year
+            const techUpdateData = { ...crudFormData };
+            if (techUpdateData.start_year) {
+              const currentYear = new Date().getFullYear();
+              const startYear = parseInt(techUpdateData.start_year.toString());
+              techUpdateData.years_of_experience = currentYear - startYear;
+              // Mantener start_year para futuras actualizaciones
+            }
+            await updateTechnology(editingItem.id, techUpdateData);
             break;
           case "studies":
             await updateStudy(editingItem.id, crudFormData);
@@ -607,7 +615,15 @@ function Admin() {
             await createWorkExperience(newWorkExpData);
             break;
           case "technologies":
-            await createTechnology(crudFormData);
+            // Calcular años de experiencia automáticamente desde start_year
+            const techCreateData = { ...crudFormData };
+            if (techCreateData.start_year) {
+              const currentYear = new Date().getFullYear();
+              const startYear = parseInt(techCreateData.start_year.toString());
+              techCreateData.years_of_experience = currentYear - startYear;
+              // Mantener start_year para futuras actualizaciones
+            }
+            await createTechnology(techCreateData);
             break;
           case "studies":
             // Asegurar que status siempre tenga un valor
@@ -2653,23 +2669,27 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Años de Experiencia
+                        Año de Inicio
                       </label>
                       <input
                         type="number"
-                        step="0.1"
-                        value={crudFormData.years_of_experience || ""}
+                        min="1900"
+                        max={new Date().getFullYear()}
+                        value={crudFormData.start_year || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            years_of_experience: e.target.value
-                              ? parseFloat(e.target.value)
+                            start_year: e.target.value
+                              ? parseInt(e.target.value)
                               : undefined,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        placeholder="Ej: 3.5"
+                        placeholder="Ej: 2020"
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Los años de experiencia se calcularán automáticamente
+                      </p>
                     </div>
                   </>
                 )}

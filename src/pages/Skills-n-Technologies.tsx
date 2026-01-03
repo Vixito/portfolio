@@ -38,15 +38,24 @@ function SkillsNTechnologies() {
         setLoading(true);
         const data = await getTechnologies();
         // Mapear datos de Supabase al formato de la interfaz
+        const currentYear = new Date().getFullYear();
         const mappedTechnologies: Technology[] = (data || []).map(
-          (tech: any) => ({
-            id: tech.id,
-            name: tech.name,
-            category: tech.category,
-            level: tech.level,
-            icon: tech.icon,
-            yearsOfExperience: tech.years_of_experience,
-          })
+          (tech: any) => {
+            // Calcular años de experiencia automáticamente desde start_year
+            let yearsOfExperience = tech.years_of_experience;
+            if (tech.start_year) {
+              const startYear = parseInt(tech.start_year.toString());
+              yearsOfExperience = currentYear - startYear;
+            }
+            return {
+              id: tech.id,
+              name: tech.name,
+              category: tech.category,
+              level: tech.level,
+              icon: tech.icon,
+              yearsOfExperience: yearsOfExperience,
+            };
+          }
         );
         setTechnologies(mappedTechnologies);
       } catch (error) {
