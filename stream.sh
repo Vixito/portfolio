@@ -125,11 +125,10 @@ play_url() {
     )
     
     # Agregar opciones TLS solo si usamos HTTPS
-    # Deshabilitar completamente la verificación TLS para evitar errores
+    # Usar solo opciones válidas de FFmpeg para TLS
     if [ "$PROTOCOL" = "https" ]; then
         FFMPEG_OPTS+=(
             -tls_verify 0
-            -tls_allow_insecure 1
             -multiple_requests 1
             -protocol_whitelist file,http,https,tcp,tls
         )
@@ -161,7 +160,6 @@ play_url() {
         if [ "$PROTOCOL" = "https" ]; then
             FFMPEG_OPTS_REENCODE+=(
                 -tls_verify 0
-                -tls_allow_insecure 1
                 -multiple_requests 1
                 -protocol_whitelist file,http,https,tcp,tls
             )
