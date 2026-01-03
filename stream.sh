@@ -6,12 +6,13 @@
 # Variables de entorno con valores por defecto
 PLAYLIST_URL="${PLAYLIST_URL:-https://cdn.vixis.dev/music/playlist.m3u}"
 ICECAST_HOST="${ICECAST_HOST:-radio.vixis.dev}"
-ICECAST_PORT="${ICECAST_PORT:-443}"
+ICECAST_PORT="${ICECAST_PORT:-8000}"  # Cambiar a 8000 por defecto (HTTP) para evitar TLS
 ICECAST_MOUNT="${ICECAST_MOUNT:-/vixis}"
 ICECAST_USER="${ICECAST_USER:-source}"
 ICECAST_PASSWORD="${ICECAST_PASSWORD:-}"
 # Host interno de Koyeb (si los servicios pueden comunicarse entre sí)
 # IMPORTANTE: Debe ser el nombre EXACTO del servicio de Icecast en Koyeb
+# Ejemplo: si tu servicio de Icecast se llama "portfolio", usa: ICECAST_INTERNAL_HOST=portfolio
 ICECAST_INTERNAL_HOST="${ICECAST_INTERNAL_HOST:-}"
 # Supabase Storage (requerido para leer archivos directamente)
 SUPABASE_URL="${SUPABASE_URL:-}"
@@ -23,27 +24,25 @@ SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
 # Usar urllib.parse.quote con safe='' para codificar todos los caracteres especiales
 ICECAST_PASSWORD_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$ICECAST_PASSWORD")
 
-# Intentar usar host interno con puerto 8000 si está configurado
-# Esto evita problemas de TLS al usar HTTP directo entre servicios
-# IMPORTANTE: En Koyeb, el host interno debe ser el nombre EXACTO del servicio
-# No uses "cool-lorne" (ese es el nombre del servicio FFmpeg, no Icecast)
+# ESTRATEGIA: Priorizar HTTP sobre HTTPS para evitar problemas TLS
+# 1. Si hay host interno → usar HTTP interno (puerto 8000)
+# 2. Si NO hay host interno → usar HTTP público (puerto 8000) en lugar de HTTPS
+# Esto evita los errores TLS que están causando "Error in the push function"
 if [ -n "$ICECAST_INTERNAL_HOST" ]; then
     ICECAST_HOST_FINAL="$ICECAST_INTERNAL_HOST"
     ICECAST_PORT_FINAL="8000"
     PROTOCOL="http"
-    echo "Usando host interno de Koyeb: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL}"
+    echo "✓ Usando host INTERNO de Koyeb: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (HTTP)"
+    echo "  Esto evita problemas TLS al comunicarse directamente entre servicios"
 else
-    # Si no hay host interno, usar host público (HTTPS)
+    # Si no hay host interno, usar HTTP público (puerto 8000) en lugar de HTTPS
+    # IMPORTANTE: Asegúrate de que el puerto 8000 esté expuesto públicamente en Koyeb
     ICECAST_HOST_FINAL="$ICECAST_HOST"
-    ICECAST_PORT_FINAL="$ICECAST_PORT"
-    # Determinar protocolo según el puerto
-    if [ "$ICECAST_PORT" = "443" ]; then
-        PROTOCOL="https"
-    else
-        PROTOCOL="http"
-    fi
-    echo "Usando host público: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (${PROTOCOL})"
-    echo "NOTA: Si tienes problemas de TLS, configura ICECAST_INTERNAL_HOST con el nombre del servicio de Icecast en Koyeb"
+    ICECAST_PORT_FINAL="8000"  # Forzar puerto 8000 (HTTP) en lugar de 443 (HTTPS)
+    PROTOCOL="http"
+    echo "⚠ Usando host PÚBLICO: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (HTTP)"
+    echo "  NOTA: Si tienes problemas, configura ICECAST_INTERNAL_HOST con el nombre del servicio de Icecast en Koyeb"
+    echo "  Ejemplo: ICECAST_INTERNAL_HOST=portfolio (donde 'portfolio' es el nombre de tu servicio Icecast)"
 fi
 
 # Construir URL de Icecast usando HTTP/HTTPS directo con autenticación básica
@@ -124,19 +123,26 @@ play_url() {
         -fflags +genpts
     )
     
-    # Agregar opciones TLS solo si usamos HTTPS
-    # Usar solo opciones válidas de FFmpeg para TLS
-    if [ "$PROTOCOL" = "https" ]; then
-        FFMPEG_OPTS+=(
-            -tls_verify 0
-            -multiple_requests 1
-            -protocol_whitelist file,http,https,tcp,tls
-        )
-    fi
+    # No agregar opciones TLS porque ahora usamos HTTP siempre
+    # Esto evita los errores "Error in the push function" y "session invalidated"
     
-    # Intentar con copy primero
-    if ! ffmpeg "${FFMPEG_OPTS[@]}" "$ICECAST_URL" 2>&1; then
+    # Capturar salida de FFmpeg para análisis de errores
+    FFMPEG_OUTPUT=$(ffmpeg "${FFMPEG_OPTS[@]}" "$ICECAST_URL" 2>&1)
+    FFMPEG_EXIT_CODE=$?
+    
+    if [ $FFMPEG_EXIT_CODE -ne 0 ]; then
+        echo "⚠ Error al reproducir con 'copy' (código: $FFMPEG_EXIT_CODE)" >&2
+        echo "Últimas líneas de FFmpeg:" >&2
+        echo "$FFMPEG_OUTPUT" | tail -10 >&2
+        
+        # Verificar si es un error TLS
+        if echo "$FFMPEG_OUTPUT" | grep -qi "tls\|ssl\|certificate\|handshake"; then
+            echo "❌ Error TLS detectado. Solución: Configura ICECAST_INTERNAL_HOST en Koyeb" >&2
+            echo "   Ejemplo: ICECAST_INTERNAL_HOST=portfolio" >&2
+        fi
+        
         # Si falla con copy, intentar re-encodificar (solo audio)
+        echo "Intentando re-encodificar..." >&2
         FFMPEG_OPTS_REENCODE=(
             -re
             -user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
@@ -157,15 +163,10 @@ play_url() {
             -fflags +genpts
         )
         
-        if [ "$PROTOCOL" = "https" ]; then
-            FFMPEG_OPTS_REENCODE+=(
-                -tls_verify 0
-                -multiple_requests 1
-                -protocol_whitelist file,http,https,tcp,tls
-            )
-        fi
-        
+        # No agregar opciones TLS porque ahora usamos HTTP siempre
         ffmpeg "${FFMPEG_OPTS_REENCODE[@]}" "$ICECAST_URL" 2>&1
+    else
+        echo "$FFMPEG_OUTPUT" | tail -5
     fi
 }
 
