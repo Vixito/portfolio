@@ -27,11 +27,17 @@ interface StoreItem {
   base_price_cop: number | null;
   thumbnail_url: string | null;
   images: string[] | null;
-  // Campos configurables desde Admin
-  action_type?: "link" | "submit" | "schedule"; // Tipo de acción del botón
-  action_url?: string | null; // URL para redirección (si action_type es "link")
-  pricing_link?: string | null; // Link de pricing generado desde Admin
-  button_text?: string | null; // Texto personalizado del botón
+  // Nueva estructura de botones
+  button_type?: "buy" | "request";
+  buy_button_type?: "external_link" | "custom_checkout";
+  buy_button_url?: string | null;
+  request_button_type?: "external_link" | "custom_form";
+  request_button_url?: string | null;
+  // Campos antiguos (mantener por compatibilidad durante migración)
+  action_type?: "link" | "submit" | "schedule";
+  action_url?: string | null;
+  pricing_link?: string | null;
+  button_text?: string | null;
   product_pricing?: ProductPricing[]; // Pricing del producto
 }
 
@@ -84,7 +90,14 @@ function Store() {
                 ? product.images
                 : []
               : null,
-            action_type: product.action_type || "link",
+            // Nueva estructura de botones
+            button_type: product.button_type || "buy",
+            buy_button_type: product.buy_button_type || "external_link",
+            buy_button_url: product.buy_button_url || null,
+            request_button_type: product.request_button_type || "external_link",
+            request_button_url: product.request_button_url || null,
+            // Campos antiguos (mantener por compatibilidad durante migración)
+            action_type: product.action_type || null,
             action_url: product.action_url || null,
             pricing_link: product.pricing_link || null,
             button_text: product.button_text || null,
@@ -110,27 +123,62 @@ function Store() {
   };
 
   const handleAction = (item: StoreItem) => {
-    if (item.action_type === "link") {
-      // Redirigir a la URL configurada (pricing_link o action_url)
-      const url = item.pricing_link || item.action_url;
-      if (url) {
-        window.open(url, "_blank", "noopener,noreferrer");
+    const buttonType = item.button_type || "buy";
+
+    if (buttonType === "buy") {
+      // Botón "Comprar"
+      const buyType = item.buy_button_type || "external_link";
+      const buyUrl = item.buy_button_url;
+
+      if (buyType === "external_link") {
+        // Link externo (Amazon, Hotmart, etc.)
+        if (buyUrl) {
+          window.open(buyUrl, "_blank", "noopener,noreferrer");
+        }
+      } else if (buyType === "custom_checkout") {
+        // Checkout propio (/checkout/:id)
+        const checkoutUrl = `/checkout/${buyUrl || item.id}`;
+        window.location.href = checkoutUrl;
       }
-    } else if (
-      item.action_type === "submit" ||
-      item.action_type === "schedule"
-    ) {
-      // Para submit/schedule, podría abrir un modal o redirigir a un formulario
-      // Por ahora, mostrar un mensaje o redirigir a action_url si existe
-      if (item.action_url) {
-        window.open(item.action_url, "_blank", "noopener,noreferrer");
-      } else {
-        // Aquí podrías abrir un modal de formulario para "Agéndalo"
-        alert(
-          item.action_type === "schedule"
-            ? t("store.scheduleSoon")
-            : t("store.sendingRequest")
-        );
+    } else if (buttonType === "request") {
+      // Botón "Solicitar"
+      const requestType = item.request_button_type || "external_link";
+      const requestUrl = item.request_button_url;
+
+      if (requestType === "external_link") {
+        // Link externo
+        if (requestUrl) {
+          window.open(requestUrl, "_blank", "noopener,noreferrer");
+        }
+      } else if (requestType === "custom_form") {
+        // Formulario propio
+        if (requestUrl) {
+          window.location.href = requestUrl;
+        } else {
+          // Fallback: mostrar mensaje
+          alert(t("store.sendingRequest"));
+        }
+      }
+    } else {
+      // Fallback para compatibilidad con campos antiguos
+      if (item.action_type === "link") {
+        const url = item.pricing_link || item.action_url;
+        if (url) {
+          window.open(url, "_blank", "noopener,noreferrer");
+        }
+      } else if (
+        item.action_type === "submit" ||
+        item.action_type === "schedule"
+      ) {
+        if (item.action_url) {
+          window.open(item.action_url, "_blank", "noopener,noreferrer");
+        } else {
+          alert(
+            item.action_type === "schedule"
+              ? t("store.scheduleSoon")
+              : t("store.sendingRequest")
+          );
+        }
       }
     }
   };
@@ -146,8 +194,9 @@ function Store() {
     if (!pricing) {
       // Fallback si no hay pricing
       const isColombia = userCountry === "CO";
+      // Usar precio base (sin conversión hardcodeada)
       const price = isColombia
-        ? item.base_price_cop || item.base_price_usd * 4000
+        ? item.base_price_cop || item.base_price_usd
         : item.base_price_usd;
       const currency = isColombia ? "COP" : "USD";
       return new Intl.NumberFormat(isColombia ? "es-CO" : "en-US", {
@@ -210,10 +259,20 @@ function Store() {
 
   // Obtener texto del botón
   const getButtonText = (item: StoreItem) => {
+    // Si hay texto personalizado (campos antiguos), usarlo
     if (item.button_text) {
       return item.button_text;
     }
-    // Texto por defecto según el tipo de acción
+
+    // Usar nueva estructura de botones
+    const buttonType = item.button_type || "buy";
+    if (buttonType === "buy") {
+      return t("store.buy");
+    } else if (buttonType === "request") {
+      return t("store.request");
+    }
+
+    // Fallback para compatibilidad con campos antiguos
     switch (item.action_type) {
       case "schedule":
         return t("store.schedule");
@@ -375,19 +434,7 @@ function Store() {
                   <Button
                     variant="primary"
                     onClick={() => {
-                      // Si tiene pricing_link y action_type es "link", usar pricing_link
-                      if (
-                        selectedItem.action_type === "link" &&
-                        selectedItem.pricing_link
-                      ) {
-                        window.open(
-                          selectedItem.pricing_link,
-                          "_blank",
-                          "noopener,noreferrer"
-                        );
-                      } else {
-                        handleAction(selectedItem);
-                      }
+                      handleAction(selectedItem);
                       setIsModalOpen(false);
                     }}
                     className="w-full"

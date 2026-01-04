@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { checkRateLimit, getRequestIdentifier } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +11,68 @@ interface ExchangeRateResponse {
   rates: Record<string, number>;
   base: string;
   date: string;
+}
+
+// Rate limiting simple (autocontenido)
+interface RateLimitConfig {
+  maxRequests: number;
+  windowMs: number;
+}
+
+interface RateLimitStore {
+  count: number;
+  resetAt: number;
+}
+
+const rateLimitStore = new Map<string, RateLimitStore>();
+
+function checkRateLimit(
+  identifier: string,
+  config: RateLimitConfig
+): { allowed: boolean; remaining: number; resetAt: number } {
+  const now = Date.now();
+  const record = rateLimitStore.get(identifier);
+
+  if (!record || now > record.resetAt) {
+    rateLimitStore.set(identifier, {
+      count: 1,
+      resetAt: now + config.windowMs,
+    });
+    return {
+      allowed: true,
+      remaining: config.maxRequests - 1,
+      resetAt: now + config.windowMs,
+    };
+  }
+
+  if (record.count >= config.maxRequests) {
+    return {
+      allowed: false,
+      remaining: 0,
+      resetAt: record.resetAt,
+    };
+  }
+
+  record.count++;
+  return {
+    allowed: true,
+    remaining: config.maxRequests - record.count,
+    resetAt: record.resetAt,
+  };
+}
+
+function getRequestIdentifier(req: Request): string {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) {
+    return realIp;
+  }
+
+  return "unknown";
 }
 
 serve(async (req) => {
