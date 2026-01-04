@@ -294,42 +294,64 @@ except Exception as e:
     return 0
 }
 
-# Loop infinito para reproducir archivos continuamente
+# ⚠️ ADVERTENCIA: Este script está DESHABILITADO temporalmente
+# para evitar consumo excesivo de Cached Egress en Supabase.
+# FFmpeg descarga archivos MP3 completos repetidamente, generando
+# tráfico masivo (24+ GB en un día).
+#
+# SOLUCIONES RECOMENDADAS:
+# 1. Mover archivos MP3 a un CDN externo (CloudFront, BunnyCDN, etc.)
+# 2. Cachear archivos MP3 localmente en el servidor
+# 3. Usar un servicio de streaming dedicado (Shoutcast, etc.)
+#
+# Para reactivar, descomenta el código siguiente y optimiza el streaming.
+
+echo "⚠️ SERVICIO FFMPEG DESHABILITADO TEMPORALMENTE"
+echo "Razón: Consumo excesivo de Cached Egress en Supabase (24+ GB/día)"
+echo ""
+echo "Para reactivar, necesitas:"
+echo "1. Mover archivos MP3 fuera de Supabase Storage"
+echo "2. O implementar cache local de archivos MP3"
+echo "3. O usar un servicio de streaming dedicado"
+echo ""
+echo "El servicio permanecerá inactivo para evitar costos adicionales."
+echo "Presiona Ctrl+C para salir, o espera 60 segundos para reiniciar el mensaje..."
+
+# Mantener el proceso vivo pero sin hacer nada
 while true; do
-    # Listar archivos MP3 desde Supabase Storage
-    MP3_FILES=$(list_mp3_files)
-    
-    if [ -z "$MP3_FILES" ]; then
-        echo "Error: No se pudieron obtener archivos MP3, reintentando en 10 segundos..."
-        sleep 10
-        continue
-    fi
-    
-    # Contar archivos
-    FILE_COUNT=$(echo "$MP3_FILES" | wc -l)
-    echo "Encontrados ${FILE_COUNT} archivos MP3"
-    
-    # Procesar archivos y mezclar aleatoriamente
-    # OPTIMIZACIÓN: No verificar cada URL antes de reproducirla
-    # Asumimos que los archivos en Supabase Storage son válidos
-    # Solo verificamos si falla la reproducción
-    echo "$MP3_FILES" | shuf | while IFS= read -r filename; do
-        # Construir URL pública de Supabase Storage
-        # Codificar el nombre del archivo para URL (manejar espacios y caracteres especiales)
-        FILENAME_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$filename")
-        URL="${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${FILENAME_ENCODED}"
-        
-        echo "Reproduciendo: $filename"
-        
-        # Reproducir directamente sin verificación previa
-        # Esto reduce significativamente las solicitudes analíticas
-        # Si el archivo no es accesible, FFmpeg fallará y continuaremos con el siguiente
-        play_url "$URL" || {
-            echo "Error al reproducir $URL, continuando con siguiente..."
-            sleep 1
-        }
-    done
-    
-    echo "Todos los archivos reproducidos, reiniciando lista..."
-    sleep 2
+    sleep 60
+    echo "Servicio aún deshabilitado. Revisa las opciones arriba para reactivarlo."
 done
+
+# CÓDIGO DESHABILITADO - Descomenta solo después de implementar una solución
+# Loop infinito para reproducir archivos continuamente
+# while true; do
+#     # Listar archivos MP3 desde Supabase Storage
+#     MP3_FILES=$(list_mp3_files)
+#     
+#     if [ -z "$MP3_FILES" ]; then
+#         echo "Error: No se pudieron obtener archivos MP3, reintentando en 10 segundos..."
+#         sleep 10
+#         continue
+#     fi
+#     
+#     # Contar archivos
+#     FILE_COUNT=$(echo "$MP3_FILES" | wc -l)
+#     echo "Encontrados ${FILE_COUNT} archivos MP3"
+#     
+#     # Procesar archivos y mezclar aleatoriamente
+#     echo "$MP3_FILES" | shuf | while IFS= read -r filename; do
+#         FILENAME_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$filename")
+#         URL="${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${FILENAME_ENCODED}"
+#         
+#         echo "Reproduciendo: $filename"
+#         
+#         play_url "$URL" || {
+#             echo "Error al reproducir $URL, continuando con siguiente..."
+#             sleep 1
+#         }
+#     done
+#     
+#     echo "Todos los archivos reproducidos, reiniciando lista..."
+#     sleep 2
+# done

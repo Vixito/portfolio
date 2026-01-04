@@ -1,0 +1,114 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimit, getRequestIdentifier } from "../_shared/rate-limit.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+interface ExchangeRateResponse {
+  rates: Record<string, number>;
+  base: string;
+  date: string;
+}
+
+serve(async (req) => {
+  // Manejar CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    // Rate limiting: 60 requests por minuto por IP
+    const identifier = getRequestIdentifier(req);
+    const rateLimit = checkRateLimit(identifier, {
+      maxRequests: 60,
+      windowMs: 60 * 1000, // 1 minuto
+    });
+
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: "Demasiadas solicitudes. Por favor, intenta más tarde.",
+          retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": Math.ceil(
+              (rateLimit.resetAt - Date.now()) / 1000
+            ).toString(),
+            "X-RateLimit-Limit": "60",
+            "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+            "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+          },
+        }
+      );
+    }
+
+    // Obtener API key de exchangerate-api.com desde Doppler
+    const exchangeRateApiKey = Deno.env.get("EXCHANGERATE_API_KEY");
+    if (!exchangeRateApiKey) {
+      throw new Error("EXCHANGERATE_API_KEY no configurada");
+    }
+
+    // Obtener parámetros opcionales (base_currency, target_currency)
+    const url = new URL(req.url);
+    const baseCurrency = url.searchParams.get("base") || "USD";
+    const targetCurrency = url.searchParams.get("target") || "COP";
+
+    // Obtener tipo de cambio en tiempo real
+    const exchangeUrl = `https://v6.exchangerate-api.com/v6/${exchangeRateApiKey}/latest/${baseCurrency}`;
+    const exchangeResponse = await fetch(exchangeUrl);
+
+    if (!exchangeResponse.ok) {
+      throw new Error(
+        `Error al obtener tipo de cambio: ${exchangeResponse.statusText}`
+      );
+    }
+
+    const exchangeData: ExchangeRateResponse = await exchangeResponse.json();
+    const exchangeRate = exchangeData.rates[targetCurrency];
+
+    if (!exchangeRate) {
+      return new Response(
+        JSON.stringify({
+          error: `Moneda ${targetCurrency} no soportada`,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Retornar respuesta
+    return new Response(
+      JSON.stringify({
+        base_currency: baseCurrency,
+        target_currency: targetCurrency,
+        exchange_rate: exchangeRate,
+        date: exchangeData.date,
+        calculated_at: new Date().toISOString(),
+      }),
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": "60",
+          "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+          "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+        },
+      }
+    );
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

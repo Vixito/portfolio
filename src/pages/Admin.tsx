@@ -46,6 +46,9 @@ import {
   deleteStudy,
   getUserStatus,
   updateUserStatus,
+  getExchangeRate,
+  getProductPricing,
+  updateProductPricing,
 } from "../lib/supabase-functions";
 
 function Admin() {
@@ -106,6 +109,8 @@ function Admin() {
   const [crudFormData, setCrudFormData] = useState<any>({});
   const [extractingEventData, setExtractingEventData] = useState(false);
   const [eventUrl, setEventUrl] = useState("");
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [loadingExchangeRate, setLoadingExchangeRate] = useState(false);
 
   // Verificar key de autenticación inicial (solo para permitir mostrar el formulario)
   useEffect(() => {
@@ -258,6 +263,26 @@ function Admin() {
   // Permitir scroll del body incluso cuando el modal está abierto
   // El modal tiene su propio scroll interno
 
+  // Cargar tasa de cambio cuando se monta el componente o cuando se abre el modal de productos
+  useEffect(() => {
+    const loadExchangeRate = async () => {
+      if (activeTab === "products" && showCRUDModal) {
+        try {
+          setLoadingExchangeRate(true);
+          const rate = await getExchangeRate("USD", "COP");
+          setExchangeRate(rate.exchange_rate);
+        } catch (error) {
+          console.error("Error al obtener tasa de cambio:", error);
+          // Fallback a tasa fija
+          setExchangeRate(4000);
+        } finally {
+          setLoadingExchangeRate(false);
+        }
+      }
+    };
+    loadExchangeRate();
+  }, [activeTab, showCRUDModal]);
+
   const loadCRUDData = async () => {
     setLoadingCRUD(true);
     try {
@@ -357,13 +382,41 @@ function Admin() {
     setShowCRUDModal(true);
   };
 
-  const handleEdit = (item: any) => {
+  const handleEdit = async (item: any) => {
     setEditingItem(item);
-    // Convertir USD a COP para productos al editar
-    const copToUsdRate = 4000;
     const formData = { ...item };
-    if (activeTab === "products" && item.base_price_usd) {
-      formData.base_price_cop = item.base_price_usd * copToUsdRate;
+
+    if (activeTab === "products") {
+      // Cargar pricing del producto (incluyendo ofertas)
+      try {
+        const pricing = await getProductPricing(item.id);
+        if (pricing) {
+          formData.is_on_sale = pricing.is_on_sale;
+          formData.sale_percentage = pricing.sale_percentage;
+          formData.sale_starts_at = pricing.sale_starts_at
+            ? new Date(pricing.sale_starts_at).toISOString().slice(0, 16)
+            : "";
+          formData.sale_ends_at = pricing.sale_ends_at
+            ? new Date(pricing.sale_ends_at).toISOString().slice(0, 16)
+            : "";
+        }
+      } catch (error) {
+        console.error("Error al cargar pricing:", error);
+      }
+
+      // Si no hay price_currency, usar USD por defecto
+      if (!formData.price_currency) {
+        formData.price_currency = "USD";
+      }
+
+      // Si hay precio en USD pero no en COP, calcular COP
+      if (formData.base_price_usd && !formData.base_price_cop && exchangeRate) {
+        formData.base_price_cop = formData.base_price_usd * exchangeRate;
+      }
+      // Si hay precio en COP pero no en USD, calcular USD
+      if (formData.base_price_cop && !formData.base_price_usd && exchangeRate) {
+        formData.base_price_usd = formData.base_price_cop / exchangeRate;
+      }
     }
     // Para testimonios, usar el ID del cliente como client_id
     if (activeTab === "testimonials") {
@@ -480,15 +533,53 @@ function Admin() {
         // Actualizar
         switch (activeTab) {
           case "products":
-            // Convertir COP a USD si se está actualizando el precio
-            const copToUsdRate = 4000;
-            const updateProductData = { ...crudFormData };
-            if (updateProductData.base_price_cop !== undefined) {
+            const updateProductData: any = { ...crudFormData };
+            const rate = exchangeRate || 4000; // Fallback a 4000 si no hay tasa
+
+            // Determinar moneda y convertir precios
+            const priceCurrency = updateProductData.price_currency || "USD";
+
+            if (priceCurrency === "COP" && updateProductData.base_price_cop) {
+              // Si se ingresó en COP, calcular USD
               updateProductData.base_price_usd =
-                updateProductData.base_price_cop / copToUsdRate;
-              delete updateProductData.base_price_cop;
+                updateProductData.base_price_cop / rate;
+            } else if (
+              priceCurrency === "USD" &&
+              updateProductData.base_price_usd
+            ) {
+              // Si se ingresó en USD, calcular COP
+              updateProductData.base_price_cop =
+                updateProductData.base_price_usd * rate;
             }
+
+            // Separar datos de oferta del producto
+            const saleData = {
+              is_on_sale: updateProductData.is_on_sale || false,
+              sale_percentage: updateProductData.sale_percentage,
+              sale_starts_at: updateProductData.sale_starts_at
+                ? new Date(updateProductData.sale_starts_at).toISOString()
+                : null,
+              sale_ends_at: updateProductData.sale_ends_at
+                ? new Date(updateProductData.sale_ends_at).toISOString()
+                : null,
+            };
+
+            // Eliminar campos de oferta del objeto del producto
+            delete updateProductData.is_on_sale;
+            delete updateProductData.sale_percentage;
+            delete updateProductData.sale_starts_at;
+            delete updateProductData.sale_ends_at;
+
+            // Guardar producto
             await updateProduct(editingItem.id, updateProductData);
+
+            // Guardar pricing y ofertas
+            if (saleData.is_on_sale && saleData.sale_percentage) {
+              await updateProductPricing(editingItem.id, saleData);
+            } else {
+              // Si no hay oferta, desactivarla
+              await updateProductPricing(editingItem.id, { is_on_sale: false });
+            }
             break;
           case "projects":
             await updateProject(editingItem.id, crudFormData);
@@ -552,18 +643,50 @@ function Admin() {
         // Crear
         switch (activeTab) {
           case "products":
-            // Convertir COP a USD (tasa aproximada: 1 USD = 4000 COP)
-            // El usuario puede ajustar esta tasa si es necesario
-            const copToUsdRate = 4000; // 1 USD = 4000 COP
-            const productData = {
-              ...crudFormData,
-              base_price_usd: crudFormData.base_price_cop
-                ? crudFormData.base_price_cop / copToUsdRate
-                : 0,
+            const productData: any = { ...crudFormData };
+            const createRate = exchangeRate || 4000; // Fallback a 4000 si no hay tasa
+
+            // Determinar moneda y convertir precios
+            const createPriceCurrency = productData.price_currency || "USD";
+
+            if (createPriceCurrency === "COP" && productData.base_price_cop) {
+              // Si se ingresó en COP, calcular USD
+              productData.base_price_usd =
+                productData.base_price_cop / createRate;
+            } else if (
+              createPriceCurrency === "USD" &&
+              productData.base_price_usd
+            ) {
+              // Si se ingresó en USD, calcular COP
+              productData.base_price_cop =
+                productData.base_price_usd * createRate;
+            }
+
+            // Separar datos de oferta del producto
+            const createSaleData = {
+              is_on_sale: productData.is_on_sale || false,
+              sale_percentage: productData.sale_percentage,
+              sale_starts_at: productData.sale_starts_at
+                ? new Date(productData.sale_starts_at).toISOString()
+                : null,
+              sale_ends_at: productData.sale_ends_at
+                ? new Date(productData.sale_ends_at).toISOString()
+                : null,
             };
-            // Eliminar base_price_cop del objeto antes de enviar
-            delete productData.base_price_cop;
-            await createProduct(productData);
+
+            // Eliminar campos de oferta del objeto del producto
+            delete productData.is_on_sale;
+            delete productData.sale_percentage;
+            delete productData.sale_starts_at;
+            delete productData.sale_ends_at;
+
+            // Crear producto
+            const newProduct = await createProduct(productData);
+
+            // Guardar pricing y ofertas si hay
+            if (createSaleData.is_on_sale && createSaleData.sale_percentage) {
+              await updateProductPricing(newProduct.id, createSaleData);
+            }
             break;
           case "projects":
             await createProject(crudFormData);
@@ -1696,23 +1819,184 @@ function Admin() {
                         rows={5}
                       />
                     </div>
+                    {/* Selector de moneda */}
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldBasePrice")} *
+                        Moneda del precio *
+                      </label>
+                      <select
+                        value={crudFormData.price_currency || "USD"}
+                        onChange={(e) => {
+                          const currency = e.target.value as "USD" | "COP";
+                          setCrudFormData({
+                            ...crudFormData,
+                            price_currency: currency,
+                          });
+                        }}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      >
+                        <option value="USD">USD (Dólares)</option>
+                        <option value="COP">COP (Pesos Colombianos)</option>
+                      </select>
+                    </div>
+
+                    {/* Campo de precio según moneda seleccionada */}
+                    {crudFormData.price_currency === "COP" ? (
+                      <div>
+                        <label className="block text-gray-300 text-sm mb-2">
+                          Precio en COP *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={crudFormData.base_price_cop || ""}
+                          onChange={(e) => {
+                            const copPrice = parseFloat(e.target.value) || 0;
+                            const usdPrice = exchangeRate
+                              ? copPrice / exchangeRate
+                              : 0;
+                            setCrudFormData({
+                              ...crudFormData,
+                              base_price_cop: copPrice,
+                              base_price_usd: usdPrice,
+                            });
+                          }}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                          required
+                        />
+                        {exchangeRate && crudFormData.base_price_cop && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            ≈ ${crudFormData.base_price_usd?.toFixed(2)} USD
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-gray-300 text-sm mb-2">
+                          Precio en USD *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={crudFormData.base_price_usd || ""}
+                          onChange={(e) => {
+                            const usdPrice = parseFloat(e.target.value) || 0;
+                            const copPrice = exchangeRate
+                              ? usdPrice * exchangeRate
+                              : 0;
+                            setCrudFormData({
+                              ...crudFormData,
+                              base_price_usd: usdPrice,
+                              base_price_cop: copPrice,
+                            });
+                          }}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                          required
+                        />
+                        {exchangeRate && crudFormData.base_price_usd && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            ≈ ${crudFormData.base_price_cop?.toFixed(2)} COP
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Campo de sector */}
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Sector
                       </label>
                       <input
-                        type="number"
-                        step="0.01"
-                        value={crudFormData.base_price_cop || ""}
+                        type="text"
+                        value={crudFormData.sector || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            base_price_cop: parseFloat(e.target.value),
+                            sector: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        required
+                        placeholder="Ej: Desarrollo Web, Consultoría, etc."
                       />
+                    </div>
+
+                    {/* Sección de ofertas */}
+                    <div className="border-t border-gray-700 pt-4">
+                      <label className="flex items-center gap-2 text-gray-300 text-sm mb-4">
+                        <input
+                          type="checkbox"
+                          checked={crudFormData.is_on_sale || false}
+                          onChange={(e) =>
+                            setCrudFormData({
+                              ...crudFormData,
+                              is_on_sale: e.target.checked,
+                            })
+                          }
+                          className="w-4 h-4"
+                        />
+                        Producto en oferta
+                      </label>
+
+                      {crudFormData.is_on_sale && (
+                        <>
+                          <div className="mb-4">
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Porcentaje de descuento (%) *
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              value={crudFormData.sale_percentage || ""}
+                              onChange={(e) =>
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  sale_percentage:
+                                    parseFloat(e.target.value) || 0,
+                                })
+                              }
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                              required={crudFormData.is_on_sale}
+                            />
+                          </div>
+
+                          <div className="mb-4">
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Fecha de inicio de oferta
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={crudFormData.sale_starts_at || ""}
+                              onChange={(e) =>
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  sale_starts_at: e.target.value,
+                                })
+                              }
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Fecha de fin de oferta
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={crudFormData.sale_ends_at || ""}
+                              onChange={(e) =>
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  sale_ends_at: e.target.value,
+                                })
+                              }
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">

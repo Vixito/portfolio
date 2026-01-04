@@ -2,8 +2,21 @@ import { useState, useEffect } from "react";
 import Pagination from "../components/ui/Pagination";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
-import { getProducts } from "../lib/supabase-functions";
+import { getProductsWithPricing } from "../lib/supabase-functions";
 import { useTranslation } from "../lib/i18n";
+
+interface ProductPricing {
+  id: string;
+  product_id: string;
+  current_price_cop: number;
+  current_price_usd: number;
+  is_on_sale: boolean;
+  sale_percentage: number | null;
+  sale_price_cop: number | null;
+  sale_price_usd: number | null;
+  sale_starts_at: string | null;
+  sale_ends_at: string | null;
+}
 
 interface StoreItem {
   id: string;
@@ -11,6 +24,7 @@ interface StoreItem {
   description: string | null;
   full_description: string | null;
   base_price_usd: number;
+  base_price_cop: number | null;
   thumbnail_url: string | null;
   images: string[] | null;
   // Campos configurables desde Admin
@@ -18,6 +32,7 @@ interface StoreItem {
   action_url?: string | null; // URL para redirección (si action_type es "link")
   pricing_link?: string | null; // Link de pricing generado desde Admin
   button_text?: string | null; // Texto personalizado del botón
+  product_pricing?: ProductPricing[]; // Pricing del producto
 }
 
 function Store() {
@@ -27,32 +42,55 @@ function Store() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userCountry, setUserCountry] = useState<string | null>(null);
   const itemsPerPage = 12;
+
+  // Detectar país del usuario por IP
+  useEffect(() => {
+    const detectCountry = async () => {
+      try {
+        const response = await fetch("https://ipapi.co/json/");
+        const data = await response.json();
+        setUserCountry(data.country_code);
+      } catch (error) {
+        console.error("Error al detectar país:", error);
+        // Si falla, asumir que no es Colombia (mostrar USD)
+        setUserCountry(null);
+      }
+    };
+    detectCountry();
+  }, []);
 
   useEffect(() => {
     const loadProducts = async () => {
       try {
         setLoading(true);
-        const products = await getProducts();
+        const products = await getProductsWithPricing();
 
         // Mapear productos de Supabase a StoreItem
-        const mappedItems: StoreItem[] = products.map((product: any) => ({
-          id: product.id,
-          title: product.title,
-          description: product.description,
-          full_description: product.full_description,
-          base_price_usd: Number(product.base_price_usd),
-          thumbnail_url: product.thumbnail_url,
-          images: product.images
-            ? Array.isArray(product.images)
-              ? product.images
-              : []
-            : null,
-          action_type: product.action_type || "link",
-          action_url: product.action_url || null,
-          pricing_link: product.pricing_link || null,
-          button_text: product.button_text || null,
-        }));
+        const mappedItems: StoreItem[] = (products || []).map(
+          (product: any) => ({
+            id: product.id,
+            title: product.title,
+            description: product.description,
+            full_description: product.full_description,
+            base_price_usd: Number(product.base_price_usd || 0),
+            base_price_cop: product.base_price_cop
+              ? Number(product.base_price_cop)
+              : null,
+            thumbnail_url: product.thumbnail_url,
+            images: product.images
+              ? Array.isArray(product.images)
+                ? product.images
+                : []
+              : null,
+            action_type: product.action_type || "link",
+            action_url: product.action_url || null,
+            pricing_link: product.pricing_link || null,
+            button_text: product.button_text || null,
+            product_pricing: product.product_pricing || [],
+          })
+        );
 
         setItems(mappedItems);
       } catch (error) {
@@ -102,12 +140,72 @@ function Store() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentItems = items.slice(startIndex, startIndex + itemsPerPage);
 
-  // Formatear precio (mostrar precio base en USD)
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price);
+  // Formatear precio según país del usuario
+  const formatPrice = (item: StoreItem) => {
+    const pricing = item.product_pricing?.[0];
+    if (!pricing) {
+      // Fallback si no hay pricing
+      const isColombia = userCountry === "CO";
+      const price = isColombia
+        ? item.base_price_cop || item.base_price_usd * 4000
+        : item.base_price_usd;
+      const currency = isColombia ? "COP" : "USD";
+      return new Intl.NumberFormat(isColombia ? "es-CO" : "en-US", {
+        style: "currency",
+        currency,
+      }).format(price);
+    }
+
+    const isColombia = userCountry === "CO";
+    const isOnSale =
+      pricing.is_on_sale &&
+      (!pricing.sale_ends_at || new Date(pricing.sale_ends_at) > new Date());
+
+    if (isOnSale) {
+      const salePrice = isColombia
+        ? pricing.sale_price_cop || pricing.current_price_cop
+        : pricing.sale_price_usd || pricing.current_price_usd;
+      const originalPrice = isColombia
+        ? pricing.current_price_cop
+        : pricing.current_price_usd;
+      const currency = isColombia ? "COP" : "USD";
+
+      return (
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <span className="line-through text-gray-500 text-lg">
+              {new Intl.NumberFormat(isColombia ? "es-CO" : "en-US", {
+                style: "currency",
+                currency,
+              }).format(originalPrice)}
+            </span>
+            <span className="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+              -{pricing.sale_percentage}%
+            </span>
+          </div>
+          <span className="text-2xl font-bold text-red-600">
+            {new Intl.NumberFormat(isColombia ? "es-CO" : "en-US", {
+              style: "currency",
+              currency,
+            }).format(salePrice)}
+          </span>
+        </div>
+      );
+    }
+
+    const price = isColombia
+      ? pricing.current_price_cop
+      : pricing.current_price_usd;
+    const currency = isColombia ? "COP" : "USD";
+
+    return (
+      <span className="text-2xl font-bold text-purple">
+        {new Intl.NumberFormat(isColombia ? "es-CO" : "en-US", {
+          style: "currency",
+          currency,
+        }).format(price)}
+      </span>
+    );
   };
 
   // Obtener texto del botón
@@ -191,9 +289,7 @@ function Store() {
                     }}
                   />
                   <div className="flex items-center justify-between">
-                    <p className="text-2xl font-bold text-purple">
-                      {formatPrice(item.base_price_usd)}
-                    </p>
+                    <div className="flex-1">{formatPrice(item)}</div>
                     <Button
                       variant="outline"
                       onClick={(e) => {
@@ -263,9 +359,7 @@ function Store() {
               {/* Información */}
               <div>
                 <div className="mb-4">
-                  <p className="text-3xl font-bold text-purple mb-2">
-                    {formatPrice(selectedItem.base_price_usd)}
-                  </p>
+                  <div className="mb-2">{formatPrice(selectedItem)}</div>
                   <div
                     className="text-gray-600 prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{

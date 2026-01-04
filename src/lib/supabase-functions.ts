@@ -127,7 +127,10 @@ export async function createProduct(product: {
   title: string;
   description?: string;
   full_description?: string;
-  base_price_usd: number;
+  base_price_usd?: number;
+  base_price_cop?: number;
+  price_currency?: "USD" | "COP";
+  sector?: string;
   thumbnail_url?: string;
   images?: string[];
   action_type?: "link" | "submit" | "schedule";
@@ -152,6 +155,9 @@ export async function updateProduct(
     description: string;
     full_description: string;
     base_price_usd: number;
+    base_price_cop: number;
+    price_currency: "USD" | "COP";
+    sector: string;
     thumbnail_url: string;
     images: string[];
     action_type: "link" | "submit" | "schedule";
@@ -703,5 +709,126 @@ export async function updateUserStatus(status: "available" | "away" | "busy") {
     .single();
 
   if (error) throw new Error(`Error al actualizar status: ${error.message}`);
+  return data;
+}
+
+/**
+ * Obtiene la tasa de cambio USD/COP en tiempo real
+ */
+export async function getExchangeRate(
+  baseCurrency: string = "USD",
+  targetCurrency: string = "COP"
+) {
+  const { data, error } = await supabase.functions.invoke("get-exchange-rate", {
+    body: {
+      base: baseCurrency,
+      target: targetCurrency,
+    },
+  });
+
+  if (error) {
+    throw new Error(`Error al obtener tasa de cambio: ${error.message}`);
+  }
+
+  return data;
+}
+
+// ========== PRODUCT PRICING ==========
+/**
+ * Obtiene el pricing de un producto (precio actual y ofertas)
+ */
+export async function getProductPricing(productId: string) {
+  const { data, error } = await supabase
+    .from("product_pricing")
+    .select("*")
+    .eq("product_id", productId)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    throw new Error(`Error al obtener pricing: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Actualiza el pricing de un producto (incluyendo ofertas)
+ */
+export async function updateProductPricing(
+  productId: string,
+  updates: {
+    is_on_sale?: boolean;
+    sale_percentage?: number;
+    sale_starts_at?: string;
+    sale_ends_at?: string;
+  }
+) {
+  // Si hay oferta, calcular precios con descuento
+  let salePriceCop: number | null = null;
+  let salePriceUsd: number | null = null;
+
+  if (updates.is_on_sale && updates.sale_percentage) {
+    // Obtener precio actual
+    const currentPricing = await getProductPricing(productId);
+    if (currentPricing) {
+      const discount = updates.sale_percentage / 100;
+      salePriceCop = currentPricing.current_price_cop * (1 - discount);
+      salePriceUsd = currentPricing.current_price_usd * (1 - discount);
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("product_pricing")
+    .update({
+      ...updates,
+      sale_price_cop: salePriceCop,
+      sale_price_usd: salePriceUsd,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("product_id", productId)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Error al actualizar pricing: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Obtiene todos los productos con su pricing
+ */
+export async function getProductsWithPricing() {
+  const { data, error } = await supabase
+    .from("products")
+    .select(
+      `
+      *,
+      product_pricing (*)
+    `
+    )
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Error al obtener productos: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Obtiene multiplicadores por sector
+ */
+export async function getSectorMultipliers() {
+  const { data, error } = await supabase
+    .from("sector_multipliers")
+    .select("*")
+    .order("sector_name", { ascending: true });
+
+  if (error) {
+    throw new Error(`Error al obtener multiplicadores: ${error.message}`);
+  }
+
   return data;
 }
