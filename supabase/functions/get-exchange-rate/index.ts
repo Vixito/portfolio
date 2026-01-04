@@ -5,6 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 interface ExchangeRateResponse {
@@ -16,7 +17,10 @@ interface ExchangeRateResponse {
 serve(async (req) => {
   // Manejar CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders,
+    });
   }
 
   try {
@@ -55,10 +59,33 @@ serve(async (req) => {
       throw new Error("EXCHANGERATE_API_KEY no configurada");
     }
 
-    // Obtener parámetros opcionales (base_currency, target_currency)
+    // Obtener parámetros del body o query string
+    let baseCurrency = "USD";
+    let targetCurrency = "COP";
+
+    // Intentar obtener del body primero (para POST requests desde supabase.functions.invoke)
+    if (req.method === "POST") {
+      try {
+        const contentType = req.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const body = await req.json();
+          if (body && typeof body === "object") {
+            baseCurrency = body.base || baseCurrency;
+            targetCurrency = body.target || targetCurrency;
+          }
+        }
+      } catch (error) {
+        // Si falla al leer el body, continuar con query string
+        console.log("Error al leer body:", error);
+      }
+    }
+
+    // Si no se obtuvieron del body, intentar desde query string
     const url = new URL(req.url);
-    const baseCurrency = url.searchParams.get("base") || "USD";
-    const targetCurrency = url.searchParams.get("target") || "COP";
+    const queryBase = url.searchParams.get("base");
+    const queryTarget = url.searchParams.get("target");
+    if (queryBase) baseCurrency = queryBase;
+    if (queryTarget) targetCurrency = queryTarget;
 
     // Obtener tipo de cambio en tiempo real
     const exchangeUrl = `https://v6.exchangerate-api.com/v6/${exchangeRateApiKey}/latest/${baseCurrency}`;
