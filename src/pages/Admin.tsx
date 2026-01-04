@@ -270,11 +270,21 @@ function Admin() {
         try {
           setLoadingExchangeRate(true);
           const rate = await getExchangeRate("USD", "COP");
-          setExchangeRate(rate.exchange_rate);
+          if (rate && rate.exchange_rate) {
+            setExchangeRate(rate.exchange_rate);
+          } else {
+            console.error("Error: No se pudo obtener tasa de cambio válida");
+            // No usar fallback hardcodeado - mostrar error al usuario
+            alert(
+              "Error al obtener tasa de cambio. Por favor, intenta de nuevo."
+            );
+          }
         } catch (error) {
           console.error("Error al obtener tasa de cambio:", error);
-          // Fallback a tasa fija
-          setExchangeRate(4000);
+          // No usar fallback hardcodeado - mostrar error al usuario
+          alert(
+            "Error al obtener tasa de cambio. Por favor, verifica tu conexión e intenta de nuevo."
+          );
         } finally {
           setLoadingExchangeRate(false);
         }
@@ -376,6 +386,11 @@ function Admin() {
     } else if (activeTab === "technologies") {
       defaultFormData.level = "beginner";
       defaultFormData.category = "other";
+    } else if (activeTab === "products") {
+      // Valores por defecto para productos
+      defaultFormData.button_type = "buy";
+      defaultFormData.buy_button_type = "external_link";
+      defaultFormData.price_currency = "USD";
     }
     setCrudFormData(defaultFormData);
     setEventUrl("");
@@ -407,6 +422,21 @@ function Admin() {
       // Si no hay price_currency, usar USD por defecto
       if (!formData.price_currency) {
         formData.price_currency = "USD";
+      }
+
+      // Si no hay button_type, usar "buy" por defecto
+      if (!formData.button_type) {
+        formData.button_type = "buy";
+      }
+
+      // Si no hay buy_button_type, usar "external_link" por defecto
+      if (!formData.buy_button_type) {
+        formData.buy_button_type = "external_link";
+      }
+
+      // Si no hay request_button_type, usar "external_link" por defecto
+      if (!formData.request_button_type) {
+        formData.request_button_type = "external_link";
       }
 
       // Si hay precio en USD pero no en COP, calcular COP
@@ -534,7 +564,13 @@ function Admin() {
         switch (activeTab) {
           case "products":
             const updateProductData: any = { ...crudFormData };
-            const rate = exchangeRate || 4000; // Fallback a 4000 si no hay tasa
+            if (!exchangeRate) {
+              alert(
+                "Error: No se pudo obtener la tasa de cambio. Por favor, intenta de nuevo."
+              );
+              return;
+            }
+            const rate = exchangeRate;
 
             // Determinar moneda y convertir precios
             const priceCurrency = updateProductData.price_currency || "USD";
@@ -644,7 +680,13 @@ function Admin() {
         switch (activeTab) {
           case "products":
             const productData: any = { ...crudFormData };
-            const createRate = exchangeRate || 4000; // Fallback a 4000 si no hay tasa
+            if (!exchangeRate) {
+              alert(
+                "Error: No se pudo obtener la tasa de cambio. Por favor, intenta de nuevo."
+              );
+              return;
+            }
+            const createRate = exchangeRate;
 
             // Determinar moneda y convertir precios
             const createPriceCurrency = productData.price_currency || "USD";
@@ -2014,123 +2056,158 @@ function Admin() {
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                       />
                     </div>
-                    <div>
-                      <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldActionType")}
-                      </label>
-                      <select
-                        value={crudFormData.action_type || "link"}
-                        onChange={(e) =>
-                          setCrudFormData({
-                            ...crudFormData,
-                            action_type: e.target.value,
-                          })
-                        }
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                      >
-                        <option value="link">
-                          {t("admin.actionTypeLink")}
-                        </option>
-                        <option value="submit">
-                          {t("admin.actionTypeSubmit")}
-                        </option>
-                        <option value="schedule">
-                          {t("admin.actionTypeSchedule")}
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldActionUrl")}
-                      </label>
-                      <input
-                        type="url"
-                        value={crudFormData.action_url || ""}
-                        onChange={(e) =>
-                          setCrudFormData({
-                            ...crudFormData,
-                            action_url: e.target.value,
-                          })
-                        }
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldPricingLink")}
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="url"
-                          value={crudFormData.pricing_link || ""}
+                    {/* Nueva estructura clara de botones */}
+                    <div className="border-t border-gray-700 pt-4">
+                      <h3 className="text-lg font-semibold text-white mb-4">
+                        Configuración de Botones
+                      </h3>
+
+                      {/* Tipo de botón principal */}
+                      <div className="mb-4">
+                        <label className="block text-gray-300 text-sm mb-2">
+                          Tipo de Botón *
+                        </label>
+                        <select
+                          value={crudFormData.button_type || "buy"}
                           onChange={(e) =>
                             setCrudFormData({
                               ...crudFormData,
-                              pricing_link: e.target.value,
+                              button_type: e.target.value,
                             })
                           }
-                          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        />
-                        {editingItem && (
-                          <button
-                            onClick={async () => {
-                              try {
-                                const link = await generatePricingLink(
-                                  editingItem.id,
-                                  "COP",
-                                  "Colombia"
-                                );
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                          required
+                        >
+                          <option value="buy">Comprar</option>
+                          <option value="request">Solicitar</option>
+                        </select>
+                      </div>
+
+                      {/* Configuración del botón "Comprar" */}
+                      {crudFormData.button_type === "buy" && (
+                        <>
+                          <div className="mb-4">
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Tipo de Acción para "Comprar" *
+                            </label>
+                            <select
+                              value={
+                                crudFormData.buy_button_type || "external_link"
+                              }
+                              onChange={(e) =>
                                 setCrudFormData({
                                   ...crudFormData,
-                                  pricing_link: link,
-                                });
-                              } catch (error) {
-                                alert(
-                                  `Error: ${
-                                    error instanceof Error
-                                      ? error.message
-                                      : "Error desconocido"
-                                  }`
-                                );
+                                  buy_button_type: e.target.value,
+                                })
                               }
-                            }}
-                            className="px-4 py-2 text-white rounded-lg text-sm cursor-pointer"
-                            style={{
-                              backgroundColor: "rgba(32, 147, 196, 0.2)",
-                              borderColor: "rgba(32, 147, 196, 0.3)",
-                              borderWidth: "1px",
-                              borderStyle: "solid",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                "rgba(32, 147, 196, 0.3)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                "rgba(32, 147, 196, 0.2)";
-                            }}
-                          >
-                            {t("admin.generateLink")}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-gray-300 text-sm mb-2">
-                        Texto del Botón
-                      </label>
-                      <input
-                        type="text"
-                        value={crudFormData.button_text || ""}
-                        onChange={(e) =>
-                          setCrudFormData({
-                            ...crudFormData,
-                            button_text: e.target.value,
-                          })
-                        }
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        placeholder={t("admin.buttonTextPlaceholder")}
-                      />
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                              required
+                            >
+                              <option value="external_link">
+                                Link Externo (Amazon, Hotmart, etc.)
+                              </option>
+                              <option value="custom_checkout">
+                                Checkout Propio (/checkout/:id)
+                              </option>
+                            </select>
+                          </div>
+                          <div className="mb-4">
+                            <label className="block text-gray-300 text-sm mb-2">
+                              {crudFormData.buy_button_type === "external_link"
+                                ? "URL Externa (Amazon, Hotmart, etc.)"
+                                : "ID del Producto para Checkout (se generará /checkout/:id)"}
+                              *
+                            </label>
+                            <input
+                              type={
+                                crudFormData.buy_button_type === "external_link"
+                                  ? "url"
+                                  : "text"
+                              }
+                              value={crudFormData.buy_button_url || ""}
+                              onChange={(e) =>
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  buy_button_url: e.target.value,
+                                })
+                              }
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                              placeholder={
+                                crudFormData.buy_button_type === "external_link"
+                                  ? "https://amazon.com/..."
+                                  : "producto-123"
+                              }
+                              required
+                            />
+                            {crudFormData.buy_button_type ===
+                              "custom_checkout" && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                El link generado será: /checkout/
+                                {crudFormData.buy_button_url || "id"}
+                              </p>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {/* Configuración del botón "Solicitar" */}
+                      {crudFormData.button_type === "request" && (
+                        <>
+                          <div className="mb-4">
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Tipo de Acción para "Solicitar" *
+                            </label>
+                            <select
+                              value={
+                                crudFormData.request_button_type ||
+                                "external_link"
+                              }
+                              onChange={(e) =>
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  request_button_type: e.target.value,
+                                })
+                              }
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                              required
+                            >
+                              <option value="external_link">
+                                Link Externo
+                              </option>
+                              <option value="custom_form">
+                                Formulario Propio
+                              </option>
+                            </select>
+                          </div>
+                          <div className="mb-4">
+                            <label className="block text-gray-300 text-sm mb-2">
+                              {crudFormData.request_button_type ===
+                              "external_link"
+                                ? "URL Externa"
+                                : "URL del Formulario Propio"}
+                              *
+                            </label>
+                            <input
+                              type="url"
+                              value={crudFormData.request_button_url || ""}
+                              onChange={(e) =>
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  request_button_url: e.target.value,
+                                })
+                              }
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                              placeholder={
+                                crudFormData.request_button_type ===
+                                "external_link"
+                                  ? "https://..."
+                                  : "/request/:id"
+                              }
+                              required
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   </>
                 )}

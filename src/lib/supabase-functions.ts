@@ -133,6 +133,13 @@ export async function createProduct(product: {
   sector?: string;
   thumbnail_url?: string;
   images?: string[];
+  // Nueva estructura de botones
+  button_type?: "buy" | "request";
+  buy_button_type?: "external_link" | "custom_checkout";
+  buy_button_url?: string;
+  request_button_type?: "external_link" | "custom_form";
+  request_button_url?: string;
+  // Campos antiguos (mantener por compatibilidad durante migración)
   action_type?: "link" | "submit" | "schedule";
   action_url?: string;
   pricing_link?: string;
@@ -160,6 +167,13 @@ export async function updateProduct(
     sector: string;
     thumbnail_url: string;
     images: string[];
+    // Nueva estructura de botones
+    button_type: "buy" | "request";
+    buy_button_type: "external_link" | "custom_checkout";
+    buy_button_url: string;
+    request_button_type: "external_link" | "custom_form";
+    request_button_url: string;
+    // Campos antiguos (mantener por compatibilidad durante migración)
     action_type: "link" | "submit" | "schedule";
     action_url: string;
     pricing_link: string;
