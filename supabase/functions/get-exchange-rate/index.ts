@@ -8,49 +8,46 @@ const corsHeaders = {
 };
 
 interface ExchangeRateResponse {
-  rates: Record<string, number>;
-  base: string;
-  date: string;
+  result: string;
+  base_code: string;
+  conversion_rates: Record<string, number>;
+  time_last_update_utc?: string;
+  time_next_update_utc?: string;
 }
 
-// Rate limiting simple en memoria (para producción usar Redis o similar)
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
-
-function getRequestIdentifier(req: Request): string {
-  // Intentar obtener IP real desde headers
-  const realIp =
-    req.headers.get("x-real-ip") ||
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("cf-connecting-ip");
-
-  if (realIp) {
-    return realIp;
-  }
-
-  return "unknown";
+// Rate limiting simple (autocontenido)
+interface RateLimitConfig {
+  maxRequests: number;
+  windowMs: number;
 }
+
+interface RateLimitStore {
+  count: number;
+  resetAt: number;
+}
+
+const rateLimitStore = new Map<string, RateLimitStore>();
 
 function checkRateLimit(
   identifier: string,
-  options: { maxRequests: number; windowMs: number }
+  config: RateLimitConfig
 ): { allowed: boolean; remaining: number; resetAt: number } {
   const now = Date.now();
   const record = rateLimitStore.get(identifier);
 
   if (!record || now > record.resetAt) {
-    // Nueva ventana o expirada
     rateLimitStore.set(identifier, {
       count: 1,
-      resetAt: now + options.windowMs,
+      resetAt: now + config.windowMs,
     });
     return {
       allowed: true,
-      remaining: options.maxRequests - 1,
-      resetAt: now + options.windowMs,
+      remaining: config.maxRequests - 1,
+      resetAt: now + config.windowMs,
     };
   }
 
-  if (record.count >= options.maxRequests) {
+  if (record.count >= config.maxRequests) {
     return {
       allowed: false,
       remaining: 0,
@@ -61,9 +58,23 @@ function checkRateLimit(
   record.count++;
   return {
     allowed: true,
-    remaining: options.maxRequests - record.count,
+    remaining: config.maxRequests - record.count,
     resetAt: record.resetAt,
   };
+}
+
+function getRequestIdentifier(req: Request): string {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) {
+    return realIp;
+  }
+
+  return "unknown";
 }
 
 serve(async (req) => {
@@ -148,7 +159,9 @@ serve(async (req) => {
     } catch (fetchError) {
       console.error("Error al hacer fetch a exchangerate-api.com:", fetchError);
       throw new Error(
-        `Error de conexión al obtener tipo de cambio: ${fetchError.message}`
+        `Error de conexión al obtener tipo de cambio: ${
+          fetchError instanceof Error ? fetchError.message : "Error desconocido"
+        }`
       );
     }
 
@@ -176,15 +189,32 @@ serve(async (req) => {
       );
     }
 
-    if (!exchangeData.rates || typeof exchangeData.rates !== "object") {
+    // Verificar que la respuesta sea exitosa
+    if (exchangeData.result !== "success") {
+      console.error(
+        "Respuesta no exitosa de exchangerate-api.com:",
+        exchangeData
+      );
+      throw new Error(
+        "La API de tipos de cambio no devolvió una respuesta exitosa"
+      );
+    }
+
+    // Verificar que exista conversion_rates
+    if (
+      !exchangeData.conversion_rates ||
+      typeof exchangeData.conversion_rates !== "object"
+    ) {
       console.error(
         "Respuesta inválida de exchangerate-api.com:",
         exchangeData
       );
-      throw new Error("Respuesta inválida de la API de tipos de cambio");
+      throw new Error(
+        "Respuesta inválida de la API de tipos de cambio: falta conversion_rates"
+      );
     }
 
-    const exchangeRate = exchangeData.rates[targetCurrency];
+    const exchangeRate = exchangeData.conversion_rates[targetCurrency];
 
     if (!exchangeRate || typeof exchangeRate !== "number") {
       return new Response(
@@ -201,10 +231,11 @@ serve(async (req) => {
     // Retornar respuesta
     return new Response(
       JSON.stringify({
-        base_currency: baseCurrency,
+        base_currency: exchangeData.base_code || baseCurrency,
         target_currency: targetCurrency,
         exchange_rate: exchangeRate,
-        date: exchangeData.date,
+        last_update: exchangeData.time_last_update_utc || null,
+        next_update: exchangeData.time_next_update_utc || null,
         calculated_at: new Date().toISOString(),
       }),
       {
