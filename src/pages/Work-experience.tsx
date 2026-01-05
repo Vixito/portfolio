@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import Button from "../components/ui/Button";
 import { getWorkExperiences } from "../lib/supabase-functions";
-import { useTranslation } from "../lib/i18n";
+import { useTranslation, getTranslatedText } from "../lib/i18n";
 
 interface WorkExperience {
   id: string;
@@ -135,13 +135,19 @@ function WorkExperience() {
                     <div className="flex-shrink-0 relative">
                       {/* Fallback estático que siempre está presente */}
                       <div className="w-24 h-24 rounded-lg bg-purple flex items-center justify-center text-white text-3xl font-bold absolute inset-0">
-                        {experience.company.charAt(0)}
+                        {getTranslatedText(
+                          (experience as any).company_translations ||
+                            experience.company
+                        ).charAt(0)}
                       </div>
                       {/* Imagen que se muestra si carga correctamente */}
                       {experience.companyLogo && (
                         <img
                           src={experience.companyLogo}
-                          alt={experience.company}
+                          alt={getTranslatedText(
+                            (experience as any).company_translations ||
+                              experience.company
+                          )}
                           className="w-24 h-24 object-contain rounded-lg border border-gray-200 p-3 bg-gray-50 relative z-10"
                           onError={(e) => {
                             // Si la imagen falla, ocultarla (el fallback ya está visible)
@@ -156,7 +162,10 @@ function WorkExperience() {
                       <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
                         <div>
                           <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                            {experience.position}
+                            {getTranslatedText(
+                              (experience as any).position_translations ||
+                                experience.position
+                            )}
                           </h2>
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             {experience.companyUrl ? (
@@ -166,11 +175,17 @@ function WorkExperience() {
                                 rel="noopener noreferrer"
                                 className="text-lg text-purple hover:text-blue transition-colors font-semibold"
                               >
-                                {experience.company}
+                                {getTranslatedText(
+                                  (experience as any).company_translations ||
+                                    experience.company
+                                )}
                               </a>
                             ) : (
                               <p className="text-lg text-gray-600">
-                                {experience.company}
+                                {getTranslatedText(
+                                  (experience as any).company_translations ||
+                                    experience.company
+                                )}
                               </p>
                             )}
                             {experience.status === "current" && (
@@ -200,7 +215,12 @@ function WorkExperience() {
                                   d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                                 />
                               </svg>
-                              <span>{experience.location}</span>
+                              <span>
+                                {getTranslatedText(
+                                  (experience as any).location_translations ||
+                                    experience.location
+                                )}
+                              </span>
                             </div>
                             <div className="flex items-center gap-1">
                               <svg
@@ -253,7 +273,10 @@ function WorkExperience() {
                       {experience.description &&
                         experience.description.trim() !== "" && (
                           <p className="text-gray-700 mb-4 leading-relaxed">
-                            {experience.description}
+                            {getTranslatedText(
+                              (experience as any).description_translations ||
+                                experience.description
+                            )}
                           </p>
                         )}
 

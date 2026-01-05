@@ -3,7 +3,7 @@ import Pagination from "../components/ui/Pagination";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import { getProductsWithPricing } from "../lib/supabase-functions";
-import { useTranslation } from "../lib/i18n";
+import { useTranslation, getTranslatedText } from "../lib/i18n";
 
 interface ProductPricing {
   id: string;
@@ -339,12 +339,14 @@ function Store() {
                     className="text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-purple transition-colors"
                     onClick={() => handleItemClick(item)}
                   >
-                    {item.title}
+                    {getTranslatedText(item.title as any)}
                   </h3>
                   <div
                     className="text-gray-600 text-sm mb-4 line-clamp-2 prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{
-                      __html: item.description || t("common.noContent"),
+                      __html:
+                        getTranslatedText(item.description as any) ||
+                        t("common.noContent"),
                     }}
                   />
                   <div className="flex items-center justify-between">
@@ -382,7 +384,7 @@ function Store() {
           <Modal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
-            title={selectedItem.title}
+            title={getTranslatedText(selectedItem.title as any)}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Imágenes */}
@@ -393,7 +395,7 @@ function Store() {
                       selectedItem.thumbnail_url ||
                       "https://tu-cdn.cloudfront.net/default-store-thumbnail.png"
                     }
-                    alt={selectedItem.title}
+                    alt={getTranslatedText(selectedItem.title as any)}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -406,7 +408,9 @@ function Store() {
                       >
                         <img
                           src={image}
-                          alt={`${selectedItem.title} ${index + 1}`}
+                          alt={`${getTranslatedText(
+                            selectedItem.title as any
+                          )} ${index + 1}`}
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -423,8 +427,10 @@ function Store() {
                     className="text-gray-600 prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{
                       __html:
-                        selectedItem.full_description ||
-                        selectedItem.description ||
+                        getTranslatedText(
+                          selectedItem.full_description as any
+                        ) ||
+                        getTranslatedText(selectedItem.description as any) ||
                         t("common.noContent"),
                     }}
                   />

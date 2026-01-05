@@ -1108,3 +1108,64 @@ export function getTranslation(key: string, lang?: "es" | "en"): string {
   }
   return value || key;
 }
+
+// Tipo para campos traducibles (JSONB en Supabase)
+export type TranslatableField =
+  | {
+      es?: string;
+      en?: string;
+    }
+  | string
+  | null;
+
+/**
+ * Obtiene el texto traducido de un campo que puede ser:
+ * - Un objeto con claves 'es' y 'en' (JSONB de Supabase)
+ * - Un string simple (fallback para datos antiguos)
+ * - null/undefined
+ */
+export function getTranslatedText(
+  field: TranslatableField,
+  lang?: "es" | "en"
+): string {
+  const language = lang || useLanguageStore.getState().language;
+
+  if (!field) return "";
+
+  // Si es un string simple, devolverlo directamente
+  if (typeof field === "string") {
+    return field;
+  }
+
+  // Si es un objeto con traducciones
+  if (typeof field === "object" && field !== null) {
+    // Intentar obtener la traducción del idioma actual
+    const translated = field[language];
+    if (translated) return translated;
+
+    // Fallback al otro idioma si existe
+    const fallbackLang = language === "es" ? "en" : "es";
+    if (field[fallbackLang]) return field[fallbackLang];
+
+    // Si no hay traducción, devolver el primer valor disponible
+    const firstValue = field.es || field.en;
+    if (firstValue) return firstValue;
+  }
+
+  return "";
+}
+
+/**
+ * Helper para obtener múltiples campos traducidos de un objeto
+ */
+export function getTranslatedFields<T extends Record<string, any>>(
+  item: T,
+  fields: (keyof T)[],
+  lang?: "es" | "en"
+): Partial<Record<keyof T, string>> {
+  const result: Partial<Record<keyof T, string>> = {};
+  for (const field of fields) {
+    result[field] = getTranslatedText(item[field] as TranslatableField, lang);
+  }
+  return result;
+}

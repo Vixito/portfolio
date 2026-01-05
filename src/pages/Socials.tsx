@@ -6,7 +6,7 @@ Por ahora, este código muestra una lista simple que puedes paginar después.
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { getSocials } from "../lib/supabase-functions";
-import { useTranslation } from "../lib/i18n";
+import { useTranslation, getTranslatedText } from "../lib/i18n";
 
 interface SocialLink {
   id: string;
@@ -78,7 +78,9 @@ function Socials() {
                     <div className="w-full h-48 overflow-hidden bg-gray-100 flex-shrink-0">
                       <img
                         src={social.image}
-                        alt={social.title}
+                        alt={getTranslatedText(
+                          (social as any).title_translations || social.title
+                        )}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
@@ -88,7 +90,9 @@ function Socials() {
                   <div className="p-6 flex flex-col flex-1 min-h-0">
                     {/* Título en negrita */}
                     <h3 className="text-xl font-bold text-gray-900 mb-4 group-hover:text-purple transition-colors">
-                      {social.title}
+                      {getTranslatedText(
+                        (social as any).title_translations || social.title
+                      )}
                     </h3>
 
                     {/* Badge del logo + texto del enlace */}
@@ -101,7 +105,9 @@ function Socials() {
                       <div className="w-4 h-8 ml-2 flex items-center justify-center flex-shrink-0">
                         <img
                           src={social.logo}
-                          alt={social.title}
+                          alt={getTranslatedText(
+                            (social as any).title_translations || social.title
+                          )}
                           className="w-full h-full object-contain"
                         />
                       </div>
@@ -112,7 +118,10 @@ function Socials() {
 
                     {/* Descripción debajo del badge */}
                     <p className="text-sm text-gray-600 leading-relaxed">
-                      {social.description}
+                      {getTranslatedText(
+                        (social as any).description_translations ||
+                          social.description
+                      )}
                     </p>
                   </div>
                 </div>

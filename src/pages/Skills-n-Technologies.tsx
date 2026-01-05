@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { getTechnologies } from "../lib/supabase-functions";
-import { useTranslation } from "../lib/i18n";
+import { useTranslation, getTranslatedText } from "../lib/i18n";
 
 interface Technology {
   id: string;
   name: string;
+  name_translations?: any;
   category:
     | "language"
     | "framework"
@@ -50,6 +51,7 @@ function SkillsNTechnologies() {
             return {
               id: tech.id,
               name: tech.name,
+              name_translations: tech.name_translations,
               category: tech.category,
               level: tech.level,
               icon: tech.icon,
@@ -385,7 +387,9 @@ function SkillsNTechnologies() {
                       {tech.icon && (
                         <img
                           src={tech.icon}
-                          alt={tech.name}
+                          alt={getTranslatedText(
+                            tech.name_translations || tech.name
+                          )}
                           className="w-8 h-8 object-contain"
                           onError={(e) => {
                             e.currentTarget.style.display = "none";
@@ -393,7 +397,7 @@ function SkillsNTechnologies() {
                         />
                       )}
                       <span className="font-semibold text-gray-900">
-                        {tech.name}
+                        {getTranslatedText(tech.name_translations || tech.name)}
                       </span>
                     </div>
                   </td>

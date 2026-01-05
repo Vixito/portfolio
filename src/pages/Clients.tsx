@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Pagination from "../components/ui/Pagination";
 import { getClients } from "../lib/supabase-functions";
-import { useTranslation } from "../lib/i18n";
+import { useTranslation, getTranslatedText } from "../lib/i18n";
 
 interface Client {
   id: string;
@@ -51,14 +51,32 @@ function Clients() {
 
         // Extraer testimonios de los clientes que los tengan
         const testimonialsData = (clientsData || [])
-          .filter((client: Client) => client.testimonial_content)
-          .map((client: Client) => ({
+          .filter(
+            (client: any) =>
+              client.testimonial_content ||
+              client.testimonial_content_translations
+          )
+          .map((client: any) => ({
             id: client.id,
-            clientName: client.name,
+            clientName: getTranslatedText(
+              client.name_translations || client.name
+            ),
             clientLogo: client.logo,
-            content: client.testimonial_content || "",
-            author: client.testimonial_author || "",
-            role: client.testimonial_role || "",
+            content: getTranslatedText(
+              client.testimonial_content_translations ||
+                client.testimonial_content ||
+                ""
+            ),
+            author: getTranslatedText(
+              client.testimonial_author_translations ||
+                client.testimonial_author ||
+                ""
+            ),
+            role: getTranslatedText(
+              client.testimonial_role_translations ||
+                client.testimonial_role ||
+                ""
+            ),
             url: client.testimonial_url,
           }));
         setTestimonials(testimonialsData);
@@ -157,7 +175,9 @@ function Clients() {
                         >
                           <img
                             src={client.logo}
-                            alt={client.name}
+                            alt={getTranslatedText(
+                              (client as any).name_translations || client.name
+                            )}
                             className="max-w-full max-h-full object-contain"
                             loading="lazy"
                             onError={(e) => {
@@ -201,7 +221,9 @@ function Clients() {
                         >
                           <img
                             src={client.logo}
-                            alt={client.name}
+                            alt={getTranslatedText(
+                              (client as any).name_translations || client.name
+                            )}
                             className="max-w-full max-h-full object-contain"
                             loading="lazy"
                             onError={(e) => {
@@ -245,7 +267,9 @@ function Clients() {
                         >
                           <img
                             src={client.logo}
-                            alt={client.name}
+                            alt={getTranslatedText(
+                              (client as any).name_translations || client.name
+                            )}
                             className="max-w-full max-h-full object-contain"
                             loading="lazy"
                             onError={(e) => {
@@ -278,7 +302,9 @@ function Clients() {
                     <div className="flex-shrink-0">
                       <img
                         src={client.logo}
-                        alt={client.name}
+                        alt={getTranslatedText(
+                          (client as any).name_translations || client.name
+                        )}
                         className="w-16 h-16 object-contain"
                         loading="lazy"
                         onError={(e) => {
@@ -296,9 +322,16 @@ function Clients() {
                     {/* Contenido */}
                     <div className="flex-1">
                       <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                        {client.name}
+                        {getTranslatedText(
+                          (client as any).name_translations || client.name
+                        )}
                       </h3>
-                      <p className="text-gray-600">{client.description}</p>
+                      <p className="text-gray-600">
+                        {getTranslatedText(
+                          (client as any).description_translations ||
+                            client.description
+                        )}
+                      </p>
                     </div>
 
                     {/* Botón PixelArt */}

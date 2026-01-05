@@ -1,16 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { getStudies } from "../lib/supabase-functions";
-import { useTranslation } from "../lib/i18n";
+import { useTranslation, getTranslatedText } from "../lib/i18n";
 
 interface Study {
   id: string;
   title: string;
+  title_translations?: any;
   institution: string;
+  institution_translations?: any;
   type: "degree" | "certification" | "course";
   startDate: string;
   endDate?: string; // Opcional si está en curso
   description: string;
+  description_translations?: any;
   logo?: string; // URL desde S3/CloudFront
   certificateUrl?: string; // Link al certificado
   status: "completed" | "in-progress";
@@ -38,11 +41,14 @@ function Studies() {
         const mappedStudies: Study[] = (data || []).map((study: any) => ({
           id: study.id,
           title: study.title,
+          title_translations: study.title_translations,
           institution: study.institution,
+          institution_translations: study.institution_translations,
           type: study.type,
           startDate: study.start_date,
           endDate: study.end_date,
           description: study.description,
+          description_translations: study.description_translations,
           logo: study.logo,
           certificateUrl: study.certificate_url,
           status: study.status,
@@ -364,7 +370,9 @@ function Studies() {
                       {study.logo ? (
                         <img
                           src={study.logo}
-                          alt={study.institution}
+                          alt={getTranslatedText(
+                            study.institution_translations || study.institution
+                          )}
                           className="w-10 h-10 object-contain rounded-lg border border-gray-200 p-1"
                           onError={(e) => {
                             e.currentTarget.style.display = "none";
@@ -376,17 +384,23 @@ function Studies() {
                             study.type
                           )} flex items-center justify-center text-white text-sm font-bold`}
                         >
-                          {study.institution.charAt(0)}
+                          {getTranslatedText(
+                            study.institution_translations || study.institution
+                          ).charAt(0)}
                         </div>
                       )}
                       <span className="font-semibold text-gray-900">
-                        {study.title}
+                        {getTranslatedText(
+                          study.title_translations || study.title
+                        )}
                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-gray-600">
-                      {study.institution}
+                      {getTranslatedText(
+                        study.institution_translations || study.institution
+                      )}
                     </span>
                   </td>
                   <td className="px-6 py-4">

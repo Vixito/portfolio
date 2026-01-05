@@ -3,7 +3,7 @@ import { getThumbnailFromUrl } from "../utils/getThumbnail";
 import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
 import { getProjects } from "../lib/supabase-functions";
-import { useTranslation } from "../lib/i18n";
+import { useTranslation, getTranslatedText } from "../lib/i18n";
 
 interface Project {
   id: string;
@@ -136,7 +136,9 @@ function ProjectCard({ project }: { project: Project }) {
           {project.thumbnail ? (
             <img
               src={project.thumbnail}
-              alt={project.title}
+              alt={getTranslatedText(
+                (project as any).title_translations || project.title
+              )}
               className="w-full h-full object-cover"
               loading="lazy"
               onError={(e) => {
@@ -157,7 +159,9 @@ function ProjectCard({ project }: { project: Project }) {
 
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
             <h3 className="text-white font-semibold text-lg mb-1">
-              {project.title}
+              {getTranslatedText(
+                (project as any).title_translations || project.title
+              )}
             </h3>
             <p className="text-white/80 text-sm">
               {project.month} {project.year}

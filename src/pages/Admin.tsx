@@ -397,9 +397,188 @@ function Admin() {
     setShowCRUDModal(true);
   };
 
+  // Funciones helper para manejar traducciones
+  const extractTranslations = (
+    translations: any,
+    fallback: string = ""
+  ): { es: string; en: string } => {
+    if (!translations || typeof translations !== "object") {
+      return { es: fallback, en: fallback };
+    }
+    return {
+      es: translations.es || fallback,
+      en: translations.en || fallback,
+    };
+  };
+
+  const buildTranslations = (es: string, en: string): any => {
+    if (!es && !en) return null;
+    const result: any = {};
+    if (es) result.es = es;
+    if (en) result.en = en;
+    return result;
+  };
+
   const handleEdit = async (item: any) => {
     setEditingItem(item);
     const formData = { ...item };
+
+    // Extraer traducciones de campos JSONB a campos separados ES/EN
+    if (activeTab === "products") {
+      const titleTrans = extractTranslations(
+        item.title_translations,
+        item.title || ""
+      );
+      formData.title_es = titleTrans.es;
+      formData.title_en = titleTrans.en;
+
+      const descTrans = extractTranslations(
+        item.description_translations,
+        item.description || ""
+      );
+      formData.description_es = descTrans.es;
+      formData.description_en = descTrans.en;
+
+      const fullDescTrans = extractTranslations(
+        item.full_description_translations,
+        item.full_description || ""
+      );
+      formData.full_description_es = fullDescTrans.es;
+      formData.full_description_en = fullDescTrans.en;
+    } else if (activeTab === "projects") {
+      const titleTrans = extractTranslations(
+        item.title_translations,
+        item.title || ""
+      );
+      formData.title_es = titleTrans.es;
+      formData.title_en = titleTrans.en;
+
+      const descTrans = extractTranslations(
+        item.description_translations,
+        item.description || ""
+      );
+      formData.description_es = descTrans.es;
+      formData.description_en = descTrans.en;
+    } else if (activeTab === "clients") {
+      const nameTrans = extractTranslations(
+        item.name_translations,
+        item.name || ""
+      );
+      formData.name_es = nameTrans.es;
+      formData.name_en = nameTrans.en;
+
+      const descTrans = extractTranslations(
+        item.description_translations,
+        item.description || ""
+      );
+      formData.description_es = descTrans.es;
+      formData.description_en = descTrans.en;
+
+      const testimonialContentTrans = extractTranslations(
+        item.testimonial_content_translations,
+        item.testimonial_content || ""
+      );
+      formData.testimonial_content_es = testimonialContentTrans.es;
+      formData.testimonial_content_en = testimonialContentTrans.en;
+
+      const testimonialAuthorTrans = extractTranslations(
+        item.testimonial_author_translations,
+        item.testimonial_author || ""
+      );
+      formData.testimonial_author_es = testimonialAuthorTrans.es;
+      formData.testimonial_author_en = testimonialAuthorTrans.en;
+
+      const testimonialRoleTrans = extractTranslations(
+        item.testimonial_role_translations,
+        item.testimonial_role || ""
+      );
+      formData.testimonial_role_es = testimonialRoleTrans.es;
+      formData.testimonial_role_en = testimonialRoleTrans.en;
+    } else if (activeTab === "socials") {
+      const titleTrans = extractTranslations(
+        item.title_translations,
+        item.title || ""
+      );
+      formData.title_es = titleTrans.es;
+      formData.title_en = titleTrans.en;
+
+      const descTrans = extractTranslations(
+        item.description_translations,
+        item.description || ""
+      );
+      formData.description_es = descTrans.es;
+      formData.description_en = descTrans.en;
+    } else if (activeTab === "events") {
+      const titleTrans = extractTranslations(
+        item.title_translations,
+        item.title || ""
+      );
+      formData.title_es = titleTrans.es;
+      formData.title_en = titleTrans.en;
+
+      const descTrans = extractTranslations(
+        item.description_translations,
+        item.description || ""
+      );
+      formData.description_es = descTrans.es;
+      formData.description_en = descTrans.en;
+    } else if (activeTab === "work_experiences") {
+      const positionTrans = extractTranslations(
+        item.position_translations,
+        item.position || ""
+      );
+      formData.position_es = positionTrans.es;
+      formData.position_en = positionTrans.en;
+
+      const companyTrans = extractTranslations(
+        item.company_translations,
+        item.company || ""
+      );
+      formData.company_es = companyTrans.es;
+      formData.company_en = companyTrans.en;
+
+      const locationTrans = extractTranslations(
+        item.location_translations,
+        item.location || ""
+      );
+      formData.location_es = locationTrans.es;
+      formData.location_en = locationTrans.en;
+
+      const descTrans = extractTranslations(
+        item.description_translations,
+        item.description || ""
+      );
+      formData.description_es = descTrans.es;
+      formData.description_en = descTrans.en;
+    } else if (activeTab === "technologies") {
+      const nameTrans = extractTranslations(
+        item.name_translations,
+        item.name || ""
+      );
+      formData.name_es = nameTrans.es;
+      formData.name_en = nameTrans.en;
+    } else if (activeTab === "studies") {
+      const titleTrans = extractTranslations(
+        item.title_translations,
+        item.title || ""
+      );
+      formData.title_es = titleTrans.es;
+      formData.title_en = titleTrans.en;
+
+      const institutionTrans = extractTranslations(
+        item.institution_translations,
+        item.institution || ""
+      );
+      formData.institution_es = institutionTrans.es;
+      formData.institution_en = institutionTrans.en;
+
+      const descTrans = extractTranslations(
+        item.description_translations,
+        item.description || ""
+      );
+      formData.description_es = descTrans.es;
+      formData.description_en = descTrans.en;
+    }
 
     if (activeTab === "products") {
       // Cargar pricing del producto (incluyendo ofertas)
@@ -527,11 +706,16 @@ function Admin() {
       if (result && result.success && result.data) {
         const extractedData = result.data;
         // Rellenar el formulario con los datos extraídos
+        // Si los datos extraídos vienen en un solo idioma, ponerlos en ambos campos
+        const extractedTitle = extractedData.title || "";
+        const extractedDescription = extractedData.description || "";
         setCrudFormData({
           ...crudFormData,
-          title: extractedData.title || "",
+          title_es: extractedTitle,
+          title_en: extractedTitle, // Por defecto, usar el mismo texto para ambos idiomas
           date: extractedData.date || "",
-          description: extractedData.description || "",
+          description_es: extractedDescription,
+          description_en: extractedDescription, // Por defecto, usar el mismo texto para ambos idiomas
           passline_url: eventUrl.trim(),
           thumbnail_url: extractedData.thumbnail_url || "",
         });
@@ -571,6 +755,28 @@ function Admin() {
               return;
             }
             const rate = exchangeRate;
+
+            // Convertir campos ES/EN a JSONB
+            updateProductData.title_translations = buildTranslations(
+              updateProductData.title_es || "",
+              updateProductData.title_en || ""
+            );
+            updateProductData.description_translations = buildTranslations(
+              updateProductData.description_es || "",
+              updateProductData.description_en || ""
+            );
+            updateProductData.full_description_translations = buildTranslations(
+              updateProductData.full_description_es || "",
+              updateProductData.full_description_en || ""
+            );
+
+            // Eliminar campos ES/EN temporales
+            delete updateProductData.title_es;
+            delete updateProductData.title_en;
+            delete updateProductData.description_es;
+            delete updateProductData.description_en;
+            delete updateProductData.full_description_es;
+            delete updateProductData.full_description_en;
 
             // Determinar moneda y convertir precios
             const priceCurrency = updateProductData.price_currency || "USD";
@@ -618,23 +824,142 @@ function Admin() {
             }
             break;
           case "projects":
-            await updateProject(editingItem.id, crudFormData);
+            const updateProjectData: any = { ...crudFormData };
+            updateProjectData.title_translations = buildTranslations(
+              updateProjectData.title_es || "",
+              updateProjectData.title_en || ""
+            );
+            updateProjectData.description_translations = buildTranslations(
+              updateProjectData.description_es || "",
+              updateProjectData.description_en || ""
+            );
+            delete updateProjectData.title_es;
+            delete updateProjectData.title_en;
+            delete updateProjectData.description_es;
+            delete updateProjectData.description_en;
+            await updateProject(editingItem.id, updateProjectData);
             break;
           case "clients":
-            await updateClient(editingItem.id, crudFormData);
+            const updateClientData: any = { ...crudFormData };
+            updateClientData.name_translations = buildTranslations(
+              updateClientData.name_es || "",
+              updateClientData.name_en || ""
+            );
+            updateClientData.description_translations = buildTranslations(
+              updateClientData.description_es || "",
+              updateClientData.description_en || ""
+            );
+            updateClientData.testimonial_content_translations =
+              buildTranslations(
+                updateClientData.testimonial_content_es || "",
+                updateClientData.testimonial_content_en || ""
+              );
+            updateClientData.testimonial_author_translations =
+              buildTranslations(
+                updateClientData.testimonial_author_es || "",
+                updateClientData.testimonial_author_en || ""
+              );
+            updateClientData.testimonial_role_translations = buildTranslations(
+              updateClientData.testimonial_role_es || "",
+              updateClientData.testimonial_role_en || ""
+            );
+            delete updateClientData.name_es;
+            delete updateClientData.name_en;
+            delete updateClientData.description_es;
+            delete updateClientData.description_en;
+            delete updateClientData.testimonial_content_es;
+            delete updateClientData.testimonial_content_en;
+            delete updateClientData.testimonial_author_es;
+            delete updateClientData.testimonial_author_en;
+            delete updateClientData.testimonial_role_es;
+            delete updateClientData.testimonial_role_en;
+            await updateClient(editingItem.id, updateClientData);
             break;
           case "testimonials":
-            await updateTestimonial(editingItem.id, crudFormData);
+            const updateTestimonialData: any = { ...crudFormData };
+            updateTestimonialData.testimonial_content_translations =
+              buildTranslations(
+                updateTestimonialData.testimonial_content_es || "",
+                updateTestimonialData.testimonial_content_en || ""
+              );
+            updateTestimonialData.testimonial_author_translations =
+              buildTranslations(
+                updateTestimonialData.testimonial_author_es || "",
+                updateTestimonialData.testimonial_author_en || ""
+              );
+            updateTestimonialData.testimonial_role_translations =
+              buildTranslations(
+                updateTestimonialData.testimonial_role_es || "",
+                updateTestimonialData.testimonial_role_en || ""
+              );
+            delete updateTestimonialData.testimonial_content_es;
+            delete updateTestimonialData.testimonial_content_en;
+            delete updateTestimonialData.testimonial_author_es;
+            delete updateTestimonialData.testimonial_author_en;
+            delete updateTestimonialData.testimonial_role_es;
+            delete updateTestimonialData.testimonial_role_en;
+            await updateTestimonial(editingItem.id, updateTestimonialData);
             break;
           case "socials":
-            await updateSocial(editingItem.id, crudFormData);
+            const updateSocialData: any = { ...crudFormData };
+            updateSocialData.title_translations = buildTranslations(
+              updateSocialData.title_es || "",
+              updateSocialData.title_en || ""
+            );
+            updateSocialData.description_translations = buildTranslations(
+              updateSocialData.description_es || "",
+              updateSocialData.description_en || ""
+            );
+            delete updateSocialData.title_es;
+            delete updateSocialData.title_en;
+            delete updateSocialData.description_es;
+            delete updateSocialData.description_en;
+            await updateSocial(editingItem.id, updateSocialData);
             break;
           case "events":
-            await updateEvent(editingItem.id, crudFormData);
+            const updateEventData: any = { ...crudFormData };
+            updateEventData.title_translations = buildTranslations(
+              updateEventData.title_es || "",
+              updateEventData.title_en || ""
+            );
+            updateEventData.description_translations = buildTranslations(
+              updateEventData.description_es || "",
+              updateEventData.description_en || ""
+            );
+            delete updateEventData.title_es;
+            delete updateEventData.title_en;
+            delete updateEventData.description_es;
+            delete updateEventData.description_en;
+            await updateEvent(editingItem.id, updateEventData);
             break;
           case "work_experiences":
             // Parsear JSON arrays si vienen como strings
             const workExpData = { ...crudFormData };
+            // Convertir traducciones
+            workExpData.position_translations = buildTranslations(
+              workExpData.position_es || "",
+              workExpData.position_en || ""
+            );
+            workExpData.company_translations = buildTranslations(
+              workExpData.company_es || "",
+              workExpData.company_en || ""
+            );
+            workExpData.location_translations = buildTranslations(
+              workExpData.location_es || "",
+              workExpData.location_en || ""
+            );
+            workExpData.description_translations = buildTranslations(
+              workExpData.description_es || "",
+              workExpData.description_en || ""
+            );
+            delete workExpData.position_es;
+            delete workExpData.position_en;
+            delete workExpData.company_es;
+            delete workExpData.company_en;
+            delete workExpData.location_es;
+            delete workExpData.location_en;
+            delete workExpData.description_es;
+            delete workExpData.description_en;
             if (typeof workExpData.responsibilities === "string") {
               try {
                 workExpData.responsibilities = JSON.parse(
@@ -663,6 +988,12 @@ function Admin() {
           case "technologies":
             // Calcular años de experiencia automáticamente desde start_year
             const techUpdateData = { ...crudFormData };
+            techUpdateData.name_translations = buildTranslations(
+              techUpdateData.name_es || "",
+              techUpdateData.name_en || ""
+            );
+            delete techUpdateData.name_es;
+            delete techUpdateData.name_en;
             if (techUpdateData.start_year) {
               const currentYear = new Date().getFullYear();
               const startYear = parseInt(techUpdateData.start_year.toString());
@@ -672,7 +1003,26 @@ function Admin() {
             await updateTechnology(editingItem.id, techUpdateData);
             break;
           case "studies":
-            await updateStudy(editingItem.id, crudFormData);
+            const updateStudyData: any = { ...crudFormData };
+            updateStudyData.title_translations = buildTranslations(
+              updateStudyData.title_es || "",
+              updateStudyData.title_en || ""
+            );
+            updateStudyData.institution_translations = buildTranslations(
+              updateStudyData.institution_es || "",
+              updateStudyData.institution_en || ""
+            );
+            updateStudyData.description_translations = buildTranslations(
+              updateStudyData.description_es || "",
+              updateStudyData.description_en || ""
+            );
+            delete updateStudyData.title_es;
+            delete updateStudyData.title_en;
+            delete updateStudyData.institution_es;
+            delete updateStudyData.institution_en;
+            delete updateStudyData.description_es;
+            delete updateStudyData.description_en;
+            await updateStudy(editingItem.id, updateStudyData);
             break;
         }
       } else {
@@ -687,6 +1037,28 @@ function Admin() {
               return;
             }
             const createRate = exchangeRate;
+
+            // Convertir campos ES/EN a JSONB
+            productData.title_translations = buildTranslations(
+              productData.title_es || "",
+              productData.title_en || ""
+            );
+            productData.description_translations = buildTranslations(
+              productData.description_es || "",
+              productData.description_en || ""
+            );
+            productData.full_description_translations = buildTranslations(
+              productData.full_description_es || "",
+              productData.full_description_en || ""
+            );
+
+            // Eliminar campos ES/EN temporales
+            delete productData.title_es;
+            delete productData.title_en;
+            delete productData.description_es;
+            delete productData.description_en;
+            delete productData.full_description_es;
+            delete productData.full_description_en;
 
             // Determinar moneda y convertir precios
             const createPriceCurrency = productData.price_currency || "USD";
@@ -731,26 +1103,145 @@ function Admin() {
             }
             break;
           case "projects":
-            await createProject(crudFormData);
+            const createProjectData: any = { ...crudFormData };
+            createProjectData.title_translations = buildTranslations(
+              createProjectData.title_es || "",
+              createProjectData.title_en || ""
+            );
+            createProjectData.description_translations = buildTranslations(
+              createProjectData.description_es || "",
+              createProjectData.description_en || ""
+            );
+            delete createProjectData.title_es;
+            delete createProjectData.title_en;
+            delete createProjectData.description_es;
+            delete createProjectData.description_en;
+            await createProject(createProjectData);
             break;
           case "clients":
-            await createClient(crudFormData);
+            const createClientData: any = { ...crudFormData };
+            createClientData.name_translations = buildTranslations(
+              createClientData.name_es || "",
+              createClientData.name_en || ""
+            );
+            createClientData.description_translations = buildTranslations(
+              createClientData.description_es || "",
+              createClientData.description_en || ""
+            );
+            createClientData.testimonial_content_translations =
+              buildTranslations(
+                createClientData.testimonial_content_es || "",
+                createClientData.testimonial_content_en || ""
+              );
+            createClientData.testimonial_author_translations =
+              buildTranslations(
+                createClientData.testimonial_author_es || "",
+                createClientData.testimonial_author_en || ""
+              );
+            createClientData.testimonial_role_translations = buildTranslations(
+              createClientData.testimonial_role_es || "",
+              createClientData.testimonial_role_en || ""
+            );
+            delete createClientData.name_es;
+            delete createClientData.name_en;
+            delete createClientData.description_es;
+            delete createClientData.description_en;
+            delete createClientData.testimonial_content_es;
+            delete createClientData.testimonial_content_en;
+            delete createClientData.testimonial_author_es;
+            delete createClientData.testimonial_author_en;
+            delete createClientData.testimonial_role_es;
+            delete createClientData.testimonial_role_en;
+            await createClient(createClientData);
             break;
           case "testimonials":
-            await createTestimonial(crudFormData);
+            const createTestimonialData: any = { ...crudFormData };
+            createTestimonialData.testimonial_content_translations =
+              buildTranslations(
+                createTestimonialData.testimonial_content_es || "",
+                createTestimonialData.testimonial_content_en || ""
+              );
+            createTestimonialData.testimonial_author_translations =
+              buildTranslations(
+                createTestimonialData.testimonial_author_es || "",
+                createTestimonialData.testimonial_author_en || ""
+              );
+            createTestimonialData.testimonial_role_translations =
+              buildTranslations(
+                createTestimonialData.testimonial_role_es || "",
+                createTestimonialData.testimonial_role_en || ""
+              );
+            delete createTestimonialData.testimonial_content_es;
+            delete createTestimonialData.testimonial_content_en;
+            delete createTestimonialData.testimonial_author_es;
+            delete createTestimonialData.testimonial_author_en;
+            delete createTestimonialData.testimonial_role_es;
+            delete createTestimonialData.testimonial_role_en;
+            await createTestimonial(createTestimonialData);
             break;
           case "socials":
-            await createSocial(crudFormData);
+            const createSocialData: any = { ...crudFormData };
+            createSocialData.title_translations = buildTranslations(
+              createSocialData.title_es || "",
+              createSocialData.title_en || ""
+            );
+            createSocialData.description_translations = buildTranslations(
+              createSocialData.description_es || "",
+              createSocialData.description_en || ""
+            );
+            delete createSocialData.title_es;
+            delete createSocialData.title_en;
+            delete createSocialData.description_es;
+            delete createSocialData.description_en;
+            await createSocial(createSocialData);
             break;
           case "events":
-            await createEvent({
+            const createEventData: any = {
               ...crudFormData,
               passline_url: crudFormData.passline_url || eventUrl,
-            });
+            };
+            createEventData.title_translations = buildTranslations(
+              createEventData.title_es || "",
+              createEventData.title_en || ""
+            );
+            createEventData.description_translations = buildTranslations(
+              createEventData.description_es || "",
+              createEventData.description_en || ""
+            );
+            delete createEventData.title_es;
+            delete createEventData.title_en;
+            delete createEventData.description_es;
+            delete createEventData.description_en;
+            await createEvent(createEventData);
             break;
           case "work_experiences":
             // Parsear JSON arrays si vienen como strings
             const newWorkExpData = { ...crudFormData };
+            // Convertir traducciones
+            newWorkExpData.position_translations = buildTranslations(
+              newWorkExpData.position_es || "",
+              newWorkExpData.position_en || ""
+            );
+            newWorkExpData.company_translations = buildTranslations(
+              newWorkExpData.company_es || "",
+              newWorkExpData.company_en || ""
+            );
+            newWorkExpData.location_translations = buildTranslations(
+              newWorkExpData.location_es || "",
+              newWorkExpData.location_en || ""
+            );
+            newWorkExpData.description_translations = buildTranslations(
+              newWorkExpData.description_es || "",
+              newWorkExpData.description_en || ""
+            );
+            delete newWorkExpData.position_es;
+            delete newWorkExpData.position_en;
+            delete newWorkExpData.company_es;
+            delete newWorkExpData.company_en;
+            delete newWorkExpData.location_es;
+            delete newWorkExpData.location_en;
+            delete newWorkExpData.description_es;
+            delete newWorkExpData.description_en;
             if (typeof newWorkExpData.responsibilities === "string") {
               try {
                 newWorkExpData.responsibilities = JSON.parse(
@@ -782,6 +1273,12 @@ function Admin() {
           case "technologies":
             // Calcular años de experiencia automáticamente desde start_year
             const techCreateData = { ...crudFormData };
+            techCreateData.name_translations = buildTranslations(
+              techCreateData.name_es || "",
+              techCreateData.name_en || ""
+            );
+            delete techCreateData.name_es;
+            delete techCreateData.name_en;
             if (techCreateData.start_year) {
               const currentYear = new Date().getFullYear();
               const startYear = parseInt(techCreateData.start_year.toString());
@@ -792,10 +1289,28 @@ function Admin() {
             break;
           case "studies":
             // Asegurar que status siempre tenga un valor
-            const studyData = {
+            const studyData: any = {
               ...crudFormData,
               status: crudFormData.status || "completed",
             };
+            studyData.title_translations = buildTranslations(
+              studyData.title_es || "",
+              studyData.title_en || ""
+            );
+            studyData.institution_translations = buildTranslations(
+              studyData.institution_es || "",
+              studyData.institution_en || ""
+            );
+            studyData.description_translations = buildTranslations(
+              studyData.description_es || "",
+              studyData.description_en || ""
+            );
+            delete studyData.title_es;
+            delete studyData.title_en;
+            delete studyData.institution_es;
+            delete studyData.institution_en;
+            delete studyData.description_es;
+            delete studyData.description_en;
             await createStudy(studyData);
             break;
         }
@@ -1814,15 +2329,15 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldTitle")} *
+                        {t("admin.fieldTitle")} (Español) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.title || ""}
+                        value={crudFormData.title_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            title: e.target.value,
+                            title_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -1831,14 +2346,31 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldDescription")}
+                        {t("admin.fieldTitle")} (English) *
                       </label>
-                      <textarea
-                        value={crudFormData.description || ""}
+                      <input
+                        type="text"
+                        value={crudFormData.title_en || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            description: e.target.value,
+                            title_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldDescription")} (Español)
+                      </label>
+                      <textarea
+                        value={crudFormData.description_es || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            description_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -1847,14 +2379,46 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldFullDescription")}
+                        {t("admin.fieldDescription")} (English)
                       </label>
                       <textarea
-                        value={crudFormData.full_description || ""}
+                        value={crudFormData.description_en || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            full_description: e.target.value,
+                            description_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldFullDescription")} (Español)
+                      </label>
+                      <textarea
+                        value={crudFormData.full_description_es || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            full_description_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        rows={5}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldFullDescription")} (English)
+                      </label>
+                      <textarea
+                        value={crudFormData.full_description_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            full_description_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2216,15 +2780,32 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldTitle")} *
+                        {t("admin.fieldTitle")} (Español) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.title || ""}
+                        value={crudFormData.title_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            title: e.target.value,
+                            title_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldTitle")} (English) *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.title_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            title_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2339,15 +2920,32 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Nombre *
+                        Nombre (Español) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.name || ""}
+                        value={crudFormData.name_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            name: e.target.value,
+                            name_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Nombre (English) *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.name_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            name_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2373,14 +2971,31 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Descripción *
+                        Descripción (Español) *
                       </label>
                       <textarea
-                        value={crudFormData.description || ""}
+                        value={crudFormData.description_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            description: e.target.value,
+                            description_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Descripción (English) *
+                      </label>
+                      <textarea
+                        value={crudFormData.description_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            description_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2441,14 +3056,14 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldTestimonialContent")} *
+                        {t("admin.fieldTestimonialContent")} (Español) *
                       </label>
                       <textarea
-                        value={crudFormData.testimonial_content || ""}
+                        value={crudFormData.testimonial_content_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            testimonial_content: e.target.value,
+                            testimonial_content_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2459,15 +3074,33 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldTestimonialAuthor")} *
+                        {t("admin.fieldTestimonialContent")} (English) *
                       </label>
-                      <input
-                        type="text"
-                        value={crudFormData.testimonial_author || ""}
+                      <textarea
+                        value={crudFormData.testimonial_content_en || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            testimonial_author: e.target.value,
+                            testimonial_content_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        rows={4}
+                        placeholder="Ej: 'Excellent work, very professional...'"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldTestimonialAuthor")} (Español) *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.testimonial_author_es || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            testimonial_author_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2477,19 +3110,54 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldTestimonialRole")}
+                        {t("admin.fieldTestimonialAuthor")} (English) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.testimonial_role || ""}
+                        value={crudFormData.testimonial_author_en || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            testimonial_role: e.target.value,
+                            testimonial_author_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="Ej: Juan Pérez"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldTestimonialRole")} (Español)
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.testimonial_role_es || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            testimonial_role_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                         placeholder="Ej: CEO, Director de Marketing"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldTestimonialRole")} (English)
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.testimonial_role_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            testimonial_role_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="Ej: CEO, Marketing Director"
                       />
                     </div>
                     <div>
@@ -2517,15 +3185,15 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldTitle")} *
+                        {t("admin.fieldTitle")} (Español) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.title || ""}
+                        value={crudFormData.title_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            title: e.target.value,
+                            title_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2534,14 +3202,48 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldDescription")} *
+                        {t("admin.fieldTitle")} (English) *
                       </label>
-                      <textarea
-                        value={crudFormData.description || ""}
+                      <input
+                        type="text"
+                        value={crudFormData.title_en || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            description: e.target.value,
+                            title_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldDescription")} (Español) *
+                      </label>
+                      <textarea
+                        value={crudFormData.description_es || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            description_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldDescription")} (English) *
+                      </label>
+                      <textarea
+                        value={crudFormData.description_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            description_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2651,20 +3353,38 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldTitle")} *
+                        {t("admin.fieldTitle")} (Español) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.title || ""}
+                        value={crudFormData.title_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            title: e.target.value,
+                            title_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                         required
                         placeholder="Se llenará automáticamente al extraer datos"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldTitle")} (English) *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.title_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            title_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                        placeholder="Will be filled automatically when extracting data"
                       />
                     </div>
                     <div>
@@ -2686,19 +3406,36 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldDescription")}
+                        {t("admin.fieldDescription")} (Español)
                       </label>
                       <textarea
-                        value={crudFormData.description || ""}
+                        value={crudFormData.description_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            description: e.target.value,
+                            description_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                         rows={3}
                         placeholder="Se llenará automáticamente al extraer datos"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldDescription")} (English)
+                      </label>
+                      <textarea
+                        value={crudFormData.description_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            description_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        rows={3}
+                        placeholder="Will be filled automatically when extracting data"
                       />
                     </div>
                     <div>
@@ -2725,15 +3462,15 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Posición/Cargo *
+                        Posición/Cargo (Español) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.position || ""}
+                        value={crudFormData.position_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            position: e.target.value,
+                            position_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2742,15 +3479,49 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldCompany")} *
+                        Posición/Cargo (English) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.company || ""}
+                        value={crudFormData.position_en || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            company: e.target.value,
+                            position_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldCompany")} (Español) *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.company_es || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            company_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldCompany")} (English) *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.company_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            company_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2791,15 +3562,33 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldLocation")} *
+                        {t("admin.fieldLocation")} (Español) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.location || ""}
+                        value={crudFormData.location_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            location: e.target.value,
+                            location_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="Ej: Bogotá, Colombia"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldLocation")} (English) *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.location_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            location_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2847,14 +3636,30 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Descripción
+                        Descripción (Español)
                       </label>
                       <textarea
-                        value={crudFormData.description || ""}
+                        value={crudFormData.description_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            description: e.target.value,
+                            description_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Descripción (English)
+                      </label>
+                      <textarea
+                        value={crudFormData.description_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            description_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -2951,15 +3756,32 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Nombre *
+                        Nombre (Español) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.name || ""}
+                        value={crudFormData.name_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            name: e.target.value,
+                            name_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Nombre (English) *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.name_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            name_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -3059,15 +3881,15 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldTitle")} *
+                        {t("admin.fieldTitle")} (Español) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.title || ""}
+                        value={crudFormData.title_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            title: e.target.value,
+                            title_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -3076,15 +3898,49 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldInstitution")} {"*"}
+                        {t("admin.fieldTitle")} (English) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.institution || ""}
+                        value={crudFormData.title_en || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            institution: e.target.value,
+                            title_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldInstitution")} (Español) *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.institution_es || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            institution_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldInstitution")} (English) *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.institution_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            institution_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -3156,14 +4012,31 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldDescription")} {"*"}
+                        {t("admin.fieldDescription")} (Español) *
                       </label>
                       <textarea
-                        value={crudFormData.description || ""}
+                        value={crudFormData.description_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            description: e.target.value,
+                            description_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        {t("admin.fieldDescription")} (English) *
+                      </label>
+                      <textarea
+                        value={crudFormData.description_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            description_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
