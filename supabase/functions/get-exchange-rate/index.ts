@@ -13,39 +13,44 @@ interface ExchangeRateResponse {
   date: string;
 }
 
-// Rate limiting simple (autocontenido)
-interface RateLimitConfig {
-  maxRequests: number;
-  windowMs: number;
-}
+// Rate limiting simple en memoria (para producción usar Redis o similar)
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
-interface RateLimitStore {
-  count: number;
-  resetAt: number;
-}
+function getRequestIdentifier(req: Request): string {
+  // Intentar obtener IP real desde headers
+  const realIp =
+    req.headers.get("x-real-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("cf-connecting-ip");
 
-const rateLimitStore = new Map<string, RateLimitStore>();
+  if (realIp) {
+    return realIp;
+  }
+
+  return "unknown";
+}
 
 function checkRateLimit(
   identifier: string,
-  config: RateLimitConfig
+  options: { maxRequests: number; windowMs: number }
 ): { allowed: boolean; remaining: number; resetAt: number } {
   const now = Date.now();
   const record = rateLimitStore.get(identifier);
 
   if (!record || now > record.resetAt) {
+    // Nueva ventana o expirada
     rateLimitStore.set(identifier, {
       count: 1,
-      resetAt: now + config.windowMs,
+      resetAt: now + options.windowMs,
     });
     return {
       allowed: true,
-      remaining: config.maxRequests - 1,
-      resetAt: now + config.windowMs,
+      remaining: options.maxRequests - 1,
+      resetAt: now + options.windowMs,
     };
   }
 
-  if (record.count >= config.maxRequests) {
+  if (record.count >= options.maxRequests) {
     return {
       allowed: false,
       remaining: 0,
@@ -56,23 +61,9 @@ function checkRateLimit(
   record.count++;
   return {
     allowed: true,
-    remaining: config.maxRequests - record.count,
+    remaining: options.maxRequests - record.count,
     resetAt: record.resetAt,
   };
-}
-
-function getRequestIdentifier(req: Request): string {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0].trim();
-  }
-
-  const realIp = req.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp;
-  }
-
-  return "unknown";
 }
 
 serve(async (req) => {
@@ -150,21 +141,55 @@ serve(async (req) => {
 
     // Obtener tipo de cambio en tiempo real
     const exchangeUrl = `https://v6.exchangerate-api.com/v6/${exchangeRateApiKey}/latest/${baseCurrency}`;
-    const exchangeResponse = await fetch(exchangeUrl);
 
-    if (!exchangeResponse.ok) {
+    let exchangeResponse: Response;
+    try {
+      exchangeResponse = await fetch(exchangeUrl);
+    } catch (fetchError) {
+      console.error("Error al hacer fetch a exchangerate-api.com:", fetchError);
       throw new Error(
-        `Error al obtener tipo de cambio: ${exchangeResponse.statusText}`
+        `Error de conexión al obtener tipo de cambio: ${fetchError.message}`
       );
     }
 
-    const exchangeData: ExchangeRateResponse = await exchangeResponse.json();
+    if (!exchangeResponse.ok) {
+      const errorText = await exchangeResponse.text();
+      console.error(
+        `Error de exchangerate-api.com: ${exchangeResponse.status} ${exchangeResponse.statusText}`,
+        errorText
+      );
+      throw new Error(
+        `Error al obtener tipo de cambio (${exchangeResponse.status}): ${exchangeResponse.statusText}`
+      );
+    }
+
+    let exchangeData: ExchangeRateResponse;
+    try {
+      exchangeData = await exchangeResponse.json();
+    } catch (parseError) {
+      console.error(
+        "Error al parsear respuesta de exchangerate-api.com:",
+        parseError
+      );
+      throw new Error(
+        "Error al procesar respuesta de la API de tipos de cambio"
+      );
+    }
+
+    if (!exchangeData.rates || typeof exchangeData.rates !== "object") {
+      console.error(
+        "Respuesta inválida de exchangerate-api.com:",
+        exchangeData
+      );
+      throw new Error("Respuesta inválida de la API de tipos de cambio");
+    }
+
     const exchangeRate = exchangeData.rates[targetCurrency];
 
-    if (!exchangeRate) {
+    if (!exchangeRate || typeof exchangeRate !== "number") {
       return new Response(
         JSON.stringify({
-          error: `Moneda ${targetCurrency} no soportada`,
+          error: `Moneda ${targetCurrency} no soportada o no disponible`,
         }),
         {
           status: 400,
@@ -194,9 +219,18 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("Error en get-exchange-rate:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Error desconocido";
+    return new Response(
+      JSON.stringify({
+        error: errorMessage,
+        details: error instanceof Error ? error.stack : undefined,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });
