@@ -452,13 +452,6 @@ function Admin() {
       );
       formData.title_es = titleTrans.es;
       formData.title_en = titleTrans.en;
-
-      const descTrans = extractTranslations(
-        item.description_translations,
-        item.description || ""
-      );
-      formData.description_es = descTrans.es;
-      formData.description_en = descTrans.en;
     } else if (activeTab === "clients") {
       const nameTrans = extractTranslations(
         item.name_translations,
@@ -829,14 +822,8 @@ function Admin() {
               updateProjectData.title_es || "",
               updateProjectData.title_en || ""
             );
-            updateProjectData.description_translations = buildTranslations(
-              updateProjectData.description_es || "",
-              updateProjectData.description_en || ""
-            );
             delete updateProjectData.title_es;
             delete updateProjectData.title_en;
-            delete updateProjectData.description_es;
-            delete updateProjectData.description_en;
             await updateProject(editingItem.id, updateProjectData);
             break;
           case "clients":
@@ -1108,14 +1095,8 @@ function Admin() {
               createProjectData.title_es || "",
               createProjectData.title_en || ""
             );
-            createProjectData.description_translations = buildTranslations(
-              createProjectData.description_es || "",
-              createProjectData.description_en || ""
-            );
             delete createProjectData.title_es;
             delete createProjectData.title_en;
-            delete createProjectData.description_es;
-            delete createProjectData.description_en;
             await createProject(createProjectData);
             break;
           case "clients":
