@@ -4,6 +4,7 @@ import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import { getProductsWithPricing } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
+import { escapeHtml } from "../lib/security";
 
 interface ProductPricing {
   id: string;
@@ -348,15 +349,11 @@ function Store() {
                   >
                     {getTranslatedText(item.title_translations || item.title)}
                   </h3>
-                  <div
-                    className="text-gray-600 text-sm mb-4 line-clamp-2 prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{
-                      __html:
-                        getTranslatedText(
-                          item.description_translations || item.description
-                        ) || t("common.noContent"),
-                    }}
-                  />
+                  <div className="text-gray-600 text-sm mb-4 line-clamp-2 prose prose-sm max-w-none">
+                    {getTranslatedText(
+                      item.description_translations || item.description
+                    ) || t("common.noContent")}
+                  </div>
                   <div className="flex items-center justify-between">
                     <div className="flex-1">{formatPrice(item)}</div>
                     <Button
@@ -435,21 +432,17 @@ function Store() {
               <div>
                 <div className="mb-4">
                   <div className="mb-2">{formatPrice(selectedItem)}</div>
-                  <div
-                    className="text-gray-600 prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{
-                      __html:
-                        getTranslatedText(
-                          selectedItem.full_description_translations ||
-                            selectedItem.full_description
-                        ) ||
-                        getTranslatedText(
-                          selectedItem.description_translations ||
-                            selectedItem.description
-                        ) ||
-                        t("common.noContent"),
-                    }}
-                  />
+                  <div className="text-gray-600 prose prose-sm max-w-none">
+                    {getTranslatedText(
+                      selectedItem.full_description_translations ||
+                        selectedItem.full_description
+                    ) ||
+                      getTranslatedText(
+                        selectedItem.description_translations ||
+                          selectedItem.description
+                      ) ||
+                      t("common.noContent")}
+                  </div>
                 </div>
 
                 <div className="space-y-3">

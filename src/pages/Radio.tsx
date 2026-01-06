@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
 import { useTranslation } from "../lib/i18n";
 import AdSpace from "../components/features/AdSpace";
+import { sanitizeUserInput } from "../lib/security";
 
 interface Song {
   id: string;
@@ -493,16 +494,21 @@ function Radio() {
       setIsSending(true);
 
       // Guardar username en localStorage
-      localStorage.setItem("radio_username", username.trim());
+      const sanitizedUsername = sanitizeUserInput(username.trim(), 20);
+      localStorage.setItem("radio_username", sanitizedUsername);
 
-      const trimmedMessage = messageInput.trim().replace(/\s+/g, " ");
+      // Sanitizar mensaje antes de guardar
+      const sanitizedMessage = sanitizeUserInput(
+        messageInput.trim().replace(/\s+/g, " "),
+        200
+      );
 
       // Insertar mensaje en la base de datos
       const { data, error } = await supabase
         .from("messages")
         .insert({
-          username: username.trim(),
-          message: trimmedMessage,
+          username: sanitizedUsername,
+          message: sanitizedMessage,
         })
         .select()
         .single();

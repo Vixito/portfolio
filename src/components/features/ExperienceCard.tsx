@@ -72,9 +72,12 @@ function ExperienceCard() {
                     target.style.display = "none";
                     const parent = target.parentElement;
                     if (parent) {
-                      parent.innerHTML = `<span class="text-white font-bold text-xs">${exp.company.charAt(
-                        0
-                      )}</span>`;
+                      // Usar textContent en lugar de innerHTML para prevenir XSS
+                      const span = document.createElement("span");
+                      span.className = "text-white font-bold text-xs";
+                      span.textContent = exp.company.charAt(0);
+                      parent.innerHTML = "";
+                      parent.appendChild(span);
                     }
                   }}
                 />
