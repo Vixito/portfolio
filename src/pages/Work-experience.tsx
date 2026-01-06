@@ -39,27 +39,61 @@ function WorkExperience() {
       try {
         setLoading(true);
         const data = await getWorkExperiences();
+        console.log("🔍 Raw data from Supabase:", data);
+
         // Mapear datos de Supabase al formato de la interfaz, preservando campos de traducción
         const mappedExperiences: WorkExperience[] = (data || []).map(
           (exp: any) => {
+            console.log("📝 Processing experience:", exp.id, {
+              responsibilities: exp.responsibilities,
+              responsibilitiesType: typeof exp.responsibilities,
+              isArray: Array.isArray(exp.responsibilities),
+              position_translations: exp.position_translations,
+              description_translations: exp.description_translations,
+              location_translations: exp.location_translations,
+              company_translations: exp.company_translations,
+            });
+
             // Parsear responsabilidades si vienen como string JSON
             let responsibilities: string[] = [];
             if (exp.responsibilities) {
               if (Array.isArray(exp.responsibilities)) {
                 responsibilities = exp.responsibilities;
+                console.log(
+                  "✅ Responsibilities already array:",
+                  responsibilities
+                );
               } else if (typeof exp.responsibilities === "string") {
                 const trimmed = exp.responsibilities.trim();
-                if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                  // Es un JSON array
+                console.log("🔤 Responsibilities as string:", trimmed);
+                // Intentar parsear como JSON primero
+                if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
                   try {
                     const parsed = JSON.parse(trimmed);
-                    responsibilities = Array.isArray(parsed) ? parsed : [];
+                    console.log("📦 Parsed JSON:", parsed);
+                    if (Array.isArray(parsed)) {
+                      responsibilities = parsed;
+                    } else if (parsed && typeof parsed === "object") {
+                      // Si es un objeto, intentar extraer valores
+                      responsibilities = Object.values(parsed).filter(
+                        (v) => typeof v === "string" && v.trim() !== ""
+                      ) as string[];
+                    }
                   } catch (e) {
-                    console.warn("Error parsing responsibilities JSON:", e);
-                    responsibilities = [];
+                    console.warn(
+                      "❌ Error parsing responsibilities JSON:",
+                      e,
+                      "Raw:",
+                      trimmed
+                    );
+                    // Si falla el parseo JSON, intentar como texto separado
+                    responsibilities = trimmed
+                      .split(/[,\n]/)
+                      .map((s: string) => s.trim())
+                      .filter((s: string) => s.length > 0);
                   }
                 } else {
-                  // Intentar como array separado por comas o líneas
+                  // Si no parece JSON, separar por comas o líneas
                   responsibilities = trimmed
                     .split(/[,\n]/)
                     .map((s: string) => s.trim())
@@ -67,6 +101,8 @@ function WorkExperience() {
                 }
               }
             }
+
+            console.log("✅ Final responsibilities:", responsibilities);
 
             // Parsear tecnologías si vienen como string JSON
             let technologies: string[] = [];
