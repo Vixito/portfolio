@@ -165,7 +165,9 @@ function ProjectCard({ project }: { project: Project }) {
               )}
             </h3>
             <p className="text-white/80 text-sm">
-              {project.month} {project.year}
+              {t(`workExperience.${project.month.toLowerCase()}`) ||
+                project.month}{" "}
+              {project.year}
             </p>
           </div>
         </div>

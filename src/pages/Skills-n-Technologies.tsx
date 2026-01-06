@@ -133,17 +133,7 @@ function SkillsNTechnologies() {
   });
 
   const getCategoryLabel = (category: Technology["category"]) => {
-    const labels = {
-      language: "Lenguajes",
-      framework: "Frameworks",
-      database: "Bases de Datos",
-      tool: "Herramientas",
-      cloud: "Cloud",
-      instrument: "Instrumentos",
-      music: "Música",
-      other: "Otro",
-    };
-    return labels[category];
+    return t(`skills.${category}`);
   };
 
   const getLevelColor = (level: Technology["level"]) => {

@@ -7,13 +7,17 @@ import { useTranslation, getTranslatedText } from "../lib/i18n";
 interface WorkExperience {
   id: string;
   position: string;
+  position_translations?: { es?: string; en?: string } | null;
   company: string;
+  company_translations?: { es?: string; en?: string } | null;
   companyUrl?: string;
   companyLogo?: string; // URL desde S3/CloudFront
   location: string;
+  location_translations?: { es?: string; en?: string } | null;
   startDate: string;
   endDate?: string; // Opcional si es trabajo actual
   description: string;
+  description_translations?: { es?: string; en?: string } | null;
   responsibilities: string[];
   technologies: string[];
   type: "full-time" | "part-time" | "contract" | "freelance";
@@ -33,18 +37,22 @@ function WorkExperience() {
       try {
         setLoading(true);
         const data = await getWorkExperiences();
-        // Mapear datos de Supabase al formato de la interfaz
+        // Mapear datos de Supabase al formato de la interfaz, preservando campos de traducción
         const mappedExperiences: WorkExperience[] = (data || []).map(
           (exp: any) => ({
             id: exp.id,
             position: exp.position,
+            position_translations: exp.position_translations,
             company: exp.company,
+            company_translations: exp.company_translations,
             companyUrl: exp.company_url,
             companyLogo: exp.company_logo,
             location: exp.location,
+            location_translations: exp.location_translations,
             startDate: exp.start_date,
             endDate: exp.end_date,
             description: exp.description,
+            description_translations: exp.description_translations,
             responsibilities: Array.isArray(exp.responsibilities)
               ? exp.responsibilities
               : [],
@@ -136,8 +144,7 @@ function WorkExperience() {
                       {/* Fallback estático que siempre está presente */}
                       <div className="w-24 h-24 rounded-lg bg-purple flex items-center justify-center text-white text-3xl font-bold absolute inset-0">
                         {getTranslatedText(
-                          (experience as any).company_translations ||
-                            experience.company
+                          experience.company_translations || experience.company
                         ).charAt(0)}
                       </div>
                       {/* Imagen que se muestra si carga correctamente */}
@@ -145,7 +152,7 @@ function WorkExperience() {
                         <img
                           src={experience.companyLogo}
                           alt={getTranslatedText(
-                            (experience as any).company_translations ||
+                            experience.company_translations ||
                               experience.company
                           )}
                           className="w-24 h-24 object-contain rounded-lg border border-gray-200 p-3 bg-gray-50 relative z-10"
@@ -163,7 +170,7 @@ function WorkExperience() {
                         <div>
                           <h2 className="text-2xl font-bold text-gray-900 mb-1">
                             {getTranslatedText(
-                              (experience as any).position_translations ||
+                              experience.position_translations ||
                                 experience.position
                             )}
                           </h2>
@@ -176,14 +183,14 @@ function WorkExperience() {
                                 className="text-lg text-purple hover:text-blue transition-colors font-semibold"
                               >
                                 {getTranslatedText(
-                                  (experience as any).company_translations ||
+                                  experience.company_translations ||
                                     experience.company
                                 )}
                               </a>
                             ) : (
                               <p className="text-lg text-gray-600">
                                 {getTranslatedText(
-                                  (experience as any).company_translations ||
+                                  experience.company_translations ||
                                     experience.company
                                 )}
                               </p>
@@ -217,7 +224,7 @@ function WorkExperience() {
                               </svg>
                               <span>
                                 {getTranslatedText(
-                                  (experience as any).location_translations ||
+                                  experience.location_translations ||
                                     experience.location
                                 )}
                               </span>
@@ -274,7 +281,7 @@ function WorkExperience() {
                         experience.description.trim() !== "" && (
                           <p className="text-gray-700 mb-4 leading-relaxed">
                             {getTranslatedText(
-                              (experience as any).description_translations ||
+                              experience.description_translations ||
                                 experience.description
                             )}
                           </p>

@@ -367,6 +367,12 @@ export const translations = {
       success: "Petición enviada exitosamente",
       error: "Error al enviar la petición",
     },
+    // NotFound
+    notFound: {
+      gameOver: "Game Over",
+      fileNotFound: "404 FILE NOT FOUND",
+      backToHome: "Back to Home",
+    },
     // Admin
     admin: {
       title: "Panel de Administración",
@@ -906,6 +912,12 @@ export const translations = {
       fri: "Fri",
       success: "Request sent successfully",
       error: "Error sending request",
+    },
+    // NotFound
+    notFound: {
+      gameOver: "Game Over",
+      fileNotFound: "404 FILE NOT FOUND",
+      backToHome: "Back to Home",
     },
     // Admin
     admin: {

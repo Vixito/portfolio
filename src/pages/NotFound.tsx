@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "../lib/i18n";
+import { Link } from "react-router-dom";
+import Button from "../components/ui/Button";
 
 function NotFound() {
+  const { t } = useTranslation();
   const playerRef = useRef<HTMLDivElement>(null);
   const skyboxRef = useRef<HTMLDivElement>(null);
 
@@ -55,11 +59,20 @@ function NotFound() {
         className="skybox relative w-full"
         style={{ height: "70vh", backgroundColor: "#63B4F5" }}
       >
-        {/* Texto "Game over" y "404 FILE NOT FOUND" */}
+        {/* Texto traducido */}
         <div className="txt">
-          Game over
+          {t("notFound.gameOver")}
           <br />
-          <span>404 FILE NOT FOUND</span>
+          <span>{t("notFound.fileNotFound")}</span>
+        </div>
+
+        {/* Botón para volver al inicio */}
+        <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10">
+          <Link to="/">
+            <Button variant="primary" className="px-6 py-3">
+              {t("notFound.backToHome")}
+            </Button>
+          </Link>
         </div>
 
         {/* Personaje caminando */}

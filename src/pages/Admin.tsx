@@ -420,28 +420,57 @@ function Admin() {
   };
 
   const handleEdit = async (item: any) => {
-    setEditingItem(item);
-    const formData = { ...item };
+    // Buscar el item actualizado de la lista para asegurar que tenemos los datos más recientes
+    let currentItem = item;
+    switch (activeTab) {
+      case "products":
+        currentItem = products.find((p) => p.id === item.id) || item;
+        break;
+      case "projects":
+        currentItem = projects.find((p) => p.id === item.id) || item;
+        break;
+      case "clients":
+        currentItem = clients.find((c) => c.id === item.id) || item;
+        break;
+      case "socials":
+        currentItem = socials.find((s) => s.id === item.id) || item;
+        break;
+      case "events":
+        currentItem = events.find((e) => e.id === item.id) || item;
+        break;
+      case "work_experiences":
+        currentItem = workExperiences.find((w) => w.id === item.id) || item;
+        break;
+      case "technologies":
+        currentItem = technologies.find((t) => t.id === item.id) || item;
+        break;
+      case "studies":
+        currentItem = studies.find((s) => s.id === item.id) || item;
+        break;
+    }
+
+    setEditingItem(currentItem);
+    const formData = { ...currentItem };
 
     // Extraer traducciones de campos JSONB a campos separados ES/EN
     if (activeTab === "products") {
       const titleTrans = extractTranslations(
-        item.title_translations,
-        item.title || ""
+        currentItem.title_translations,
+        currentItem.title || ""
       );
       formData.title_es = titleTrans.es;
       formData.title_en = titleTrans.en;
 
       const descTrans = extractTranslations(
-        item.description_translations,
-        item.description || ""
+        currentItem.description_translations,
+        currentItem.description || ""
       );
       formData.description_es = descTrans.es;
       formData.description_en = descTrans.en;
 
       const fullDescTrans = extractTranslations(
-        item.full_description_translations,
-        item.full_description || ""
+        currentItem.full_description_translations,
+        currentItem.full_description || ""
       );
       formData.full_description_es = fullDescTrans.es;
       formData.full_description_en = fullDescTrans.en;
@@ -576,7 +605,7 @@ function Admin() {
     if (activeTab === "products") {
       // Cargar pricing del producto (incluyendo ofertas)
       try {
-        const pricing = await getProductPricing(item.id);
+        const pricing = await getProductPricing(currentItem.id);
         if (pricing) {
           formData.is_on_sale = pricing.is_on_sale;
           formData.sale_percentage = pricing.sale_percentage;
@@ -622,23 +651,27 @@ function Admin() {
     }
     // Para testimonios, usar el ID del cliente como client_id
     if (activeTab === "testimonials") {
-      formData.client_id = item.id;
+      formData.client_id = currentItem.id;
     }
     // Para work_experiences, convertir arrays a JSON strings para el textarea
     if (activeTab === "work_experiences") {
-      if (Array.isArray(item.responsibilities)) {
+      if (Array.isArray(currentItem.responsibilities)) {
         formData.responsibilities = JSON.stringify(
-          item.responsibilities,
+          currentItem.responsibilities,
           null,
           2
         );
       }
-      if (Array.isArray(item.technologies)) {
-        formData.technologies = JSON.stringify(item.technologies, null, 2);
+      if (Array.isArray(currentItem.technologies)) {
+        formData.technologies = JSON.stringify(
+          currentItem.technologies,
+          null,
+          2
+        );
       }
     }
     setCrudFormData(formData);
-    setEventUrl(item.passline_url || "");
+    setEventUrl(currentItem.passline_url || "");
     setShowCRUDModal(true);
   };
 
@@ -1306,7 +1339,6 @@ function Admin() {
           : "Elemento creado exitosamente"
       );
     } catch (error) {
-      console.error("Error al guardar:", error);
       alert(
         `Error al guardar: ${
           error instanceof Error ? error.message : "Error desconocido"
