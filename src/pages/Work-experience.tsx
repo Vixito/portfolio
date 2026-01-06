@@ -39,29 +39,64 @@ function WorkExperience() {
         const data = await getWorkExperiences();
         // Mapear datos de Supabase al formato de la interfaz, preservando campos de traducción
         const mappedExperiences: WorkExperience[] = (data || []).map(
-          (exp: any) => ({
-            id: exp.id,
-            position: exp.position,
-            position_translations: exp.position_translations,
-            company: exp.company,
-            company_translations: exp.company_translations,
-            companyUrl: exp.company_url,
-            companyLogo: exp.company_logo,
-            location: exp.location,
-            location_translations: exp.location_translations,
-            startDate: exp.start_date,
-            endDate: exp.end_date,
-            description: exp.description,
-            description_translations: exp.description_translations,
-            responsibilities: Array.isArray(exp.responsibilities)
-              ? exp.responsibilities
-              : [],
-            technologies: Array.isArray(exp.technologies)
-              ? exp.technologies
-              : [],
-            type: exp.type,
-            status: exp.status,
-          })
+          (exp: any) => {
+            // Parsear responsabilidades si vienen como string JSON
+            let responsibilities: string[] = [];
+            if (exp.responsibilities) {
+              if (Array.isArray(exp.responsibilities)) {
+                responsibilities = exp.responsibilities;
+              } else if (typeof exp.responsibilities === "string") {
+                try {
+                  const parsed = JSON.parse(exp.responsibilities);
+                  responsibilities = Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                  // Si no es JSON válido, intentar como array separado por comas o líneas
+                  responsibilities = exp.responsibilities
+                    .split(/[,\n]/)
+                    .map((s: string) => s.trim())
+                    .filter((s: string) => s.length > 0);
+                }
+              }
+            }
+
+            // Parsear tecnologías si vienen como string JSON
+            let technologies: string[] = [];
+            if (exp.technologies) {
+              if (Array.isArray(exp.technologies)) {
+                technologies = exp.technologies;
+              } else if (typeof exp.technologies === "string") {
+                try {
+                  const parsed = JSON.parse(exp.technologies);
+                  technologies = Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                  technologies = exp.technologies
+                    .split(/[,\n]/)
+                    .map((s: string) => s.trim())
+                    .filter((s: string) => s.length > 0);
+                }
+              }
+            }
+
+            return {
+              id: exp.id,
+              position: exp.position,
+              position_translations: exp.position_translations,
+              company: exp.company,
+              company_translations: exp.company_translations,
+              companyUrl: exp.company_url,
+              companyLogo: exp.company_logo,
+              location: exp.location,
+              location_translations: exp.location_translations,
+              startDate: exp.start_date,
+              endDate: exp.end_date,
+              description: exp.description,
+              description_translations: exp.description_translations,
+              responsibilities,
+              technologies,
+              type: exp.type,
+              status: exp.status,
+            };
+          }
         );
         setExperiences(mappedExperiences);
       } catch (error) {

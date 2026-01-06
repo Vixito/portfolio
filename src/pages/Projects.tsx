@@ -121,6 +121,32 @@ function Projects() {
   );
 }
 
+// Función helper para obtener el mes traducido
+function getTranslatedMonth(month: string, t: (key: string) => string): string {
+  // Mapeo de meses en español a inglés para las claves de traducción
+  const monthMap: Record<string, string> = {
+    enero: "january",
+    febrero: "february",
+    marzo: "march",
+    abril: "april",
+    mayo: "may",
+    junio: "june",
+    julio: "july",
+    agosto: "august",
+    septiembre: "september",
+    octubre: "october",
+    noviembre: "november",
+    diciembre: "december",
+  };
+
+  const monthLower = month.toLowerCase();
+  // Si el mes está en español, mapearlo a inglés para la clave
+  const translationKey = monthMap[monthLower] || monthLower;
+
+  // Usar directamente la traducción de workExperience.{mes}
+  return t(`workExperience.${translationKey}`);
+}
+
 // Componente de tarjeta de proyecto
 function ProjectCard({ project }: { project: Project }) {
   const { t } = useTranslation();
@@ -165,9 +191,7 @@ function ProjectCard({ project }: { project: Project }) {
               )}
             </h3>
             <p className="text-white/80 text-sm">
-              {t(`workExperience.${project.month.toLowerCase()}`) ||
-                project.month}{" "}
-              {project.year}
+              {getTranslatedMonth(project.month, t)} {project.year}
             </p>
           </div>
         </div>
