@@ -42,43 +42,14 @@ function WorkExperience() {
         // Mapear datos de Supabase al formato de la interfaz, preservando campos de traducción
         const mappedExperiences: WorkExperience[] = (data || []).map(
           (exp: any) => {
-            console.log("🔍 Processing experience:", exp.id);
-            console.log("  - responsibilities raw:", exp.responsibilities);
-            console.log(
-              "  - responsibilities type:",
-              typeof exp.responsibilities
-            );
-            console.log(
-              "  - responsibilities isArray:",
-              Array.isArray(exp.responsibilities)
-            );
-            if (
-              Array.isArray(exp.responsibilities) &&
-              exp.responsibilities.length > 0
-            ) {
-              console.log("  - first responsibility:", exp.responsibilities[0]);
-              console.log(
-                "  - first responsibility type:",
-                typeof exp.responsibilities[0]
-              );
-            }
-
             // Parsear responsabilidades - pueden venir como array de strings o array de objetos {es, en}
             let responsibilities: string[] = [];
             if (exp.responsibilities) {
               if (Array.isArray(exp.responsibilities)) {
                 // Si es array, verificar si son objetos con traducciones o strings simples
-                console.log("  ✅ Responsibilities is array, processing...");
                 responsibilities = exp.responsibilities
                   .map((resp: any) => {
-                    console.log(
-                      "    - Processing resp:",
-                      resp,
-                      "type:",
-                      typeof resp
-                    );
                     if (typeof resp === "string") {
-                      console.log("    - String, returning:", resp);
                       return resp;
                     } else if (
                       resp &&
@@ -86,18 +57,11 @@ function WorkExperience() {
                       (resp.es || resp.en)
                     ) {
                       // Es un objeto con traducciones, usar getTranslatedText
-                      const translated = getTranslatedText(resp, language);
-                      console.log(
-                        "    - Object with translations, translated:",
-                        translated
-                      );
-                      return translated;
+                      return getTranslatedText(resp, language);
                     }
-                    console.log("    - Unknown format, returning empty");
                     return "";
                   })
                   .filter((s: string) => s.trim() !== "");
-                console.log("  ✅ Final responsibilities:", responsibilities);
               } else if (typeof exp.responsibilities === "string") {
                 const trimmed = exp.responsibilities.trim();
                 // Intentar parsear como JSON primero
@@ -222,7 +186,7 @@ function WorkExperience() {
     };
 
     loadExperiences();
-  }, []);
+  }, [language]); // Re-cargar cuando cambie el idioma para re-traducir responsabilidades y tecnologías
 
   // Animación de entrada
   useEffect(() => {
@@ -436,9 +400,13 @@ function WorkExperience() {
 
                       {/* Responsabilidades - Solo mostrar si hay responsabilidades */}
                       {experience.responsibilities &&
+                        Array.isArray(experience.responsibilities) &&
                         experience.responsibilities.length > 0 &&
                         experience.responsibilities.some(
-                          (resp) => resp && resp.trim() !== ""
+                          (resp) =>
+                            resp &&
+                            typeof resp === "string" &&
+                            resp.trim() !== ""
                         ) && (
                           <div className="mb-4">
                             <h3 className="text-sm font-semibold text-gray-900 mb-2">
@@ -446,7 +414,12 @@ function WorkExperience() {
                             </h3>
                             <ul className="list-disc list-inside space-y-1 text-gray-600 text-sm">
                               {experience.responsibilities
-                                .filter((resp) => resp && resp.trim() !== "")
+                                .filter(
+                                  (resp) =>
+                                    resp &&
+                                    typeof resp === "string" &&
+                                    resp.trim() !== ""
+                                )
                                 .map((resp, index) => (
                                   <li key={index}>{resp}</li>
                                 ))}
