@@ -208,6 +208,7 @@ export async function getProjects() {
 
 export async function createProject(project: {
   title: string;
+  title_translations?: { es?: string; en?: string } | null;
   url: string;
   repository?: string;
   month: string;
@@ -228,6 +229,7 @@ export async function updateProject(
   id: string,
   updates: Partial<{
     title: string;
+    title_translations?: { es?: string; en?: string } | null;
     url: string;
     repository: string;
     month: string;
@@ -263,12 +265,17 @@ export async function getClients() {
 
 export async function createClient(client: {
   name: string;
+  name_translations?: { es?: string; en?: string } | null;
   logo: string;
   description: string;
+  description_translations?: { es?: string; en?: string } | null;
   url: string;
   testimonial_content?: string;
+  testimonial_content_translations?: { es?: string; en?: string } | null;
   testimonial_author?: string;
+  testimonial_author_translations?: { es?: string; en?: string } | null;
   testimonial_role?: string;
+  testimonial_role_translations?: { es?: string; en?: string } | null;
   testimonial_url?: string;
 }) {
   const { data, error } = await supabase
@@ -284,12 +291,17 @@ export async function updateClient(
   id: string,
   updates: Partial<{
     name: string;
+    name_translations?: { es?: string; en?: string } | null;
     logo: string;
     description: string;
+    description_translations?: { es?: string; en?: string } | null;
     url: string;
     testimonial_content: string;
+    testimonial_content_translations?: { es?: string; en?: string } | null;
     testimonial_author: string;
+    testimonial_author_translations?: { es?: string; en?: string } | null;
     testimonial_role: string;
+    testimonial_role_translations?: { es?: string; en?: string } | null;
     testimonial_url: string;
   }>
 ) {
@@ -392,7 +404,9 @@ export async function getSocials() {
 
 export async function createSocial(social: {
   title: string;
+  title_translations?: { es?: string; en?: string } | null;
   description: string;
+  description_translations?: { es?: string; en?: string } | null;
   logo: string;
   url: string;
   image?: string;
@@ -411,7 +425,9 @@ export async function updateSocial(
   id: string,
   updates: Partial<{
     title: string;
+    title_translations?: { es?: string; en?: string } | null;
     description: string;
+    description_translations?: { es?: string; en?: string } | null;
     logo: string;
     url: string;
     image: string;
@@ -446,8 +462,10 @@ export async function getEvents() {
 
 export async function createEvent(event: {
   title: string;
+  title_translations?: { es?: string; en?: string } | null;
   date: string;
   description?: string;
+  description_translations?: { es?: string; en?: string } | null;
   passline_url: string;
   thumbnail_url?: string;
 }) {
@@ -464,8 +482,10 @@ export async function updateEvent(
   id: string,
   updates: Partial<{
     title: string;
+    title_translations?: { es?: string; en?: string } | null;
     date: string;
     description: string;
+    description_translations?: { es?: string; en?: string } | null;
     passline_url: string;
     thumbnail_url: string;
   }>
@@ -500,13 +520,17 @@ export async function getWorkExperiences() {
 
 export async function createWorkExperience(experience: {
   position: string;
+  position_translations?: { es?: string; en?: string } | null;
   company: string;
+  company_translations?: { es?: string; en?: string } | null;
   company_url?: string;
   company_logo?: string;
   location: string;
+  location_translations?: { es?: string; en?: string } | null;
   start_date: string;
   end_date?: string;
   description: string;
+  description_translations?: { es?: string; en?: string } | null;
   responsibilities: string[]; // JSON array
   technologies: string[]; // JSON array
   type: "full-time" | "part-time" | "contract" | "freelance";
@@ -530,13 +554,17 @@ export async function updateWorkExperience(
   id: string,
   updates: Partial<{
     position: string;
+    position_translations?: { es?: string; en?: string } | null;
     company: string;
+    company_translations?: { es?: string; en?: string } | null;
     company_url: string;
     company_logo: string;
     location: string;
+    location_translations?: { es?: string; en?: string } | null;
     start_date: string;
     end_date: string;
     description: string;
+    description_translations?: { es?: string; en?: string } | null;
     responsibilities: string[];
     technologies: string[];
     type: "full-time" | "part-time" | "contract" | "freelance";
@@ -577,6 +605,7 @@ export async function getTechnologies() {
 
 export async function createTechnology(technology: {
   name: string;
+  name_translations?: { es?: string; en?: string } | null;
   category:
     | "language"
     | "framework"
@@ -604,6 +633,7 @@ export async function updateTechnology(
   id: string,
   updates: Partial<{
     name: string;
+    name_translations?: { es?: string; en?: string } | null;
     category:
       | "language"
       | "framework"
@@ -647,11 +677,14 @@ export async function getStudies() {
 
 export async function createStudy(study: {
   title: string;
+  title_translations?: { es?: string; en?: string } | null;
   institution: string;
+  institution_translations?: { es?: string; en?: string } | null;
   type: "degree" | "certification" | "course";
   start_date: string;
   end_date?: string;
   description: string;
+  description_translations?: { es?: string; en?: string } | null;
   logo?: string;
   certificate_url?: string;
   status: "completed" | "in-progress";
@@ -669,11 +702,14 @@ export async function updateStudy(
   id: string,
   updates: Partial<{
     title: string;
+    title_translations?: { es?: string; en?: string } | null;
     institution: string;
+    institution_translations?: { es?: string; en?: string } | null;
     type: "degree" | "certification" | "course";
     start_date: string;
     end_date: string;
     description: string;
+    description_translations?: { es?: string; en?: string } | null;
     logo: string;
     certificate_url: string;
     status: "completed" | "in-progress";

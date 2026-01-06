@@ -1306,6 +1306,7 @@ function Admin() {
           : "Elemento creado exitosamente"
       );
     } catch (error) {
+      console.error("Error al guardar:", error);
       alert(
         `Error al guardar: ${
           error instanceof Error ? error.message : "Error desconocido"
