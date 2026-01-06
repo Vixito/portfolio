@@ -5,6 +5,7 @@ import { optimizeAndUpload } from "../lib/storage-functions";
 import NotFound from "./NotFound";
 import { useTranslation } from "../lib/i18n";
 import { useStatusStore } from "../stores/useStatusStore";
+import { useLanguageStore } from "../stores/useLanguageStore";
 import {
   getProducts,
   createProduct,
@@ -653,22 +654,102 @@ function Admin() {
     if (activeTab === "testimonials") {
       formData.client_id = currentItem.id;
     }
-    // Para work_experiences, convertir arrays a JSON strings para el textarea
+    // Para work_experiences, convertir arrays a formato de lista con ES/EN
     if (activeTab === "work_experiences") {
-      if (Array.isArray(currentItem.responsibilities)) {
-        formData.responsibilities = JSON.stringify(
-          currentItem.responsibilities,
-          null,
-          2
-        );
+      // Convertir responsabilidades a formato de lista
+      let responsibilitiesList: Array<{ es: string; en: string }> = [];
+      if (currentItem.responsibilities) {
+        if (Array.isArray(currentItem.responsibilities)) {
+          // Si es array de strings simples, convertir a objetos con ES/EN
+          responsibilitiesList = currentItem.responsibilities.map(
+            (resp: any) => {
+              if (typeof resp === "string") {
+                return { es: resp, en: resp };
+              } else if (
+                resp &&
+                typeof resp === "object" &&
+                (resp.es || resp.en)
+              ) {
+                return { es: resp.es || "", en: resp.en || "" };
+              }
+              return { es: "", en: "" };
+            }
+          );
+        } else if (typeof currentItem.responsibilities === "string") {
+          try {
+            const parsed = JSON.parse(currentItem.responsibilities);
+            if (Array.isArray(parsed)) {
+              responsibilitiesList = parsed.map((resp: any) => {
+                if (typeof resp === "string") {
+                  return { es: resp, en: resp };
+                } else if (
+                  resp &&
+                  typeof resp === "object" &&
+                  (resp.es || resp.en)
+                ) {
+                  return { es: resp.es || "", en: resp.en || "" };
+                }
+                return { es: "", en: "" };
+              });
+            }
+          } catch (e) {
+            // Si no es JSON válido, crear un item con el texto
+            responsibilitiesList = [
+              {
+                es: currentItem.responsibilities,
+                en: currentItem.responsibilities,
+              },
+            ];
+          }
+        }
       }
-      if (Array.isArray(currentItem.technologies)) {
-        formData.technologies = JSON.stringify(
-          currentItem.technologies,
-          null,
-          2
-        );
+      formData.responsibilities_list =
+        responsibilitiesList.length > 0
+          ? responsibilitiesList
+          : [{ es: "", en: "" }];
+
+      // Convertir tecnologías a formato de lista
+      let technologiesList: Array<{ es: string; en: string }> = [];
+      if (currentItem.technologies) {
+        if (Array.isArray(currentItem.technologies)) {
+          technologiesList = currentItem.technologies.map((tech: any) => {
+            if (typeof tech === "string") {
+              return { es: tech, en: tech };
+            } else if (
+              tech &&
+              typeof tech === "object" &&
+              (tech.es || tech.en)
+            ) {
+              return { es: tech.es || "", en: tech.en || "" };
+            }
+            return { es: "", en: "" };
+          });
+        } else if (typeof currentItem.technologies === "string") {
+          try {
+            const parsed = JSON.parse(currentItem.technologies);
+            if (Array.isArray(parsed)) {
+              technologiesList = parsed.map((tech: any) => {
+                if (typeof tech === "string") {
+                  return { es: tech, en: tech };
+                } else if (
+                  tech &&
+                  typeof tech === "object" &&
+                  (tech.es || tech.en)
+                ) {
+                  return { es: tech.es || "", en: tech.en || "" };
+                }
+                return { es: "", en: "" };
+              });
+            }
+          } catch (e) {
+            technologiesList = [
+              { es: currentItem.technologies, en: currentItem.technologies },
+            ];
+          }
+        }
       }
+      formData.technologies_list =
+        technologiesList.length > 0 ? technologiesList : [{ es: "", en: "" }];
     }
     setCrudFormData(formData);
     setEventUrl(currentItem.passline_url || "");
@@ -980,29 +1061,92 @@ function Admin() {
             delete workExpData.location_en;
             delete workExpData.description_es;
             delete workExpData.description_en;
-            if (typeof workExpData.responsibilities === "string") {
+
+            // Convertir responsabilidades_list a array de objetos {es, en} para guardar traducciones
+            if (
+              workExpData.responsibilities_list &&
+              Array.isArray(workExpData.responsibilities_list)
+            ) {
+              workExpData.responsibilities = workExpData.responsibilities_list
+                .filter(
+                  (item: { es?: string; en?: string }) =>
+                    (item.es && item.es.trim() !== "") ||
+                    (item.en && item.en.trim() !== "")
+                )
+                .map((item: { es?: string; en?: string }) => ({
+                  es: item.es || "",
+                  en: item.en || "",
+                }));
+            } else if (typeof workExpData.responsibilities === "string") {
               try {
-                workExpData.responsibilities = JSON.parse(
-                  workExpData.responsibilities
-                );
+                const parsed = JSON.parse(workExpData.responsibilities);
+                if (Array.isArray(parsed)) {
+                  workExpData.responsibilities = parsed.map((item: any) => {
+                    if (typeof item === "string") {
+                      return { es: item, en: item };
+                    } else if (item && typeof item === "object") {
+                      return { es: item.es || "", en: item.en || "" };
+                    }
+                    return { es: "", en: "" };
+                  });
+                } else {
+                  workExpData.responsibilities = [];
+                }
               } catch (e) {
-                // Si falla, intentar como array separado por comas
+                // Si falla, convertir a array de objetos
                 workExpData.responsibilities = workExpData.responsibilities
                   .split(",")
-                  .map((s: string) => s.trim())
-                  .filter((s: string) => s.length > 0);
+                  .map((s: string) => {
+                    const trimmed = s.trim();
+                    return trimmed ? { es: trimmed, en: trimmed } : null;
+                  })
+                  .filter((item: any) => item !== null);
               }
             }
-            if (typeof workExpData.technologies === "string") {
+            delete workExpData.responsibilities_list;
+
+            // Convertir technologies_list a array de objetos {es, en} para guardar traducciones
+            if (
+              workExpData.technologies_list &&
+              Array.isArray(workExpData.technologies_list)
+            ) {
+              workExpData.technologies = workExpData.technologies_list
+                .filter(
+                  (item: { es?: string; en?: string }) =>
+                    (item.es && item.es.trim() !== "") ||
+                    (item.en && item.en.trim() !== "")
+                )
+                .map((item: { es?: string; en?: string }) => ({
+                  es: item.es || "",
+                  en: item.en || "",
+                }));
+            } else if (typeof workExpData.technologies === "string") {
               try {
-                workExpData.technologies = JSON.parse(workExpData.technologies);
+                const parsed = JSON.parse(workExpData.technologies);
+                if (Array.isArray(parsed)) {
+                  workExpData.technologies = parsed.map((item: any) => {
+                    if (typeof item === "string") {
+                      return { es: item, en: item };
+                    } else if (item && typeof item === "object") {
+                      return { es: item.es || "", en: item.en || "" };
+                    }
+                    return { es: "", en: "" };
+                  });
+                } else {
+                  workExpData.technologies = [];
+                }
               } catch (e) {
+                // Si falla, convertir a array de objetos
                 workExpData.technologies = workExpData.technologies
                   .split(",")
-                  .map((s: string) => s.trim())
-                  .filter((s: string) => s.length > 0);
+                  .map((s: string) => {
+                    const trimmed = s.trim();
+                    return trimmed ? { es: trimmed, en: trimmed } : null;
+                  })
+                  .filter((item: any) => item !== null);
               }
             }
+            delete workExpData.technologies_list;
             await updateWorkExperience(editingItem.id, workExpData);
             break;
           case "technologies":
@@ -1256,13 +1400,25 @@ function Admin() {
             delete newWorkExpData.location_en;
             delete newWorkExpData.description_es;
             delete newWorkExpData.description_en;
-            if (typeof newWorkExpData.responsibilities === "string") {
+
+            // Convertir responsabilidades_list a array de strings (usar ES por defecto, o EN si ES está vacío)
+            if (
+              newWorkExpData.responsibilities_list &&
+              Array.isArray(newWorkExpData.responsibilities_list)
+            ) {
+              newWorkExpData.responsibilities =
+                newWorkExpData.responsibilities_list
+                  .map((item: { es?: string; en?: string }) => {
+                    const lang = useLanguageStore.getState().language;
+                    return item[lang] || item.es || item.en || "";
+                  })
+                  .filter((s: string) => s.trim() !== "");
+            } else if (typeof newWorkExpData.responsibilities === "string") {
               try {
                 newWorkExpData.responsibilities = JSON.parse(
                   newWorkExpData.responsibilities
                 );
               } catch (e) {
-                // Si falla, intentar como array separado por comas
                 newWorkExpData.responsibilities =
                   newWorkExpData.responsibilities
                     .split(",")
@@ -1270,7 +1426,20 @@ function Admin() {
                     .filter((s: string) => s.length > 0);
               }
             }
-            if (typeof newWorkExpData.technologies === "string") {
+            delete newWorkExpData.responsibilities_list;
+
+            // Convertir technologies_list a array de strings
+            if (
+              newWorkExpData.technologies_list &&
+              Array.isArray(newWorkExpData.technologies_list)
+            ) {
+              newWorkExpData.technologies = newWorkExpData.technologies_list
+                .map((item: { es?: string; en?: string }) => {
+                  const lang = useLanguageStore.getState().language;
+                  return item[lang] || item.es || item.en || "";
+                })
+                .filter((s: string) => s.trim() !== "");
+            } else if (typeof newWorkExpData.technologies === "string") {
               try {
                 newWorkExpData.technologies = JSON.parse(
                   newWorkExpData.technologies
@@ -1282,6 +1451,7 @@ function Admin() {
                   .filter((s: string) => s.length > 0);
               }
             }
+            delete newWorkExpData.technologies_list;
             await createWorkExperience(newWorkExpData);
             break;
           case "technologies":
@@ -3682,44 +3852,221 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Responsabilidades (JSON Array)
+                        {t("admin.fieldResponsibilities")}
                       </label>
-                      <textarea
-                        value={crudFormData.responsibilities || "[]"}
-                        onChange={(e) =>
+                      {(
+                        crudFormData.responsibilities_list || [
+                          { es: "", en: "" },
+                        ]
+                      ).map(
+                        (item: { es: string; en: string }, index: number) => (
+                          <div
+                            key={index}
+                            className="mb-3 p-3 bg-gray-800 rounded-lg border border-gray-700"
+                          >
+                            <div className="grid grid-cols-2 gap-3 mb-2">
+                              <div>
+                                <label className="block text-gray-400 text-xs mb-1">
+                                  Español
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.es || ""}
+                                  onChange={(e) => {
+                                    const newList = [
+                                      ...(crudFormData.responsibilities_list || [
+                                        { es: "", en: "" },
+                                      ]),
+                                    ];
+                                    newList[index] = {
+                                      ...newList[index],
+                                      es: e.target.value,
+                                    };
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      responsibilities_list: newList,
+                                    });
+                                  }}
+                                  className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm"
+                                  placeholder="Ej: Desarrollar APIs"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-gray-400 text-xs mb-1">
+                                  English
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.en || ""}
+                                  onChange={(e) => {
+                                    const newList = [
+                                      ...(crudFormData.responsibilities_list || [
+                                        { es: "", en: "" },
+                                      ]),
+                                    ];
+                                    newList[index] = {
+                                      ...newList[index],
+                                      en: e.target.value,
+                                    };
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      responsibilities_list: newList,
+                                    });
+                                  }}
+                                  className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm"
+                                  placeholder="Ej: Develop APIs"
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newList = [
+                                  ...(crudFormData.responsibilities_list || [
+                                    { es: "", en: "" },
+                                  ]),
+                                ];
+                                newList.splice(index, 1);
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  responsibilities_list:
+                                    newList.length > 0
+                                      ? newList
+                                      : [{ es: "", en: "" }],
+                                });
+                              }}
+                              className="text-red-400 hover:text-red-300 text-xs"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        )
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
                           setCrudFormData({
                             ...crudFormData,
-                            responsibilities: e.target.value,
-                          })
-                        }
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-sm"
-                        rows={5}
-                        placeholder='["Responsabilidad 1", "Responsabilidad 2", ...]'
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Formato JSON: ["Item 1", "Item 2", "Item 3"]
-                      </p>
+                            responsibilities_list: [
+                              ...(crudFormData.responsibilities_list || [
+                                { es: "", en: "" },
+                              ]),
+                              { es: "", en: "" },
+                            ],
+                          });
+                        }}
+                        className="mt-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded"
+                      >
+                        + Agregar Responsabilidad
+                      </button>
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Tecnologías (JSON Array) *
+                        {t("admin.fieldTechnologies")} *
                       </label>
-                      <textarea
-                        value={crudFormData.technologies || "[]"}
-                        onChange={(e) =>
+                      {(
+                        crudFormData.technologies_list || [{ es: "", en: "" }]
+                      ).map(
+                        (item: { es: string; en: string }, index: number) => (
+                          <div
+                            key={index}
+                            className="mb-3 p-3 bg-gray-800 rounded-lg border border-gray-700"
+                          >
+                            <div className="grid grid-cols-2 gap-3 mb-2">
+                              <div>
+                                <label className="block text-gray-400 text-xs mb-1">
+                                  Español
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.es || ""}
+                                  onChange={(e) => {
+                                    const newList = [
+                                      ...(crudFormData.technologies_list || [
+                                        { es: "", en: "" },
+                                      ]),
+                                    ];
+                                    newList[index] = {
+                                      ...newList[index],
+                                      es: e.target.value,
+                                    };
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      technologies_list: newList,
+                                    });
+                                  }}
+                                  className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm"
+                                  placeholder="Ej: TypeScript"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-gray-400 text-xs mb-1">
+                                  English
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.en || ""}
+                                  onChange={(e) => {
+                                    const newList = [
+                                      ...(crudFormData.technologies_list || [
+                                        { es: "", en: "" },
+                                      ]),
+                                    ];
+                                    newList[index] = {
+                                      ...newList[index],
+                                      en: e.target.value,
+                                    };
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      technologies_list: newList,
+                                    });
+                                  }}
+                                  className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm"
+                                  placeholder="Ej: TypeScript"
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newList = [
+                                  ...(crudFormData.technologies_list || [
+                                    { es: "", en: "" },
+                                  ]),
+                                ];
+                                newList.splice(index, 1);
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  technologies_list:
+                                    newList.length > 0
+                                      ? newList
+                                      : [{ es: "", en: "" }],
+                                });
+                              }}
+                              className="text-red-400 hover:text-red-300 text-xs"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        )
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
                           setCrudFormData({
                             ...crudFormData,
-                            technologies: e.target.value,
-                          })
-                        }
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-sm"
-                        rows={5}
-                        placeholder='["TypeScript", "React", "Node.js", ...]'
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Formato JSON: ["Tech 1", "Tech 2", "Tech 3"]
-                      </p>
+                            technologies_list: [
+                              ...(crudFormData.technologies_list || [
+                                { es: "", en: "" },
+                              ]),
+                              { es: "", en: "" },
+                            ],
+                          });
+                        }}
+                        className="mt-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded"
+                      >
+                        + Agregar Tecnología
+                      </button>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>

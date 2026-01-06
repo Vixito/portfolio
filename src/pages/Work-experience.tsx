@@ -54,38 +54,53 @@ function WorkExperience() {
               company_translations: exp.company_translations,
             });
 
-            // Parsear responsabilidades si vienen como string JSON
+            // Parsear responsabilidades - pueden venir como array de strings o array de objetos {es, en}
             let responsibilities: string[] = [];
             if (exp.responsibilities) {
               if (Array.isArray(exp.responsibilities)) {
-                responsibilities = exp.responsibilities;
-                console.log(
-                  "✅ Responsibilities already array:",
-                  responsibilities
-                );
+                // Si es array, verificar si son objetos con traducciones o strings simples
+                responsibilities = exp.responsibilities
+                  .map((resp: any) => {
+                    if (typeof resp === "string") {
+                      return resp;
+                    } else if (
+                      resp &&
+                      typeof resp === "object" &&
+                      (resp.es || resp.en)
+                    ) {
+                      // Es un objeto con traducciones, usar getTranslatedText
+                      return getTranslatedText(resp, language);
+                    }
+                    return "";
+                  })
+                  .filter((s: string) => s.trim() !== "");
               } else if (typeof exp.responsibilities === "string") {
                 const trimmed = exp.responsibilities.trim();
-                console.log("🔤 Responsibilities as string:", trimmed);
                 // Intentar parsear como JSON primero
                 if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
                   try {
                     const parsed = JSON.parse(trimmed);
-                    console.log("📦 Parsed JSON:", parsed);
                     if (Array.isArray(parsed)) {
-                      responsibilities = parsed;
+                      responsibilities = parsed
+                        .map((resp: any) => {
+                          if (typeof resp === "string") {
+                            return resp;
+                          } else if (
+                            resp &&
+                            typeof resp === "object" &&
+                            (resp.es || resp.en)
+                          ) {
+                            return getTranslatedText(resp, language);
+                          }
+                          return "";
+                        })
+                        .filter((s: string) => s.trim() !== "");
                     } else if (parsed && typeof parsed === "object") {
-                      // Si es un objeto, intentar extraer valores
                       responsibilities = Object.values(parsed).filter(
                         (v) => typeof v === "string" && v.trim() !== ""
                       ) as string[];
                     }
                   } catch (e) {
-                    console.warn(
-                      "❌ Error parsing responsibilities JSON:",
-                      e,
-                      "Raw:",
-                      trimmed
-                    );
                     // Si falla el parseo JSON, intentar como texto separado
                     responsibilities = trimmed
                       .split(/[,\n]/)
@@ -102,17 +117,47 @@ function WorkExperience() {
               }
             }
 
-            console.log("✅ Final responsibilities:", responsibilities);
-
-            // Parsear tecnologías si vienen como string JSON
+            // Parsear tecnologías - pueden venir como array de strings o array de objetos {es, en}
             let technologies: string[] = [];
             if (exp.technologies) {
               if (Array.isArray(exp.technologies)) {
-                technologies = exp.technologies;
+                // Si es array, verificar si son objetos con traducciones o strings simples
+                technologies = exp.technologies
+                  .map((tech: any) => {
+                    if (typeof tech === "string") {
+                      return tech;
+                    } else if (
+                      tech &&
+                      typeof tech === "object" &&
+                      (tech.es || tech.en)
+                    ) {
+                      // Es un objeto con traducciones, usar getTranslatedText
+                      return getTranslatedText(tech, language);
+                    }
+                    return "";
+                  })
+                  .filter((s: string) => s.trim() !== "");
               } else if (typeof exp.technologies === "string") {
                 try {
                   const parsed = JSON.parse(exp.technologies);
-                  technologies = Array.isArray(parsed) ? parsed : [];
+                  if (Array.isArray(parsed)) {
+                    technologies = parsed
+                      .map((tech: any) => {
+                        if (typeof tech === "string") {
+                          return tech;
+                        } else if (
+                          tech &&
+                          typeof tech === "object" &&
+                          (tech.es || tech.en)
+                        ) {
+                          return getTranslatedText(tech, language);
+                        }
+                        return "";
+                      })
+                      .filter((s: string) => s.trim() !== "");
+                  } else {
+                    technologies = [];
+                  }
                 } catch (e) {
                   technologies = exp.technologies
                     .split(/[,\n]/)
