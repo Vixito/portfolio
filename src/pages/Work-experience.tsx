@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import Button from "../components/ui/Button";
 import { getWorkExperiences } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
+import { useLanguageStore } from "../stores/useLanguageStore";
 
 interface WorkExperience {
   id: string;
@@ -26,6 +27,7 @@ interface WorkExperience {
 
 function WorkExperience() {
   const { t } = useTranslation();
+  const { language } = useLanguageStore();
   const [experiences, setExperiences] = useState<WorkExperience[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedExperience, setSelectedExperience] =
@@ -46,12 +48,19 @@ function WorkExperience() {
               if (Array.isArray(exp.responsibilities)) {
                 responsibilities = exp.responsibilities;
               } else if (typeof exp.responsibilities === "string") {
-                try {
-                  const parsed = JSON.parse(exp.responsibilities);
-                  responsibilities = Array.isArray(parsed) ? parsed : [];
-                } catch (e) {
-                  // Si no es JSON válido, intentar como array separado por comas o líneas
-                  responsibilities = exp.responsibilities
+                const trimmed = exp.responsibilities.trim();
+                if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                  // Es un JSON array
+                  try {
+                    const parsed = JSON.parse(trimmed);
+                    responsibilities = Array.isArray(parsed) ? parsed : [];
+                  } catch (e) {
+                    console.warn("Error parsing responsibilities JSON:", e);
+                    responsibilities = [];
+                  }
+                } else {
+                  // Intentar como array separado por comas o líneas
+                  responsibilities = trimmed
                     .split(/[,\n]/)
                     .map((s: string) => s.trim())
                     .filter((s: string) => s.length > 0);
@@ -282,7 +291,7 @@ function WorkExperience() {
                                 {new Date(
                                   experience.startDate
                                 ).toLocaleDateString(
-                                  t("language") === "es" ? "es-ES" : "en-US",
+                                  language === "es" ? "es-ES" : "en-US",
                                   {
                                     year: "numeric",
                                     month: "long",
@@ -293,9 +302,7 @@ function WorkExperience() {
                                   ? new Date(
                                       experience.endDate
                                     ).toLocaleDateString(
-                                      t("language") === "es"
-                                        ? "es-ES"
-                                        : "en-US",
+                                      language === "es" ? "es-ES" : "en-US",
                                       {
                                         year: "numeric",
                                         month: "long",
