@@ -21,8 +21,11 @@ interface ProductPricing {
 interface StoreItem {
   id: string;
   title: string;
+  title_translations?: { es?: string; en?: string } | null;
   description: string | null;
+  description_translations?: { es?: string; en?: string } | null;
   full_description: string | null;
+  full_description_translations?: { es?: string; en?: string } | null;
   base_price_usd: number;
   base_price_cop: number | null;
   thumbnail_url: string | null;
@@ -73,13 +76,17 @@ function Store() {
         setLoading(true);
         const products = await getProductsWithPricing();
 
-        // Mapear productos de Supabase a StoreItem
+        // Mapear productos de Supabase a StoreItem, preservando campos de traducción
         const mappedItems: StoreItem[] = (products || []).map(
           (product: any) => ({
             id: product.id,
             title: product.title,
+            title_translations: product.title_translations,
             description: product.description,
+            description_translations: product.description_translations,
             full_description: product.full_description,
+            full_description_translations:
+              product.full_description_translations,
             base_price_usd: Number(product.base_price_usd || 0),
             base_price_cop: product.base_price_cop
               ? Number(product.base_price_cop)
@@ -339,14 +346,15 @@ function Store() {
                     className="text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-purple transition-colors"
                     onClick={() => handleItemClick(item)}
                   >
-                    {getTranslatedText(item.title as any)}
+                    {getTranslatedText(item.title_translations || item.title)}
                   </h3>
                   <div
                     className="text-gray-600 text-sm mb-4 line-clamp-2 prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{
                       __html:
-                        getTranslatedText(item.description as any) ||
-                        t("common.noContent"),
+                        getTranslatedText(
+                          item.description_translations || item.description
+                        ) || t("common.noContent"),
                     }}
                   />
                   <div className="flex items-center justify-between">
@@ -384,7 +392,9 @@ function Store() {
           <Modal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
-            title={getTranslatedText(selectedItem.title as any)}
+            title={getTranslatedText(
+              selectedItem.title_translations || selectedItem.title
+            )}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Imágenes */}
@@ -395,7 +405,9 @@ function Store() {
                       selectedItem.thumbnail_url ||
                       "https://tu-cdn.cloudfront.net/default-store-thumbnail.png"
                     }
-                    alt={getTranslatedText(selectedItem.title as any)}
+                    alt={getTranslatedText(
+                      selectedItem.title_translations || selectedItem.title
+                    )}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -428,9 +440,13 @@ function Store() {
                     dangerouslySetInnerHTML={{
                       __html:
                         getTranslatedText(
-                          selectedItem.full_description as any
+                          selectedItem.full_description_translations ||
+                            selectedItem.full_description
                         ) ||
-                        getTranslatedText(selectedItem.description as any) ||
+                        getTranslatedText(
+                          selectedItem.description_translations ||
+                            selectedItem.description
+                        ) ||
                         t("common.noContent"),
                     }}
                   />

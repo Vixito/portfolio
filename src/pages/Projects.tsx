@@ -8,6 +8,7 @@ import { useTranslation, getTranslatedText } from "../lib/i18n";
 interface Project {
   id: string;
   title: string;
+  title_translations?: { es?: string; en?: string } | null;
   url: string;
   repository?: string;
   month: string;
@@ -137,7 +138,7 @@ function ProjectCard({ project }: { project: Project }) {
             <img
               src={project.thumbnail}
               alt={getTranslatedText(
-                (project as any).title_translations || project.title
+                project.title_translations || project.title
               )}
               className="w-full h-full object-cover"
               loading="lazy"

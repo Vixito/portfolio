@@ -7,12 +7,17 @@ import { useTranslation, getTranslatedText } from "../lib/i18n";
 interface Client {
   id: string;
   name: string;
+  name_translations?: { es?: string; en?: string } | null;
   logo: string;
   description: string;
+  description_translations?: { es?: string; en?: string } | null;
   url: string;
   testimonial_content?: string;
+  testimonial_content_translations?: { es?: string; en?: string } | null;
   testimonial_author?: string;
+  testimonial_author_translations?: { es?: string; en?: string } | null;
   testimonial_role?: string;
+  testimonial_role_translations?: { es?: string; en?: string } | null;
   testimonial_url?: string;
 }
 
@@ -47,38 +52,66 @@ function Clients() {
       try {
         setLoading(true);
         const clientsData = await getClients();
-        setClients(clientsData || []);
+
+        // Mapear datos de Supabase al formato de la interfaz, preservando campos de traducción
+        const mappedClients: Client[] = (clientsData || []).map(
+          (client: any) => ({
+            id: client.id,
+            name: client.name,
+            name_translations: client.name_translations,
+            logo: client.logo,
+            description: client.description,
+            description_translations: client.description_translations,
+            url: client.url,
+            testimonial_content: client.testimonial_content,
+            testimonial_content_translations:
+              client.testimonial_content_translations,
+            testimonial_author: client.testimonial_author,
+            testimonial_author_translations:
+              client.testimonial_author_translations,
+            testimonial_role: client.testimonial_role,
+            testimonial_role_translations: client.testimonial_role_translations,
+            testimonial_url: client.testimonial_url,
+          })
+        );
+
+        setClients(mappedClients);
 
         // Extraer testimonios de los clientes que los tengan
-        const testimonialsData = (clientsData || [])
-          .filter(
-            (client: any) =>
-              client.testimonial_content ||
-              client.testimonial_content_translations
-          )
-          .map((client: any) => ({
-            id: client.id,
-            clientName: getTranslatedText(
-              client.name_translations || client.name
-            ),
-            clientLogo: client.logo,
-            content: getTranslatedText(
+        // Filtrar solo aquellos que tienen contenido real después de traducir
+        const testimonialsData = mappedClients
+          .map((client) => {
+            const content = getTranslatedText(
               client.testimonial_content_translations ||
                 client.testimonial_content ||
                 ""
-            ),
-            author: getTranslatedText(
-              client.testimonial_author_translations ||
-                client.testimonial_author ||
-                ""
-            ),
-            role: getTranslatedText(
-              client.testimonial_role_translations ||
-                client.testimonial_role ||
-                ""
-            ),
-            url: client.testimonial_url,
-          }));
+            );
+            // Solo incluir si el contenido traducido no está vacío
+            if (!content || content.trim() === "") return null;
+
+            return {
+              id: client.id,
+              clientName: getTranslatedText(
+                client.name_translations || client.name
+              ),
+              clientLogo: client.logo,
+              content: content,
+              author: getTranslatedText(
+                client.testimonial_author_translations ||
+                  client.testimonial_author ||
+                  ""
+              ),
+              role: getTranslatedText(
+                client.testimonial_role_translations ||
+                  client.testimonial_role ||
+                  ""
+              ),
+              url: client.testimonial_url,
+            };
+          })
+          .filter(
+            (testimonial): testimonial is Testimonial => testimonial !== null
+          );
         setTestimonials(testimonialsData);
       } catch (error) {
         console.error(t("clients.errorLoadingClients"), error);
@@ -176,7 +209,7 @@ function Clients() {
                           <img
                             src={client.logo}
                             alt={getTranslatedText(
-                              (client as any).name_translations || client.name
+                              client.name_translations || client.name
                             )}
                             className="max-w-full max-h-full object-contain"
                             loading="lazy"
@@ -222,7 +255,7 @@ function Clients() {
                           <img
                             src={client.logo}
                             alt={getTranslatedText(
-                              (client as any).name_translations || client.name
+                              client.name_translations || client.name
                             )}
                             className="max-w-full max-h-full object-contain"
                             loading="lazy"
@@ -268,7 +301,7 @@ function Clients() {
                           <img
                             src={client.logo}
                             alt={getTranslatedText(
-                              (client as any).name_translations || client.name
+                              client.name_translations || client.name
                             )}
                             className="max-w-full max-h-full object-contain"
                             loading="lazy"
@@ -303,7 +336,7 @@ function Clients() {
                       <img
                         src={client.logo}
                         alt={getTranslatedText(
-                          (client as any).name_translations || client.name
+                          client.name_translations || client.name
                         )}
                         className="w-16 h-16 object-contain"
                         loading="lazy"
@@ -323,13 +356,12 @@ function Clients() {
                     <div className="flex-1">
                       <h3 className="text-xl font-semibold text-gray-900 mb-1">
                         {getTranslatedText(
-                          (client as any).name_translations || client.name
+                          client.name_translations || client.name
                         )}
                       </h3>
                       <p className="text-gray-600">
                         {getTranslatedText(
-                          (client as any).description_translations ||
-                            client.description
+                          client.description_translations || client.description
                         )}
                       </p>
                     </div>
@@ -413,9 +445,12 @@ function Clients() {
                       </div>
 
                       {/* Contenido del testimonio */}
-                      <p className="text-gray-700 mb-4 italic leading-relaxed">
-                        "{testimonial.content}"
-                      </p>
+                      {testimonial.content &&
+                        testimonial.content.trim() !== "" && (
+                          <p className="text-gray-700 mb-4 italic leading-relaxed">
+                            "{testimonial.content}"
+                          </p>
+                        )}
 
                       {/* Autor */}
                       <div className="border-t border-gray-200 pt-4">
