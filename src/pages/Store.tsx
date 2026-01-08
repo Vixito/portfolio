@@ -386,8 +386,14 @@ function Store() {
                     {item.button_type === "buy" &&
                     item.buy_button_type === "external_link" &&
                     Array.isArray(item.buy_button_url) &&
-                    item.buy_button_url.length > 1 ? (
-                      // Si hay múltiples links, mostrar botón que abre modal
+                    (item.buy_button_url.length > 1 ||
+                      item.buy_button_url.some(
+                        (link: any) =>
+                          link.simultaneous_urls &&
+                          Array.isArray(link.simultaneous_urls) &&
+                          link.simultaneous_urls.length > 0
+                      )) ? (
+                      // Si hay múltiples links O links simultáneos, mostrar botón que abre modal
                       <Button
                         variant="outline"
                         onClick={(e) => {
@@ -407,9 +413,10 @@ function Store() {
                             item.button_type === "buy" &&
                             item.buy_button_type === "external_link" &&
                             Array.isArray(item.buy_button_url) &&
-                            item.buy_button_url.length === 1
+                            item.buy_button_url.length === 1 &&
+                            !item.buy_button_url[0].simultaneous_urls
                           ) {
-                            // Si hay un solo link en array, abrirlo directamente
+                            // Si hay un solo link en array sin simultaneous_urls, abrirlo directamente
                             handleAction(item, item.buy_button_url[0].url);
                           } else {
                             handleItemClick(item);
@@ -543,8 +550,6 @@ function Store() {
                             className="w-full"
                           >
                             {link.label || `${t("store.buy")} - ${index + 1}`}
-                            {hasSimultaneous &&
-                              ` (+${link.simultaneous_urls.length})`}
                           </Button>
                         );
                       }

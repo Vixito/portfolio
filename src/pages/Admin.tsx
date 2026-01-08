@@ -421,6 +421,8 @@ function Admin() {
   };
 
   const handleEdit = async (item: any) => {
+    // Recargar datos primero para asegurar que tenemos la versión más reciente
+    await loadCRUDData();
     // Buscar el item actualizado de la lista para asegurar que tenemos los datos más recientes
     let currentItem = item;
     switch (activeTab) {
@@ -1589,12 +1591,13 @@ function Admin() {
             break;
         }
       }
-      await loadCRUDData();
+      // Cerrar modal primero
       setShowCRUDModal(false);
-      // Recargar datos después de guardar
-      await loadCRUDData();
       setEditingItem(null);
       setCrudFormData({});
+      // Recargar datos después de guardar (con un pequeño delay para asegurar que el servidor procesó)
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await loadCRUDData();
       alert(
         editingItem
           ? "Elemento actualizado exitosamente"
