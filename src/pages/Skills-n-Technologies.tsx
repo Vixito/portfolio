@@ -17,7 +17,8 @@ interface Technology {
     | "music"
     | "other";
   level: "beginner" | "intermediate" | "advanced" | "expert";
-  icon?: string; // URL desde S3/CloudFront o nombre de icono
+  icon?: string; // URL desde S3/CloudFront o nombre de icono (legacy)
+  badge_url?: string; // URL del badge (shields.io u otro servicio)
   yearsOfExperience?: number;
 }
 
@@ -55,6 +56,7 @@ function SkillsNTechnologies() {
               category: tech.category,
               level: tech.level,
               icon: tech.icon,
+              badge_url: tech.badge_url,
               yearsOfExperience: yearsOfExperience,
             };
           }
@@ -374,19 +376,30 @@ function SkillsNTechnologies() {
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      {tech.icon && (
+                      {tech.badge_url ? (
+                        // Mostrar badge si existe badge_url
                         <img
-                          src={tech.icon}
+                          src={tech.badge_url}
                           alt={getTranslatedText(
                             tech.name_translations || tech.name
                           )}
-                          className="w-8 h-8 object-contain"
+                          className="h-6 object-contain"
                           onError={(e) => {
+                            // Fallback a texto si el badge falla
                             e.currentTarget.style.display = "none";
+                            const fallback = e.currentTarget
+                              .nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = "inline";
                           }}
                         />
-                      )}
-                      <span className="font-semibold text-gray-900">
+                      ) : null}
+                      {/* Fallback: mostrar texto si no hay badge o si el badge falla */}
+                      <span
+                        className={`font-semibold text-gray-900 ${
+                          tech.badge_url ? "hidden" : ""
+                        }`}
+                        style={{ display: tech.badge_url ? "none" : "inline" }}
+                      >
                         {getTranslatedText(tech.name_translations || tech.name)}
                       </span>
                     </div>

@@ -34,7 +34,7 @@ interface StoreItem {
   // Nueva estructura de botones
   button_type?: "buy" | "request";
   buy_button_type?: "external_link" | "custom_checkout";
-  buy_button_url?: string | null;
+  buy_button_url?: string | Array<{ label: string; url: string }> | null; // Puede ser string (legacy), array de links, o null
   request_button_type?: "external_link" | "custom_form";
   request_button_url?: string | null;
   // Campos antiguos (mantener por compatibilidad durante migración)
@@ -130,21 +130,29 @@ function Store() {
     setIsModalOpen(true);
   };
 
-  const handleAction = (item: StoreItem) => {
+  const handleAction = (item: StoreItem, linkUrl?: string) => {
     const buttonType = item.button_type || "buy";
 
     if (buttonType === "buy") {
       // Botón "Comprar"
       const buyType = item.buy_button_type || "external_link";
-      const buyUrl = item.buy_button_url;
 
       if (buyType === "external_link") {
-        // Link externo (Amazon, Hotmart, etc.)
-        if (buyUrl) {
-          window.open(buyUrl, "_blank", "noopener,noreferrer");
+        // Link externo (puede ser múltiple)
+        const urlToOpen =
+          linkUrl ||
+          (typeof item.buy_button_url === "string"
+            ? item.buy_button_url
+            : null);
+        if (urlToOpen) {
+          window.open(urlToOpen, "_blank", "noopener,noreferrer");
         }
       } else if (buyType === "custom_checkout") {
         // Checkout propio (/checkout/:id)
+        const buyUrl =
+          typeof item.buy_button_url === "string"
+            ? item.buy_button_url
+            : item.id;
         const checkoutUrl = `/checkout/${buyUrl || item.id}`;
         window.location.href = checkoutUrl;
       }
@@ -356,16 +364,43 @@ function Store() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex-1">{formatPrice(item)}</div>
-                    <Button
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAction(item);
-                      }}
-                      className="px-4 py-2 cursor-pointer"
-                    >
-                      {getButtonText(item)}
-                    </Button>
+                    {item.button_type === "buy" &&
+                    item.buy_button_type === "external_link" &&
+                    Array.isArray(item.buy_button_url) &&
+                    item.buy_button_url.length > 1 ? (
+                      // Si hay múltiples links, mostrar botón que abre modal
+                      <Button
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleItemClick(item);
+                        }}
+                        className="px-4 py-2 cursor-pointer text-sm"
+                      >
+                        {t("store.buy")}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (
+                            item.button_type === "buy" &&
+                            item.buy_button_type === "external_link" &&
+                            Array.isArray(item.buy_button_url) &&
+                            item.buy_button_url.length === 1
+                          ) {
+                            // Si hay un solo link en array, abrirlo directamente
+                            handleAction(item, item.buy_button_url[0].url);
+                          } else {
+                            handleItemClick(item);
+                          }
+                        }}
+                        className="px-4 py-2 cursor-pointer text-sm"
+                      >
+                        {getButtonText(item)}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -446,16 +481,51 @@ function Store() {
                 </div>
 
                 <div className="space-y-3">
-                  <Button
-                    variant="primary"
-                    onClick={() => {
-                      handleAction(selectedItem);
-                      setIsModalOpen(false);
-                    }}
-                    className="w-full"
-                  >
-                    {getButtonText(selectedItem)}
-                  </Button>
+                  {selectedItem.button_type === "buy" &&
+                  selectedItem.buy_button_type === "external_link" &&
+                  Array.isArray(selectedItem.buy_button_url) &&
+                  selectedItem.buy_button_url.length > 0 ? (
+                    // Múltiples botones para links externos
+                    selectedItem.buy_button_url.map((link, index) => (
+                      <Button
+                        key={index}
+                        variant={index === 0 ? "primary" : "outline"}
+                        onClick={() => {
+                          handleAction(selectedItem, link.url);
+                          setIsModalOpen(false);
+                        }}
+                        className="w-full"
+                      >
+                        {link.label || `${t("store.buy")} - ${index + 1}`}
+                      </Button>
+                    ))
+                  ) : selectedItem.button_type === "buy" &&
+                    selectedItem.buy_button_type === "external_link" &&
+                    typeof selectedItem.buy_button_url === "string" ? (
+                    // Un solo link (legacy)
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        handleAction(selectedItem);
+                        setIsModalOpen(false);
+                      }}
+                      className="w-full"
+                    >
+                      {getButtonText(selectedItem)}
+                    </Button>
+                  ) : (
+                    // Otros tipos de botones
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        handleAction(selectedItem);
+                        setIsModalOpen(false);
+                      }}
+                      className="w-full"
+                    >
+                      {getButtonText(selectedItem)}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

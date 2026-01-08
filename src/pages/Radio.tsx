@@ -66,6 +66,11 @@ function Radio() {
     import.meta.env.VITE_ICECAST_STATUS_URL ||
     "http://localhost:8000/status-json.xsl";
 
+  // Configuración de AzuraCast (para cuando no esté en transmisión)
+  const AZURACAST_BASE_URL = import.meta.env.VITE_AZURACAST_BASE_URL || "";
+  const AZURACAST_API_KEY = import.meta.env.VITE_AZURACAST_API_KEY || "";
+  const AZURACAST_STATION_ID = import.meta.env.VITE_AZURACAST_STATION_ID || "1";
+
   // Cargar metadata del stream de Icecast y verificar si está en vivo
   useEffect(() => {
     let isMounted = true;
@@ -112,8 +117,50 @@ function Radio() {
             url: ICECAST_STREAM_URL,
           });
         } else {
-          // La radio no está activa
+          // La radio no está activa, intentar conectar con AzuraCast
           setIsLive(false);
+
+          // Intentar obtener información de AzuraCast si está configurado
+          if (AZURACAST_BASE_URL && AZURACAST_API_KEY) {
+            try {
+              const azuracastResponse = await fetch(
+                `${AZURACAST_BASE_URL}/api/nowplaying/${AZURACAST_STATION_ID}`,
+                {
+                  headers: {
+                    "X-API-Key": AZURACAST_API_KEY,
+                  },
+                  signal: controller.signal,
+                }
+              );
+
+              if (azuracastResponse.ok) {
+                const azuracastData = await azuracastResponse.json();
+                const nowPlaying = azuracastData.now_playing;
+
+                if (nowPlaying && nowPlaying.song) {
+                  setCurrentSong({
+                    id: "azuracast",
+                    title: nowPlaying.song.title || t("radio.offlineTitle"),
+                    artist: nowPlaying.song.artist || t("radio.waiting"),
+                    url:
+                      nowPlaying.station.listen_url ||
+                      `${AZURACAST_BASE_URL}/radio/${AZURACAST_STATION_ID}`,
+                  });
+                  return; // Salir temprano si AzuraCast funciona
+                }
+              }
+            } catch (azuracastError) {
+              // Silenciar errores de AzuraCast, continuar con fallback
+              if (import.meta.env.DEV) {
+                console.debug(
+                  "Error al conectar con AzuraCast:",
+                  azuracastError
+                );
+              }
+            }
+          }
+
+          // Fallback: mostrar estado offline
           setCurrentSong({
             id: "offline",
             title: t("radio.offlineTitle"),
@@ -129,12 +176,58 @@ function Radio() {
         if (import.meta.env.DEV) {
           console.debug("Error al cargar metadata de Icecast:", error);
         }
-        // Si no se puede conectar, asumir que está offline
+        // Si no se puede conectar con Icecast, intentar AzuraCast
         setIsLive(false);
+
+        if (AZURACAST_BASE_URL && AZURACAST_API_KEY) {
+          try {
+            const azuracastController = new AbortController();
+            const azuracastTimeout = setTimeout(
+              () => azuracastController.abort(),
+              5000
+            );
+
+            const azuracastResponse = await fetch(
+              `${AZURACAST_BASE_URL}/api/nowplaying/${AZURACAST_STATION_ID}`,
+              {
+                headers: {
+                  "X-API-Key": AZURACAST_API_KEY,
+                },
+                signal: azuracastController.signal,
+              }
+            );
+
+            clearTimeout(azuracastTimeout);
+
+            if (azuracastResponse.ok) {
+              const azuracastData = await azuracastResponse.json();
+              const nowPlaying = azuracastData.now_playing;
+
+              if (nowPlaying && nowPlaying.song) {
+                setCurrentSong({
+                  id: "azuracast",
+                  title: nowPlaying.song.title || t("radio.offlineTitle"),
+                  artist: nowPlaying.song.artist || t("radio.waiting"),
+                  url:
+                    nowPlaying.station.listen_url ||
+                    `${AZURACAST_BASE_URL}/radio/${AZURACAST_STATION_ID}`,
+                });
+                return; // Salir temprano si AzuraCast funciona
+              }
+            }
+          } catch (azuracastError) {
+            // Silenciar errores de AzuraCast
+            if (import.meta.env.DEV) {
+              console.debug("Error al conectar con AzuraCast:", azuracastError);
+            }
+          }
+        }
+
+        // Fallback final: mostrar estado offline
         setCurrentSong({
           id: "offline",
           title: t("radio.offlineTitle"),
-          artist: t("radio.offlineArtist"),
+          artist: t("radio.waiting"),
           url: ICECAST_STREAM_URL,
         });
       }
@@ -152,7 +245,13 @@ function Radio() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [ICECAST_STATUS_URL, ICECAST_STREAM_URL]); // Removido t y language para evitar re-renders constantes
+  }, [
+    ICECAST_STATUS_URL,
+    ICECAST_STREAM_URL,
+    AZURACAST_BASE_URL,
+    AZURACAST_API_KEY,
+    AZURACAST_STATION_ID,
+  ]); // Incluir variables de AzuraCast
 
   // Pausar automáticamente si la radio se desconecta (pero no reproducir automáticamente)
   useEffect(() => {

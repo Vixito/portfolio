@@ -475,6 +475,23 @@ function Admin() {
       );
       formData.full_description_es = fullDescTrans.es;
       formData.full_description_en = fullDescTrans.en;
+
+      // Manejar buy_button_url como array de links externos
+      if (currentItem.buy_button_type === "external_link") {
+        // Si es un string (legacy), convertir a array
+        if (
+          typeof currentItem.buy_button_url === "string" &&
+          currentItem.buy_button_url
+        ) {
+          formData.buy_external_links = [
+            { label: "Link 1", url: currentItem.buy_button_url },
+          ];
+        } else if (Array.isArray(currentItem.buy_button_url)) {
+          formData.buy_external_links = currentItem.buy_button_url;
+        } else {
+          formData.buy_external_links = [];
+        }
+      }
     } else if (activeTab === "projects") {
       const titleTrans = extractTranslations(
         item.title_translations,
@@ -885,6 +902,24 @@ function Admin() {
             delete updateProductData.full_description_es;
             delete updateProductData.full_description_en;
 
+            // Manejar buy_external_links: convertir array a JSONB si es external_link
+            if (updateProductData.buy_button_type === "external_link") {
+              if (
+                updateProductData.buy_external_links &&
+                Array.isArray(updateProductData.buy_external_links)
+              ) {
+                // Filtrar links vacíos y convertir a JSONB
+                const validLinks = updateProductData.buy_external_links.filter(
+                  (link: any) => link && link.url && link.url.trim()
+                );
+                updateProductData.buy_button_url =
+                  validLinks.length > 0 ? validLinks : null;
+              } else {
+                updateProductData.buy_button_url = null;
+              }
+              delete updateProductData.buy_external_links;
+            }
+
             // Determinar moneda y convertir precios
             const priceCurrency = updateProductData.price_currency || "USD";
 
@@ -1223,6 +1258,24 @@ function Admin() {
             delete productData.description_en;
             delete productData.full_description_es;
             delete productData.full_description_en;
+
+            // Manejar buy_external_links: convertir array a JSONB si es external_link
+            if (productData.buy_button_type === "external_link") {
+              if (
+                productData.buy_external_links &&
+                Array.isArray(productData.buy_external_links)
+              ) {
+                // Filtrar links vacíos y convertir a JSONB
+                const validLinks = productData.buy_external_links.filter(
+                  (link: any) => link && link.url && link.url.trim()
+                );
+                productData.buy_button_url =
+                  validLinks.length > 0 ? validLinks : null;
+              } else {
+                productData.buy_button_url = null;
+              }
+              delete productData.buy_external_links;
+            }
 
             // Determinar moneda y convertir precios
             const createPriceCurrency = productData.price_currency || "USD";
@@ -2842,59 +2895,150 @@ function Admin() {
                               value={
                                 crudFormData.buy_button_type || "external_link"
                               }
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const newType = e.target.value;
                                 setCrudFormData({
                                   ...crudFormData,
-                                  buy_button_type: e.target.value,
-                                })
-                              }
+                                  buy_button_type: newType,
+                                  // Limpiar datos según el tipo
+                                  buy_button_url:
+                                    newType === "custom_checkout"
+                                      ? crudFormData.buy_button_url
+                                      : undefined,
+                                  buy_external_links:
+                                    newType === "external_link"
+                                      ? crudFormData.buy_external_links || []
+                                      : undefined,
+                                });
+                              }}
                               className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                               required
                             >
                               <option value="external_link">
-                                Link Externo (Amazon, Hotmart, etc.)
+                                Link Externo (Amazon, Hotmart, Airtm, etc.)
                               </option>
                               <option value="custom_checkout">
                                 Checkout Propio (/checkout/:id)
                               </option>
                             </select>
                           </div>
-                          <div className="mb-4">
-                            <label className="block text-gray-300 text-sm mb-2">
-                              {crudFormData.buy_button_type === "external_link"
-                                ? "URL Externa (Amazon, Hotmart, etc.)"
-                                : "ID del Producto para Checkout (se generará /checkout/:id)"}
-                              *
-                            </label>
-                            <input
-                              type={
-                                crudFormData.buy_button_type === "external_link"
-                                  ? "url"
-                                  : "text"
-                              }
-                              value={crudFormData.buy_button_url || ""}
-                              onChange={(e) =>
-                                setCrudFormData({
-                                  ...crudFormData,
-                                  buy_button_url: e.target.value,
-                                })
-                              }
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                              placeholder={
-                                crudFormData.buy_button_type === "external_link"
-                                  ? "https://amazon.com/..."
-                                  : "producto-123"
-                              }
-                              required
-                            />
-                            {crudFormData.buy_button_type ===
-                              "custom_checkout" && (
+
+                          {crudFormData.buy_button_type === "external_link" && (
+                            <div className="mb-4">
+                              <label className="block text-gray-300 text-sm mb-2">
+                                Links Externos (puedes agregar múltiples) *
+                              </label>
+                              {(crudFormData.buy_external_links || []).map(
+                                (link: any, index: number) => (
+                                  <div key={index} className="mb-3 flex gap-2">
+                                    <input
+                                      type="text"
+                                      placeholder="Etiqueta (ej: Airtm, Amazon, etc.)"
+                                      value={link.label || ""}
+                                      onChange={(e) => {
+                                        const newLinks = [
+                                          ...(crudFormData.buy_external_links ||
+                                            []),
+                                        ];
+                                        newLinks[index] = {
+                                          ...link,
+                                          label: e.target.value,
+                                        };
+                                        setCrudFormData({
+                                          ...crudFormData,
+                                          buy_external_links: newLinks,
+                                        });
+                                      }}
+                                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                    />
+                                    <input
+                                      type="url"
+                                      placeholder="https://..."
+                                      value={link.url || ""}
+                                      onChange={(e) => {
+                                        const newLinks = [
+                                          ...(crudFormData.buy_external_links ||
+                                            []),
+                                        ];
+                                        newLinks[index] = {
+                                          ...link,
+                                          url: e.target.value,
+                                        };
+                                        setCrudFormData({
+                                          ...crudFormData,
+                                          buy_external_links: newLinks,
+                                        });
+                                      }}
+                                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const newLinks = [
+                                          ...(crudFormData.buy_external_links ||
+                                            []),
+                                        ];
+                                        newLinks.splice(index, 1);
+                                        setCrudFormData({
+                                          ...crudFormData,
+                                          buy_external_links:
+                                            newLinks.length > 0
+                                              ? newLinks
+                                              : undefined,
+                                        });
+                                      }}
+                                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                )
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    buy_external_links: [
+                                      ...(crudFormData.buy_external_links ||
+                                        []),
+                                      { label: "", url: "" },
+                                    ],
+                                  });
+                                }}
+                                className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                              >
+                                + Agregar Link
+                              </button>
+                            </div>
+                          )}
+
+                          {crudFormData.buy_button_type ===
+                            "custom_checkout" && (
+                            <div className="mb-4">
+                              <label className="block text-gray-300 text-sm mb-2">
+                                ID del Producto para Checkout (se generará
+                                /checkout/:id) *
+                              </label>
+                              <input
+                                type="text"
+                                value={crudFormData.buy_button_url || ""}
+                                onChange={(e) =>
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    buy_button_url: e.target.value,
+                                  })
+                                }
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                placeholder="producto-123"
+                                required
+                              />
                               <p className="text-xs text-gray-400 mt-1">
                                 El link generado será: /checkout/
                                 {crudFormData.buy_button_url || "id"}
                               </p>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </>
                       )}
 
@@ -4197,7 +4341,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldIcon")}
+                        {t("admin.fieldIcon")} (Legacy - Opcional)
                       </label>
                       <input
                         type="url"
@@ -4209,7 +4353,32 @@ function Admin() {
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="https://..."
                       />
+                      <p className="text-xs text-gray-400 mt-1">
+                        URL del icono (se usará si no hay badge_url)
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        URL del Badge (shields.io u otro) *
+                      </label>
+                      <input
+                        type="url"
+                        value={crudFormData.badge_url || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            badge_url: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="https://img.shields.io/badge/..."
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Ejemplo:
+                        https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black
+                      </p>
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
