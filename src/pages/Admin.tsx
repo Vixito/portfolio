@@ -421,6 +421,11 @@ function Admin() {
   };
 
   const handleEdit = async (item: any) => {
+    // Recargar datos primero para asegurar que tenemos la versión más reciente
+    await loadCRUDData();
+    // Esperar un momento para que React actualice el estado
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     // Buscar el item actualizado de la lista para asegurar que tenemos los datos más recientes
     let currentItem = item;
     switch (activeTab) {
@@ -887,6 +892,25 @@ function Admin() {
             }
             const rate = exchangeRate;
 
+            // Establecer campos requeridos (title, description, full_description) antes de convertir traducciones
+            // Usar title_es como fallback si title no existe
+            if (!updateProductData.title && updateProductData.title_es) {
+              updateProductData.title = updateProductData.title_es;
+            }
+            if (
+              !updateProductData.description &&
+              updateProductData.description_es
+            ) {
+              updateProductData.description = updateProductData.description_es;
+            }
+            if (
+              !updateProductData.full_description &&
+              updateProductData.full_description_es
+            ) {
+              updateProductData.full_description =
+                updateProductData.full_description_es;
+            }
+
             // Convertir campos ES/EN a JSONB
             updateProductData.title_translations = buildTranslations(
               updateProductData.title_es || "",
@@ -1272,6 +1296,21 @@ function Admin() {
               return;
             }
             const createRate = exchangeRate;
+
+            // Establecer campos requeridos (title, description, full_description) antes de convertir traducciones
+            // Usar title_es como fallback si title no existe
+            if (!productData.title && productData.title_es) {
+              productData.title = productData.title_es;
+            }
+            if (!productData.description && productData.description_es) {
+              productData.description = productData.description_es;
+            }
+            if (
+              !productData.full_description &&
+              productData.full_description_es
+            ) {
+              productData.full_description = productData.full_description_es;
+            }
 
             // Convertir campos ES/EN a JSONB
             productData.title_translations = buildTranslations(
