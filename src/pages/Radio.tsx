@@ -234,12 +234,13 @@ function Radio() {
     };
 
     fetchMetadata();
-    // Actualizar metadata cada 10 segundos (no más frecuente para evitar spam)
+    // Actualizar metadata cada 30 segundos cuando está en vivo (optimizado para recursos)
+    // Cuando está offline con AzuraCast, actualizar cada 60 segundos para reducir consumo
     const interval = setInterval(() => {
       if (isMounted) {
         fetchMetadata();
       }
-    }, 10000);
+    }, 30000); // 30 segundos es un buen balance entre actualización y consumo de recursos
 
     return () => {
       isMounted = false;

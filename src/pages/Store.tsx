@@ -138,14 +138,33 @@ function Store() {
       const buyType = item.buy_button_type || "external_link";
 
       if (buyType === "external_link") {
-        // Link externo (puede ser múltiple)
-        const urlToOpen =
-          linkUrl ||
-          (typeof item.buy_button_url === "string"
-            ? item.buy_button_url
-            : null);
-        if (urlToOpen) {
-          window.open(urlToOpen, "_blank", "noopener,noreferrer");
+        // Link externo (puede ser múltiple o simultáneo)
+        if (linkUrl) {
+          // Si se pasa un linkUrl específico, abrirlo
+          window.open(linkUrl, "_blank", "noopener,noreferrer");
+        } else if (
+          Array.isArray(item.buy_button_url) &&
+          item.buy_button_url.length > 0
+        ) {
+          // Si hay múltiples links, abrir el primero y sus simultaneous_urls si existen
+          const firstLink = item.buy_button_url[0];
+          if (firstLink.url) {
+            window.open(firstLink.url, "_blank", "noopener,noreferrer");
+            // Si tiene simultaneous_urls, abrirlos también
+            if (
+              firstLink.simultaneous_urls &&
+              Array.isArray(firstLink.simultaneous_urls)
+            ) {
+              firstLink.simultaneous_urls.forEach((url: string) => {
+                if (url && url.trim()) {
+                  window.open(url, "_blank", "noopener,noreferrer");
+                }
+              });
+            }
+          }
+        } else if (typeof item.buy_button_url === "string") {
+          // Legacy: string único
+          window.open(item.buy_button_url, "_blank", "noopener,noreferrer");
         }
       } else if (buyType === "custom_checkout") {
         // Checkout propio (/checkout/:id)
@@ -486,19 +505,50 @@ function Store() {
                   Array.isArray(selectedItem.buy_button_url) &&
                   selectedItem.buy_button_url.length > 0 ? (
                     // Múltiples botones para links externos
-                    selectedItem.buy_button_url.map((link, index) => (
-                      <Button
-                        key={index}
-                        variant={index === 0 ? "primary" : "outline"}
-                        onClick={() => {
-                          handleAction(selectedItem, link.url);
-                          setIsModalOpen(false);
-                        }}
-                        className="w-full"
-                      >
-                        {link.label || `${t("store.buy")} - ${index + 1}`}
-                      </Button>
-                    ))
+                    selectedItem.buy_button_url.map(
+                      (link: any, index: number) => {
+                        const hasSimultaneous =
+                          link.simultaneous_urls &&
+                          Array.isArray(link.simultaneous_urls) &&
+                          link.simultaneous_urls.length > 0;
+                        return (
+                          <Button
+                            key={index}
+                            variant={index === 0 ? "primary" : "outline"}
+                            onClick={() => {
+                              // Abrir URL principal
+                              if (link.url) {
+                                window.open(
+                                  link.url,
+                                  "_blank",
+                                  "noopener,noreferrer"
+                                );
+                              }
+                              // Abrir simultaneous_urls si existen
+                              if (hasSimultaneous) {
+                                link.simultaneous_urls.forEach(
+                                  (url: string) => {
+                                    if (url && url.trim()) {
+                                      window.open(
+                                        url,
+                                        "_blank",
+                                        "noopener,noreferrer"
+                                      );
+                                    }
+                                  }
+                                );
+                              }
+                              setIsModalOpen(false);
+                            }}
+                            className="w-full"
+                          >
+                            {link.label || `${t("store.buy")} - ${index + 1}`}
+                            {hasSimultaneous &&
+                              ` (+${link.simultaneous_urls.length})`}
+                          </Button>
+                        );
+                      }
+                    )
                   ) : selectedItem.button_type === "buy" &&
                     selectedItem.buy_button_type === "external_link" &&
                     typeof selectedItem.buy_button_url === "string" ? (

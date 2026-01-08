@@ -487,7 +487,14 @@ function Admin() {
             { label: "Link 1", url: currentItem.buy_button_url },
           ];
         } else if (Array.isArray(currentItem.buy_button_url)) {
-          formData.buy_external_links = currentItem.buy_button_url;
+          // Preservar simultaneous_urls si existen
+          formData.buy_external_links = currentItem.buy_button_url.map(
+            (link: any) => ({
+              label: link.label || "",
+              url: link.url || "",
+              simultaneous_urls: link.simultaneous_urls || undefined,
+            })
+          );
         } else {
           formData.buy_external_links = [];
         }
@@ -908,10 +915,25 @@ function Admin() {
                 updateProductData.buy_external_links &&
                 Array.isArray(updateProductData.buy_external_links)
               ) {
-                // Filtrar links vacíos y convertir a JSONB
-                const validLinks = updateProductData.buy_external_links.filter(
-                  (link: any) => link && link.url && link.url.trim()
-                );
+                // Filtrar links vacíos y procesar simultaneous_urls
+                const validLinks = updateProductData.buy_external_links
+                  .filter((link: any) => link && link.url && link.url.trim())
+                  .map((link: any) => {
+                    // Filtrar simultaneous_urls vacíos
+                    if (
+                      link.simultaneous_urls &&
+                      Array.isArray(link.simultaneous_urls)
+                    ) {
+                      link.simultaneous_urls = link.simultaneous_urls.filter(
+                        (url: string) => url && url.trim()
+                      );
+                      // Si no hay simultaneous_urls válidos, eliminar el campo
+                      if (link.simultaneous_urls.length === 0) {
+                        delete link.simultaneous_urls;
+                      }
+                    }
+                    return link;
+                  });
                 updateProductData.buy_button_url =
                   validLinks.length > 0 ? validLinks : null;
               } else {
@@ -1265,10 +1287,25 @@ function Admin() {
                 productData.buy_external_links &&
                 Array.isArray(productData.buy_external_links)
               ) {
-                // Filtrar links vacíos y convertir a JSONB
-                const validLinks = productData.buy_external_links.filter(
-                  (link: any) => link && link.url && link.url.trim()
-                );
+                // Filtrar links vacíos y procesar simultaneous_urls
+                const validLinks = productData.buy_external_links
+                  .filter((link: any) => link && link.url && link.url.trim())
+                  .map((link: any) => {
+                    // Filtrar simultaneous_urls vacíos
+                    if (
+                      link.simultaneous_urls &&
+                      Array.isArray(link.simultaneous_urls)
+                    ) {
+                      link.simultaneous_urls = link.simultaneous_urls.filter(
+                        (url: string) => url && url.trim()
+                      );
+                      // Si no hay simultaneous_urls válidos, eliminar el campo
+                      if (link.simultaneous_urls.length === 0) {
+                        delete link.simultaneous_urls;
+                      }
+                    }
+                    return link;
+                  });
                 productData.buy_button_url =
                   validLinks.length > 0 ? validLinks : null;
               } else {
@@ -1554,6 +1591,8 @@ function Admin() {
       }
       await loadCRUDData();
       setShowCRUDModal(false);
+      // Recargar datos después de guardar
+      await loadCRUDData();
       setEditingItem(null);
       setCrudFormData({});
       alert(
@@ -2930,67 +2969,203 @@ function Admin() {
                               </label>
                               {(crudFormData.buy_external_links || []).map(
                                 (link: any, index: number) => (
-                                  <div key={index} className="mb-3 flex gap-2">
-                                    <input
-                                      type="text"
-                                      placeholder="Etiqueta (ej: Airtm, Amazon, etc.)"
-                                      value={link.label || ""}
-                                      onChange={(e) => {
-                                        const newLinks = [
-                                          ...(crudFormData.buy_external_links ||
-                                            []),
-                                        ];
-                                        newLinks[index] = {
-                                          ...link,
-                                          label: e.target.value,
-                                        };
-                                        setCrudFormData({
-                                          ...crudFormData,
-                                          buy_external_links: newLinks,
-                                        });
-                                      }}
-                                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                                    />
-                                    <input
-                                      type="url"
-                                      placeholder="https://..."
-                                      value={link.url || ""}
-                                      onChange={(e) => {
-                                        const newLinks = [
-                                          ...(crudFormData.buy_external_links ||
-                                            []),
-                                        ];
-                                        newLinks[index] = {
-                                          ...link,
-                                          url: e.target.value,
-                                        };
-                                        setCrudFormData({
-                                          ...crudFormData,
-                                          buy_external_links: newLinks,
-                                        });
-                                      }}
-                                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const newLinks = [
-                                          ...(crudFormData.buy_external_links ||
-                                            []),
-                                        ];
-                                        newLinks.splice(index, 1);
-                                        setCrudFormData({
-                                          ...crudFormData,
-                                          buy_external_links:
-                                            newLinks.length > 0
-                                              ? newLinks
+                                  <div key={index} className="mb-3 space-y-2">
+                                    <div className="flex gap-2">
+                                      <input
+                                        type="text"
+                                        placeholder="Etiqueta (ej: Airtm, Amazon, etc.)"
+                                        value={link.label || ""}
+                                        onChange={(e) => {
+                                          const newLinks = [
+                                            ...(crudFormData.buy_external_links ||
+                                              []),
+                                          ];
+                                          newLinks[index] = {
+                                            ...link,
+                                            label: e.target.value,
+                                          };
+                                          setCrudFormData({
+                                            ...crudFormData,
+                                            buy_external_links: newLinks,
+                                          });
+                                        }}
+                                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newLinks = [
+                                            ...(crudFormData.buy_external_links ||
+                                              []),
+                                          ];
+                                          newLinks.splice(index, 1);
+                                          setCrudFormData({
+                                            ...crudFormData,
+                                            buy_external_links:
+                                              newLinks.length > 0
+                                                ? newLinks
+                                                : undefined,
+                                          });
+                                        }}
+                                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <input
+                                        type="url"
+                                        placeholder="URL principal (https://...)"
+                                        value={link.url || ""}
+                                        onChange={(e) => {
+                                          const newLinks = [
+                                            ...(crudFormData.buy_external_links ||
+                                              []),
+                                          ];
+                                          newLinks[index] = {
+                                            ...link,
+                                            url: e.target.value,
+                                          };
+                                          setCrudFormData({
+                                            ...crudFormData,
+                                            buy_external_links: newLinks,
+                                          });
+                                        }}
+                                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        id={`simultaneous-${index}`}
+                                        checked={
+                                          link.simultaneous_urls ? true : false
+                                        }
+                                        onChange={(e) => {
+                                          const newLinks = [
+                                            ...(crudFormData.buy_external_links ||
+                                              []),
+                                          ];
+                                          newLinks[index] = {
+                                            ...link,
+                                            simultaneous_urls: e.target.checked
+                                              ? []
                                               : undefined,
-                                        });
-                                      }}
-                                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-                                    >
-                                      ×
-                                    </button>
+                                          };
+                                          setCrudFormData({
+                                            ...crudFormData,
+                                            buy_external_links: newLinks,
+                                          });
+                                        }}
+                                        className="w-4 h-4"
+                                      />
+                                      <label
+                                        htmlFor={`simultaneous-${index}`}
+                                        className="text-gray-300 text-sm"
+                                      >
+                                        Abrir múltiples links simultáneamente
+                                      </label>
+                                    </div>
+                                    {link.simultaneous_urls !== undefined && (
+                                      <div className="ml-4 space-y-2">
+                                        {(link.simultaneous_urls || []).map(
+                                          (
+                                            simUrl: string,
+                                            simIndex: number
+                                          ) => (
+                                            <div
+                                              key={simIndex}
+                                              className="flex gap-2"
+                                            >
+                                              <input
+                                                type="url"
+                                                placeholder="URL adicional (https://...)"
+                                                value={simUrl || ""}
+                                                onChange={(e) => {
+                                                  const newLinks = [
+                                                    ...(crudFormData.buy_external_links ||
+                                                      []),
+                                                  ];
+                                                  if (
+                                                    !newLinks[index]
+                                                      .simultaneous_urls
+                                                  ) {
+                                                    newLinks[
+                                                      index
+                                                    ].simultaneous_urls = [];
+                                                  }
+                                                  newLinks[
+                                                    index
+                                                  ].simultaneous_urls[
+                                                    simIndex
+                                                  ] = e.target.value;
+                                                  setCrudFormData({
+                                                    ...crudFormData,
+                                                    buy_external_links:
+                                                      newLinks,
+                                                  });
+                                                }}
+                                                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const newLinks = [
+                                                    ...(crudFormData.buy_external_links ||
+                                                      []),
+                                                  ];
+                                                  if (
+                                                    newLinks[index]
+                                                      .simultaneous_urls
+                                                  ) {
+                                                    newLinks[
+                                                      index
+                                                    ].simultaneous_urls.splice(
+                                                      simIndex,
+                                                      1
+                                                    );
+                                                  }
+                                                  setCrudFormData({
+                                                    ...crudFormData,
+                                                    buy_external_links:
+                                                      newLinks,
+                                                  });
+                                                }}
+                                                className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                                              >
+                                                ×
+                                              </button>
+                                            </div>
+                                          )
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const newLinks = [
+                                              ...(crudFormData.buy_external_links ||
+                                                []),
+                                            ];
+                                            if (
+                                              !newLinks[index].simultaneous_urls
+                                            ) {
+                                              newLinks[
+                                                index
+                                              ].simultaneous_urls = [];
+                                            }
+                                            newLinks[
+                                              index
+                                            ].simultaneous_urls.push("");
+                                            setCrudFormData({
+                                              ...crudFormData,
+                                              buy_external_links: newLinks,
+                                            });
+                                          }}
+                                          className="w-full px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+                                        >
+                                          + Agregar URL adicional
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 )
                               )}
