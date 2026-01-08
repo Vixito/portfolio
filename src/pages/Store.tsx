@@ -109,7 +109,12 @@ function Store() {
             action_url: product.action_url || null,
             pricing_link: product.pricing_link || null,
             button_text: product.button_text || null,
-            product_pricing: product.product_pricing || [],
+            // Asegurar que product_pricing sea un array y tenga los datos correctos
+            product_pricing: Array.isArray(product.product_pricing)
+              ? product.product_pricing
+              : product.product_pricing
+              ? [product.product_pricing]
+              : [],
           })
         );
 

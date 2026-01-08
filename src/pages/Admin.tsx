@@ -423,35 +423,46 @@ function Admin() {
   const handleEdit = async (item: any) => {
     // Recargar datos primero para asegurar que tenemos la versión más reciente
     await loadCRUDData();
-    // Esperar un momento para que React actualice el estado
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    // Buscar el item actualizado de la lista para asegurar que tenemos los datos más recientes
+    // Esperar más tiempo para que React actualice el estado completamente
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Buscar el item actualizado directamente desde la base de datos si es producto
     let currentItem = item;
-    switch (activeTab) {
-      case "products":
+    if (activeTab === "products") {
+      try {
+        // Obtener el producto directamente desde la base de datos para asegurar datos frescos
+        const { getProducts } = await import("../lib/supabase-functions");
+        const freshProducts = await getProducts();
+        currentItem = freshProducts.find((p: any) => p.id === item.id) || item;
+      } catch (error) {
+        console.error("Error al obtener producto fresco:", error);
+        // Fallback a buscar en el estado
         currentItem = products.find((p) => p.id === item.id) || item;
-        break;
-      case "projects":
-        currentItem = projects.find((p) => p.id === item.id) || item;
-        break;
-      case "clients":
-        currentItem = clients.find((c) => c.id === item.id) || item;
-        break;
-      case "socials":
-        currentItem = socials.find((s) => s.id === item.id) || item;
-        break;
-      case "events":
-        currentItem = events.find((e) => e.id === item.id) || item;
-        break;
-      case "work_experiences":
-        currentItem = workExperiences.find((w) => w.id === item.id) || item;
-        break;
-      case "technologies":
-        currentItem = technologies.find((t) => t.id === item.id) || item;
-        break;
-      case "studies":
-        currentItem = studies.find((s) => s.id === item.id) || item;
-        break;
+      }
+    } else {
+      // Para otros tabs, buscar en el estado actualizado
+      switch (activeTab) {
+        case "projects":
+          currentItem = projects.find((p) => p.id === item.id) || item;
+          break;
+        case "clients":
+          currentItem = clients.find((c) => c.id === item.id) || item;
+          break;
+        case "socials":
+          currentItem = socials.find((s) => s.id === item.id) || item;
+          break;
+        case "events":
+          currentItem = events.find((e) => e.id === item.id) || item;
+          break;
+        case "work_experiences":
+          currentItem = workExperiences.find((w) => w.id === item.id) || item;
+          break;
+        case "technologies":
+          currentItem = technologies.find((t) => t.id === item.id) || item;
+          break;
+        case "studies":
+          currentItem = studies.find((s) => s.id === item.id) || item;
+          break;
+      }
     }
 
     setEditingItem(currentItem);
