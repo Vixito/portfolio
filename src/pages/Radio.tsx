@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { gsap } from "gsap";
-import { getUpcomingEvents } from "../lib/supabase-functions";
+import { getUpcomingEvents, getPlaylist } from "../lib/supabase-functions";
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
 import { useTranslation } from "../lib/i18n";
@@ -57,6 +57,11 @@ function Radio() {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const volumeThrottleRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Estados para la playlist automática
+  const [playlist, setPlaylist] = useState<Song[]>([]);
+  const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0);
+  const playlistLoadedRef = useRef(false);
 
   // URL del stream de Icecast (configurable desde variables de entorno)
   const ICECAST_STREAM_URL =
@@ -254,14 +259,70 @@ function Radio() {
     AZURACAST_STATION_ID,
   ]); // Incluir variables de AzuraCast
 
-  // Pausar automáticamente si la radio se desconecta (pero no reproducir automáticamente)
+  // Cargar playlist cuando no está en vivo
+  useEffect(() => {
+    const loadPlaylist = async () => {
+      if (isLive || playlistLoadedRef.current) return;
+
+      try {
+        const playlistData = await getPlaylist();
+        if (playlistData && playlistData.length > 0) {
+          const songs: Song[] = playlistData.map((item: any) => ({
+            id: item.id,
+            title: item.title || t("radio.unknownTitle"),
+            artist: item.artist || t("radio.unknownArtist"),
+            url: item.url,
+            duration: item.duration || undefined,
+          }));
+          setPlaylist(songs);
+          playlistLoadedRef.current = true;
+
+          // Si hay canciones, iniciar la primera automáticamente
+          if (songs.length > 0 && !isLive) {
+            setCurrentPlaylistIndex(0);
+            setCurrentSong(songs[0]);
+            // Configurar el audio pero no reproducir automáticamente (esperar a que el usuario haga click)
+            if (audioRef.current) {
+              audioRef.current.src = songs[0].url;
+              audioRef.current.load();
+            }
+          }
+        }
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.debug("Error al cargar playlist:", error);
+        }
+      }
+    };
+
+    if (!isLive) {
+      loadPlaylist();
+    } else {
+      // Resetear cuando vuelve a estar en vivo
+      playlistLoadedRef.current = false;
+      setPlaylist([]);
+      setCurrentPlaylistIndex(0);
+    }
+  }, [isLive, t]);
+
+  // Pausar automáticamente si la radio se desconecta y cambiar a playlist
   useEffect(() => {
     if (!isLive && audioRef.current && isPlaying) {
-      // Pausar si la radio se desconecta
+      // Si estaba reproduciendo en vivo, pausar
       audioRef.current.pause();
       setIsPlaying(false);
+
+      // Si hay playlist disponible, cambiar a la primera canción
+      if (playlist.length > 0 && currentPlaylistIndex < playlist.length) {
+        const nextSong = playlist[currentPlaylistIndex];
+        setCurrentSong(nextSong);
+        if (audioRef.current) {
+          audioRef.current.src = nextSong.url;
+          audioRef.current.load();
+        }
+      }
     }
-  }, [isLive, isPlaying]);
+  }, [isLive, isPlaying, playlist, currentPlaylistIndex]);
 
   // Cargar eventos próximos
   useEffect(() => {
@@ -388,12 +449,42 @@ function Radio() {
       }
     };
 
-    const handleEnded = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      // Si no está en vivo y hay playlist, pasar a la siguiente canción
+      if (!isLive && playlist.length > 0) {
+        const nextIndex = (currentPlaylistIndex + 1) % playlist.length; // Bucle
+        setCurrentPlaylistIndex(nextIndex);
+        const nextSong = playlist[nextIndex];
+        setCurrentSong(nextSong);
+        if (audioRef.current) {
+          audioRef.current.src = nextSong.url;
+          audioRef.current.load();
+          // Reproducir automáticamente la siguiente canción
+          audioRef.current.play().catch((error) => {
+            if (import.meta.env.DEV) {
+              console.debug("Error al reproducir siguiente canción:", error);
+            }
+          });
+        }
+      }
+    };
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleError = (e: Event) => {
       console.error("Error en el stream de audio:", e);
       setIsPlaying(false);
+      // Si hay error y no está en vivo, intentar siguiente canción
+      if (!isLive && playlist.length > 0) {
+        const nextIndex = (currentPlaylistIndex + 1) % playlist.length;
+        setCurrentPlaylistIndex(nextIndex);
+        const nextSong = playlist[nextIndex];
+        setCurrentSong(nextSong);
+        if (audioRef.current) {
+          audioRef.current.src = nextSong.url;
+          audioRef.current.load();
+        }
+      }
     };
 
     audio.addEventListener("timeupdate", updateTime);
@@ -411,7 +502,7 @@ function Radio() {
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("error", handleError);
     };
-  }, []);
+  }, [isLive, playlist, currentPlaylistIndex]);
 
   // Cerrar menú al hacer click fuera
   useEffect(() => {
@@ -446,27 +537,49 @@ function Radio() {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      // Solo intentar reproducir si la radio está en vivo
-      if (!isLive) {
-        return;
-      }
-
       try {
-        // Asegurar que el src esté configurado
-        if (
-          !audioRef.current.src ||
-          audioRef.current.src !== currentSong?.url
-        ) {
-          audioRef.current.src = currentSong?.url || ICECAST_STREAM_URL;
-        }
+        // Si está en vivo, usar el stream de Icecast
+        if (isLive) {
+          if (
+            !audioRef.current.src ||
+            audioRef.current.src !== currentSong?.url
+          ) {
+            audioRef.current.src = currentSong?.url || ICECAST_STREAM_URL;
+          }
+          await audioRef.current.play();
+          setIsPlaying(true);
+        } else {
+          // Si no está en vivo, usar la playlist
+          if (playlist.length > 0) {
+            // Asegurar que tenemos la canción actual de la playlist
+            const songToPlay = playlist[currentPlaylistIndex] || playlist[0];
+            setCurrentSong(songToPlay);
+            setCurrentPlaylistIndex(
+              currentPlaylistIndex < playlist.length ? currentPlaylistIndex : 0
+            );
 
-        await audioRef.current.play();
-        setIsPlaying(true);
+            if (
+              !audioRef.current.src ||
+              audioRef.current.src !== songToPlay.url
+            ) {
+              audioRef.current.src = songToPlay.url;
+              audioRef.current.load();
+            }
+
+            await audioRef.current.play();
+            setIsPlaying(true);
+          } else {
+            // Si no hay playlist, mostrar mensaje
+            if (import.meta.env.DEV) {
+              console.debug("No hay playlist disponible");
+            }
+          }
+        }
       } catch (error) {
         // Si falla la reproducción, mantener el estado en false
         setIsPlaying(false);
         if (import.meta.env.DEV) {
-          console.debug("Error al reproducir la radio:", error);
+          console.debug("Error al reproducir:", error);
         }
       }
     }

@@ -888,3 +888,19 @@ export async function getSectorMultipliers() {
 
   return data;
 }
+
+/**
+ * Obtiene la playlist de la radio (para reproducción automática cuando no está en vivo)
+ */
+export async function getPlaylist() {
+  const { data, error } = await supabase
+    .from("playlist")
+    .select("*")
+    .order("order", { ascending: true });
+
+  if (error) {
+    throw new Error(`Error al obtener playlist: ${error.message}`);
+  }
+
+  return data || [];
+}
