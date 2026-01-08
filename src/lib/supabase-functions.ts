@@ -159,8 +159,11 @@ export async function updateProduct(
   id: string,
   updates: Partial<{
     title: string;
+    title_translations?: { es?: string; en?: string } | null;
     description: string;
+    description_translations?: { es?: string; en?: string } | null;
     full_description: string;
+    full_description_translations?: { es?: string; en?: string } | null;
     base_price_usd: number;
     base_price_cop: number;
     price_currency: "USD" | "COP";
@@ -170,7 +173,10 @@ export async function updateProduct(
     // Nueva estructura de botones
     button_type: "buy" | "request";
     buy_button_type: "external_link" | "custom_checkout";
-    buy_button_url: string;
+    buy_button_url:
+      | string
+      | Array<{ label: string; url: string; simultaneous_urls?: string[] }>
+      | null;
     request_button_type: "external_link" | "custom_form";
     request_button_url: string;
     // Campos antiguos (mantener por compatibilidad durante migración)

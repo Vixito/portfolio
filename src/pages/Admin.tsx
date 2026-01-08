@@ -421,48 +421,33 @@ function Admin() {
   };
 
   const handleEdit = async (item: any) => {
-    // Recargar datos primero para asegurar que tenemos la versión más reciente
-    await loadCRUDData();
-    // Esperar más tiempo para que React actualice el estado completamente
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    // Buscar el item actualizado directamente desde la base de datos si es producto
+    // Buscar el item actualizado de la lista para asegurar que tenemos los datos más recientes
     let currentItem = item;
-    if (activeTab === "products") {
-      try {
-        // Obtener el producto directamente desde la base de datos para asegurar datos frescos
-        const { getProducts } = await import("../lib/supabase-functions");
-        const freshProducts = await getProducts();
-        currentItem = freshProducts.find((p: any) => p.id === item.id) || item;
-      } catch (error) {
-        console.error("Error al obtener producto fresco:", error);
-        // Fallback a buscar en el estado
+    switch (activeTab) {
+      case "products":
         currentItem = products.find((p) => p.id === item.id) || item;
-      }
-    } else {
-      // Para otros tabs, buscar en el estado actualizado
-      switch (activeTab) {
-        case "projects":
-          currentItem = projects.find((p) => p.id === item.id) || item;
-          break;
-        case "clients":
-          currentItem = clients.find((c) => c.id === item.id) || item;
-          break;
-        case "socials":
-          currentItem = socials.find((s) => s.id === item.id) || item;
-          break;
-        case "events":
-          currentItem = events.find((e) => e.id === item.id) || item;
-          break;
-        case "work_experiences":
-          currentItem = workExperiences.find((w) => w.id === item.id) || item;
-          break;
-        case "technologies":
-          currentItem = technologies.find((t) => t.id === item.id) || item;
-          break;
-        case "studies":
-          currentItem = studies.find((s) => s.id === item.id) || item;
-          break;
-      }
+        break;
+      case "projects":
+        currentItem = projects.find((p) => p.id === item.id) || item;
+        break;
+      case "clients":
+        currentItem = clients.find((c) => c.id === item.id) || item;
+        break;
+      case "socials":
+        currentItem = socials.find((s) => s.id === item.id) || item;
+        break;
+      case "events":
+        currentItem = events.find((e) => e.id === item.id) || item;
+        break;
+      case "work_experiences":
+        currentItem = workExperiences.find((w) => w.id === item.id) || item;
+        break;
+      case "technologies":
+        currentItem = technologies.find((t) => t.id === item.id) || item;
+        break;
+      case "studies":
+        currentItem = studies.find((s) => s.id === item.id) || item;
+        break;
     }
 
     setEditingItem(currentItem);
@@ -991,8 +976,22 @@ function Admin() {
             delete updateProductData.sale_starts_at;
             delete updateProductData.sale_ends_at;
 
+            // Debug: ver qué se está enviando
+            console.log("Actualizando producto con datos:", {
+              id: editingItem.id,
+              data: updateProductData,
+              buy_button_url: updateProductData.buy_button_url,
+              title_translations: updateProductData.title_translations,
+            });
+
             // Guardar producto
-            await updateProduct(editingItem.id, updateProductData);
+            const updatedProduct = await updateProduct(
+              editingItem.id,
+              updateProductData
+            );
+
+            // Debug: ver qué se devolvió
+            console.log("Producto actualizado, respuesta:", updatedProduct);
 
             // Guardar pricing y ofertas
             if (saleData.is_on_sale && saleData.sale_percentage) {
@@ -1606,14 +1605,12 @@ function Admin() {
       }
       // Guardar referencia de si estaba editando antes de limpiar
       const wasEditing = !!editingItem;
-      // Recargar datos ANTES de cerrar el modal para asegurar que se actualicen
-      await loadCRUDData();
-      // Esperar un momento para que el estado se actualice
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      // Cerrar modal después de recargar
+      // Cerrar modal inmediatamente (comportamiento anterior)
       setShowCRUDModal(false);
       setEditingItem(null);
       setCrudFormData({});
+      // Recargar datos después de cerrar el modal
+      await loadCRUDData();
       alert(
         wasEditing
           ? "Elemento actualizado exitosamente"
