@@ -549,7 +549,7 @@ function Store() {
                             }}
                             className="w-full"
                           >
-                            {link.label || `${t("store.buy")} - ${index + 1}`}
+                            {link.label || getButtonText(selectedItem)}
                           </Button>
                         );
                       }

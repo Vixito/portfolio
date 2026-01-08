@@ -423,6 +423,8 @@ function Admin() {
   const handleEdit = async (item: any) => {
     // Recargar datos primero para asegurar que tenemos la versión más reciente
     await loadCRUDData();
+    // Esperar un momento para que React actualice el estado
+    await new Promise((resolve) => setTimeout(resolve, 100));
     // Buscar el item actualizado de la lista para asegurar que tenemos los datos más recientes
     let currentItem = item;
     switch (activeTab) {
@@ -1591,15 +1593,18 @@ function Admin() {
             break;
         }
       }
-      // Cerrar modal primero
+      // Guardar referencia de si estaba editando antes de limpiar
+      const wasEditing = !!editingItem;
+      // Recargar datos ANTES de cerrar el modal para asegurar que se actualicen
+      await loadCRUDData();
+      // Esperar un momento para que el estado se actualice
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Cerrar modal después de recargar
       setShowCRUDModal(false);
       setEditingItem(null);
       setCrudFormData({});
-      // Recargar datos después de guardar (con un pequeño delay para asegurar que el servidor procesó)
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await loadCRUDData();
       alert(
-        editingItem
+        wasEditing
           ? "Elemento actualizado exitosamente"
           : "Elemento creado exitosamente"
       );
