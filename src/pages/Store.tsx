@@ -354,8 +354,8 @@ function Store() {
         {/* Filtro por categoría/sector */}
         {items.length > 0 && (
           <div className="mb-8 flex justify-start">
-            <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 pl-1">
                 {t("store.filterByCategory") || "Filtrar por categoría:"}
               </label>
               <select

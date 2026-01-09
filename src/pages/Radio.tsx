@@ -335,21 +335,42 @@ function Radio() {
                 try {
                   audioRef.current.src = validSongs[0].url;
                   audioRef.current.load();
-                  // Intentar reproducir automáticamente
-                  audioRef.current
-                    .play()
-                    .then(() => {
-                      setIsPlaying(true);
-                    })
-                    .catch((error) => {
-                      // Si falla el autoplay (requiere interacción del usuario), no hacer nada
-                      if (import.meta.env.DEV) {
-                        console.debug(
-                          "No se pudo reproducir automáticamente la playlist:",
-                          error
-                        );
-                      }
-                    });
+
+                  // Esperar a que el audio esté listo antes de reproducir
+                  const handleCanPlay = () => {
+                    if (audioRef.current && !isPlaying) {
+                      audioRef.current
+                        .play()
+                        .then(() => {
+                          setIsPlaying(true);
+                        })
+                        .catch((error) => {
+                          // Si falla el autoplay (requiere interacción del usuario), no hacer nada
+                          if (import.meta.env.DEV) {
+                            console.debug(
+                              "No se pudo reproducir automáticamente la playlist:",
+                              error
+                            );
+                          }
+                        });
+                    }
+                    // Remover el listener después de usarlo
+                    audioRef.current?.removeEventListener(
+                      "canplay",
+                      handleCanPlay
+                    );
+                  };
+
+                  // Agregar listener para cuando el audio esté listo
+                  audioRef.current.addEventListener("canplay", handleCanPlay, {
+                    once: true,
+                  });
+
+                  // También intentar reproducir si ya está listo
+                  if (audioRef.current.readyState >= 3) {
+                    // HAVE_FUTURE_DATA o superior
+                    handleCanPlay();
+                  }
                 } catch (error) {
                   if (import.meta.env.DEV) {
                     console.debug("Error al cargar primera canción:", error);
