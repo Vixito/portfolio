@@ -51,14 +51,29 @@ function AdsterraBanner({ className = "", style }: AdsterraBannerProps) {
     // Función para inicializar el banner cuando el contenedor esté listo
     const initBanner = () => {
       if (containerRef.current && (window as any).atOptions) {
-        // El script de Adsterra buscará contenedores con el ID y creará el iframe
-        // Solo necesitamos asegurarnos de que el contenedor tenga el ID correcto
+        // El script de Adsterra necesita que el contenedor esté en el DOM
+        // y que el script se ejecute para crear el iframe
+        // El script buscará contenedores con el ID o data-adsterra-key
       }
     };
 
     if (existingScript) {
-      // Si el script ya está cargado, inicializar el banner
-      setTimeout(initBanner, 100);
+      // Si el script ya está cargado, esperar un momento y verificar si necesita reinicialización
+      setTimeout(() => {
+        // Si el contenedor ya tiene un iframe, no hacer nada
+        if (
+          containerRef.current &&
+          !containerRef.current.querySelector("iframe")
+        ) {
+          // El script debería crear el iframe automáticamente
+          // Si no lo hace, puede que necesite reinicialización
+          if (import.meta.env.DEV) {
+            console.debug(
+              "Script de Adsterra cargado pero iframe no encontrado, esperando..."
+            );
+          }
+        }
+      }, 500);
       return;
     }
 
@@ -76,9 +91,22 @@ function AdsterraBanner({ className = "", style }: AdsterraBannerProps) {
       }
     };
 
-    // Cuando el script se carga, inicializar el banner
+    // Cuando el script se carga, esperar un momento para que el DOM esté listo
     script.onload = () => {
-      setTimeout(initBanner, 100);
+      // El script de Adsterra debería buscar automáticamente contenedores con el ID
+      // Esperar un momento para que el script procese el DOM
+      setTimeout(() => {
+        if (
+          containerRef.current &&
+          !containerRef.current.querySelector("iframe")
+        ) {
+          if (import.meta.env.DEV) {
+            console.debug(
+              "Script de Adsterra cargado pero iframe no creado automáticamente"
+            );
+          }
+        }
+      }, 500);
     };
 
     // Agregar el script al head

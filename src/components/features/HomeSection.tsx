@@ -84,11 +84,13 @@ function HomeSection() {
 
         {/* Anuncios al lado de Contactar */}
         <div className="home-card md:col-span-2 lg:col-span-1">
-          <div className="flex flex-col gap-4 h-full">
+          <div className="flex flex-row md:flex-col lg:flex-row gap-4 h-full items-center justify-center">
             {/* Google AdSense */}
-            <AdSpace className="flex-1" />
+            <div className="flex-1">
+              <AdSpace className="h-full w-full" />
+            </div>
             {/* Adsterra Banner */}
-            <div className="flex justify-center">
+            <div className="flex-1 flex justify-center">
               <AdsterraBanner />
             </div>
           </div>
