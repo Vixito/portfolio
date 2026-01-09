@@ -31,3 +31,40 @@
 .animate-slideUp {
   animation: slideUp 0.3s ease-out;
 }
+
+/* Animaciones para dropdown/select */
+@keyframes dropdownOpen {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Estilos para select con animaciones y color azul */
+select {
+  transition: all 0.2s ease-in-out;
+  animation: dropdownOpen 0.2s ease-out;
+}
+
+select:focus {
+  outline: none;
+  border-color: #2093c4;
+  box-shadow: 0 0 0 2px rgba(32, 147, 196, 0.2);
+}
+
+select:hover {
+  border-color: #2093c4;
+}
+
+select option {
+  padding: 8px;
+  transition: background-color 0.15s ease-in-out;
+}
+
+select option:hover {
+  background-color: rgba(32, 147, 196, 0.1);
+}

@@ -884,6 +884,16 @@ function Admin() {
         switch (activeTab) {
           case "products":
             const updateProductData: any = { ...crudFormData };
+            // Validar que el sector sea obligatorio
+            if (
+              !updateProductData.sector ||
+              updateProductData.sector.trim() === ""
+            ) {
+              alert(
+                "Error: El campo Sector es obligatorio. Por favor, selecciona un sector."
+              );
+              return;
+            }
             if (!exchangeRate) {
               alert(
                 "Error: No se pudo obtener la tasa de cambio. Por favor, intenta de nuevo."
@@ -1289,6 +1299,13 @@ function Admin() {
         switch (activeTab) {
           case "products":
             const productData: any = { ...crudFormData };
+            // Validar que el sector sea obligatorio
+            if (!productData.sector || productData.sector.trim() === "") {
+              alert(
+                "Error: El campo Sector es obligatorio. Por favor, selecciona un sector."
+              );
+              return;
+            }
             if (!exchangeRate) {
               alert(
                 "Error: No se pudo obtener la tasa de cambio. Por favor, intenta de nuevo."
@@ -2839,13 +2856,12 @@ function Admin() {
                       </div>
                     )}
 
-                    {/* Campo de sector */}
+                    {/* Campo de sector (obligatorio, dropdown) */}
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Sector
+                        Sector <span className="text-red-400">*</span>
                       </label>
-                      <input
-                        type="text"
+                      <select
                         value={crudFormData.sector || ""}
                         onChange={(e) =>
                           setCrudFormData({
@@ -2854,8 +2870,18 @@ function Admin() {
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        placeholder="Ej: Desarrollo Web, Consultoría, etc."
-                      />
+                        required
+                      >
+                        <option value="">Selecciona un sector</option>
+                        <option value="programación">Programación</option>
+                        <option value="ropa">Ropa</option>
+                        <option value="diseño">Diseño</option>
+                        <option value="asesoría">Asesoría</option>
+                        <option value="curso">Curso</option>
+                        <option value="inversión">Inversión</option>
+                        <option value="música">Música</option>
+                        <option value="idiomas">Idiomas</option>
+                      </select>
                     </div>
 
                     {/* Sección de ofertas */}

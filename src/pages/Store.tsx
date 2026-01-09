@@ -31,6 +31,7 @@ interface StoreItem {
   base_price_cop: number | null;
   thumbnail_url: string | null;
   images: string[] | null;
+  sector: string | null; // Categoría/Sector del producto
   // Nueva estructura de botones
   button_type?: "buy" | "request";
   buy_button_type?: "external_link" | "custom_checkout";
@@ -52,24 +53,27 @@ function Store() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [userCountry, setUserCountry] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const itemsPerPage = 12;
 
-  // Detectar país del usuario por IP
-  useEffect(() => {
-    const detectCountry = async () => {
-      try {
-        const response = await fetch("https://ipapi.co/json/");
-        const data = await response.json();
-        setUserCountry(data.country_code);
-      } catch (error) {
-        console.error("Error al detectar país:", error);
-        // Si falla, asumir que no es Colombia (mostrar USD)
-        setUserCountry(null);
-      }
-    };
-    detectCountry();
-  }, []);
+  // Categorías disponibles (deben coincidir con las opciones en Admin)
+  const categories = [
+    { value: "all", label: t("store.allCategories") || "Todas las categorías" },
+    {
+      value: "programación",
+      label: t("store.category.programming") || "Programación",
+    },
+    { value: "ropa", label: t("store.category.clothing") || "Ropa" },
+    { value: "diseño", label: t("store.category.design") || "Diseño" },
+    { value: "asesoría", label: t("store.category.consulting") || "Asesoría" },
+    { value: "curso", label: t("store.category.course") || "Curso" },
+    {
+      value: "inversión",
+      label: t("store.category.investment") || "Inversión",
+    },
+    { value: "música", label: t("store.category.music") || "Música" },
+    { value: "idiomas", label: t("store.category.languages") || "Idiomas" },
+  ];
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -98,6 +102,7 @@ function Store() {
                 ? product.images
                 : []
               : null,
+            sector: product.sector || null,
             // Nueva estructura de botones
             button_type: product.button_type || "buy",
             buy_button_type: product.buy_button_type || "external_link",
@@ -223,49 +228,58 @@ function Store() {
     }
   };
 
-  // Calcular páginas
-  const totalPages = Math.ceil(items.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentItems = items.slice(startIndex, startIndex + itemsPerPage);
+  // Resetear página cuando cambia el filtro
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory]);
 
-  // Formatear precio según país del usuario
+  // Filtrar productos por categoría/sector
+  const filteredItems = items.filter((item) => {
+    if (selectedCategory === "all") {
+      return true;
+    }
+    return item.sector === selectedCategory;
+  });
+
+  // Calcular páginas con productos filtrados
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentItems = filteredItems.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  // Formatear precio (simplificado, sin detección de país por IP)
   const formatPrice = (item: StoreItem) => {
     const pricing = item.product_pricing?.[0];
     if (!pricing) {
-      // Fallback si no hay pricing
-      const isColombia = userCountry === "CO";
-      // Usar precio base (sin conversión hardcodeada)
-      const price = isColombia
-        ? item.base_price_cop || item.base_price_usd
-        : item.base_price_usd;
-      const currency = isColombia ? "COP" : "USD";
-      return new Intl.NumberFormat(isColombia ? "es-CO" : "en-US", {
-        style: "currency",
-        currency,
-      }).format(price);
+      // Fallback: mostrar precio en USD si no hay pricing
+      const price = item.base_price_usd || 0;
+      return (
+        <span className="text-2xl font-bold text-purple">
+          {new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+          }).format(price)}
+        </span>
+      );
     }
 
-    const isColombia = userCountry === "CO";
     const isOnSale =
       pricing.is_on_sale &&
       (!pricing.sale_ends_at || new Date(pricing.sale_ends_at) > new Date());
 
     if (isOnSale) {
-      const salePrice = isColombia
-        ? pricing.sale_price_cop || pricing.current_price_cop
-        : pricing.sale_price_usd || pricing.current_price_usd;
-      const originalPrice = isColombia
-        ? pricing.current_price_cop
-        : pricing.current_price_usd;
-      const currency = isColombia ? "COP" : "USD";
+      const salePrice = pricing.sale_price_usd || pricing.current_price_usd;
+      const originalPrice = pricing.current_price_usd;
 
       return (
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="line-through text-gray-500 text-lg">
-              {new Intl.NumberFormat(isColombia ? "es-CO" : "en-US", {
+              {new Intl.NumberFormat("en-US", {
                 style: "currency",
-                currency,
+                currency: "USD",
               }).format(originalPrice)}
             </span>
             <span className="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
@@ -273,25 +287,22 @@ function Store() {
             </span>
           </div>
           <span className="text-2xl font-bold text-red-600">
-            {new Intl.NumberFormat(isColombia ? "es-CO" : "en-US", {
+            {new Intl.NumberFormat("en-US", {
               style: "currency",
-              currency,
+              currency: "USD",
             }).format(salePrice)}
           </span>
         </div>
       );
     }
 
-    const price = isColombia
-      ? pricing.current_price_cop
-      : pricing.current_price_usd;
-    const currency = isColombia ? "COP" : "USD";
+    const price = pricing.current_price_usd;
 
     return (
       <span className="text-2xl font-bold text-purple">
-        {new Intl.NumberFormat(isColombia ? "es-CO" : "en-US", {
+        {new Intl.NumberFormat("en-US", {
           style: "currency",
-          currency,
+          currency: "USD",
         }).format(price)}
       </span>
     );
@@ -339,13 +350,46 @@ function Store() {
           {t("store.title")}
         </h1>
 
+        {/* Filtro por categoría/sector */}
+        {items.length > 0 && (
+          <div className="mb-8 flex justify-start">
+            <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {t("store.filterByCategory") || "Filtrar por categoría:"}
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full md:w-64 bg-gray-50 border border-gray-300 rounded-lg p-2 text-gray-900 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#2093c4] focus:border-[#2093c4] hover:border-[#2093c4]"
+                style={{
+                  transition: "all 0.2s ease-in-out",
+                }}
+              >
+                {categories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
         {/* Grid de productos */}
-        {items.length === 0 ? (
+        {filteredItems.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-2xl text-gray-600 mb-4">
-              {t("store.noProducts")}
+              {selectedCategory === "all"
+                ? t("store.noProducts")
+                : t("store.noProductsInCategory") ||
+                  "No hay productos en esta categoría"}
             </p>
-            <p className="text-gray-500">{t("store.noProductsDescription")}</p>
+            <p className="text-gray-500">
+              {selectedCategory === "all"
+                ? t("store.noProductsDescription")
+                : t("store.tryAnotherCategory") ||
+                  "Intenta seleccionar otra categoría"}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
@@ -441,12 +485,20 @@ function Store() {
 
         {/* Paginación */}
         {totalPages > 1 && (
-          <div className="flex justify-center">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
+          <div className="mt-8">
+            <div className="flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+            <p className="text-center text-sm text-gray-500 mt-4">
+              {t("store.showingResults") || "Mostrando"} {startIndex + 1} -{" "}
+              {Math.min(startIndex + itemsPerPage, filteredItems.length)}{" "}
+              {t("store.of") || "de"} {filteredItems.length}{" "}
+              {t("store.products") || "productos"}
+            </p>
           </div>
         )}
 

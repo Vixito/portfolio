@@ -131,7 +131,7 @@ function AdsterraBanner({ className = "", style }: AdsterraBannerProps) {
     <div
       ref={containerRef}
       className={`bg-gray-100 border border-gray-300 rounded-lg flex items-center justify-center ${className}`}
-      style={{ minHeight: "250px", width: "300px", ...style }}
+      style={{ minHeight: "250px", width: "100%", ...style }}
       id={uniqueId}
       data-adsterra-key="d1c3f3974459f71dfabd40e46ad89a97"
     >

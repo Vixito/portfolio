@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
 import { useTranslation } from "../lib/i18n";
 import AdSpace from "../components/features/AdSpace";
+import AdsterraBanner from "../components/features/AdsterraBanner";
 import { sanitizeUserInput } from "../lib/security";
 
 interface Song {
@@ -94,6 +95,32 @@ function Radio() {
           cache: "no-cache",
           signal: controller.signal,
         });
+
+        // Si el servicio no está disponible (503, 502, etc.), manejar silenciosamente
+        if (
+          !response.ok &&
+          (response.status === 503 ||
+            response.status === 502 ||
+            response.status === 500)
+        ) {
+          clearTimeout(timeoutId);
+          if (!isMounted) return;
+          setIsLive(false);
+          // No loggear errores de servicio no disponible en producción
+          if (import.meta.env.DEV) {
+            console.debug(
+              `Servicio de radio no disponible (${response.status})`
+            );
+          }
+          // Continuar con el flujo normal (playlist o offline) - no hacer throw
+          setCurrentSong({
+            id: "offline",
+            title: t("radio.offlineTitle"),
+            artist: t("radio.waiting"),
+            url: ICECAST_STREAM_URL,
+          });
+          return;
+        }
 
         clearTimeout(timeoutId);
         const data = await response.json();
@@ -896,44 +923,19 @@ function Radio() {
             </div>
           </div>
 
-          {/* Tiempo y barra de progreso (oculto para streams en vivo) */}
-          {duration > 0 ? (
-            <div className="hidden md:flex items-center gap-2 min-w-[200px]">
-              <span className="text-xs text-gray-400 min-w-[40px] text-right">
-                {formatTime(currentTime)}
+          {/* Estado ONLINE/OFFLINE (siempre visible) */}
+          <div className="flex items-center gap-2 min-w-[60px] md:min-w-[100px]">
+            {/* ONLINE cuando está en vivo O cuando se reproduce automáticamente la playlist */}
+            {isLive || (isPlaying && !isLive && playlist.length > 0) ? (
+              <span className="text-[10px] md:text-xs text-blue-400 font-semibold animate-pulse">
+                ● {t("radio.online")}
               </span>
-              <input
-                type="range"
-                min="0"
-                max={duration || 0}
-                value={currentTime}
-                onChange={handleSeek}
-                className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-white"
-                style={{
-                  background: `linear-gradient(to right, white 0%, white ${
-                    (currentTime / duration) * 100
-                  }%, #4b5563 ${
-                    (currentTime / duration) * 100
-                  }%, #4b5563 100%)`,
-                }}
-              />
-              <span className="text-xs text-gray-400 min-w-[40px]">
-                {formatTime(duration)}
+            ) : (
+              <span className="text-[10px] md:text-xs text-gray-400">
+                ○ {t("radio.offline")}
               </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 min-w-[60px] md:min-w-[100px]">
-              {isLive ? (
-                <span className="text-[10px] md:text-xs text-blue-400 font-semibold animate-pulse">
-                  ● {t("radio.online")}
-                </span>
-              ) : (
-                <span className="text-[10px] md:text-xs text-gray-400">
-                  ○ {t("radio.offline")}
-                </span>
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Control de volumen */}
           <div className="hidden md:flex items-center gap-2 min-w-[120px]">
@@ -1259,8 +1261,21 @@ function Radio() {
                   </div>
                 )}
               </div>
-              {/* Anuncio debajo de Próximos Eventos */}
-              <AdSpace className="mt-6" />
+              {/* Anuncios superpuestos (misma posición, uno detrás del otro) */}
+              <div className="relative mt-6 min-h-[250px] w-full">
+                {/* Google AdSense - se muestra si está disponible (z-index: 10, detrás) */}
+                <div className="absolute inset-0 z-10">
+                  <AdSpace className="h-full w-full" />
+                </div>
+                {/* Adsterra Banner - se muestra si está disponible (z-index: 20, encima de AdSense) */}
+                {(import.meta.env.VITE_ADSTERRA_ENABLED === "true" ||
+                  (import.meta.env.PROD &&
+                    import.meta.env.VITE_ADSTERRA_ENABLED !== "false")) && (
+                  <div className="absolute inset-0 z-20">
+                    <AdsterraBanner className="h-full w-full" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
