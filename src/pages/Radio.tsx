@@ -62,6 +62,8 @@ function Radio() {
   const [playlist, setPlaylist] = useState<Song[]>([]);
   const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0);
   const playlistLoadedRef = useRef(false);
+  const errorCountRef = useRef(0);
+  const lastErrorTimeRef = useRef(0);
 
   // URL del stream de Icecast (configurable desde variables de entorno)
   const ICECAST_STREAM_URL =
@@ -274,18 +276,49 @@ function Radio() {
             url: item.url,
             duration: item.duration || undefined,
           }));
-          setPlaylist(songs);
-          playlistLoadedRef.current = true;
 
-          // Si hay canciones, iniciar la primera automáticamente
-          if (songs.length > 0 && !isLive) {
-            setCurrentPlaylistIndex(0);
-            setCurrentSong(songs[0]);
-            // Configurar el audio pero no reproducir automáticamente (esperar a que el usuario haga click)
-            if (audioRef.current) {
-              audioRef.current.src = songs[0].url;
-              audioRef.current.load();
+          // Filtrar canciones con URLs válidas antes de establecer la playlist
+          const validSongs = songs.filter((song) => {
+            try {
+              if (!song.url || typeof song.url !== "string") return false;
+              new URL(song.url);
+              return true;
+            } catch {
+              if (import.meta.env.DEV) {
+                console.debug(
+                  "URL inválida en la playlist, saltando:",
+                  song.url
+                );
+              }
+              return false;
             }
+          });
+
+          if (validSongs.length > 0) {
+            setPlaylist(validSongs);
+            playlistLoadedRef.current = true;
+
+            // Si hay canciones válidas, iniciar la primera automáticamente
+            if (!isLive) {
+              setCurrentPlaylistIndex(0);
+              setCurrentSong(validSongs[0]);
+              // Configurar el audio pero no reproducir automáticamente (esperar a que el usuario haga click)
+              if (audioRef.current && validSongs[0].url) {
+                try {
+                  audioRef.current.src = validSongs[0].url;
+                  audioRef.current.load();
+                } catch (error) {
+                  if (import.meta.env.DEV) {
+                    console.debug("Error al cargar primera canción:", error);
+                  }
+                }
+              }
+            }
+          } else {
+            if (import.meta.env.DEV) {
+              console.debug("No hay canciones con URLs válidas en la playlist");
+            }
+            setPlaylist([]);
           }
         }
       } catch (error) {
@@ -451,40 +484,86 @@ function Radio() {
 
     const handleEnded = () => {
       setIsPlaying(false);
+      // Resetear contador de errores cuando una canción termina correctamente
+      errorCountRef.current = 0;
+
       // Si no está en vivo y hay playlist, pasar a la siguiente canción
       if (!isLive && playlist.length > 0) {
-        const nextIndex = (currentPlaylistIndex + 1) % playlist.length; // Bucle
-        setCurrentPlaylistIndex(nextIndex);
+        const nextIndex = (currentPlaylistIndex + 1) % playlist.length;
         const nextSong = playlist[nextIndex];
-        setCurrentSong(nextSong);
-        if (audioRef.current) {
-          audioRef.current.src = nextSong.url;
-          audioRef.current.load();
-          // Reproducir automáticamente la siguiente canción
-          audioRef.current.play().catch((error) => {
+
+        if (audioRef.current && nextSong && nextSong.url) {
+          // Validar URL antes de intentar cargar
+          try {
+            new URL(nextSong.url);
+            setCurrentPlaylistIndex(nextIndex);
+            setCurrentSong(nextSong);
+            audioRef.current.src = nextSong.url;
+            audioRef.current.load();
+            // Reproducir automáticamente la siguiente canción
+            audioRef.current.play().catch((error) => {
+              // Si falla el autoplay, no intentar más automáticamente
+              if (import.meta.env.DEV) {
+                console.debug(
+                  "Error al reproducir siguiente canción (probablemente requiere interacción del usuario):",
+                  error
+                );
+              }
+            });
+          } catch (urlError) {
+            // URL inválida, solo loggear en desarrollo
             if (import.meta.env.DEV) {
-              console.debug("Error al reproducir siguiente canción:", error);
+              console.debug("URL inválida en la playlist:", nextSong.url);
             }
-          });
+            // NO intentar siguiente canción automáticamente para evitar bucles
+          }
         }
       }
     };
-    const handlePlay = () => setIsPlaying(true);
+    const handlePlay = () => {
+      setIsPlaying(true);
+      // Resetear contador de errores cuando se reproduce correctamente
+      errorCountRef.current = 0;
+    };
     const handlePause = () => setIsPlaying(false);
     const handleError = (e: Event) => {
-      console.error("Error en el stream de audio:", e);
       setIsPlaying(false);
-      // Si hay error y no está en vivo, intentar siguiente canción
-      if (!isLive && playlist.length > 0) {
-        const nextIndex = (currentPlaylistIndex + 1) % playlist.length;
-        setCurrentPlaylistIndex(nextIndex);
-        const nextSong = playlist[nextIndex];
-        setCurrentSong(nextSong);
+
+      // Evitar bucles infinitos: solo loggear en desarrollo y con throttling
+      const now = Date.now();
+      if (now - lastErrorTimeRef.current > 2000) {
+        // Máximo un error cada 2 segundos
+        if (import.meta.env.DEV) {
+          console.debug(
+            "Error en el stream de audio (probablemente URL inválida o problema de CORS):",
+            e
+          );
+        }
+        lastErrorTimeRef.current = now;
+      }
+
+      // Incrementar contador de errores consecutivos
+      errorCountRef.current += 1;
+
+      // Si hay más de 5 errores consecutivos, detener completamente y limpiar
+      if (errorCountRef.current >= 5) {
+        if (import.meta.env.DEV) {
+          console.debug(
+            "Demasiados errores consecutivos, deteniendo reproducción automática"
+          );
+        }
+        // Limpiar el src para evitar más intentos
         if (audioRef.current) {
-          audioRef.current.src = nextSong.url;
+          audioRef.current.src = "";
           audioRef.current.load();
         }
+        // NO intentar cambiar de canción automáticamente para evitar bucles infinitos
+        return;
       }
+
+      // NO cambiar automáticamente de canción cuando hay un error
+      // Esto evita bucles infinitos. El usuario deberá hacer click en play para intentar la siguiente canción
+      // O la canción cambiará cuando termine correctamente (handleEnded)
     };
 
     audio.addEventListener("timeupdate", updateTime);

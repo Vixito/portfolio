@@ -6,6 +6,7 @@ import ContactSection from "./ContactSection";
 import LatestPostCard from "./LatestPostCard";
 import ExperienceCard from "./ExperienceCard";
 import AdSpace from "./AdSpace";
+import AdsterraBanner from "./AdsterraBanner";
 import { useTranslation } from "../../lib/i18n";
 
 function HomeSection() {
@@ -81,9 +82,16 @@ function HomeSection() {
           <ContactSection />
         </div>
 
-        {/* Anuncio al lado de Contactar */}
+        {/* Anuncios al lado de Contactar */}
         <div className="home-card md:col-span-2 lg:col-span-1">
-          <AdSpace className="h-full" />
+          <div className="flex flex-col gap-4 h-full">
+            {/* Google AdSense */}
+            <AdSpace className="flex-1" />
+            {/* Adsterra Banner */}
+            <div className="flex justify-center">
+              <AdsterraBanner />
+            </div>
+          </div>
         </div>
       </div>
     </div>
