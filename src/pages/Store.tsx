@@ -57,22 +57,23 @@ function Store() {
   const itemsPerPage = 12;
 
   // Categorías disponibles (deben coincidir con las opciones en Admin)
+  // Ordenadas alfabéticamente, excepto "all" que va primero
   const categories = [
     { value: "all", label: t("store.allCategories") || "Todas las categorías" },
-    {
-      value: "programación",
-      label: t("store.category.programming") || "Programación",
-    },
-    { value: "ropa", label: t("store.category.clothing") || "Ropa" },
-    { value: "diseño", label: t("store.category.design") || "Diseño" },
     { value: "asesoría", label: t("store.category.consulting") || "Asesoría" },
     { value: "curso", label: t("store.category.course") || "Curso" },
+    { value: "diseño", label: t("store.category.design") || "Diseño" },
+    { value: "idiomas", label: t("store.category.languages") || "Idiomas" },
     {
       value: "inversión",
       label: t("store.category.investment") || "Inversión",
     },
     { value: "música", label: t("store.category.music") || "Música" },
-    { value: "idiomas", label: t("store.category.languages") || "Idiomas" },
+    {
+      value: "programación",
+      label: t("store.category.programming") || "Programación",
+    },
+    { value: "ropa", label: t("store.category.clothing") || "Ropa" },
   ];
 
   useEffect(() => {

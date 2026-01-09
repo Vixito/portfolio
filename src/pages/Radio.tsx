@@ -329,11 +329,27 @@ function Radio() {
             if (!isLive) {
               setCurrentPlaylistIndex(0);
               setCurrentSong(validSongs[0]);
-              // Configurar el audio pero no reproducir automáticamente (esperar a que el usuario haga click)
-              if (audioRef.current && validSongs[0].url) {
+              // Reproducir automáticamente la playlist cuando no está en vivo (solo en /radio)
+              const isRadioPage = window.location.pathname === "/radio";
+              if (audioRef.current && validSongs[0].url && isRadioPage) {
                 try {
                   audioRef.current.src = validSongs[0].url;
                   audioRef.current.load();
+                  // Intentar reproducir automáticamente
+                  audioRef.current
+                    .play()
+                    .then(() => {
+                      setIsPlaying(true);
+                    })
+                    .catch((error) => {
+                      // Si falla el autoplay (requiere interacción del usuario), no hacer nada
+                      if (import.meta.env.DEV) {
+                        console.debug(
+                          "No se pudo reproducir automáticamente la playlist:",
+                          error
+                        );
+                      }
+                    });
                 } catch (error) {
                   if (import.meta.env.DEV) {
                     console.debug("Error al cargar primera canción:", error);
@@ -364,6 +380,34 @@ function Radio() {
       setCurrentPlaylistIndex(0);
     }
   }, [isLive, t]);
+
+  // Reproducir automáticamente cuando está en vivo (solo en /radio, no en Home)
+  useEffect(() => {
+    // Verificar que estamos en la página /radio (no en Home)
+    const isRadioPage = window.location.pathname === "/radio";
+
+    if (isLive && isRadioPage && audioRef.current && !isPlaying) {
+      // Cuando está en vivo, reproducir automáticamente
+      const playLive = async () => {
+        try {
+          if (
+            !audioRef.current.src ||
+            audioRef.current.src !== currentSong?.url
+          ) {
+            audioRef.current.src = currentSong?.url || ICECAST_STREAM_URL;
+          }
+          await audioRef.current.play();
+          setIsPlaying(true);
+        } catch (error) {
+          // Si falla el autoplay (requiere interacción del usuario), no hacer nada
+          if (import.meta.env.DEV) {
+            console.debug("No se pudo reproducir automáticamente:", error);
+          }
+        }
+      };
+      playLive();
+    }
+  }, [isLive, currentSong, ICECAST_STREAM_URL]);
 
   // Pausar automáticamente si la radio se desconecta y cambiar a playlist
   useEffect(() => {
