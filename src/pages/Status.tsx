@@ -201,19 +201,13 @@ function Status() {
     }
   };
 
-  // URL de Typeform para testimonios (desde variable de entorno)
-  const TYPEFORM_TESTIMONIAL_URL =
-    import.meta.env.VITE_TYPEFORM_TESTIMONIAL_URL || "";
-
   const handleTestimonialClick = () => {
-    if (TYPEFORM_TESTIMONIAL_URL) {
-      window.open(TYPEFORM_TESTIMONIAL_URL, "_blank", "noopener,noreferrer");
-    } else {
-      alert(
-        t("status.testimonialUrlNotConfigured") ||
-          "URL de Typeform no configurada"
-      );
-    }
+    // URLs de Tally.so según el idioma
+    const tallyUrl =
+      language === "es"
+        ? "https://tally.so/r/yP2O90"
+        : "https://tally.so/r/VLQgPy";
+    window.open(tallyUrl, "_blank", "noopener,noreferrer");
   };
 
   const selectedRange = watch("investmentRange");

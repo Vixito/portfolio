@@ -334,11 +334,14 @@ function Radio() {
               if (audioRef.current && validSongs[0].url && isRadioPage) {
                 try {
                   audioRef.current.src = validSongs[0].url;
+                  audioRef.current.volume = volume; // Configurar volumen antes de cargar
                   audioRef.current.load();
 
                   // Esperar a que el audio esté listo antes de reproducir
                   const handleCanPlay = () => {
                     if (audioRef.current && !isPlaying) {
+                      // Asegurar que el volumen esté configurado
+                      audioRef.current.volume = volume;
                       audioRef.current
                         .play()
                         .then(() => {
@@ -443,6 +446,7 @@ function Radio() {
         setCurrentSong(nextSong);
         if (audioRef.current) {
           audioRef.current.src = nextSong.url;
+          audioRef.current.volume = volume; // Configurar volumen antes de cargar
           audioRef.current.load();
         }
       }
@@ -553,10 +557,20 @@ function Radio() {
     }
   }, [currentSong]);
 
+  // Configurar volumen inicial cuando se carga el audio
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
   // Event listeners del audio
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // Configurar volumen inicial
+    audio.volume = volume;
 
     // Para streams en vivo, no hay duración definida
     const updateTime = () => {
@@ -591,6 +605,7 @@ function Radio() {
             setCurrentPlaylistIndex(nextIndex);
             setCurrentSong(nextSong);
             audioRef.current.src = nextSong.url;
+            audioRef.current.volume = volume; // Configurar volumen antes de cargar
             audioRef.current.load();
             // Reproducir automáticamente la siguiente canción
             audioRef.current.play().catch((error) => {
@@ -716,6 +731,7 @@ function Radio() {
             audioRef.current.src !== currentSong?.url
           ) {
             audioRef.current.src = currentSong?.url || ICECAST_STREAM_URL;
+            audioRef.current.volume = volume; // Configurar volumen antes de reproducir
           }
           await audioRef.current.play();
           setIsPlaying(true);
@@ -734,6 +750,7 @@ function Radio() {
               audioRef.current.src !== songToPlay.url
             ) {
               audioRef.current.src = songToPlay.url;
+              audioRef.current.volume = volume; // Configurar volumen antes de cargar
               audioRef.current.load();
             }
 
@@ -1054,16 +1071,12 @@ function Radio() {
               <div className="absolute top-full right-0 mt-2 bg-black shadow-lg min-w-[180px] z-[9999]">
                 <button
                   onClick={() => {
-                    const typeformUrl =
-                      import.meta.env.VITE_TYPEFORM_SONG_REQUEST_URL || "";
-                    if (typeformUrl) {
-                      window.open(typeformUrl, "_blank", "noopener,noreferrer");
-                    } else {
-                      alert(
-                        t("radio.songRequestUrlNotConfigured") ||
-                          "URL de Typeform no configurada"
-                      );
-                    }
+                    // URLs de Tally.so según el idioma
+                    const tallyUrl =
+                      language === "es"
+                        ? "https://tally.so/r/Y501K6"
+                        : "https://tally.so/r/b5ja5Z";
+                    window.open(tallyUrl, "_blank", "noopener,noreferrer");
                     setShowMenu(false);
                   }}
                   className="w-full px-4 py-2 text-left text-white hover:bg-white/20 transition-colors cursor-pointer flex items-center gap-2 text-sm"
