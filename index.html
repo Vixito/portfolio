@@ -2,6 +2,20 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <!-- Google Tag Manager -->
+    <script>
+      (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != "dataLayer" ? "&l=" + l : "";
+        j.async = true;
+        j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, "script", "dataLayer", "GTM-NQPZT62J");
+    </script>
+    <!-- End Google Tag Manager -->
     <link
       rel="icon"
       type="image/svg+xml"
@@ -35,7 +49,7 @@
     <!-- Content Security Policy -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://plausible.io https://static.hotjar.com https://*.hotjar.com https://pagead2.googlesyndication.com https://static.cloudflareinsights.com https://vixis.dev https://openairtowhardworking.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net; font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net; img-src 'self' data: https: blob:; connect-src 'self' https://plausible.io https://*.hotjar.com https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://v6.exchangerate-api.com https://cdn.vixis.dev https://radio.vixis.dev https://ipapi.co; media-src 'self' https://radio.vixis.dev https://*.supabase.co https://*.supabase.in https://*.s3.amazonaws.com https://*.cloudfront.net blob:; frame-src 'self' https://plausible.io https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://openairtowhardworking.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.googletagmanager.com https://plausible.io https://static.hotjar.com https://*.hotjar.com https://pagead2.googlesyndication.com https://static.cloudflareinsights.com https://vixis.dev https://openairtowhardworking.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net; font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net; img-src 'self' data: https: blob:; connect-src 'self' https://www.googletagmanager.com https://*.googletagmanager.com https://plausible.io https://*.hotjar.com https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://v6.exchangerate-api.com https://cdn.vixis.dev https://radio.vixis.dev https://ipapi.co; media-src 'self' https://radio.vixis.dev https://*.supabase.co https://*.supabase.in https://*.s3.amazonaws.com https://*.cloudfront.net blob:; frame-src 'self' https://www.googletagmanager.com https://*.googletagmanager.com https://plausible.io https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://openairtowhardworking.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
     />
 
     <!-- Privacy-friendly analytics by Plausible -->
@@ -79,6 +93,16 @@
     <title>Vixis - Portfolio</title>
   </head>
   <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript
+      ><iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-NQPZT62J"
+        height="0"
+        width="0"
+        style="display: none; visibility: hidden"
+      ></iframe
+    ></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
