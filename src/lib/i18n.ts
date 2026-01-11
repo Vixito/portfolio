@@ -338,6 +338,8 @@ export const translations = {
       selectRange: "Seleccionar rango",
       encryptionNotice:
         "ENCRIPTACIÓN ACTIVA. TUS DATOS SERÁN PROCESADOS BAJO PROTOCOLOS DE PRIVACIDAD NIVEL A+.",
+      successMessage:
+        "Tu mensaje se envió exitosamente. Me pondré en contacto contigo pronto.",
       giveTestimonial: "Da un testimonio",
       testimonialUrlNotConfigured: "URL de Typeform no configurada",
       submit: "Enviar",
@@ -351,14 +353,14 @@ export const translations = {
         "El contacto se redirigirá a mi correo y analizaré tu mensaje en cuestión de horas.",
       step2Title: "DISCOVERY CALL",
       step2Description:
-        "Agendamos una reunión de aproximadamente 20 minutos para alinear objetivos y visión.",
+        "Agendamos una reunión de aproximadamente 15 minutos para alinear objetivos y visión.",
       step3Title: "PROPUESTA TÉCNICA",
       step3Description:
         "Te envío un plan detallado, presupuesto y cronograma real.",
       directEmail: "CORREO DIRECTO",
       callWhatsapp: "WHATSAPP DIRECTO",
       preferVideocall: "¿PREFIERES UNA VIDEOLLAMADA?",
-      discoveryCall: "DISCOVERY CALL DE 20 MIN",
+      discoveryCall: "DISCOVERY CALL DE 15 MIN",
       scheduleNow: "AGENDAR AHORA",
       orWriteHere: "O ESCRÍBEME AQUÍ",
       identityName: "IDENTIDAD / NOMBRE",
@@ -905,6 +907,8 @@ export const translations = {
       selectRange: "Select range",
       encryptionNotice:
         "ACTIVE ENCRYPTION. YOUR DATA WILL BE PROCESSED UNDER A+ LEVEL PRIVACY PROTOCOLS.",
+      successMessage:
+        "Your message was sent successfully. I'll get in touch with you soon.",
       giveTestimonial: "Give a Testimonial",
       testimonialUrlNotConfigured: "Typeform URL not configured",
       submit: "Submit",
@@ -918,14 +922,14 @@ export const translations = {
         "The contact will be redirected to my email and I will analyze your message in a few hours.",
       step2Title: "DISCOVERY CALL",
       step2Description:
-        "We schedule a meeting of approximately 20 minutes to align objectives and vision.",
+        "We schedule a meeting of approximately 15 minutes to align objectives and vision.",
       step3Title: "TECHNICAL PROPOSAL",
       step3Description:
         "I send you a detailed plan, budget, and real timeline.",
       directEmail: "DIRECT EMAIL",
       callWhatsapp: "DIRECT WHATSAPP",
       preferVideocall: "DO YOU PREFER A VIDEO CALL?",
-      discoveryCall: "20 MIN DISCOVERY CALL",
+      discoveryCall: "15 MIN DISCOVERY CALL",
       scheduleNow: "SCHEDULE NOW",
       orWriteHere: "OR WRITE ME HERE",
       identityName: "IDENTITY / NAME",

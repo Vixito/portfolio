@@ -30,13 +30,76 @@ export async function createRequest(params: {
   request_type: "job" | "collaboration" | "consultation" | "other";
   message: string;
 }) {
-  const { data, error } = await supabase.rpc("create_request", params);
+  const { data, error } = await supabase.rpc("create_request", {
+    p_name: params.name,
+    p_email: params.email,
+    p_request_type: params.request_type,
+    p_message: params.message,
+  });
 
   if (error) {
     throw new Error(`Error al crear petición: ${error.message}`);
   }
 
+  // Llamar al webhook de n8n para enviar email (no bloquea si falla)
+  const webhookUrl =
+    import.meta.env.VITE_N8N_WEBHOOK_URL ||
+    "https://n8n-production-cde5.up.railway.app/webhook/status-form";
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: params.name,
+        email: params.email,
+        phone: params.phone || "",
+        currency: params.currency || "",
+        investmentRange: params.investmentRange || "",
+        requestType: params.request_type,
+        message: params.message,
+      }),
+    });
+  } catch (webhookError) {
+    console.error("Error al enviar webhook:", webhookError);
+    // No lanzar error, solo loguear
+  }
+
   return data;
+}
+
+export async function sendScheduleRequest(params: {
+  name: string;
+  email: string;
+  phone?: string;
+  message?: string;
+}) {
+  // Llamar al webhook de n8n para notificar
+  const webhookUrl =
+    import.meta.env.VITE_N8N_SCHEDULE_WEBHOOK_URL ||
+    "https://n8n-production-cde5.up.railway.app/webhook/status-schedule";
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: params.name,
+        email: params.email,
+        phone: params.phone || "",
+        message: params.message || "",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Error al enviar solicitud de agenda");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error al enviar webhook de agenda:", error);
+    throw error;
+  }
 }
 
 /**

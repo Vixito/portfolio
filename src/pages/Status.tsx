@@ -8,8 +8,9 @@ import { useLanguageStore } from "../stores/useLanguageStore";
 import StatusBadge from "../components/features/StatusBadge";
 import AnimatedInput from "../components/ui/AnimatedInput";
 import Textarea from "../components/ui/Textarea";
-import { createRequest } from "../lib/supabase-functions";
+import { createRequest, sendScheduleRequest } from "../lib/supabase-functions";
 import { useTranslation } from "../lib/i18n";
+import BasicToast from "../components/ui/BasicToast";
 
 // Esquema de validación con Zod - se actualizará dinámicamente con traducciones
 const createRequestSchema = (t: (key: string) => string) =>
@@ -19,9 +20,18 @@ const createRequestSchema = (t: (key: string) => string) =>
       .string()
       .min(1, "Tu email completo es requerido")
       .email(t("status.emailPlaceholder") || "Ingresa un email válido"),
-    requestType: z.enum(["job", "collaboration", "consultation", "other"], {
-      error: t("status.typePlaceholder"),
-    }),
+    phone: z.string().optional(),
+    requestType: z
+      .string()
+      .refine(
+        (val) =>
+          ["job", "collaboration", "consultation", "other"].includes(
+            val as any
+          ),
+        {
+          message: t("status.typePlaceholder") || "Selecciona tipo",
+        }
+      ),
     message: z
       .string()
       .min(1, t("status.messagePlaceholder") || "Este campo es requerido")
@@ -45,6 +55,7 @@ function Status() {
   );
   const [showInvestmentDropdown, setShowInvestmentDropdown] = useState(false);
   const [showRequestTypeDropdown, setShowRequestTypeDropdown] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const investmentDropdownRef = useRef<HTMLDivElement>(null);
   const requestTypeDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +73,7 @@ function Status() {
     resolver: zodResolver(requestSchema),
     defaultValues: {
       currency: "COP",
+      requestType: undefined,
     },
   });
 
@@ -189,9 +201,12 @@ function Status() {
         email: data.email,
         request_type: data.requestType,
         message: data.message,
+        phone: data.phone,
+        currency: data.currency,
+        investmentRange: data.investmentRange,
       });
 
-      alert(t("status.success"));
+      setShowToast(true);
       reset();
     } catch (error) {
       console.error(t("status.error"), error);
@@ -453,6 +468,35 @@ function Status() {
                   </div>
                 </div>
                 <button
+                  onClick={async () => {
+                    try {
+                      // Intentar obtener email del formulario si está disponible
+                      const formEmail = watch("email") || "";
+                      const formName = watch("name") || "";
+                      const formPhone = watch("phone") || "";
+
+                      // Enviar notificación a n8n (no bloquea si falla)
+                      if (formEmail) {
+                        try {
+                          await sendScheduleRequest({
+                            name: formName || "Usuario",
+                            email: formEmail,
+                            phone: formPhone,
+                            message: "Solicitud de agenda desde botón",
+                          });
+                        } catch (e) {
+                          console.error("Error al notificar agenda:", e);
+                        }
+                      }
+
+                      // Redirigir a Cal.com
+                      window.open("https://cal.com/vixis/", "_blank");
+                    } catch (error) {
+                      console.error("Error:", error);
+                      // Redirigir de todas formas
+                      window.open("https://cal.com/vixis/", "_blank");
+                    }
+                  }}
                   className="px-4 py-2 text-white font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-2"
                   style={{ backgroundColor: "#2093c4" }}
                   onMouseEnter={(e) => {
@@ -544,6 +588,7 @@ function Status() {
                   </label>
                   <input
                     type="tel"
+                    {...register("phone")}
                     placeholder="+57..."
                     className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2"
                     style={{ focusRingColor: "#331d83" }}
@@ -841,6 +886,17 @@ function Status() {
           </div>
         </div>
       </div>
+      {showToast && (
+        <BasicToast
+          message={
+            t("status.successMessage") ||
+            "Tu mensaje se envió exitosamente. Me pondré en contacto contigo pronto."
+          }
+          type="success"
+          duration={5000}
+          onClose={() => setShowToast(false)}
+        />
+      )}
     </div>
   );
 }
