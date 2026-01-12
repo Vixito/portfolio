@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 import { getUpcomingEvents, getPlaylist } from "../lib/supabase-functions";
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
-import { useTranslation } from "../lib/i18n";
+import { useTranslation, getTranslatedText } from "../lib/i18n";
 import AdSpace from "../components/features/AdSpace";
 import AdsterraBanner from "../components/features/AdsterraBanner";
 import { sanitizeUserInput } from "../lib/security";
@@ -30,10 +30,12 @@ function Radio() {
     Array<{
       id: string;
       title: string;
+      title_translations?: { es?: string; en?: string } | null;
       date: string;
       passline_url: string | null;
       thumbnail_url: string | null;
       description: string | null;
+      description_translations?: { es?: string; en?: string } | null;
     }>
   >([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -1375,14 +1377,20 @@ function Radio() {
                           }}
                         >
                           <h3 className="font-semibold text-gray-900 mb-1">
-                            {event.title}
+                            {getTranslatedText(
+                              (event as any).title_translations || event.title
+                            )}
                           </h3>
                           <p className="text-sm text-gray-600">
                             {formattedDate}
                           </p>
-                          {event.description && (
+                          {(event.description ||
+                            (event as any).description_translations) && (
                             <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                              {event.description}
+                              {getTranslatedText(
+                                (event as any).description_translations ||
+                                  event.description
+                              )}
                             </p>
                           )}
                         </div>
@@ -1392,7 +1400,7 @@ function Radio() {
                 )}
               </div>
               {/* Anuncios superpuestos (misma posición, uno detrás del otro) */}
-              <div className="relative mt-6 min-h-[250px] w-full">
+              <div className="relative mt-6 mb-4 min-h-[250px] w-full">
                 {/* Google AdSense - se muestra si está disponible (z-index: 10, detrás) */}
                 <div className="absolute inset-0 z-10">
                   <AdSpace className="h-full w-full" />
