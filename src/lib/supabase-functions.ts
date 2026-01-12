@@ -198,6 +198,7 @@ export async function createBlogPost(post: {
   platform: string;
   thumbnail_url?: string;
   published_at: string;
+  author?: string;
 }) {
   const { data, error } = await supabase
     .from("blog_posts")
@@ -224,6 +225,7 @@ export async function updateBlogPost(
     platform: string;
     thumbnail_url: string;
     published_at: string;
+    author: string;
   }>
 ) {
   const { data, error } = await supabase

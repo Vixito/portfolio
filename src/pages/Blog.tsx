@@ -11,6 +11,7 @@ interface BlogPost {
   url: string; // Link al blog externo
   platform: string; // "Medium", "Dev.to", etc.
   date: string;
+  author?: string;
 }
 
 function Blog() {
@@ -38,6 +39,7 @@ function Blog() {
             url: post.url,
             platform: post.platform,
             date: post.published_at,
+            author: post.author,
           }));
           setPosts(mappedPosts);
         } else {
@@ -110,11 +112,16 @@ function Blog() {
                   {/* Contenido */}
                   <div className="md:w-2/3 p-6 flex flex-col justify-between">
                     <div>
-                      {/* Plataforma y fecha */}
-                      <div className="flex items-center gap-3 mb-2">
+                      {/* Plataforma, autor y fecha */}
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <span className="text-xs font-medium text-purple bg-purple/10 px-2 py-1 rounded">
                           {post.platform}
                         </span>
+                        {post.author && (
+                          <span className="text-xs text-gray-600 font-medium">
+                            {post.author}
+                          </span>
+                        )}
                         <span className="text-xs text-gray-500">
                           {new Date(post.date).toLocaleDateString(
                             language === "es" ? "es-ES" : "en-US",

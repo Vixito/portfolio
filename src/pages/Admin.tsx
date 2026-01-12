@@ -4780,6 +4780,23 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
+                        Autor (opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.author || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            author: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="Nombre del autor"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
                         Thumbnail URL (opcional)
                       </label>
                       <input
