@@ -75,99 +75,106 @@ function Blog() {
         </h1>
 
         {/* Lista vertical de posts */}
-        <div className="space-y-8 mb-12">
-          {currentPosts.map((post) => (
-            <article
-              key={post.id}
-              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow border border-gray-200"
-            >
-              <div className="flex flex-col md:flex-row">
-                {/* Miniatura */}
-                <div className="md:w-1/3 h-48 md:h-auto bg-gray-100 relative overflow-hidden">
-                  <img
-                    src={post.thumbnail}
-                    alt={post.title}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (!target.dataset.errorHandled) {
-                        target.dataset.errorHandled = "true";
-                        target.src =
-                          "https://via.placeholder.com/400x300?text=No+Image";
-                        target.classList.add("opacity-50");
-                      }
-                    }}
-                  />
-                </div>
+        {posts.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-2xl text-gray-600 mb-4">{t("blog.noPosts")}</p>
+            <p className="text-gray-500">{t("blog.noPostsDescription")}</p>
+          </div>
+        ) : (
+          <div className="space-y-8 mb-12">
+            {currentPosts.map((post) => (
+              <article
+                key={post.id}
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow border border-gray-200"
+              >
+                <div className="flex flex-col md:flex-row">
+                  {/* Miniatura */}
+                  <div className="md:w-1/3 h-48 md:h-auto bg-gray-100 relative overflow-hidden">
+                    <img
+                      src={post.thumbnail}
+                      alt={post.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (!target.dataset.errorHandled) {
+                          target.dataset.errorHandled = "true";
+                          target.src =
+                            "https://via.placeholder.com/400x300?text=No+Image";
+                          target.classList.add("opacity-50");
+                        }
+                      }}
+                    />
+                  </div>
 
-                {/* Contenido */}
-                <div className="md:w-2/3 p-6 flex flex-col justify-between">
-                  <div>
-                    {/* Plataforma y fecha */}
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-xs font-medium text-purple bg-purple/10 px-2 py-1 rounded">
-                        {post.platform}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(post.date).toLocaleDateString(
-                          language === "es" ? "es-ES" : "en-US",
-                          {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          }
-                        )}
-                      </span>
+                  {/* Contenido */}
+                  <div className="md:w-2/3 p-6 flex flex-col justify-between">
+                    <div>
+                      {/* Plataforma y fecha */}
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-xs font-medium text-purple bg-purple/10 px-2 py-1 rounded">
+                          {post.platform}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(post.date).toLocaleDateString(
+                            language === "es" ? "es-ES" : "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Título */}
+                      <h2 className="text-2xl font-bold text-gray-900 mb-3 hover:text-purple transition-colors">
+                        <a
+                          href={post.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          {post.title}
+                        </a>
+                      </h2>
+
+                      {/* Excerpt (contenido incompleto) */}
+                      <p className="text-gray-600 leading-relaxed line-clamp-3">
+                        {post.excerpt}
+                      </p>
                     </div>
 
-                    {/* Título */}
-                    <h2 className="text-2xl font-bold text-gray-900 mb-3 hover:text-purple transition-colors">
+                    {/* Link para leer más */}
+                    <div className="mt-4">
                       <a
                         href={post.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block"
+                        className="text-purple font-semibold hover:text-blue transition-colors inline-flex items-center gap-2"
                       >
-                        {post.title}
+                        {t("blog.readMore")}
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
                       </a>
-                    </h2>
-
-                    {/* Excerpt (contenido incompleto) */}
-                    <p className="text-gray-600 leading-relaxed line-clamp-3">
-                      {post.excerpt}
-                    </p>
-                  </div>
-
-                  {/* Link para leer más */}
-                  <div className="mt-4">
-                    <a
-                      href={post.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple font-semibold hover:text-blue transition-colors inline-flex items-center gap-2"
-                    >
-                      {t("blog.readMore")}
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                    </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
+              </article>
+            ))}
+          </div>
+        )}
 
         {/* Paginación */}
         {totalPages > 1 && (
