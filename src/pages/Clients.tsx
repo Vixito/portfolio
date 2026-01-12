@@ -325,7 +325,7 @@ function Clients() {
 
             {/* Lista de clientes */}
             <div className="mb-16">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
                 {t("clients.title")}
               </h2>
               <div className="space-y-6">
@@ -354,12 +354,12 @@ function Clients() {
 
                     {/* Contenido */}
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">
                         {getTranslatedText(
                           client.name_translations || client.name
                         )}
                       </h3>
-                      <p className="text-gray-600">
+                      <p className="text-gray-600 dark:text-gray-400">
                         {getTranslatedText(
                           client.description_translations || client.description
                         )}
@@ -416,14 +416,14 @@ function Clients() {
             {/* Testimonios estilo Pinterest */}
             {testimonials.length > 0 && (
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
                   {t("clients.testimonials")}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {testimonials.map((testimonial) => (
                     <div
                       key={testimonial.id}
-                      className="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition-shadow border border-gray-200"
+                      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
                     >
                       {/* Logo del cliente */}
                       <div className="mb-4">
@@ -454,10 +454,10 @@ function Clients() {
 
                       {/* Autor */}
                       <div className="border-t border-gray-200 pt-4">
-                        <p className="font-semibold text-gray-900">
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">
                           {testimonial.author}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                           {testimonial.role}
                         </p>
                         {testimonial.url && (

@@ -170,7 +170,7 @@ function Studies() {
                 <th className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -192,14 +192,14 @@ function Studies() {
                       onChange={(e) =>
                         setFilters({ ...filters, title: e.target.value })
                       }
-                      className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple"
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple dark:focus:border-cyan-200"
                     />
                   </div>
                 </th>
                 <th className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -221,14 +221,14 @@ function Studies() {
                       onChange={(e) =>
                         setFilters({ ...filters, institution: e.target.value })
                       }
-                      className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple"
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple dark:focus:border-cyan-200"
                     />
                   </div>
                 </th>
                 <th className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -251,7 +251,7 @@ function Studies() {
                           type: e.target.value as Study["type"] | "all",
                         })
                       }
-                      className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
                       <option value="all">{t("studies.all")}</option>
                       <option value="degree">{t("studies.degree")}</option>
@@ -265,7 +265,7 @@ function Studies() {
                 <th className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -288,7 +288,7 @@ function Studies() {
                           status: e.target.value as Study["status"] | "all",
                         })
                       }
-                      className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
                       <option value="all">{t("studies.all")}</option>
                       <option value="completed">
@@ -303,7 +303,7 @@ function Studies() {
                 <th className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -323,7 +323,7 @@ function Studies() {
                 <th className="px-6 py-4 text-left min-w-[180px]">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -349,7 +349,7 @@ function Studies() {
                             | "no",
                         })
                       }
-                      className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
                       <option value="all">{t("studies.all")}</option>
                       <option value="yes">{t("studies.yes")}</option>

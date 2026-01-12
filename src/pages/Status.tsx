@@ -231,24 +231,13 @@ function Status() {
       ?.label || t("status.selectRange");
 
   return (
-    <div className="min-h-screen py-20 px-4 bg-white relative overflow-hidden">
+    <div className="min-h-screen py-20 px-4 bg-white dark:bg-gray-900 relative overflow-hidden transition-colors">
       {/* Fondo cuadriculado con Blue Corner Glow (igual que Home) */}
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, #f0f0f0 1px, transparent 1px),
-            linear-gradient(to bottom, #f0f0f0 1px, transparent 1px),
-            radial-gradient(circle 600px at 0% 200px, rgba(32, 148, 197, 0.302), transparent),
-            radial-gradient(circle 600px at 100% 200px, rgba(32, 147, 196, 0.3), transparent)
-          `,
-          backgroundSize: "20px 20px, 20px 20px, 100% 100%, 100% 100%",
-        }}
-      />
+      <div className="absolute inset-0 z-0 grid-background dark:bg-gray-900" />
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4">
             {t("status.title")}
           </h1>
         </div>
@@ -259,15 +248,7 @@ function Status() {
             <StatusBadge />
             <button
               onClick={handleTestimonialClick}
-              className="flex items-center gap-3 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 font-medium transition-all cursor-pointer hover:bg-blue-50"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#2093c4";
-                e.currentTarget.style.color = "#2093c4";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#e5e7eb";
-                e.currentTarget.style.color = "#111827";
-              }}
+              className="flex items-center gap-3 px-4 py-2 rounded-lg border border-gray-200 dark:border-cyan-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-medium transition-all cursor-pointer hover:border-[#2093c4] hover:text-[#2093c4] hover:bg-blue-50 dark:hover:bg-blue-900/20"
             >
               <span className="text-sm font-semibold">
                 {t("status.giveTestimonial") || "Brindar un Testimonio"}
@@ -280,7 +261,7 @@ function Status() {
             }
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs md:text-sm text-gray-600 pr-7 hover:text-blue transition-colors cursor-pointer font-mono"
+            className="text-xs md:text-sm text-gray-600 dark:text-gray-400 pr-7 hover:text-blue dark:hover:text-blue-400 transition-colors cursor-pointer font-mono"
           >
             {currentTime}
           </a>
@@ -292,13 +273,10 @@ function Status() {
           <div className="space-y-8">
             {/* Título y descripción */}
             <div>
-              <h2
-                className="text-3xl md:text-4xl font-bold mb-4"
-                style={{ color: "#331d83" }}
-              >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-[#331d83] dark:text-cyan-300">
                 {t("status.visionTitle") || "TRABAJA CONMIGO"}
               </h2>
-              <p className="text-gray-700 text-lg">
+              <p className="text-gray-700 dark:text-gray-300 text-lg">
                 {t("status.visionDescription") ||
                   "¿Tienes un proyecto desafiante, una duda técnica o simplemente quieres expandir tu red? Hablemos."}
               </p>
@@ -314,10 +292,10 @@ function Status() {
                   01
                 </span>
                 <div>
-                  <h3 className="text-gray-900 font-semibold mb-1">
+                  <h3 className="text-gray-900 dark:text-gray-100 font-semibold mb-1">
                     {t("status.step1Title") || "CONTACTO INICIAL"}
                   </h3>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     {t("status.step1Description") ||
                       "El contacto se redirigirá a mi correo y analizaré tu mensaje en cuestión de horas."}
                   </p>
@@ -331,10 +309,10 @@ function Status() {
                   02
                 </span>
                 <div>
-                  <h3 className="text-gray-900 font-semibold mb-1">
+                  <h3 className="text-gray-900 dark:text-gray-100 font-semibold mb-1">
                     {t("status.step2Title") || "DISCOVERY CALL"}
                   </h3>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     {t("status.step2Description") ||
                       "Agendamos una reunión de aproximadamente 20 minutos para alinear objetivos y visión."}
                   </p>
@@ -348,10 +326,10 @@ function Status() {
                   03
                 </span>
                 <div>
-                  <h3 className="text-gray-900 font-semibold mb-1">
+                  <h3 className="text-gray-900 dark:text-gray-100 font-semibold mb-1">
                     {t("status.step3Title") || "PROPUESTA TÉCNICA"}
                   </h3>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     {t("status.step3Description") ||
                       "Te envío un plan detallado, presupuesto y cronograma real."}
                   </p>
@@ -361,7 +339,7 @@ function Status() {
 
             {/* Contacto directo */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
                   <svg
                     className="w-5 h-5"
@@ -377,7 +355,7 @@ function Status() {
                       d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                     />
                   </svg>
-                  <span className="text-gray-900 text-sm font-semibold">
+                  <span className="text-gray-900 dark:text-gray-100 text-sm font-semibold">
                     {t("status.directEmail") || "CORREO DIRECTO"}
                   </span>
                 </div>
@@ -389,7 +367,7 @@ function Status() {
                   carlosvicioso@vixis.dev
                 </a>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
                   <svg
                     className="w-5 h-5"
@@ -405,7 +383,7 @@ function Status() {
                       d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                     />
                   </svg>
-                  <span className="text-gray-900 text-sm font-semibold">
+                  <span className="text-gray-900 dark:text-gray-100 text-sm font-semibold">
                     {t("status.callWhatsapp") || "WHATSAPP DIRECTO"}
                   </span>
                 </div>
@@ -435,7 +413,7 @@ function Status() {
           {/* Columna derecha: Agendamiento y Formulario */}
           <div className="space-y-6">
             {/* Opción de videollamada */}
-            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 transition-colors">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div
@@ -458,11 +436,11 @@ function Status() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-gray-900 font-semibold">
+                    <p className="text-gray-900 dark:text-gray-100 font-semibold">
                       {t("status.preferVideocall") ||
                         "¿PREFIERES UNA VIDEOLLAMADA?"}
                     </p>
-                    <p className="text-gray-600 text-sm">
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">
                       {t("status.discoveryCall") || "DISCOVERY CALL DE 20 MIN"}
                     </p>
                   </div>
@@ -527,21 +505,21 @@ function Status() {
             {/* Separador */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
+                <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">
+                <span className="px-4 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">
                   {t("status.orWriteHere") || "O ESCRÍBEME AQUÍ"}
                 </span>
               </div>
             </div>
 
             {/* Formulario */}
-            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {/* Nombre */}
                 <div>
-                  <label className="block text-gray-900 text-sm font-medium mb-2">
+                  <label className="block text-gray-900 dark:text-gray-100 text-sm font-medium mb-2">
                     {t("status.identityName") || "IDENTIDAD / NOMBRE"} *
                   </label>
                   <input
@@ -550,8 +528,7 @@ function Status() {
                     placeholder={
                       t("status.namePlaceholder") || "Ej. Carlos Vicioso"
                     }
-                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2"
-                    style={{ focusRingColor: "#331d83" }}
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-2 border-gray-300 dark:border-[#2093c4] rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-[#331d83]"
                   />
                   {errors.name && (
                     <p className="text-red-600 text-xs mt-1">
@@ -562,7 +539,7 @@ function Status() {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-gray-900 text-sm font-medium mb-2">
+                  <label className="block text-gray-900 dark:text-gray-100 text-sm font-medium mb-2">
                     {t("status.linkChannelEmail") || "CANAL DE ENLACE / EMAIL"}{" "}
                     *
                   </label>
@@ -570,8 +547,7 @@ function Status() {
                     type="email"
                     {...register("email")}
                     placeholder={t("status.emailPlaceholder") || "tu@email.com"}
-                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2"
-                    style={{ focusRingColor: "#331d83" }}
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-2 border-gray-300 dark:border-[#2093c4] rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-[#331d83]"
                   />
                   {errors.email && (
                     <p className="text-red-600 text-xs mt-1">
@@ -582,7 +558,7 @@ function Status() {
 
                 {/* Teléfono */}
                 <div>
-                  <label className="block text-gray-900 text-sm font-medium mb-2">
+                  <label className="block text-gray-900 dark:text-gray-100 text-sm font-medium mb-2">
                     {t("status.mobileFrequencyPhone") ||
                       "FRECUENCIA MÓVIL / TELÉFONO"}
                   </label>
@@ -590,14 +566,13 @@ function Status() {
                     type="tel"
                     {...register("phone")}
                     placeholder="+57..."
-                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2"
-                    style={{ focusRingColor: "#331d83" }}
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-2 border-gray-300 dark:border-[#2093c4] rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-[#331d83]"
                   />
                 </div>
 
                 {/* Inversión Estimada - Dropdown unificado */}
                 <div className="relative investment-dropdown-container">
-                  <label className="block text-gray-900 text-sm font-medium mb-2">
+                  <label className="block text-gray-900 dark:text-gray-100 text-sm font-medium mb-2">
                     {t("status.estimatedInvestment") || "INVERSIÓN ESTIMADA"} *
                   </label>
                   <div className="relative">
@@ -606,15 +581,13 @@ function Status() {
                       onClick={() =>
                         setShowInvestmentDropdown(!showInvestmentDropdown)
                       }
-                      className="w-full px-4 py-2 bg-white border-2 rounded-lg text-left text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 flex items-center justify-between"
-                      style={{
-                        borderColor: "#2093c4",
-                        focusRingColor: "#331d83",
-                      }}
+                      className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-2 border-gray-300 dark:border-[#2093c4] rounded-lg text-left text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-[#331d83] flex items-center justify-between"
                     >
                       <span
                         className={
-                          selectedRange ? "text-gray-900" : "text-gray-500"
+                          selectedRange
+                            ? "text-gray-900 dark:text-gray-100"
+                            : "text-gray-500 dark:text-gray-400"
                         }
                       >
                         {selectedRange
@@ -641,7 +614,7 @@ function Status() {
                     {showInvestmentDropdown && (
                       <div
                         ref={investmentDropdownRef}
-                        className="absolute z-10 w-full mt-2 bg-white border-2 rounded-lg overflow-hidden shadow-lg"
+                        className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border-2 dark:border-gray-700 rounded-lg overflow-hidden shadow-lg"
                         style={{ borderColor: "#2093c4" }}
                       >
                         {/* Selector de divisa */}
@@ -656,7 +629,7 @@ function Status() {
                             className={`flex-1 px-4 py-2 text-sm font-semibold transition-colors ${
                               selectedCurrency === "COP"
                                 ? "text-white"
-                                : "text-gray-600 hover:bg-gray-100"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                             }`}
                             style={
                               selectedCurrency === "COP"
@@ -677,7 +650,7 @@ function Status() {
                             className={`flex-1 px-4 py-2 text-sm font-semibold transition-colors ${
                               selectedCurrency === "USD"
                                 ? "text-white"
-                                : "text-gray-600 hover:bg-gray-100"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                             }`}
                             style={
                               selectedCurrency === "USD"
@@ -699,7 +672,7 @@ function Status() {
                                 setValue("investmentRange", range.value);
                                 setShowInvestmentDropdown(false);
                               }}
-                              className="w-full px-4 py-2 text-left text-gray-900 hover:bg-gray-100 transition-colors text-sm"
+                              className="w-full px-4 py-2 text-left text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
                             >
                               {range.label}
                             </button>
@@ -719,7 +692,7 @@ function Status() {
 
                 {/* Tipo de Petición - Dropdown animado */}
                 <div className="relative request-type-dropdown-container">
-                  <label className="block text-gray-900 text-sm font-medium mb-2">
+                  <label className="block text-gray-900 dark:text-gray-100 text-sm font-medium mb-2">
                     {t("status.type") || "TIPO"} *
                   </label>
                   <div className="relative">
@@ -728,19 +701,13 @@ function Status() {
                       onClick={() =>
                         setShowRequestTypeDropdown(!showRequestTypeDropdown)
                       }
-                      className="w-full px-4 py-2 bg-white border-2 rounded-lg text-left text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 flex items-center justify-between"
-                      style={{
-                        borderColor: watch("requestType")
-                          ? "#2093c4"
-                          : "#d1d5db",
-                        focusRingColor: "#331d83",
-                      }}
+                      className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-2 border-gray-300 dark:border-[#2093c4] rounded-lg text-left text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-[#331d83] flex items-center justify-between"
                     >
                       <span
                         className={
                           watch("requestType")
-                            ? "text-gray-900"
-                            : "text-gray-500"
+                            ? "text-gray-900 dark:text-gray-100"
+                            : "text-gray-500 dark:text-gray-400"
                         }
                       >
                         {watch("requestType")
@@ -773,7 +740,7 @@ function Status() {
                     {showRequestTypeDropdown && (
                       <div
                         ref={requestTypeDropdownRef}
-                        className="absolute z-10 w-full mt-2 bg-white border-2 rounded-lg overflow-hidden shadow-lg"
+                        className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border-2 dark:border-gray-700 rounded-lg overflow-hidden shadow-lg"
                         style={{ borderColor: "#2093c4" }}
                       >
                         {[
@@ -792,7 +759,7 @@ function Status() {
                               setValue("requestType", option.value as any);
                               setShowRequestTypeDropdown(false);
                             }}
-                            className="w-full px-4 py-2 text-left text-gray-900 hover:bg-gray-100 transition-colors text-sm"
+                            className="w-full px-4 py-2 text-left text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
                           >
                             {option.label}
                           </button>
@@ -810,7 +777,7 @@ function Status() {
 
                 {/* Brief del Proyecto / Mensaje */}
                 <div>
-                  <label className="block text-gray-900 text-sm font-medium mb-2">
+                  <label className="block text-gray-900 dark:text-gray-100 text-sm font-medium mb-2">
                     {t("status.message") || "Brief del Proyecto / Mensaje"} *
                   </label>
                   <Textarea
@@ -819,8 +786,7 @@ function Status() {
                       t("status.messagePlaceholder") || "Describe tu visión..."
                     }
                     rows={4}
-                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 resize-none"
-                    style={{ focusRingColor: "#331d83" }}
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-2 border-gray-300 dark:border-[#2093c4] rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-[#331d83] resize-none"
                   />
                   {errors.message && (
                     <p className="text-red-600 text-xs mt-1">
@@ -864,7 +830,7 @@ function Status() {
                       />
                     </svg>
                   </button>
-                  <div className="flex items-center gap-2 text-xs text-gray-600 flex-1">
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 flex-1">
                     <svg
                       className="w-4 h-4 flex-shrink-0"
                       fill="currentColor"

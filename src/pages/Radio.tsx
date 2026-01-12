@@ -7,6 +7,7 @@ import { useTranslation, getTranslatedText } from "../lib/i18n";
 import AdSpace from "../components/features/AdSpace";
 import AdsterraBanner from "../components/features/AdsterraBanner";
 import { sanitizeUserInput } from "../lib/security";
+import { emitRadioState } from "../hooks/useRadioState";
 
 interface Song {
   id: string;
@@ -470,6 +471,15 @@ function Radio() {
       }
     }
   }, [isLive, isPlaying, playlist, currentPlaylistIndex]);
+
+  // Emitir estado de la radio para que RadioPlayer en HomeSection pueda acceder
+  useEffect(() => {
+    emitRadioState({
+      isPlaying,
+      isLive,
+      currentSong,
+    });
+  }, [isPlaying, isLive, currentSong]);
 
   // Cargar eventos próximos
   useEffect(() => {

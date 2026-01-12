@@ -55,10 +55,10 @@ function Hero() {
                 className="w-32 h-32 rounded-full object-cover border-4 border-purple shadow-lg"
               />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 text-center md:text-left">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 text-center md:text-left">
               {t("home.title")}
             </h1>
-            <p className="text-lg text-gray-600 text-center md:text-left">
+            <p className="text-lg text-gray-600 dark:text-gray-400 text-center md:text-left">
               {t("home.subtitle")}
               <br />
               {t("home.specialization")}
