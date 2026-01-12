@@ -355,16 +355,13 @@ function Store() {
         {items.length > 0 && (
           <div className="mb-8 flex justify-start">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 pl-1">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2 pl-1">
                 {t("store.filterByCategory") || "Filtrar por categoría:"}
               </label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full md:w-64 bg-gray-50 border border-gray-300 rounded-lg p-2 text-gray-900 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#2093c4] focus:border-[#2093c4] hover:border-[#2093c4]"
-                style={{
-                  transition: "all 0.2s ease-in-out",
-                }}
+                className="w-full md:w-64 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-gray-900 dark:text-gray-100 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#2093c4] focus:border-[#2093c4] hover:border-[#2093c4] animate-dropdown-open cursor-pointer"
               >
                 {categories.map((category) => (
                   <option key={category.value} value={category.value}>
@@ -445,7 +442,7 @@ function Store() {
                       )) ? (
                       // Si hay múltiples links O links simultáneos, mostrar botón que abre modal
                       <Button
-                        variant="outline"
+                        variant="outlineDark"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleItemClick(item);
@@ -456,7 +453,7 @@ function Store() {
                       </Button>
                     ) : (
                       <Button
-                        variant="outline"
+                        variant="outlineDark"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (
@@ -579,7 +576,7 @@ function Store() {
                         return (
                           <Button
                             key={index}
-                            variant={index === 0 ? "primary" : "outline"}
+                            variant={index === 0 ? "primary" : "outlineDark"}
                             onClick={() => {
                               // Abrir URL principal
                               if (link.url) {

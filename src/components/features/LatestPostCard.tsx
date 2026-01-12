@@ -16,11 +16,11 @@ function LatestPostCard() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 h-full">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 h-full transition-colors">
       <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
           <svg
-            className="w-5 h-5 text-gray-600"
+            className="w-5 h-5 text-gray-600 dark:text-gray-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -33,30 +33,32 @@ function LatestPostCard() {
             />
           </svg>
         </div>
-        <span className="text-sm font-semibold text-gray-600">
+        <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
           {t("latestPostCard.title")}
         </span>
       </div>
-      <p className="text-xs text-gray-500 mb-3">{latestPost.date}</p>
-      <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-2">
+      <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
+        {latestPost.date}
+      </p>
+      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 line-clamp-2">
         {latestPost.title}
       </h3>
       <div className="flex flex-wrap gap-2 mb-4">
         {latestPost.tags.map((tag, index) => (
           <span
             key={index}
-            className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600"
+            className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs text-gray-600 dark:text-gray-400"
           >
             {tag}
           </span>
         ))}
       </div>
-      <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
         {latestPost.excerpt}
       </p>
       <Link
         to={latestPost.url}
-        className="text-sm text-purple hover:text-blue transition-colors cursor-pointer inline-flex items-center gap-1"
+        className="text-sm text-purple dark:text-purple-400 hover:text-blue dark:hover:text-blue-400 transition-colors cursor-pointer inline-flex items-center gap-1"
       >
         {t("latestPostCard.readMore")}
         <svg

@@ -131,11 +131,11 @@ function HomeSection() {
 
         {/* Proyectos con Scrollable Card Stack */}
         <div className="home-card">
-          <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 h-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 h-full transition-colors">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                 <svg
-                  className="w-5 h-5 text-gray-600"
+                  className="w-5 h-5 text-gray-600 dark:text-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -148,7 +148,7 @@ function HomeSection() {
                   />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {t("homeSection.projects")}
               </h2>
             </div>

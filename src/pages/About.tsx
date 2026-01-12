@@ -12,10 +12,10 @@ function About() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Lado izquierdo: Texto */}
           <div className="space-y-4 md:space-y-6 order-2 md:order-1">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
               {t("about.title")}
             </h1>
-            <div className="space-y-3 md:space-y-4 text-sm md:text-base text-gray-600 leading-relaxed">
+            <div className="space-y-3 md:space-y-4 text-sm md:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
               <p>{t("about.description1")}</p>
               <p>{t("about.description2")}</p>
               <p>{t("about.description3")}</p>

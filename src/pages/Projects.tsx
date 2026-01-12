@@ -205,7 +205,7 @@ function ProjectCard({ project }: { project: Project }) {
               rel="noopener noreferrer"
               className="flex-1 cursor-pointer"
             >
-              <Button variant="outline" className="w-full cursor-pointer">
+              <Button variant="outlineDark" className="w-full cursor-pointer">
                 {t("projects.repository")}
               </Button>
             </a>

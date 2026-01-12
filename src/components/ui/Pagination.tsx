@@ -32,7 +32,7 @@ function Pagination({
           className={`px-4 py-2 rounded-lg border transition-colors cursor-pointer ${
             currentPage === page
               ? "bg-[#2093c4] text-white border-[#2093c4]"
-              : "border-gray-300 hover:bg-[#2093c4]/10 bg-white text-gray-700"
+              : "border-gray-300 dark:border-gray-600 hover:bg-[#2093c4]/10 dark:hover:bg-[#2093c4]/20 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
           }`}
         >
           {page}

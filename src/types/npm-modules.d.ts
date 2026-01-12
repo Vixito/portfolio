@@ -40,3 +40,24 @@ declare module "recharts";
 declare module "@tanstack/react-query";
 declare module "zustand";
 declare module "@supabase/supabase-js";
+
+// Declaración de tipos para import.meta.env en Vite/Deno
+interface ImportMetaEnv {
+  readonly VITE_SUPABASE_URL?: string;
+  readonly VITE_SUPABASE_ANON_KEY?: string;
+  readonly VITE_ICECAST_STREAM_URL?: string;
+  readonly VITE_ICECAST_STATUS_URL?: string;
+  readonly VITE_AZURACAST_BASE_URL?: string;
+  readonly VITE_AZURACAST_API_KEY?: string;
+  readonly VITE_AZURACAST_STATION_ID?: string;
+  readonly VITE_ADMIN_KEY?: string;
+  readonly VITE_N8N_WEBHOOK_URL?: string;
+  readonly VITE_N8N_SCHEDULE_WEBHOOK_URL?: string;
+  readonly VITE_ADSTERRA_ENABLED?: string;
+  readonly PROD?: boolean;
+  readonly DEV?: boolean;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

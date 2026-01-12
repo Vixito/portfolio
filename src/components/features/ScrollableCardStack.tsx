@@ -79,7 +79,7 @@ function ScrollableCardStack() {
       {projects.map((project, index) => (
         <div
           key={project.id}
-          className="stack-card absolute inset-0 bg-white rounded-lg shadow-xl cursor-pointer transform-gpu border-2 border-gray-200 overflow-hidden"
+          className="stack-card absolute inset-0 bg-white dark:bg-gray-800 rounded-lg shadow-xl cursor-pointer transform-gpu border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-colors"
           onClick={() => handleCardClick(index)}
           style={{
             transform: `rotate(${(index - currentIndex) * 8}deg) translate(${

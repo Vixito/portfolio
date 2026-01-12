@@ -199,7 +199,7 @@ function SkillsNTechnologies() {
                 <th className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -221,14 +221,14 @@ function SkillsNTechnologies() {
                       onChange={(e) =>
                         setFilters({ ...filters, name: e.target.value })
                       }
-                      className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple"
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple dark:focus:border-cyan-200"
                     />
                   </div>
                 </th>
                 <th className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -253,7 +253,7 @@ function SkillsNTechnologies() {
                             | "all",
                         })
                       }
-                      className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
                       <option value="all">{t("skills.all")}</option>
                       <option value="language">{t("skills.language")}</option>
@@ -272,7 +272,7 @@ function SkillsNTechnologies() {
                 <th className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -295,7 +295,7 @@ function SkillsNTechnologies() {
                           level: e.target.value as Technology["level"] | "all",
                         })
                       }
-                      className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
                       <option value="all">{t("skills.all")}</option>
                       <option value="beginner">{t("skills.beginner")}</option>
@@ -310,7 +310,7 @@ function SkillsNTechnologies() {
                 <th className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -337,7 +337,7 @@ function SkillsNTechnologies() {
                             | "5+",
                         })
                       }
-                      className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-purple cursor-pointer"
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple cursor-pointer"
                     >
                       <option value="all">{t("skills.all")}</option>
                       <option value="1-2">1-2 {t("skills.years")}</option>
@@ -349,7 +349,7 @@ function SkillsNTechnologies() {
                 <th className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-4 h-4 text-gray-500"
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"

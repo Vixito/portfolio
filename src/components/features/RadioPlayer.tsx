@@ -1,12 +1,26 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../lib/i18n";
+import { useRadioState } from "../../hooks/useRadioState";
 
 function RadioPlayer() {
   const { t } = useTranslation();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLive, setIsLive] = useState(false);
+  const {
+    isPlaying: sharedIsPlaying,
+    isLive: sharedIsLive,
+    currentSong: sharedCurrentSong,
+  } = useRadioState();
+  const [isPlaying, setIsPlaying] = useState(sharedIsPlaying);
+  const [isLive, setIsLive] = useState(sharedIsLive);
+  const [currentSong, setCurrentSong] = useState(sharedCurrentSong);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Sincronizar con el estado compartido
+  useEffect(() => {
+    setIsPlaying(sharedIsPlaying);
+    setIsLive(sharedIsLive);
+    setCurrentSong(sharedCurrentSong);
+  }, [sharedIsPlaying, sharedIsLive, sharedCurrentSong]);
 
   // URL del stream de Icecast
   const ICECAST_STREAM_URL =
@@ -104,56 +118,60 @@ function RadioPlayer() {
   }, [isLive]);
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 transition-colors">
       <div className="flex items-center gap-4">
-        {/* Botón de play a la izquierda */}
+        {/* Botón de play a la izquierda con efecto de disco de vinilo */}
         <button
           onClick={togglePlayPause}
-          className={`w-16 h-16 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center overflow-hidden flex-shrink-0 transition-all cursor-pointer ${
-            isPlaying ? "animate-spin" : ""
-          } hover:opacity-90`}
+          disabled={!isLive}
+          className={`w-16 h-16 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-90 ${
+            isLive ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+          } ${isPlaying ? "animate-spin" : ""}`}
           style={{
             animationDuration: "3s",
           }}
         >
-          {isPlaying ? (
-            <svg
-              className="w-8 h-8 text-white"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-            </svg>
-          ) : (
-            <svg
-              className="w-8 h-8 text-white"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          )}
+          {/* Icono de play/pause */}
+          <div className="pointer-events-none">
+            {isPlaying ? (
+              <svg
+                className="w-8 h-8 text-white"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+              </svg>
+            ) : (
+              <svg
+                className="w-8 h-8 text-white"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+          </div>
         </button>
         <div className="flex-1">
           {/* Radio Vixis encima de Online/Offline */}
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
             {t("radio.title")}
           </h3>
           {isLive ? (
-            <p className="text-xs text-blue-400 font-semibold animate-pulse flex items-center gap-1">
-              <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+            <p className="text-xs text-blue-400 dark:text-blue-300 font-semibold animate-pulse flex items-center gap-1">
+              <span className="w-2 h-2 bg-blue-400 dark:bg-blue-300 rounded-full"></span>
               {t("radio.online")}
             </p>
           ) : (
-            <p className="text-xs text-gray-400 flex items-center gap-1">
-              <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+            <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+              <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></span>
               {t("radio.offline")}
             </p>
           )}
         </div>
         <Link
           to="/radio"
-          className="text-sm text-purple hover:text-blue transition-colors cursor-pointer inline-flex items-center gap-1"
+          className="text-sm text-purple dark:text-purple-400 hover:text-blue dark:hover:text-blue-400 transition-colors cursor-pointer inline-flex items-center gap-1"
         >
           {t("radio.viewMore")}
           <svg

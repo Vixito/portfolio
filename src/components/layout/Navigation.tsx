@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { gsap } from "gsap";
 import { useLanguageStore } from "../../stores/useLanguageStore";
+import { useThemeStore } from "../../stores/useThemeStore";
 import { setGlobalDropdown } from "../features/LanguageSelector";
 
 function Navigation() {
@@ -12,6 +13,7 @@ function Navigation() {
   const settingsDropdownRef = useRef<HTMLDivElement>(null);
   const settingsContainerRef = useRef<HTMLLIElement>(null);
   const { language, setLanguage } = useLanguageStore();
+  const { theme, toggleTheme } = useThemeStore();
 
   const trabajoItems = [
     { path: "/projects", label: language === "es" ? "Proyectos" : "Projects" },
@@ -164,8 +166,13 @@ function Navigation() {
   return (
     <nav
       id="cubicle"
-      className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-gray-200 z-50 w-full"
-      style={{ padding: 0, margin: 0, transform: "translateY(0)", opacity: 1 }}
+      className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-white/90 backdrop-blur-sm border-t border-black dark:border-black z-50 w-full transition-colors"
+      style={{
+        padding: 0,
+        margin: 0,
+        transform: "translateY(0)",
+        opacity: 1,
+      }}
     >
       <ul className="links">
         {simpleItems.map((item) => (
@@ -204,7 +211,7 @@ function Navigation() {
           <div
             ref={dropdownRef}
             style={{ display: "none" }}
-            className={`dropdown-menu absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-black min-w-[220px] z-50 mb-0 ${
+            className={`dropdown-menu absolute bottom-full left-1/2 -translate-x-1/2 bg-white dark:bg-black border border-black dark:border-white min-w-[220px] z-50 mb-0 transition-colors ${
               isStudioPage ? "studio-dropdown" : ""
             }`}
             onMouseEnter={() => handleMouseEnter("trabajo")}
@@ -214,9 +221,9 @@ function Navigation() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 transition-colors cursor-pointer text-black whitespace-nowrap ${
+                className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors cursor-pointer text-black dark:text-white whitespace-nowrap ${
                   isActive(item.path)
-                    ? "bg-purple/20 text-purple font-semibold"
+                    ? "bg-purple/20 dark:bg-purple/30 text-purple font-semibold"
                     : ""
                 }`}
               >
@@ -259,7 +266,7 @@ function Navigation() {
           <div
             ref={settingsDropdownRef}
             style={{ display: "none" }}
-            className={`dropdown-menu absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-black min-w-[180px] z-50 mb-0 ${
+            className={`dropdown-menu absolute bottom-full left-1/2 -translate-x-1/2 bg-white dark:bg-black border border-black dark:border-white min-w-[180px] z-50 mb-0 transition-colors ${
               isStudioPage ? "studio-dropdown" : ""
             }`}
             onMouseEnter={() => handleMouseEnter("settings")}
@@ -267,15 +274,15 @@ function Navigation() {
           >
             {/* Sección de Idioma */}
             <div>
-              <div className="px-4 py-2 text-xs font-semibold text-black uppercase flex items-center gap-2">
+              <div className="px-4 py-2 text-xs font-semibold text-black dark:text-white uppercase flex items-center gap-2">
                 <span>🌐</span>
                 <span>{language === "es" ? "Idioma" : "Language"}</span>
               </div>
               <button
                 onClick={() => handleLanguageChange("es")}
-                className={`dropdown-item w-full px-4 py-2 text-left hover:bg-purple/10 transition-colors cursor-pointer text-black ${
+                className={`dropdown-item w-full px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors cursor-pointer text-black dark:text-white ${
                   language === "es"
-                    ? "bg-purple/20 text-purple font-semibold"
+                    ? "bg-purple/20 dark:bg-purple/30 text-purple font-semibold"
                     : ""
                 }`}
               >
@@ -283,9 +290,9 @@ function Navigation() {
               </button>
               <button
                 onClick={() => handleLanguageChange("en")}
-                className={`dropdown-item w-full px-4 py-2 text-left hover:bg-purple/10 transition-colors cursor-pointer text-black ${
+                className={`dropdown-item w-full px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors cursor-pointer text-black dark:text-white ${
                   language === "en"
-                    ? "bg-purple/20 text-purple font-semibold"
+                    ? "bg-purple/20 dark:bg-purple/30 text-purple font-semibold"
                     : ""
                 }`}
               >
@@ -293,9 +300,35 @@ function Navigation() {
               </button>
             </div>
 
+            {/* Sección de Tema */}
+            <div>
+              <div className="px-4 py-2 text-xs font-semibold text-black dark:text-white uppercase flex items-center gap-2">
+                <span>🎨</span>
+                <span>{language === "es" ? "Tema" : "Theme"}</span>
+              </div>
+              <button
+                onClick={() => {
+                  toggleTheme();
+                  setOpenDropdown(null);
+                }}
+                className="dropdown-item w-full px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors cursor-pointer text-black dark:text-white flex items-center justify-between"
+              >
+                <span>
+                  {theme === "light"
+                    ? language === "es"
+                      ? "Claro"
+                      : "Light"
+                    : language === "es"
+                    ? "Oscuro"
+                    : "Dark"}
+                </span>
+                <span>{theme === "light" ? "☀️" : "🌙"}</span>
+              </button>
+            </div>
+
             {/* Sección de Donaciones */}
             <div>
-              <div className="px-4 py-2 text-xs font-semibold text-black uppercase flex items-center gap-2">
+              <div className="px-4 py-2 text-xs font-semibold text-black dark:text-white uppercase flex items-center gap-2">
                 <span>💝</span>
                 <span>{language === "es" ? "Donaciones" : "Donations"}</span>
               </div>
@@ -305,7 +338,7 @@ function Navigation() {
                   href={donation.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="dropdown-item block px-4 py-2 text-left hover:bg-blue/10 transition-colors text-black cursor-pointer"
+                  className="dropdown-item block px-4 py-2 text-left hover:bg-blue/10 dark:hover:bg-blue/80 transition-colors text-black dark:text-white cursor-pointer"
                 >
                   {donation.name}
                 </a>
@@ -314,7 +347,7 @@ function Navigation() {
 
             {/* Sección de Repositorio */}
             <div>
-              <div className="px-4 py-2 text-xs font-semibold text-black uppercase flex items-center gap-2">
+              <div className="px-4 py-2 text-xs font-semibold text-black dark:text-white uppercase flex items-center gap-2">
                 <svg
                   className="w-4 h-4"
                   fill="currentColor"
@@ -333,7 +366,7 @@ function Navigation() {
                 href="https://github.com/Vixito/portfolio"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="dropdown-item block px-4 py-2 text-left hover:bg-purple/10 transition-colors text-black cursor-pointer"
+                className="dropdown-item block px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors text-black dark:text-white cursor-pointer"
               >
                 {language === "es" ? "Repositorio" : "Repository"}
               </a>
@@ -357,6 +390,11 @@ function Navigation() {
           --height: 40px;
           --width: 110px;
           --border: 2px;
+        }
+        
+        .dark {
+          --color1:rgb(11, 11, 11);
+          --color2:rgb(248, 248, 248);
         }
         
         #cubicle {
@@ -527,7 +565,10 @@ function Navigation() {
           transform-style: flat !important;
           border-top: none !important;
           border-bottom: none !important;
-          color: #000 !important;
+        }
+        
+        .dark .dropdown-item {
+          color: #f3f4f6 !important;
         }
         
         .dropdown-item::before,
