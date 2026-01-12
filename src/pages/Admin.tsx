@@ -50,6 +50,10 @@ import {
   getExchangeRate,
   getProductPricing,
   updateProductPricing,
+  getBlogPosts,
+  createBlogPost,
+  updateBlogPost,
+  deleteBlogPost,
 } from "../lib/supabase-functions";
 
 function Admin() {
@@ -94,6 +98,7 @@ function Admin() {
     | "work_experiences"
     | "technologies"
     | "studies"
+    | "blog_posts"
   >("products");
   const [products, setProducts] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -104,6 +109,7 @@ function Admin() {
   const [workExperiences, setWorkExperiences] = useState<any[]>([]);
   const [technologies, setTechnologies] = useState<any[]>([]);
   const [studies, setStudies] = useState<any[]>([]);
+  const [blogPosts, setBlogPosts] = useState<any[]>([]);
   const [loadingCRUD, setLoadingCRUD] = useState(false);
   const [showCRUDModal, setShowCRUDModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -334,7 +340,10 @@ function Admin() {
           const studiesData = await getStudies();
           setStudies(studiesData || []);
           break;
-      }
+        case "blog_posts":
+          const blogPostsData = await getBlogPosts();
+          setBlogPosts(blogPostsData || []);
+          break;
     } catch (error) {
       // Solo loggear el error, no mostrar alerta
       console.error(`Error al cargar ${activeTab}:`, error);
@@ -367,6 +376,9 @@ function Admin() {
         case "studies":
           setStudies([]);
           break;
+        case "blog_posts":
+          setBlogPosts([]);
+          break;
       }
     } finally {
       setLoadingCRUD(false);
@@ -387,6 +399,9 @@ function Admin() {
     } else if (activeTab === "technologies") {
       defaultFormData.level = "beginner";
       defaultFormData.category = "other";
+    } else if (activeTab === "blog_posts") {
+      defaultFormData.platform = "Dev.to";
+      defaultFormData.published_at = new Date().toISOString().split("T")[0];
     } else if (activeTab === "products") {
       // Valores por defecto para productos
       defaultFormData.button_type = "buy";
@@ -452,6 +467,9 @@ function Admin() {
         break;
       case "studies":
         currentItem = studies.find((s) => s.id === item.id) || item;
+        break;
+      case "blog_posts":
+        currentItem = blogPosts.find((b) => b.id === item.id) || item;
         break;
     }
 
@@ -817,6 +835,9 @@ function Admin() {
           break;
         case "studies":
           await deleteStudy(id);
+          break;
+        case "blog_posts":
+          await deleteBlogPost(id);
           break;
       }
       await loadCRUDData();
@@ -1293,6 +1314,9 @@ function Admin() {
             delete updateStudyData.description_en;
             await updateStudy(editingItem.id, updateStudyData);
             break;
+          case "blog_posts":
+            await updateBlogPost(editingItem.id, crudFormData);
+            break;
         }
       } else {
         // Crear
@@ -1656,6 +1680,9 @@ function Admin() {
             delete studyData.description_es;
             delete studyData.description_en;
             await createStudy(studyData);
+            break;
+          case "blog_posts":
+            await createBlogPost(crudFormData);
             break;
         }
       }
@@ -2204,6 +2231,7 @@ function Admin() {
                 "work_experiences",
                 "technologies",
                 "studies",
+                "blog_posts",
               ] as const
             ).map((tab) => (
               <button
@@ -2229,6 +2257,7 @@ function Admin() {
                 {tab === "work_experiences" && t("admin.workExperiences")}
                 {tab === "technologies" && t("admin.technologies")}
                 {tab === "studies" && t("admin.studies")}
+                {tab === "blog_posts" && "Blog Posts"}
               </button>
             ))}
           </div>
@@ -2256,6 +2285,8 @@ function Admin() {
                 ? workExperiences
                 : activeTab === "technologies"
                 ? technologies
+                : activeTab === "blog_posts"
+                ? blogPosts
                 : studies
               ).map((item: any) => (
                 <div
@@ -2320,6 +2351,8 @@ function Admin() {
                 ? workExperiences
                 : activeTab === "technologies"
                 ? technologies
+                : activeTab === "blog_posts"
+                ? blogPosts
                 : studies
               ).length === 0 && (
                 <div className="text-center py-8 text-gray-400">
@@ -2351,6 +2384,9 @@ function Admin() {
                   )}
                   {activeTab === "studies" && (
                     <p className="text-lg mb-2">{t("admin.noStudies")}</p>
+                  )}
+                  {activeTab === "blog_posts" && (
+                    <p className="text-lg mb-2">No hay posts de blog</p>
                   )}
                   <p className="text-sm text-gray-500">
                     {t("admin.createNewToStart")}
@@ -2655,6 +2691,10 @@ function Admin() {
                     ? editingItem
                       ? t("admin.editTechnology")
                       : t("admin.createTechnology")
+                    : activeTab === "blog_posts"
+                    ? editingItem
+                      ? "Editar Post"
+                      : "Crear Post"
                     : editingItem
                     ? t("admin.editStudy")
                     : t("admin.createStudy")}
@@ -4659,6 +4699,117 @@ function Admin() {
                       <p className="text-xs text-gray-500 mt-1">
                         Los años de experiencia se calcularán automáticamente
                       </p>
+                    </div>
+                  </>
+                )}
+
+                {activeTab === "blog_posts" && (
+                  <>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Título *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.title || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            title: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Excerpt (Descripción breve) *
+                      </label>
+                      <textarea
+                        value={crudFormData.excerpt || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            excerpt: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        URL *
+                      </label>
+                      <input
+                        type="url"
+                        value={crudFormData.url || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            url: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="https://dev.to/usuario/post"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Plataforma *
+                      </label>
+                      <select
+                        value={crudFormData.platform || "Dev.to"}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            platform: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      >
+                        <option value="Dev.to">Dev.to</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Otro">Otro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Thumbnail URL (opcional)
+                      </label>
+                      <input
+                        type="url"
+                        value={crudFormData.thumbnail_url || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            thumbnail_url: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Fecha de Publicación *
+                      </label>
+                      <input
+                        type="date"
+                        value={crudFormData.published_at || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            published_at: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
                     </div>
                   </>
                 )}

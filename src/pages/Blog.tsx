@@ -24,12 +24,22 @@ function Blog() {
     const loadPosts = async () => {
       try {
         setLoading(true);
-        const result = await fetchBlogPosts({
-          platform: "all", // Obtener posts de todas las plataformas
-        });
+        const result = await fetchBlogPosts();
 
         if (result && result.posts) {
-          setPosts(result.posts);
+          // Mapear posts de la BD al formato esperado
+          const mappedPosts = result.posts.map((post: any) => ({
+            id: post.id,
+            title: post.title,
+            thumbnail:
+              post.thumbnail_url ||
+              "https://via.placeholder.com/400x300?text=No+Image",
+            excerpt: post.excerpt,
+            url: post.url,
+            platform: post.platform,
+            date: post.published_at,
+          }));
+          setPosts(mappedPosts);
         } else {
           setPosts([]);
         }

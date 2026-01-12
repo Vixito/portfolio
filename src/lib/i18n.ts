@@ -538,6 +538,9 @@ export const translations = {
       generateLink: "Generar",
       extractEventData: "Extraer Datos del Evento",
       eventUrl: "URL del Evento",
+      eventDate: "Fecha del Evento",
+      supportsEventPlatforms:
+        "Soporta Passline, start.gg, duel.plus y otras plataformas",
       clientCannotChange: "El cliente no se puede cambiar al editar",
       buttonTextPlaceholder: "Ej: Comprar, Agéndalo, etc.",
       projectStatus: "Estado del Proyecto",
@@ -1106,6 +1109,9 @@ export const translations = {
       generateLink: "Generate",
       extractEventData: "Extract Event Data",
       eventUrl: "Event URL",
+      eventDate: "Event Date",
+      supportsEventPlatforms:
+        "Supports Passline, start.gg, duel.plus and other platforms",
       clientCannotChange: "Client cannot be changed when editing",
       buttonTextPlaceholder: "E.g: Buy, Schedule, etc.",
       projectStatus: "Project Status",

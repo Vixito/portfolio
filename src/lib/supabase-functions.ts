@@ -150,21 +150,102 @@ export async function syncPasslineEvents() {
 }
 
 /**
- * Obtiene posts de blog desde Medium, Dev.to u otras plataformas
+ * Obtiene posts de blog desde la base de datos
  */
-export async function fetchBlogPosts(params: {
+export async function fetchBlogPosts(params?: {
   platform?: "medium" | "devto" | "all";
   username?: string;
 }) {
-  const { data, error } = await supabase.functions.invoke("fetch-blog-posts", {
-    body: params,
-  });
+  // Leer desde la tabla blog_posts en Supabase
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .order("published_at", { ascending: false });
 
   if (error) {
     throw new Error(`Error al obtener posts: ${error.message}`);
   }
 
+  return { posts: data || [] };
+}
+
+/**
+ * Obtiene todos los posts de blog (para Admin)
+ */
+export async function getBlogPosts() {
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .order("published_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Error al obtener posts: ${error.message}`);
+  }
+
+  return data || [];
+}
+
+/**
+ * Crea un nuevo post de blog
+ */
+export async function createBlogPost(post: {
+  title: string;
+  excerpt: string;
+  url: string;
+  platform: string;
+  thumbnail_url?: string;
+  published_at: string;
+}) {
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .insert(post)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Error al crear post: ${error.message}`);
+  }
+
   return data;
+}
+
+/**
+ * Actualiza un post de blog
+ */
+export async function updateBlogPost(
+  id: string,
+  updates: Partial<{
+    title: string;
+    excerpt: string;
+    url: string;
+    platform: string;
+    thumbnail_url: string;
+    published_at: string;
+  }>
+) {
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Error al actualizar post: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Elimina un post de blog
+ */
+export async function deleteBlogPost(id: string) {
+  const { error } = await supabase.from("blog_posts").delete().eq("id", id);
+
+  if (error) {
+    throw new Error(`Error al eliminar post: ${error.message}`);
+  }
 }
 
 /**
