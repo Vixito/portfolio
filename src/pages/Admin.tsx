@@ -344,6 +344,7 @@ function Admin() {
           const blogPostsData = await getBlogPosts();
           setBlogPosts(blogPostsData || []);
           break;
+      }
     } catch (error) {
       // Solo loggear el error, no mostrar alerta
       console.error(`Error al cargar ${activeTab}:`, error);

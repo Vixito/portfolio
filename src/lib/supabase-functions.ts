@@ -29,6 +29,9 @@ export async function createRequest(params: {
   email: string;
   request_type: "job" | "collaboration" | "consultation" | "other";
   message: string;
+  phone?: string;
+  currency?: string;
+  investmentRange?: string;
 }) {
   const { data, error } = await supabase.rpc("create_request", {
     p_name: params.name,
