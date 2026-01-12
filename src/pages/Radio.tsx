@@ -477,6 +477,7 @@ function Radio() {
       try {
         setEventsLoading(true);
         const upcomingEvents = await getUpcomingEvents(5); // Obtener 5 eventos próximos
+        console.log("Eventos obtenidos:", upcomingEvents); // Debug
         setEvents(upcomingEvents || []);
       } catch (error) {
         console.error("Error al cargar eventos:", error);
@@ -1365,7 +1366,7 @@ function Radio() {
                       return (
                         <div
                           key={event.id}
-                          className="p-3 bg-purple/10 rounded-lg border border-purple/20 hover:bg-purple/20 transition-colors cursor-pointer"
+                          className="p-3 bg-indigo-100 rounded-lg border border-purple/20 hover:bg-cyan-100 transition-colors cursor-pointer"
                           onClick={() => {
                             if (event.passline_url) {
                               window.open(
