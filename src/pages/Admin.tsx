@@ -1146,6 +1146,9 @@ function Admin() {
             break;
           case "events":
             const updateEventData: any = { ...crudFormData };
+            // El campo title es requerido, usar title_es como título principal
+            updateEventData.title =
+              updateEventData.title_es || updateEventData.title_en || "";
             updateEventData.title_translations = buildTranslations(
               updateEventData.title_es || "",
               updateEventData.title_en || ""
@@ -1154,6 +1157,16 @@ function Admin() {
               updateEventData.description_es || "",
               updateEventData.description_en || ""
             );
+            // Si description existe, usar description_es como descripción principal
+            if (
+              updateEventData.description_es ||
+              updateEventData.description_en
+            ) {
+              updateEventData.description =
+                updateEventData.description_es ||
+                updateEventData.description_en ||
+                null;
+            }
             delete updateEventData.title_es;
             delete updateEventData.title_en;
             delete updateEventData.description_es;
@@ -1543,6 +1556,9 @@ function Admin() {
               ...crudFormData,
               passline_url: crudFormData.passline_url || eventUrl,
             };
+            // El campo title es requerido, usar title_es como título principal
+            createEventData.title =
+              createEventData.title_es || createEventData.title_en || "";
             createEventData.title_translations = buildTranslations(
               createEventData.title_es || "",
               createEventData.title_en || ""
@@ -1551,6 +1567,16 @@ function Admin() {
               createEventData.description_es || "",
               createEventData.description_en || ""
             );
+            // Si description existe, usar description_es como descripción principal
+            if (
+              createEventData.description_es ||
+              createEventData.description_en
+            ) {
+              createEventData.description =
+                createEventData.description_es ||
+                createEventData.description_en ||
+                null;
+            }
             delete createEventData.title_es;
             delete createEventData.title_en;
             delete createEventData.description_es;

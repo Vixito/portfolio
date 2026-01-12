@@ -265,7 +265,37 @@ export async function extractEventData(url: string) {
   );
 
   if (error) {
-    throw new Error(`Error al extraer datos del evento: ${error.message}`);
+    // Si hay un error con el status code, obtener más detalles
+    const errorMessage = error.message || "Error desconocido";
+    const statusCode = (error as any).status || (error as any).statusCode;
+
+    if (statusCode && statusCode !== 200) {
+      // Intentar obtener el mensaje de error del response
+      try {
+        const errorData =
+          typeof data === "object" && data !== null && "error" in data
+            ? (data as any).error
+            : errorMessage;
+        throw new Error(
+          `Error al extraer datos del evento: ${
+            errorData || `Status ${statusCode}`
+          }`
+        );
+      } catch {
+        throw new Error(
+          `Error al extraer datos del evento: ${errorMessage} (Status: ${statusCode})`
+        );
+      }
+    }
+
+    throw new Error(`Error al extraer datos del evento: ${errorMessage}`);
+  }
+
+  // Si data tiene un campo error, lanzarlo
+  if (data && typeof data === "object" && "error" in data) {
+    throw new Error(
+      `Error al extraer datos del evento: ${(data as any).error}`
+    );
   }
 
   return data;
