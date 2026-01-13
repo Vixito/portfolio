@@ -1,0 +1,38 @@
+# Dockerfile para Google Cloud Run
+# Build estático con Vite y servidor Deno
+
+# Stage 1: Build
+FROM denoland/deno:2.1.4 AS builder
+
+WORKDIR /app
+
+# Copiar archivos de configuración
+COPY deno.json deno.lock import_map.json package.json ./
+COPY vite.config.ts tsconfig.json tsconfig.app.json tsconfig.node.json ./
+COPY postcss.config.ts tailwind.config.ts ./
+COPY vite-plugin-deno-resolve.ts ./
+
+# Copiar código fuente
+COPY src ./src
+COPY index.html ./
+
+# Instalar dependencias y hacer build
+RUN deno cache --reload --node-modules-dir=auto src/main.tsx vite.config.ts npm:vite npm:@vitejs/plugin-react && \
+    deno run --allow-all --no-check --node-modules-dir=auto npm:vite build
+
+# Stage 2: Runtime
+FROM denoland/deno:2.1.4
+
+WORKDIR /app
+
+# Copiar el build y el servidor
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/index.html ./index.html
+COPY main.ts ./
+
+# Cloud Run requiere que el servidor escuche en el puerto proporcionado por $PORT
+# El main.ts ya está configurado para usar Deno.env.get("PORT")
+EXPOSE 8080
+
+# Ejecutar el servidor Deno
+CMD ["deno", "run", "--allow-net", "--allow-read", "--allow-env", "main.ts"]

@@ -1,0 +1,28 @@
+node_modules
+dist
+.git
+.vscode
+.idea
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+coverage
+*.swp
+*.swo
+*~
+
+# Archivos específicos de otros deployments
+Dockerfile
+Dockerfile.icecast
+start.sh
+start-icecast.sh
+stream.sh
+healthcheck.py
+icecast.xml
+
+# Archivos de desarrollo
+.cursor
+docs.md
+README.md

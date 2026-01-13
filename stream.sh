@@ -4,9 +4,8 @@
 # Configuración optimizada para 256MB RAM (eNano en Koyeb)
 
 # Variables de entorno con valores por defecto
-PLAYLIST_URL="${PLAYLIST_URL:-https://cdn.vixis.dev/music/playlist.m3u}"
 ICECAST_HOST="${ICECAST_HOST:-radio.vixis.dev}"
-ICECAST_PORT="${ICECAST_PORT:-8000}"  # Cambiar a 8000 por defecto (HTTP) para evitar TLS
+ICECAST_PORT="${ICECAST_PORT:-8000}"   # Por defecto 8000 (HTTP) para conexión a Koyeb
 ICECAST_MOUNT="${ICECAST_MOUNT:-/vixis}"
 ICECAST_USER="${ICECAST_USER:-source}"
 ICECAST_PASSWORD="${ICECAST_PASSWORD:-}"
@@ -14,14 +13,8 @@ ICECAST_PASSWORD="${ICECAST_PASSWORD:-}"
 # IMPORTANTE: Debe ser el nombre EXACTO del servicio de Icecast en Koyeb
 # Ejemplo: si tu servicio de Icecast se llama "portfolio", usa: ICECAST_INTERNAL_HOST=portfolio
 ICECAST_INTERNAL_HOST="${ICECAST_INTERNAL_HOST:-}"
-# Supabase Storage (requerido para leer archivos directamente)
-SUPABASE_URL="${SUPABASE_URL:-}"
-SUPABASE_STORAGE_BUCKET="${SUPABASE_STORAGE_BUCKET:-music}"
-SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
-
-# Codificar contraseña para URL (manejar caracteres especiales)
-# FFmpeg requiere que la contraseña esté codificada en la URL
-# Usar urllib.parse.quote con safe='' para codificar todos los caracteres especiales
+# Google Cloud Storage (requerido para leer archivos)
+GCS_BUCKET_NAME="${GCS_BUCKET_NAME:-}"
 ICECAST_PASSWORD_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$ICECAST_PASSWORD")
 
 # ESTRATEGIA: Priorizar HTTP sobre HTTPS para evitar problemas TLS
@@ -35,14 +28,18 @@ if [ -n "$ICECAST_INTERNAL_HOST" ]; then
     echo "✓ Usando host INTERNO de Koyeb: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (HTTP)"
     echo "  Esto evita problemas TLS al comunicarse directamente entre servicios"
 else
-    # Si no hay host interno, usar HTTP público (puerto 8000) en lugar de HTTPS
-    # IMPORTANTE: Asegúrate de que el puerto 8000 esté expuesto públicamente en Koyeb
+    # Si estamos en Google Cloud conectando a Koyeb, usamos la URL pública
     ICECAST_HOST_FINAL="$ICECAST_HOST"
-    ICECAST_PORT_FINAL="8000"  # Forzar puerto 8000 (HTTP) en lugar de 443 (HTTPS)
-    PROTOCOL="http"
-    echo "⚠ Usando host PÚBLICO: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (HTTP)"
-    echo "  NOTA: Si tienes problemas, configura ICECAST_INTERNAL_HOST con el nombre del servicio de Icecast en Koyeb"
-    echo "  Ejemplo: ICECAST_INTERNAL_HOST=portfolio (donde 'portfolio' es el nombre de tu servicio Icecast)"
+    ICECAST_PORT_FINAL="$ICECAST_PORT"
+    
+    # Determinar protocolo basado en el puerto
+    if [ "$ICECAST_PORT_FINAL" = "443" ]; then
+        PROTOCOL="https"
+    else
+        PROTOCOL="http"
+    fi
+    
+    echo "ℹ Usando host PÚBLICO: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (${PROTOCOL})"
 fi
 
 # Construir URL de Icecast usando HTTP/HTTPS directo con autenticación básica
@@ -61,17 +58,15 @@ echo "Host: ${ICECAST_HOST_FINAL}"
 echo "Port: ${ICECAST_PORT_FINAL}"
 echo "Mount: ${ICECAST_MOUNT}"
 
-# Verificar que Supabase esté configurado
-if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
-    echo "ERROR: SUPABASE_URL y SUPABASE_ANON_KEY deben estar configurados"
-    echo "Configura estas variables de entorno en Koyeb:"
-    echo "  SUPABASE_URL=https://rshlpiottljwhyxmcxjn.supabase.co"
-    echo "  SUPABASE_ANON_KEY=[tu_anon_key]"
+# Verificar que GCS esté configurado
+if [ -z "$GCS_BUCKET_NAME" ]; then
+    echo "ERROR: GCS_BUCKET_NAME debe estar configurado"
+    echo "Configura esta variable de entorno:"
+    echo "  GCS_BUCKET_NAME=mi-bucket-de-musica"
     exit 1
 fi
 
-echo "Usando Supabase Storage: ${SUPABASE_URL}"
-echo "Bucket: ${SUPABASE_STORAGE_BUCKET}"
+echo "Usando Google Cloud Storage Bucket: ${GCS_BUCKET_NAME}"
 
 # Función para reproducir una URL con FFmpeg
 play_url() {
@@ -176,7 +171,7 @@ CACHE_FILE="/tmp/mp3_files_cache.txt"
 CACHE_TIMESTAMP="/tmp/mp3_files_cache_timestamp.txt"
 CACHE_DURATION=300
 
-# Función para listar archivos MP3 desde Supabase Storage
+# Función para listar archivos MP3 desde Google Cloud Storage
 # Con cache para reducir solicitudes analíticas
 list_mp3_files() {
     # Verificar si el cache es válido
@@ -194,20 +189,21 @@ list_mp3_files() {
     fi
     
     # Cache expirado o no existe, obtener lista fresca
-    echo "Listando archivos MP3 desde Supabase Storage..." >&2
+    echo "Listando archivos MP3 desde GCS (gs://${GCS_BUCKET_NAME})..." >&2
     
-    # Usar la API de Supabase Storage para listar archivos
-    # POST /storage/v1/object/list/{bucket_id}
-    LIST_RESPONSE=$(curl -s --max-time 15 \
-        -X POST \
-        -H "apikey: ${SUPABASE_ANON_KEY}" \
-        -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
-        -H "Content-Type: application/json" \
-        -d '{"prefix":"","limit":1000,"offset":0,"sortBy":{"column":"name","order":"asc"},"search":""}' \
-        "${SUPABASE_URL}/storage/v1/object/list/${SUPABASE_STORAGE_BUCKET}")
+    # Usar gsutil para listar archivos (requiere que la VM tenga permisos storage-ro)
+    # gsutil ls devuelve rutas completas tipo: gs://bucket/file.mp3
+    if ! command -v gsutil &> /dev/null; then
+        echo "Error: gsutil no está instalado. Asegúrate de instalar Google Cloud SDK." >&2
+        return 1
+    fi
+
+    # Listar archivos recursivamente (**) o planos (*)
+    # Filtramos solo archivos .mp3
+    MP3_FILES_RAW=$(gsutil ls "gs://${GCS_BUCKET_NAME}/**.mp3" 2>/dev/null)
     
-    if [ -z "$LIST_RESPONSE" ]; then
-        echo "Error: No se pudo listar archivos desde Supabase Storage (respuesta vacía)" >&2
+    if [ -z "$MP3_FILES_RAW" ]; then
+        echo "Advertencia: No se encontraron archivos MP3 en el bucket gs://${GCS_BUCKET_NAME}" >&2
         # Si hay cache antiguo, usarlo como fallback
         if [ -f "$CACHE_FILE" ]; then
             echo "Usando cache antiguo como fallback..." >&2
@@ -217,73 +213,9 @@ list_mp3_files() {
         return 1
     fi
     
-    # Debug: mostrar primeros 200 caracteres de la respuesta (solo si hay error)
-    # Esto nos ayuda a entender el formato de la respuesta
-    RESPONSE_PREVIEW=$(echo "$LIST_RESPONSE" | head -c 200)
-    
-    # Extraer nombres de archivos MP3 del JSON usando python3
-    # El formato de respuesta puede ser:
-    # 1. Array directo: [{"name":"archivo.mp3",...},...]
-    # 2. Objeto con campo data: {"data":[{"name":"archivo.mp3",...},...]}
-    # 3. Objeto con error: {"error":"mensaje"}
-    MP3_FILES=$(echo "$LIST_RESPONSE" | python3 -c "
-import sys
-import json
-try:
-    data = json.load(sys.stdin)
-    
-    # Si es un objeto con error
-    if isinstance(data, dict) and 'error' in data:
-        print(f\"Error de Supabase: {data.get('error', 'Unknown error')}\", file=sys.stderr)
-        sys.exit(1)
-    
-    # Si es un objeto con campo 'data'
-    if isinstance(data, dict) and 'data' in data:
-        file_list = data['data']
-    # Si es un array directo
-    elif isinstance(data, list):
-        file_list = data
-    else:
-        print(f\"Formato de respuesta inesperado: {type(data)}\", file=sys.stderr)
-        sys.exit(1)
-    
-    # Filtrar archivos MP3
-    mp3_files = []
-    for item in file_list:
-        if isinstance(item, dict):
-            name = item.get('name', '')
-            if name and name.lower().endswith('.mp3'):
-                mp3_files.append(name)
-    
-    # Imprimir lista de archivos (solo nombres, uno por línea)
-    if mp3_files:
-        print('\n'.join(mp3_files))
-    else:
-        print(f\"No se encontraron archivos MP3. Total de archivos en respuesta: {len(file_list)}\", file=sys.stderr)
-        # Mostrar primeros archivos para debugging
-        if file_list:
-            print(f\"Primeros archivos encontrados: {[item.get('name', 'N/A') for item in file_list[:5]]}\", file=sys.stderr)
-        sys.exit(1)
-        
-except json.JSONDecodeError as e:
-    print(f\"Error al parsear JSON: {e}\", file=sys.stderr)
-    print(f\"Respuesta recibida (primeros 200 chars): {sys.stdin.read(200) if hasattr(sys.stdin, 'read') else 'N/A'}\", file=sys.stderr)
-    sys.exit(1)
-except Exception as e:
-    print(f\"Error inesperado: {e}\", file=sys.stderr)
-    sys.exit(1)
-")
-    
-    if [ -z "$MP3_FILES" ]; then
-        echo "Advertencia: No se encontraron archivos MP3 en el bucket" >&2
-        # Si hay cache antiguo, usarlo como fallback
-        if [ -f "$CACHE_FILE" ]; then
-            echo "Usando cache antiguo como fallback..." >&2
-            cat "$CACHE_FILE"
-            return 0
-        fi
-        return 1
-    fi
+    # Limpiar la salida para obtener solo el path relativo (quitamos gs://bucket/)
+    # Esto nos permite procesar los nombres limpiamente
+    MP3_FILES=$(echo "$MP3_FILES_RAW" | sed "s|gs://${GCS_BUCKET_NAME}/||")
     
     # Guardar en cache
     echo "$MP3_FILES" > "$CACHE_FILE"
@@ -294,64 +226,37 @@ except Exception as e:
     return 0
 }
 
-# ⚠️ ADVERTENCIA: Este script está DESHABILITADO temporalmente
-# para evitar consumo excesivo de Cached Egress en Supabase.
-# FFmpeg descarga archivos MP3 completos repetidamente, generando
-# tráfico masivo (24+ GB en un día).
-#
-# SOLUCIONES RECOMENDADAS:
-# 1. Mover archivos MP3 a un CDN externo (CloudFront, BunnyCDN, etc.)
-# 2. Cachear archivos MP3 localmente en el servidor
-# 3. Usar un servicio de streaming dedicado (Shoutcast, etc.)
-#
-# Para reactivar, descomenta el código siguiente y optimiza el streaming.
-
-echo "⚠️ SERVICIO FFMPEG DESHABILITADO TEMPORALMENTE"
-echo "Razón: Consumo excesivo de Cached Egress en Supabase (24+ GB/día)"
-echo ""
-echo "Para reactivar, necesitas:"
-echo "1. Mover archivos MP3 fuera de Supabase Storage"
-echo "2. O implementar cache local de archivos MP3"
-echo "3. O usar un servicio de streaming dedicado"
-echo ""
-echo "El servicio permanecerá inactivo para evitar costos adicionales."
-echo "Presiona Ctrl+C para salir, o espera 60 segundos para reiniciar el mensaje..."
-
-# Mantener el proceso vivo pero sin hacer nada
-while true; do
-    sleep 60
-    echo "Servicio aún deshabilitado. Revisa las opciones arriba para reactivarlo."
-done
-
-# CÓDIGO DESHABILITADO - Descomenta solo después de implementar una solución
 # Loop infinito para reproducir archivos continuamente
-# while true; do
-#     # Listar archivos MP3 desde Supabase Storage
-#     MP3_FILES=$(list_mp3_files)
-#     
-#     if [ -z "$MP3_FILES" ]; then
-#         echo "Error: No se pudieron obtener archivos MP3, reintentando en 10 segundos..."
-#         sleep 10
-#         continue
-#     fi
-#     
-#     # Contar archivos
-#     FILE_COUNT=$(echo "$MP3_FILES" | wc -l)
-#     echo "Encontrados ${FILE_COUNT} archivos MP3"
-#     
-#     # Procesar archivos y mezclar aleatoriamente
-#     echo "$MP3_FILES" | shuf | while IFS= read -r filename; do
-#         FILENAME_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$filename")
-#         URL="${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${FILENAME_ENCODED}"
-#         
-#         echo "Reproduciendo: $filename"
-#         
-#         play_url "$URL" || {
-#             echo "Error al reproducir $URL, continuando con siguiente..."
-#             sleep 1
-#         }
-#     done
-#     
-#     echo "Todos los archivos reproducidos, reiniciando lista..."
-#     sleep 2
-# done
+while true; do
+    # Listar archivos MP3 desde GCS
+    MP3_FILES=$(list_mp3_files)
+    
+    if [ -z "$MP3_FILES" ]; then
+        echo "Error: No se pudieron obtener archivos MP3, reintentando en 10 segundos..."
+        sleep 10
+        continue
+    fi
+    
+    # Contar archivos
+    FILE_COUNT=$(echo "$MP3_FILES" | wc -l)
+    echo "Encontrados ${FILE_COUNT} archivos MP3"
+    
+    # Procesar archivos y mezclar aleatoriamente
+    echo "$MP3_FILES" | shuf | while IFS= read -r filename; do
+        # Codificar el nombre del archivo para URL (espacios, caracteres especiales)
+        FILENAME_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$filename")
+        
+        # Construir URL pública de GCS
+        URL="https://storage.googleapis.com/${GCS_BUCKET_NAME}/${FILENAME_ENCODED}"
+        
+        echo "Reproduciendo: $filename"
+        
+        play_url "$URL" || {
+            echo "Error al reproducir $URL, continuando con siguiente..."
+            sleep 1
+        }
+    done
+    
+    echo "Todos los archivos reproducidos, reiniciando lista..."
+    sleep 2
+done

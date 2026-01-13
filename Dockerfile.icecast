@@ -22,6 +22,9 @@ RUN chmod +x /usr/local/bin/start-icecast.sh && \
 # Cambiar propiedad de la configuración
 RUN chown icecast:icecast /etc/icecast2/icecast.xml.template
 
+# Soporte de MIME types
+RUN apt-get update && apt-get install -y mime-support
+
 # Cambiar a usuario no-root
 USER icecast
 
