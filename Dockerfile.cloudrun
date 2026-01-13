@@ -2,7 +2,7 @@
 # Build estático con Vite y servidor Deno
 
 # Stage 1: Build
-FROM denoland/deno:2.1.4 AS builder
+FROM denoland/deno:latest AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN deno cache --reload --node-modules-dir=auto src/main.tsx vite.config.ts npm:
     deno run --allow-all --no-check --node-modules-dir=auto npm:vite build
 
 # Stage 2: Runtime
-FROM denoland/deno:2.1.4
+FROM denoland/deno:2.2.0
 
 WORKDIR /app
 
