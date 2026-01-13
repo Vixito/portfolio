@@ -60,5 +60,7 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 # Variables de sustitución (configurar en el trigger de Cloud Build)
+# En Cloud Build → Triggers → Edit → Substitution variables:
 substitutions:
-  _VITE_SUPABASE_ANON_KEY: "" # Configuradas en el trigger de Cloud Build
+  _VITE_SUPABASE_URL: "" # Valor por defecto
+  _VITE_SUPABASE_ANON_KEY: "" # DEBE configurarse en el trigger

@@ -4,31 +4,25 @@
 # Configuración optimizada para 256MB RAM (eNano en Koyeb)
 
 # Variables de entorno con valores por defecto
-ICECAST_HOST="${ICECAST_HOST:-radio.vixis.dev}"
-ICECAST_PORT="${ICECAST_PORT:-8000}"   # Por defecto 8000 (HTTP) para conexión a Koyeb
+ICECAST_HOST="${ICECAST_HOST:-localhost}"  # Por defecto localhost si Icecast está en la misma VM
+ICECAST_PORT="${ICECAST_PORT:-8000}"   # Puerto 8000 (HTTP)
 ICECAST_MOUNT="${ICECAST_MOUNT:-/vixis}"
 ICECAST_USER="${ICECAST_USER:-source}"
 ICECAST_PASSWORD="${ICECAST_PASSWORD:-}"
-# Host interno de Koyeb (si los servicios pueden comunicarse entre sí)
-# IMPORTANTE: Debe ser el nombre EXACTO del servicio de Icecast en Koyeb
-# Ejemplo: si tu servicio de Icecast se llama "portfolio", usa: ICECAST_INTERNAL_HOST=portfolio
-ICECAST_INTERNAL_HOST="${ICECAST_INTERNAL_HOST:-}"
 # Google Cloud Storage (requerido para leer archivos)
 GCS_BUCKET_NAME="${GCS_BUCKET_NAME:-}"
 ICECAST_PASSWORD_ENCODED=$(python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$ICECAST_PASSWORD")
 
-# ESTRATEGIA: Priorizar HTTP sobre HTTPS para evitar problemas TLS
-# 1. Si hay host interno → usar HTTP interno (puerto 8000)
-# 2. Si NO hay host interno → usar HTTP público (puerto 8000) en lugar de HTTPS
-# Esto evita los errores TLS que están causando "Error in the push function"
-if [ -n "$ICECAST_INTERNAL_HOST" ]; then
-    ICECAST_HOST_FINAL="$ICECAST_INTERNAL_HOST"
+# ESTRATEGIA: Si Icecast está en la misma VM, usar localhost (más rápido y confiable)
+# Si está en otro servidor, usar la URL pública
+if [ "$ICECAST_HOST" = "localhost" ] || [ "$ICECAST_HOST" = "127.0.0.1" ]; then
+    ICECAST_HOST_FINAL="localhost"
     ICECAST_PORT_FINAL="8000"
     PROTOCOL="http"
-    echo "✓ Usando host INTERNO de Koyeb: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (HTTP)"
-    echo "  Esto evita problemas TLS al comunicarse directamente entre servicios"
+    echo "✓ Usando Icecast LOCAL (misma VM): ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (HTTP)"
+    echo "  Esto evita problemas de red y latencia"
 else
-    # Si estamos en Google Cloud conectando a Koyeb, usamos la URL pública
+    # Si está en otro servidor (ej: Koyeb), usar la URL pública
     ICECAST_HOST_FINAL="$ICECAST_HOST"
     ICECAST_PORT_FINAL="$ICECAST_PORT"
     
@@ -39,7 +33,7 @@ else
         PROTOCOL="http"
     fi
     
-    echo "ℹ Usando host PÚBLICO: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (${PROTOCOL})"
+    echo "ℹ Usando Icecast REMOTO: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (${PROTOCOL})"
 fi
 
 # Construir URL de Icecast usando HTTP/HTTPS directo con autenticación básica
@@ -125,6 +119,16 @@ play_url() {
     FFMPEG_OUTPUT=$(ffmpeg "${FFMPEG_OPTS[@]}" "$ICECAST_URL" 2>&1)
     FFMPEG_EXIT_CODE=$?
     
+    # Verificar si el archivo se envió exitosamente
+    # "Broken pipe" al final es normal cuando el archivo termina
+    # Si hay "bytes written" y solo "Broken pipe", es exitoso
+    if echo "$FFMPEG_OUTPUT" | grep -qi "bytes written"; then
+        if echo "$FFMPEG_OUTPUT" | grep -qi "broken pipe" && ! echo "$FFMPEG_OUTPUT" | grep -qiE "error|failed|cannot|connection.*timeout"; then
+            echo "✓ Archivo reproducido exitosamente"
+            return 0
+        fi
+    fi
+    
     if [ $FFMPEG_EXIT_CODE -ne 0 ]; then
         echo "⚠ Error al reproducir con 'copy' (código: $FFMPEG_EXIT_CODE)" >&2
         echo "Últimas líneas de FFmpeg:" >&2
@@ -132,8 +136,7 @@ play_url() {
         
         # Verificar si es un error TLS
         if echo "$FFMPEG_OUTPUT" | grep -qi "tls\|ssl\|certificate\|handshake"; then
-            echo "❌ Error TLS detectado. Solución: Configura ICECAST_INTERNAL_HOST en Koyeb" >&2
-            echo "   Ejemplo: ICECAST_INTERNAL_HOST=portfolio" >&2
+            echo "❌ Error TLS detectado." >&2
         fi
         
         # Si falla con copy, intentar re-encodificar (solo audio)
