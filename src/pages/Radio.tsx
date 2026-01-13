@@ -71,11 +71,10 @@ function Radio() {
 
   // URL del stream de Icecast (configurable desde variables de entorno)
   const ICECAST_STREAM_URL =
-    import.meta.env.VITE_ICECAST_STREAM_URL ||
-    "http://radio.vixis.dev:8000/vixis";
+    import.meta.env.VITE_ICECAST_STREAM_URL || "https://radio.vixis.dev/vixis";
   const ICECAST_STATUS_URL =
     import.meta.env.VITE_ICECAST_STATUS_URL ||
-    "http://radio.vixis.dev:8000/status-json.xsl";
+    "https://radio.vixis.dev/status-json.xsl";
 
   // Configuración de AzuraCast (para cuando no esté en transmisión)
   const AZURACAST_BASE_URL = import.meta.env.VITE_AZURACAST_BASE_URL || "";
