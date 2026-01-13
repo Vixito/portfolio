@@ -25,10 +25,10 @@ function RadioPlayer() {
   // URL del stream de Icecast
   const ICECAST_STREAM_URL =
     import.meta.env.VITE_ICECAST_STREAM_URL ||
-    "http://localhost:8000/radiovixis";
+    "http://radio.vixis.dev:8000/vixis";
   const ICECAST_STATUS_URL =
     import.meta.env.VITE_ICECAST_STATUS_URL ||
-    "http://localhost:8000/status-json.xsl";
+    "http://radio.vixis.dev:8000/status-json.xsl";
 
   // Verificar estado de la radio
   useEffect(() => {
