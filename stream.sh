@@ -36,15 +36,17 @@ else
     echo "ℹ Usando Icecast REMOTO: ${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL} (${PROTOCOL})"
 fi
 
-# Construir URL de Icecast usando HTTP/HTTPS directo con autenticación básica
-# Usar HTTP directo es más confiable que icecast:// para FFmpeg
+# Construir URL de Icecast usando HTTP PUT con OGG Vorbis
+# Cambiamos a OGG Vorbis (formato nativo de Icecast) para evitar problemas con MP3
+# Icecast maneja OGG Vorbis nativamente sin warnings ni problemas
 ICECAST_URL="${PROTOCOL}://${ICECAST_USER}:${ICECAST_PASSWORD_ENCODED}@${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL}${ICECAST_MOUNT}"
 
 # Debug: mostrar URL sin contraseña para logs
 ICECAST_URL_DEBUG="${PROTOCOL}://${ICECAST_USER}:***@${ICECAST_HOST_FINAL}:${ICECAST_PORT_FINAL}${ICECAST_MOUNT}"
 echo "URL de Icecast (sin contraseña): ${ICECAST_URL_DEBUG}"
-echo "Protocolo: ${PROTOCOL}"
+echo "Protocolo: ${PROTOCOL} (HTTP PUT con OGG Vorbis)"
 echo "Puerto: ${ICECAST_PORT_FINAL}"
+echo "Formato: OGG Vorbis (nativo de Icecast, sin warnings)"
 echo "Host: ${ICECAST_HOST_FINAL}"
 
 echo "Iniciando streaming a Icecast..."
@@ -67,42 +69,52 @@ play_url() {
     local url="$1"
     echo "Reproduciendo: $url"
     
-    # Stream con FFmpeg usando HTTP/HTTPS directo con método PUT
+    # Stream con FFmpeg usando HTTP PUT con OGG Vorbis (formato nativo de Icecast)
+    # IMPORTANTE: Cambiamos a OGG Vorbis porque:
+    # 1. Es el formato nativo preferido de Icecast (sin warnings)
+    # 2. No tiene restricciones de licencia
+    # 3. Mejor calidad a menor bitrate
+    # 4. Icecast lo maneja nativamente sin problemas
+    # FFmpeg convertirá automáticamente los MP3 a OGG Vorbis en tiempo real
     # -re: leer a velocidad real (importante para streaming)
-    # -i: input (URL del archivo)
+    # -i: input (URL del archivo) - FFmpeg detectará automáticamente MP3, OGG, etc.
     # -user_agent: usar User-Agent de navegador para evitar bloqueos de CloudFront
     # -headers: agregar headers adicionales
     # -map 0:a:0: SOLO usar el primer stream de audio (ignorar portadas/video embebidos)
-    # -f mp3: forzar formato de entrada MP3 (evita detección incorrecta de formato)
-    # -acodec copy: copiar el codec sin re-encodificar (más eficiente, menos memoria)
-    # Si el archivo no es MP3, usar libmp3lame para re-encodificar
-    # -ab 96k: bitrate 96kbps (optimizado para memoria)
+    # -acodec libvorbis: codificar a OGG Vorbis (formato nativo de Icecast)
+    # -ab 128k: bitrate 128kbps (mejor calidad que MP3 a mismo bitrate)
     # -ar 44100: sample rate 44.1kHz
     # -ac 2: stereo
-    # -f mp3: formato de salida MP3
-    # -content_type audio/mpeg: tipo de contenido para Icecast
+    # -f ogg: formato de salida OGG
+    # -content_type application/ogg: tipo de contenido para Icecast (OGG Vorbis)
     # -method PUT: usar método PUT para enviar el stream (requerido por Icecast)
-    # -loglevel fatal: solo mostrar errores fatales (reduce logs)
+    # -ice_name "Radio Vixis": nombre del stream para Icecast (metadata)
+    # -ice_description "Radio Vixis Stream": descripción del stream
+    # -ice_genre "Various": género del stream
+    # -loglevel warning: mostrar warnings y errores (para debugging)
     # -timeout 10000000: timeout para conexiones (microsegundos)
     # -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1: reconectar automáticamente
-    # -tls_verify 0: deshabilitar verificación TLS (evita errores de certificado)
-    # -multiple_requests 1: permitir múltiples requests en la misma conexión
     # -reconnect_delay_max 5: máximo delay entre reconexiones
     # -rw_timeout 10000000: timeout para read/write operations
-    # Usar HTTP/HTTPS directo con autenticación básica en la URL y método PUT explícito
-    # Intentar primero con copy (sin re-encodificar), si falla, re-encodificar
+    # -fflags +genpts: generar PTS (Presentation Time Stamp) para el stream
+    # FFmpeg convertirá automáticamente los MP3 a OGG Vorbis en tiempo real
     FFMPEG_OPTS=(
         -re
         -user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
         -headers "Referer: https://vixis.dev/\r\n"
-        -f mp3
         -i "$url"
         -map 0:a:0
-        -acodec copy
-        -f mp3
-        -content_type audio/mpeg
+        -acodec libvorbis
+        -ab 128k
+        -ar 44100
+        -ac 2
+        -f ogg
+        -content_type application/ogg
         -method PUT
-        -loglevel error
+        -ice_name "Radio Vixis"
+        -ice_description "Radio Vixis Stream"
+        -ice_genre "Various"
+        -loglevel warning
         -timeout 10000000
         -rw_timeout 10000000
         -reconnect 1
@@ -111,9 +123,6 @@ play_url() {
         -reconnect_delay_max 5
         -fflags +genpts
     )
-    
-    # No agregar opciones TLS porque ahora usamos HTTP siempre
-    # Esto evita los errores "Error in the push function" y "session invalidated"
     
     # Capturar salida de FFmpeg para análisis de errores
     FFMPEG_OUTPUT=$(ffmpeg "${FFMPEG_OPTS[@]}" "$ICECAST_URL" 2>&1)
@@ -130,7 +139,7 @@ play_url() {
     fi
     
     if [ $FFMPEG_EXIT_CODE -ne 0 ]; then
-        echo "⚠ Error al reproducir con 'copy' (código: $FFMPEG_EXIT_CODE)" >&2
+        echo "⚠ Error al reproducir (código: $FFMPEG_EXIT_CODE)" >&2
         echo "Últimas líneas de FFmpeg:" >&2
         echo "$FFMPEG_OUTPUT" | tail -10 >&2
         
@@ -139,30 +148,8 @@ play_url() {
             echo "❌ Error TLS detectado." >&2
         fi
         
-        # Si falla con copy, intentar re-encodificar (solo audio)
-        echo "Intentando re-encodificar..." >&2
-        FFMPEG_OPTS_REENCODE=(
-            -re
-            -user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
-            -headers "Referer: https://vixis.dev/\r\n"
-            -i "$url"
-            -map 0:a:0
-            -acodec libmp3lame -ab 96k -ar 44100 -ac 2
-            -f mp3
-            -content_type audio/mpeg
-            -method PUT
-            -loglevel error
-            -timeout 10000000
-            -rw_timeout 10000000
-            -reconnect 1
-            -reconnect_at_eof 1
-            -reconnect_streamed 1
-            -reconnect_delay_max 5
-            -fflags +genpts
-        )
-        
-        # No agregar opciones TLS porque ahora usamos HTTP siempre
-        ffmpeg "${FFMPEG_OPTS_REENCODE[@]}" "$ICECAST_URL" 2>&1
+        # Si falla, el stream continuará con el siguiente archivo
+        return 1
     else
         echo "$FFMPEG_OUTPUT" | tail -5
     fi
