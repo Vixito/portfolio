@@ -16,12 +16,18 @@ COPY vite-plugin-deno-resolve.ts ./
 COPY src ./src
 COPY index.html ./
 
+# Variables de entorno para el build (VITE_* se inyectan en tiempo de build)
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
 # Instalar dependencias y hacer build
 RUN deno cache --reload --node-modules-dir=auto src/main.tsx vite.config.ts npm:vite npm:@vitejs/plugin-react && \
     deno run --allow-all --no-check --node-modules-dir=auto npm:vite build
 
 # Stage 2: Runtime
-FROM denoland/deno:2.2.0
+FROM denoland/deno:latest
 
 WORKDIR /app
 

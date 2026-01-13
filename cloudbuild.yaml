@@ -8,6 +8,10 @@ steps:
       - "build"
       - "-f"
       - "Dockerfile.cloudrun"
+      - "--build-arg"
+      - "VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}"
+      - "--build-arg"
+      - "VITE_SUPABASE_ANON_KEY=${_VITE_SUPABASE_ANON_KEY}"
       - "-t"
       - "gcr.io/$PROJECT_ID/portfolio:$SHORT_SHA"
       - "-t"
@@ -54,3 +58,7 @@ images:
 options:
   # Usar Cloud Logging para los logs del build (no requiere bucket)
   logging: CLOUD_LOGGING_ONLY
+
+# Variables de sustitución (configurar en el trigger de Cloud Build)
+substitutions:
+  _VITE_SUPABASE_ANON_KEY: "" # Configuradas en el trigger de Cloud Build
