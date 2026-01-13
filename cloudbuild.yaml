@@ -50,3 +50,7 @@ steps:
 images:
   - "gcr.io/$PROJECT_ID/portfolio:$SHORT_SHA"
   - "gcr.io/$PROJECT_ID/portfolio:latest"
+
+options:
+  # Usar Cloud Logging para los logs del build (no requiere bucket)
+  logging: CLOUD_LOGGING_ONLY
