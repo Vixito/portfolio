@@ -1,0 +1,24 @@
+[Unit]
+Description=Radio Vixis Streaming Service (Liquidsoap)
+After=network.target icecast2.service
+Wants=icecast2.service
+
+[Service]
+Type=simple
+User=radio
+Group=radio
+WorkingDirectory=/home/radio/liquidsoap
+Environment="ICECAST_HOST=localhost"
+Environment="ICECAST_PORT=8000"
+Environment="ICECAST_MOUNT=/vixis"
+Environment="ICECAST_USER=source"
+Environment="GCS_BUCKET_NAME=radio-vixis-music"
+# Usar script wrapper que carga variables de Doppler y ejecuta Liquidsoap
+ExecStart=/home/radio/liquidsoap/start-liquidsoap.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

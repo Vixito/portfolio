@@ -14,12 +14,8 @@ coverage
 *~
 
 # Archivos específicos de otros deployments
-Dockerfile
 Dockerfile.icecast
-start.sh
 start-icecast.sh
-stream.sh
-healthcheck.py
 icecast.xml
 
 # Archivos de desarrollo
