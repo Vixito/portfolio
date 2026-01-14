@@ -450,30 +450,118 @@ function Radio() {
     // Verificar que estamos en la página /radio (no en Home)
     const isRadioPage = window.location.pathname === "/radio";
 
-    if (isLive && isRadioPage && audioRef.current && !isPlaying) {
+    if (isLive && isRadioPage && audioRef.current) {
       // Cuando está en vivo, reproducir automáticamente
       const playLive = async () => {
         try {
-          const targetUrl = currentSong?.url || ICECAST_STREAM_URL;
+          // Usar directamente ICECAST_STREAM_URL para evitar problemas con currentSong que puede no estar actualizado
+          const targetUrl = ICECAST_STREAM_URL;
           const currentSrc = audioRef.current.src;
-          const currentSrcUrl = currentSrc ? new URL(currentSrc).pathname : "";
-          const targetUrlPath = new URL(targetUrl).pathname;
 
-          // Solo cambiar el src si es realmente diferente (comparar paths, no URLs completas)
-          // Esto evita que se aborte el stream cuando cambia el currentSong pero la URL es la misma
-          if (!currentSrc || !currentSrc.includes(targetUrlPath)) {
-            // Pausar antes de cambiar el src para evitar abortos
-            audioRef.current.pause();
+          // Extraer solo el pathname para comparar (evita problemas con parámetros de query)
+          const currentPath = currentSrc ? new URL(currentSrc).pathname : "";
+          const targetPath = new URL(targetUrl).pathname;
+
+          // Solo cambiar el src si es realmente diferente
+          if (!currentSrc || currentPath !== targetPath) {
+            // Para streams en vivo OGG, NO usar load() - esto interrumpe el stream
+            // Simplemente cambiar el src y dejar que el navegador maneje el stream
+            if (audioRef.current.paused) {
+              audioRef.current.pause(); // Asegurar que está pausado antes de cambiar
+            }
             audioRef.current.src = targetUrl;
-            // Para streams en vivo, no usar load() inmediatamente, dejar que el navegador lo maneje
-            audioRef.current.load();
+            // NO llamar load() para streams en vivo - el navegador lo maneja automáticamente
           }
 
-          // Esperar un momento antes de intentar reproducir para que el stream se establezca
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          // Esperar a que el stream esté listo antes de reproducir
+          // Para streams en vivo, esperar a que el metadata esté disponible
+          const waitForStream = () => {
+            return new Promise<void>((resolve) => {
+              if (!audioRef.current) {
+                resolve();
+                return;
+              }
 
-          await audioRef.current.play();
-          setIsPlaying(true);
+              // Si ya tiene metadata, reproducir inmediatamente
+              if (audioRef.current.readyState >= 2) {
+                // HAVE_CURRENT_DATA o superior
+                resolve();
+                return;
+              }
+
+              // Esperar a que el stream tenga metadata
+              const handleLoadedMetadata = () => {
+                if (audioRef.current) {
+                  audioRef.current.removeEventListener(
+                    "loadedmetadata",
+                    handleLoadedMetadata
+                  );
+                }
+                resolve();
+              };
+
+              const handleCanPlay = () => {
+                if (audioRef.current) {
+                  audioRef.current.removeEventListener(
+                    "canplay",
+                    handleCanPlay
+                  );
+                }
+                resolve();
+              };
+
+              // Timeout de seguridad (5 segundos)
+              const timeout = setTimeout(() => {
+                if (audioRef.current) {
+                  audioRef.current.removeEventListener(
+                    "loadedmetadata",
+                    handleLoadedMetadata
+                  );
+                  audioRef.current.removeEventListener(
+                    "canplay",
+                    handleCanPlay
+                  );
+                }
+                resolve();
+              }, 5000);
+
+              if (audioRef.current) {
+                audioRef.current.addEventListener(
+                  "loadedmetadata",
+                  handleLoadedMetadata,
+                  { once: true }
+                );
+                audioRef.current.addEventListener("canplay", handleCanPlay, {
+                  once: true,
+                });
+
+                // Si el stream ya está listo, limpiar el timeout
+                if (audioRef.current.readyState >= 2) {
+                  clearTimeout(timeout);
+                  audioRef.current.removeEventListener(
+                    "loadedmetadata",
+                    handleLoadedMetadata
+                  );
+                  audioRef.current.removeEventListener(
+                    "canplay",
+                    handleCanPlay
+                  );
+                  resolve();
+                }
+              } else {
+                clearTimeout(timeout);
+                resolve();
+              }
+            });
+          };
+
+          await waitForStream();
+
+          // Intentar reproducir
+          if (audioRef.current && !isPlaying) {
+            await audioRef.current.play();
+            setIsPlaying(true);
+          }
         } catch (error) {
           // Si falla el autoplay (requiere interacción del usuario), no hacer nada
           if (import.meta.env.DEV) {
@@ -481,9 +569,13 @@ function Radio() {
           }
         }
       };
-      playLive();
+
+      // Solo intentar reproducir si no está ya reproduciendo
+      if (!isPlaying) {
+        playLive();
+      }
     }
-  }, [isLive, ICECAST_STREAM_URL]); // Remover currentSong de dependencias para evitar cambios innecesarios
+  }, [isLive, ICECAST_STREAM_URL, isPlaying]); // Incluir isPlaying para evitar intentos múltiples
 
   // Pausar automáticamente si la radio se desconecta y cambiar a playlist
   useEffect(() => {
@@ -820,16 +912,23 @@ function Radio() {
       try {
         // Si está en vivo, usar el stream de Icecast
         if (isLive) {
-          const targetUrl = currentSong?.url || ICECAST_STREAM_URL;
+          const targetUrl = ICECAST_STREAM_URL; // Usar directamente la URL, no depender de currentSong
           const currentSrc = audioRef.current.src;
+          const currentPath = currentSrc ? new URL(currentSrc).pathname : "";
+          const targetPath = new URL(targetUrl).pathname;
 
           // Solo cambiar el src si es realmente diferente
-          if (!currentSrc || !currentSrc.includes(targetUrl)) {
-            // Pausar antes de cambiar el src para evitar abortos
-            audioRef.current.pause();
+          if (!currentSrc || currentPath !== targetPath) {
+            // Para streams en vivo OGG, NO usar load() - esto interrumpe el stream
+            if (!audioRef.current.paused) {
+              audioRef.current.pause();
+            }
             audioRef.current.src = targetUrl;
-            audioRef.current.load();
+            // NO llamar load() para streams en vivo
           }
+
+          // Esperar un momento para que el stream se establezca
+          await new Promise((resolve) => setTimeout(resolve, 200));
 
           await audioRef.current.play();
           setIsPlaying(true);
@@ -1206,7 +1305,7 @@ function Radio() {
       <audio
         ref={audioRef}
         muted={false}
-        preload="auto"
+        preload="metadata"
         crossOrigin="anonymous"
       />
 
