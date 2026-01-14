@@ -130,15 +130,40 @@ function Radio() {
         if (!isMounted) return;
 
         // Buscar el mountpoint de la radio
-        const mountpoint = data.icestats?.source?.find(
+        // Intentar múltiples formas de encontrar el stream
+        const sources = data.icestats?.source || [];
+        console.log("🔍 Buscando mountpoint. Fuentes disponibles:", sources);
+
+        // Buscar por mount /vixis
+        let mountpoint = sources.find(
           (source: any) =>
-            source.server_name?.toLowerCase().includes("vixis") ||
-            source.listenurl?.includes("vixis") ||
-            source.mount?.includes("vixis")
+            source.mount === "/vixis" || source.mount?.includes("/vixis")
         );
+
+        // Si no se encuentra, buscar por server_name o listenurl
+        if (!mountpoint) {
+          mountpoint = sources.find(
+            (source: any) =>
+              source.server_name?.toLowerCase().includes("vixis") ||
+              source.listenurl?.includes("vixis") ||
+              source.mount?.includes("vixis")
+          );
+        }
+
+        // Si aún no se encuentra, usar la primera fuente disponible (fallback)
+        if (!mountpoint && sources.length > 0) {
+          console.warn(
+            "⚠️ Mountpoint /vixis no encontrado, usando primera fuente disponible:",
+            sources[0]
+          );
+          mountpoint = sources[0];
+        }
+
+        console.log("📡 Mountpoint encontrado:", mountpoint);
 
         if (mountpoint) {
           // La radio está activa
+          console.log("✅ Radio EN VIVO detectada - Configurando stream");
           setIsLive(true);
           const title =
             mountpoint.title ||
@@ -166,6 +191,7 @@ function Radio() {
           });
         } else {
           // La radio no está activa
+          console.log("❌ Radio NO está en vivo - mountpoint no encontrado");
           setIsLive(false);
 
           // Limpiar el stream si estaba reproduciendo en vivo
@@ -315,11 +341,16 @@ function Radio() {
 
   // Cargar playlist cuando no está en vivo
   useEffect(() => {
-    const loadPlaylist = async () => {
-      if (isLive || playlistLoadedRef.current) return;
+    const loadPlaylist = async (forceReload = false) => {
+      if (isLive) return;
+
+      // Si ya se cargó y no es un reload forzado, no recargar
+      if (playlistLoadedRef.current && !forceReload) return;
 
       try {
+        console.log("📋 Cargando playlist...");
         const playlistData = await getPlaylist();
+        console.log("📋 Playlist cargada:", playlistData?.length, "canciones");
         if (playlistData && playlistData.length > 0) {
           const songs: Song[] = playlistData.map((item: any) => ({
             id: item.id,
@@ -437,6 +468,19 @@ function Radio() {
 
     if (!isLive) {
       loadPlaylist();
+
+      // Recargar playlist cada 5 minutos para obtener nuevas canciones
+      const playlistInterval = setInterval(() => {
+        if (!isLive) {
+          console.log(
+            "🔄 Recargando playlist para obtener nuevas canciones..."
+          );
+          playlistLoadedRef.current = false; // Permitir recarga
+          loadPlaylist(true);
+        }
+      }, 5 * 60 * 1000); // 5 minutos
+
+      return () => clearInterval(playlistInterval);
     } else {
       // Resetear cuando vuelve a estar en vivo
       playlistLoadedRef.current = false;
@@ -449,6 +493,13 @@ function Radio() {
   useEffect(() => {
     // Verificar que estamos en la página /radio (no en Home)
     const isRadioPage = window.location.pathname === "/radio";
+
+    console.log("🎵 Efecto de reproducción en vivo:", {
+      isLive,
+      isRadioPage,
+      hasAudioRef: !!audioRef.current,
+      currentSrc: audioRef.current?.src,
+    });
 
     if (isLive && isRadioPage && audioRef.current) {
       // Cuando está en vivo, reproducir automáticamente
@@ -465,9 +516,19 @@ function Radio() {
           if (needsUpdate) {
             // Para streams OGG en vivo, simplemente establecer el src
             // El navegador manejará el stream automáticamente
+            console.log("🔄 Cambiando src del audio a:", targetUrl);
             audioRef.current.pause();
             audioRef.current.src = targetUrl;
             // NO usar load() para streams en vivo OGG - interrumpe el stream
+            console.log(
+              "✅ Src establecido. Audio src actual:",
+              audioRef.current.src
+            );
+          } else {
+            console.log(
+              "ℹ️ Src ya está configurado correctamente:",
+              currentSrc
+            );
           }
 
           // Para streams en vivo OGG, intentar reproducir directamente
