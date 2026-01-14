@@ -46,7 +46,7 @@ Deno.serve({ port }, async (req: Request) => {
     try {
       indexHtml = await Deno.readTextFile(path);
       break;
-    } catch (error) {
+    } catch {
       // Continuar con el siguiente path
       continue;
     }

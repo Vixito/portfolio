@@ -396,12 +396,12 @@ export async function getProjects(includeInactive = false) {
     .from("projects")
     .select("*")
     .order("created_at", { ascending: false }); // Más nuevo primero
-  
+
   // Filtrar por is_active solo si no se incluyen inactivos (frontend)
   if (!includeInactive) {
     query = query.eq("is_active", true);
   }
-  
+
   const { data, error } = await query;
   if (error) throw new Error(`Error al obtener proyectos: ${error.message}`);
   return data;
@@ -461,11 +461,11 @@ export async function getClients(includeInactive = false) {
     .from("clients")
     .select("*")
     .order("created_at", { ascending: true });
-  
+
   if (!includeInactive) {
     query = query.eq("is_active", true);
   }
-  
+
   const { data, error } = await query;
   if (error) throw new Error(`Error al obtener clientes: ${error.message}`);
   return data;
@@ -537,11 +537,11 @@ export async function getTestimonials(includeInactive = false) {
     .select("*")
     .not("testimonial_content", "is", null)
     .order("created_at", { ascending: true });
-  
+
   if (!includeInactive) {
     query = query.eq("is_active", true);
   }
-  
+
   const { data, error } = await query;
   if (error) throw new Error(`Error al obtener testimonios: ${error.message}`);
   return data;
@@ -612,11 +612,11 @@ export async function getSocials(includeInactive = false) {
     .from("socials")
     .select("*")
     .order("created_at", { ascending: true });
-  
+
   if (!includeInactive) {
     query = query.eq("is_active", true);
   }
-  
+
   const { data, error } = await query;
   if (error)
     throw new Error(`Error al obtener redes sociales: ${error.message}`);
@@ -678,11 +678,11 @@ export async function getEvents(includeInactive = false) {
     .from("events")
     .select("*")
     .order("date", { ascending: true });
-  
+
   if (!includeInactive) {
     query = query.eq("is_active", true);
   }
-  
+
   const { data, error } = await query;
   if (error) throw new Error(`Error al obtener eventos: ${error.message}`);
   return data;
@@ -740,12 +740,12 @@ export async function getWorkExperiences(includeInactive = false) {
     .from("work_experiences")
     .select("*")
     .order("start_date", { ascending: false });
-  
+
   // Filtrar por is_active solo si no se incluyen inactivos (frontend)
   if (!includeInactive) {
     query = query.eq("is_active", true);
   }
-  
+
   const { data, error } = await query;
   if (error)
     throw new Error(
@@ -836,11 +836,11 @@ export async function getTechnologies(includeInactive = false) {
     .from("technologies")
     .select("*")
     .order("name", { ascending: true });
-  
+
   if (!includeInactive) {
     query = query.eq("is_active", true);
   }
-  
+
   const { data, error } = await query;
   if (error) throw new Error(`Error al obtener tecnologías: ${error.message}`);
   return data;
@@ -915,11 +915,11 @@ export async function getStudies(includeInactive = false) {
     .from("studies")
     .select("*")
     .order("start_date", { ascending: false });
-  
+
   if (!includeInactive) {
     query = query.eq("is_active", true);
   }
-  
+
   const { data, error } = await query;
   if (error) throw new Error(`Error al obtener estudios: ${error.message}`);
   return data;
@@ -1221,7 +1221,7 @@ export async function getLatestBlogPost() {
     }
 
     const post = blogPosts[0];
-    
+
     // Parsear tags desde el platform (convertir #Medium a "Medium", etc.)
     const platform = post.platform || "";
     const tags = platform ? [`#${platform}`] : [];
@@ -1332,7 +1332,12 @@ export async function getHomeProjects() {
       .limit(1)
       .maybeSingle();
 
-    if (!homeContentError && homeContent && homeContent.project_ids && homeContent.project_ids.length > 0) {
+    if (
+      !homeContentError &&
+      homeContent &&
+      homeContent.project_ids &&
+      homeContent.project_ids.length > 0
+    ) {
       // Si hay IDs configurados, obtener esos proyectos
       const { data: projects, error } = await supabase
         .from("projects")
@@ -1341,9 +1346,22 @@ export async function getHomeProjects() {
         .eq("is_active", true);
 
       if (!error && projects && projects.length > 0) {
-        // Ordenar según el orden en project_ids
+        // Ordenar según el orden en project_ids y aplicar overrides de home_content
         return homeContent.project_ids
-          .map((id: string) => projects.find((p) => p.id === id))
+          .map((id: string) => {
+            const project = projects.find((p) => p.id === id);
+            if (!project) return null;
+            // Si hay project_url o thumbnail_url en home_content, usarlos como override
+            return {
+              ...project,
+              url: homeContent.project_url || project.url || "",
+              thumbnail:
+                homeContent.thumbnail_url ||
+                project.thumbnail ||
+                project.thumbnail_url ||
+                "",
+            };
+          })
           .filter(Boolean);
       }
     }
@@ -1383,6 +1401,8 @@ export async function createHomeContentItem(item: {
   work_experience_id?: string;
   work_experience_data?: any;
   project_ids?: string[];
+  project_url?: string;
+  thumbnail_url?: string;
   cv_download_url?: string;
   cv_download_text?: string;
   is_active?: boolean;
@@ -1404,7 +1424,11 @@ export async function createHomeContentItem(item: {
 export async function updateHomeContentItem(
   id: string,
   updates: Partial<{
-    content_type: "latest_post" | "work_experience" | "projects" | "cv_download";
+    content_type:
+      | "latest_post"
+      | "work_experience"
+      | "projects"
+      | "cv_download";
     blog_post_id: string;
     latest_post_title: string;
     latest_post_excerpt: string;
@@ -1414,6 +1438,8 @@ export async function updateHomeContentItem(
     work_experience_id: string;
     work_experience_data: any;
     project_ids: string[];
+    project_url: string;
+    thumbnail_url: string;
     cv_download_url: string;
     cv_download_text: string;
     is_active: boolean;

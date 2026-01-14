@@ -5336,8 +5336,26 @@ function Admin() {
                               }
                             }}
                             className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-xs"
-                            rows={5}
-                            placeholder='{"company": "...", "role": "...", ...}'
+                            rows={10}
+                            placeholder='Ejemplo completo:
+{
+  "company": "Nombre de la Empresa",
+  "company_translations": {
+    "es": "Nombre de la Empresa",
+    "en": "Company Name"
+  },
+  "position": "Desarrollador Full Stack",
+  "position_translations": {
+    "es": "Desarrollador Full Stack",
+    "en": "Full Stack Developer"
+  },
+  "start_date": "2024-01-01",
+  "end_date": "2024-12-31",
+  "status": "current",
+  "company_logo": "https://cdn.vixis.dev/logo-empresa.png"
+}
+
+NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. Si no se proporciona, se mostrará la primera letra de la empresa.'
                           />
                         </div>
                       </>
@@ -5367,6 +5385,50 @@ function Admin() {
                           />
                           <p className="text-xs text-gray-500 mt-1">
                             Dejar vacío para usar los proyectos más recientes
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Link del Proyecto (URL, opcional - se usa si el
+                            proyecto no tiene URL en /projects)
+                          </label>
+                          <input
+                            type="url"
+                            value={crudFormData.project_url || ""}
+                            onChange={(e) =>
+                              setCrudFormData({
+                                ...crudFormData,
+                                project_url: e.target.value,
+                              })
+                            }
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            placeholder="https://ejemplo.com/proyecto"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            URL alternativa si el proyecto no aparece en
+                            /projects o tiene un link diferente
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Link del Thumbnail (URL de la imagen)
+                          </label>
+                          <input
+                            type="url"
+                            value={crudFormData.thumbnail_url || ""}
+                            onChange={(e) =>
+                              setCrudFormData({
+                                ...crudFormData,
+                                thumbnail_url: e.target.value,
+                              })
+                            }
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            placeholder="https://cdn.vixis.dev/proyecto-thumbnail.jpg"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            URL de la imagen que se mostrará en la Home. Al
+                            hacer click en la imagen, se abrirá el link del
+                            proyecto en una nueva pestaña.
                           </p>
                         </div>
                       </>

@@ -129,7 +129,7 @@ function LatestPostCard() {
             {t("latestPostCard.title")}
           </span>
         </div>
-        <div className="flex items-center justify-center py-8">
+        <div className="flex-1 flex items-center justify-center py-8">
           <p className="text-sm text-gray-500 dark:text-gray-500 text-center">
             {language === "es"
               ? "No hay posts de blog disponibles."
