@@ -772,61 +772,71 @@ function Radio() {
 
     // Limpiar animación anterior inmediatamente
     gsap.killTweensOf(marqueeRef.current);
-    // Asegurar que comience desde el inicio (x: 0) para mostrar el texto completo
-    gsap.set(marqueeRef.current, { x: 0 });
-
-    // Usar requestAnimationFrame para asegurar que el DOM se actualizó
-    // Esto garantiza que el texto se muestre inmediatamente al entrar
-    const rafId = requestAnimationFrame(() => {
-      // Doble RAF para asegurar que el texto se renderizó
-      requestAnimationFrame(() => {
-        if (!marqueeRef.current || !currentSong) return;
-
-        const text = `${currentSong.title} - ${currentSong.artist}`;
-        const textWidth = marqueeRef.current.scrollWidth;
-        const containerWidth =
-          marqueeRef.current.parentElement?.offsetWidth || 0;
-
-        // Solo animar si el texto es más largo que el contenedor
-        if (textWidth > containerWidth) {
-          const distance = textWidth - containerWidth + 50; // 50px de padding
-
-          // Crear timeline para controlar mejor la animación
-          const tl = gsap.timeline({ repeat: -1 });
-
-          // 1. Esperar 2 segundos mostrando el texto completo desde el inicio
-          tl.to(marqueeRef.current, {
-            x: 0,
-            duration: 2,
-            ease: "none",
-          });
-
-          // 2. Desplazarse hacia la izquierda para mostrar el resto del texto
-          tl.to(marqueeRef.current, {
-            x: -distance,
-            duration: distance / 30, // Velocidad ajustable (píxeles por segundo)
-            ease: "none",
-          });
-
-          // 3. Esperar un momento al final antes de volver al inicio
-          tl.to(marqueeRef.current, {
-            x: -distance,
-            duration: 1,
-            ease: "none",
-          });
-
-          // 4. Volver rápidamente al inicio (sin animación visible)
-          tl.set(marqueeRef.current, { x: 0 });
-        } else {
-          // Si el texto cabe, centrarlo
-          gsap.set(marqueeRef.current, { x: 0 });
-        }
-      });
+    // Asegurar que comience desde el inicio (x: 0) - FORZAR reset completo
+    gsap.set(marqueeRef.current, {
+      x: 0,
+      clearProps: "transform", // Limpiar cualquier transform anterior
     });
 
+    // Pequeño delay para asegurar que el DOM se actualizó completamente
+    const timeoutId = setTimeout(() => {
+      if (!marqueeRef.current || !currentSong) return;
+
+      // Forzar reset una vez más después del delay
+      gsap.set(marqueeRef.current, { x: 0 });
+
+      const text = `${currentSong.title} - ${currentSong.artist}`;
+      const textWidth = marqueeRef.current.scrollWidth;
+      const containerWidth = marqueeRef.current.parentElement?.offsetWidth || 0;
+
+      // Solo animar si el texto es más largo que el contenedor
+      if (textWidth > containerWidth) {
+        // Cuando el texto es más largo, comenzar desde x: 0 para mostrar el inicio
+        // (justify-center centra el texto, pero cuando es más largo necesitamos mostrar desde el inicio)
+        const distance = textWidth - containerWidth + 50; // 50px de padding
+
+        // Asegurar que comience desde el inicio del texto (x: 0)
+        gsap.set(marqueeRef.current, { x: 0 });
+
+        // Crear timeline para controlar mejor la animación
+        const tl = gsap.timeline({ repeat: -1 });
+
+        // 1. Mostrar el texto completo desde el inicio durante 2 segundos
+        tl.to(marqueeRef.current, {
+          x: 0,
+          duration: 2,
+          ease: "none",
+        });
+
+        // 2. Desplazarse hacia la izquierda para mostrar el resto del texto
+        tl.to(marqueeRef.current, {
+          x: -distance,
+          duration: distance / 30, // Velocidad ajustable (píxeles por segundo)
+          ease: "none",
+        });
+
+        // 3. Esperar un momento al final antes de volver al inicio
+        tl.to(marqueeRef.current, {
+          x: -distance,
+          duration: 1,
+          ease: "none",
+        });
+
+        // 4. Volver al inicio (sin animación visible, instantáneo)
+        tl.set(marqueeRef.current, { x: 0 });
+      } else {
+        // Si el texto cabe, centrarlo (x: 0 porque justify-center lo centra)
+        gsap.set(marqueeRef.current, { x: 0 });
+      }
+    }, 100); // Delay de 100ms para asegurar que el DOM se actualizó
+
     return () => {
-      cancelAnimationFrame(rafId);
+      clearTimeout(timeoutId);
       gsap.killTweensOf(marqueeRef.current);
+      // Asegurar reset al desmontar
+      if (marqueeRef.current) {
+        gsap.set(marqueeRef.current, { x: 0 });
+      }
     };
   }, [currentSong?.title, currentSong?.artist]);
 
@@ -1167,19 +1177,59 @@ function Radio() {
 
         setCurrentSong(newSong);
 
-        // Sincronizar audio
+        // Sincronizar audio: SIEMPRE actualizar el src para que coincida con el backend
         if (isPlaying && audioRef.current) {
           const currentSrc = audioRef.current.src;
           if (!currentSrc || !currentSrc.includes(ICECAST_STREAM_URL)) {
             audioRef.current.pause();
             audioRef.current.src = ICECAST_STREAM_URL;
+            // NO usar load() para streams OGG en vivo
             await audioRef.current.play();
+          }
+        } else if (!isPlaying && audioRef.current) {
+          // Si no está reproduciendo pero debería estar en vivo, solo actualizar el src
+          // sin reproducir (el usuario decidirá cuándo reproducir)
+          if (!audioRef.current.src.includes(ICECAST_STREAM_URL)) {
+            audioRef.current.src = ICECAST_STREAM_URL;
           }
         }
       } else {
         setIsLive(false);
-        // Si no está en vivo, recargar playlist
-        if (playlist.length === 0 || !playlistLoadedRef.current) {
+        // Si no está en vivo, sincronizar con la playlist actual
+        if (playlist.length > 0) {
+          // Encontrar qué canción está sonando actualmente basándose en el src del audio
+          const currentSrc = audioRef.current?.src || "";
+          const currentlyPlayingSong = playlist.find(
+            (song) => song.url === currentSrc
+          );
+
+          if (currentlyPlayingSong) {
+            // Sincronizar el texto con la canción que está sonando realmente
+            setCurrentSong(currentlyPlayingSong);
+            const songIndex = playlist.findIndex(
+              (song) => song.id === currentlyPlayingSong.id
+            );
+            if (songIndex >= 0) {
+              setCurrentPlaylistIndex(songIndex);
+            }
+          } else if (currentPlaylistIndex < playlist.length) {
+            // Si no encontramos match, usar el índice actual y sincronizar audio
+            const songToSync = playlist[currentPlaylistIndex];
+            setCurrentSong(songToSync);
+            // Sincronizar audio si está reproduciendo
+            if (isPlaying && audioRef.current) {
+              if (
+                !audioRef.current.src ||
+                audioRef.current.src !== songToSync.url
+              ) {
+                audioRef.current.src = songToSync.url;
+                audioRef.current.load();
+                await audioRef.current.play();
+              }
+            }
+          }
+        } else {
+          // Si no hay playlist, recargarla
           playlistLoadedRef.current = false;
           const playlistData = await getPlaylist();
           if (playlistData && playlistData.length > 0) {
@@ -1206,6 +1256,12 @@ function Radio() {
               playlistLoadedRef.current = true;
               setCurrentSong(validSongs[0]);
               setCurrentPlaylistIndex(0);
+              // Sincronizar audio si está reproduciendo
+              if (isPlaying && audioRef.current) {
+                audioRef.current.src = validSongs[0].url;
+                audioRef.current.load();
+                await audioRef.current.play();
+              }
             }
           }
         }
