@@ -770,36 +770,41 @@ function Radio() {
   useEffect(() => {
     if (!marqueeRef.current || !currentSong) return;
 
-    // Limpiar animación anterior
+    // Limpiar animación anterior inmediatamente
     gsap.killTweensOf(marqueeRef.current);
     gsap.set(marqueeRef.current, { x: 0 });
 
-    // Pequeño delay para asegurar que el DOM se actualizó
-    const timeoutId = setTimeout(() => {
-      if (!marqueeRef.current) return;
+    // Usar requestAnimationFrame para asegurar que el DOM se actualizó
+    // Esto garantiza que el texto se muestre inmediatamente al entrar
+    const rafId = requestAnimationFrame(() => {
+      // Doble RAF para asegurar que el texto se renderizó
+      requestAnimationFrame(() => {
+        if (!marqueeRef.current || !currentSong) return;
 
-      const text = `${currentSong.title} - ${currentSong.artist}`;
-      const textWidth = marqueeRef.current.scrollWidth;
-      const containerWidth = marqueeRef.current.parentElement?.offsetWidth || 0;
+        const text = `${currentSong.title} - ${currentSong.artist}`;
+        const textWidth = marqueeRef.current.scrollWidth;
+        const containerWidth =
+          marqueeRef.current.parentElement?.offsetWidth || 0;
 
-      // Solo animar si el texto es más largo que el contenedor
-      if (textWidth > containerWidth) {
-        const distance = textWidth - containerWidth + 50; // 50px de padding
+        // Solo animar si el texto es más largo que el contenedor
+        if (textWidth > containerWidth) {
+          const distance = textWidth - containerWidth + 50; // 50px de padding
 
-        gsap.to(marqueeRef.current, {
-          x: -distance,
-          duration: distance / 30, // Velocidad ajustable (píxeles por segundo)
-          ease: "none",
-          repeat: -1,
-        });
-      } else {
-        // Si el texto cabe, centrarlo
-        gsap.set(marqueeRef.current, { x: 0 });
-      }
-    }, 50);
+          gsap.to(marqueeRef.current, {
+            x: -distance,
+            duration: distance / 30, // Velocidad ajustable (píxeles por segundo)
+            ease: "none",
+            repeat: -1,
+          });
+        } else {
+          // Si el texto cabe, centrarlo
+          gsap.set(marqueeRef.current, { x: 0 });
+        }
+      });
+    });
 
     return () => {
-      clearTimeout(timeoutId);
+      cancelAnimationFrame(rafId);
       gsap.killTweensOf(marqueeRef.current);
     };
   }, [currentSong?.title, currentSong?.artist]);
@@ -965,6 +970,229 @@ function Radio() {
       }
     };
   }, []);
+
+  // Función para actualizar y sincronizar con el backend
+  const handleRefresh = async () => {
+    if (!audioRef.current) return;
+
+    try {
+      // Obtener metadata actual del backend
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(ICECAST_STATUS_URL, {
+        cache: "no-cache",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        // Si el backend no está disponible, recargar playlist si no está en vivo
+        if (!isLive && playlist.length > 0) {
+          playlistLoadedRef.current = false;
+          // Forzar recarga de playlist
+          const playlistData = await getPlaylist();
+          if (playlistData && playlistData.length > 0) {
+            const songs: Song[] = playlistData.map((item: any) => ({
+              id: item.id,
+              title: item.title || "Título Desconocido",
+              artist: item.artist || "Artista Desconocido",
+              url: item.url,
+              duration: item.duration || undefined,
+            }));
+
+            const validSongs = songs.filter((song) => {
+              try {
+                if (!song.url || typeof song.url !== "string") return false;
+                new URL(song.url);
+                return true;
+              } catch {
+                return false;
+              }
+            });
+
+            if (validSongs.length > 0) {
+              setPlaylist(validSongs);
+              playlistLoadedRef.current = true;
+              // Sincronizar con la primera canción si no hay una actual
+              if (!currentSong || currentSong.id !== validSongs[0].id) {
+                setCurrentSong(validSongs[0]);
+                setCurrentPlaylistIndex(0);
+                if (isPlaying) {
+                  audioRef.current.src = validSongs[0].url;
+                  audioRef.current.load();
+                  await audioRef.current.play();
+                }
+              }
+            }
+          }
+        }
+        return;
+      }
+
+      const data = await response.json();
+
+      // Procesar la respuesta igual que fetchMetadata
+      let sources: any[] = [];
+      if (Array.isArray(data.icestats?.source)) {
+        sources = data.icestats.source;
+      } else if (
+        data.icestats?.source &&
+        typeof data.icestats.source === "object" &&
+        !Array.isArray(data.icestats.source)
+      ) {
+        sources = [data.icestats.source];
+      } else if (data.source && Array.isArray(data.source)) {
+        sources = data.source;
+      } else if (data.source && typeof data.source === "object") {
+        sources = [data.source];
+      }
+
+      if (!Array.isArray(sources)) {
+        sources = [];
+      }
+
+      let mountpoint: any = null;
+      if (sources.length > 0) {
+        mountpoint = sources.find(
+          (source: any) =>
+            source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+        );
+
+        if (!mountpoint) {
+          mountpoint = sources.find(
+            (source: any) =>
+              source?.server_name?.toLowerCase().includes("vixis") ||
+              source?.listenurl?.includes("vixis") ||
+              source?.mount?.includes("vixis")
+          );
+        }
+
+        if (!mountpoint && sources.length > 0) {
+          mountpoint = sources[0];
+        }
+      }
+
+      if (mountpoint) {
+        setIsLive(true);
+
+        const icecastTitle =
+          mountpoint.title || mountpoint.yp_currently_playing || "En Vivo";
+        const icecastArtist = mountpoint.artist || "Radio Vixis";
+
+        // Intentar match con playlist de Supabase
+        try {
+          const playlistData = await getPlaylist();
+          if (playlistData && playlistData.length > 0) {
+            const normalize = (str: string) =>
+              str.toLowerCase().trim().replace(/\s+/g, " ");
+
+            const normalizedIcecastTitle = normalize(icecastTitle);
+            const normalizedIcecastArtist = normalize(icecastArtist);
+
+            const matchedSong = playlistData.find((song: any) => {
+              const normalizedSongTitle = normalize(song.title || "");
+              const normalizedSongArtist = normalize(song.artist || "");
+
+              const titleMatch =
+                normalizedSongTitle === normalizedIcecastTitle ||
+                normalizedIcecastTitle.includes(normalizedSongTitle) ||
+                normalizedSongTitle.includes(normalizedIcecastTitle);
+
+              const artistMatch =
+                normalizedSongArtist === normalizedIcecastArtist ||
+                normalizedIcecastArtist.includes(normalizedSongArtist) ||
+                normalizedSongArtist.includes(normalizedIcecastArtist);
+
+              return titleMatch || artistMatch;
+            });
+
+            if (matchedSong) {
+              const newSong = {
+                id: "live",
+                title: matchedSong.title,
+                artist: matchedSong.artist,
+                url: ICECAST_STREAM_URL,
+              };
+
+              // Actualizar canción actual
+              setCurrentSong(newSong);
+
+              // Sincronizar audio: si está reproduciendo y el src no coincide, actualizarlo
+              if (isPlaying && audioRef.current) {
+                const currentSrc = audioRef.current.src;
+                if (!currentSrc || !currentSrc.includes(ICECAST_STREAM_URL)) {
+                  audioRef.current.pause();
+                  audioRef.current.src = ICECAST_STREAM_URL;
+                  // NO usar load() para streams OGG en vivo
+                  await audioRef.current.play();
+                }
+              }
+              return;
+            }
+          }
+        } catch (playlistError) {
+          // Continuar con datos de Icecast
+        }
+
+        // Usar datos de Icecast
+        const newSong = {
+          id: "live",
+          title: icecastTitle,
+          artist: icecastArtist,
+          url: ICECAST_STREAM_URL,
+        };
+
+        setCurrentSong(newSong);
+
+        // Sincronizar audio
+        if (isPlaying && audioRef.current) {
+          const currentSrc = audioRef.current.src;
+          if (!currentSrc || !currentSrc.includes(ICECAST_STREAM_URL)) {
+            audioRef.current.pause();
+            audioRef.current.src = ICECAST_STREAM_URL;
+            await audioRef.current.play();
+          }
+        }
+      } else {
+        setIsLive(false);
+        // Si no está en vivo, recargar playlist
+        if (playlist.length === 0 || !playlistLoadedRef.current) {
+          playlistLoadedRef.current = false;
+          const playlistData = await getPlaylist();
+          if (playlistData && playlistData.length > 0) {
+            const songs: Song[] = playlistData.map((item: any) => ({
+              id: item.id,
+              title: item.title || "Título Desconocido",
+              artist: item.artist || "Artista Desconocido",
+              url: item.url,
+              duration: item.duration || undefined,
+            }));
+
+            const validSongs = songs.filter((song) => {
+              try {
+                if (!song.url || typeof song.url !== "string") return false;
+                new URL(song.url);
+                return true;
+              } catch {
+                return false;
+              }
+            });
+
+            if (validSongs.length > 0) {
+              setPlaylist(validSongs);
+              playlistLoadedRef.current = true;
+              setCurrentSong(validSongs[0]);
+              setCurrentPlaylistIndex(0);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // Error silenciado
+    }
+  };
 
   const togglePlayPause = async () => {
     if (!audioRef.current) return;
@@ -1457,11 +1685,32 @@ function Radio() {
                 </svg>
               )}
             </button>
+            {/* Botón de actualizar/sincronizar */}
+            <button
+              onClick={handleRefresh}
+              className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center hover:bg-white/20 rounded transition-colors cursor-pointer flex-shrink-0"
+              aria-label={t("radio.refresh") || "Actualizar"}
+              title={t("radio.refresh") || "Sincronizar con el backend"}
+            >
+              <svg
+                className="w-4 h-4 md:w-6 md:h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </button>
             {/* 😎 */}
             <img
               src="https://cdn.vixis.dev/Link_Swag.webp"
               alt="Link Swag 🎵"
-              className="w-6 h-6 md:w-8 md:h-8 flex-shrink-0 ml-2 cursor-pointer hover:opacity-80 transition-opacity"
+              className="w-6 h-6 md:w-8 md:h-8 flex-shrink-0 ml-4 cursor-pointer hover:opacity-80 transition-opacity"
               onClick={handleEmojiClick}
             />
           </div>
