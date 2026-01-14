@@ -222,8 +222,12 @@ function Radio() {
             mountpoint.title || mountpoint.yp_currently_playing || "En Vivo";
           const icecastArtist = mountpoint.artist || "Radio Vixis";
 
-          // Intentar hacer match con la tabla playlist de Supabase
-          // Esto permite usar los nombres correctos de la tabla en lugar de los tags ID3
+          // EL BACKEND ES LA FUENTE DE VERDAD - usar directamente los datos de Icecast
+          // Intentar match con playlist de Supabase SOLO para obtener nombres más limpios
+          // Pero SIEMPRE priorizar lo que dice el backend
+          let finalTitle = icecastTitle;
+          let finalArtist = icecastArtist;
+
           try {
             const playlistData = await getPlaylist();
             if (playlistData && playlistData.length > 0) {
@@ -254,33 +258,11 @@ function Radio() {
                 return titleMatch || artistMatch;
               });
 
-              // Si encontramos match, usar los datos de Supabase
+              // Si encontramos match, usar los nombres de Supabase (más limpios)
+              // pero solo si hay un match claro
               if (matchedSong) {
-                setCurrentSong((prev) => {
-                  // Solo actualizar si los valores realmente cambiaron
-                  if (
-                    prev?.url === ICECAST_STREAM_URL &&
-                    prev?.id === "live" &&
-                    prev?.title === matchedSong.title &&
-                    prev?.artist === matchedSong.artist
-                  ) {
-                    return prev; // No cambiar si los valores son iguales
-                  }
-                  if (prev?.url === ICECAST_STREAM_URL && prev?.id === "live") {
-                    return {
-                      ...prev,
-                      title: matchedSong.title,
-                      artist: matchedSong.artist,
-                    };
-                  }
-                  return {
-                    id: "live",
-                    title: matchedSong.title,
-                    artist: matchedSong.artist,
-                    url: ICECAST_STREAM_URL,
-                  };
-                });
-                return; // Salir temprano si encontramos match
+                finalTitle = matchedSong.title;
+                finalArtist = matchedSong.artist;
               }
             }
           } catch (playlistError) {
@@ -288,31 +270,34 @@ function Radio() {
             // Error silenciado para evitar logs innecesarios
           }
 
-          // Si no hay match o falla, usar datos de Icecast
-          setCurrentSong((prev) => {
-            // Solo actualizar si los valores realmente cambiaron
-            if (
-              prev?.url === ICECAST_STREAM_URL &&
-              prev?.id === "live" &&
-              prev?.title === icecastTitle &&
-              prev?.artist === icecastArtist
-            ) {
-              return prev; // No cambiar si los valores son iguales
-            }
-            if (prev?.url === ICECAST_STREAM_URL && prev?.id === "live") {
-              return {
-                ...prev,
-                title: icecastTitle,
-                artist: icecastArtist,
-              };
-            }
-            return {
-              id: "live",
-              title: icecastTitle,
-              artist: icecastArtist,
-              url: ICECAST_STREAM_URL,
-            };
+          // SIEMPRE actualizar con los datos del backend (fuente de verdad)
+          // No verificar si cambió - el backend es la autoridad
+          setCurrentSong({
+            id: "live",
+            title: finalTitle,
+            artist: finalArtist,
+            url: ICECAST_STREAM_URL,
           });
+
+          // Sincronizar audio: asegurar que el src coincida con el backend
+          if (audioRef.current) {
+            const currentSrc = audioRef.current.src;
+            // Si el audio no está apuntando al stream en vivo, actualizarlo
+            if (!currentSrc || !currentSrc.includes(ICECAST_STREAM_URL)) {
+              // Solo actualizar si está reproduciendo (no interrumpir si está pausado)
+              if (isPlaying) {
+                audioRef.current.pause();
+                audioRef.current.src = ICECAST_STREAM_URL;
+                // NO usar load() para streams OGG en vivo
+                audioRef.current.play().catch(() => {
+                  // Ignorar errores de autoplay
+                });
+              } else {
+                // Si no está reproduciendo, solo actualizar el src sin reproducir
+                audioRef.current.src = ICECAST_STREAM_URL;
+              }
+            }
+          }
         } else {
           // La radio no está activa
           setIsLive(false);
@@ -717,7 +702,12 @@ function Radio() {
           },
           (payload) => {
             const newMessage = payload.new as Tables<"messages">;
-            setMessages((prev) => [...prev, newMessage]);
+            // Verificar que el mensaje no exista ya para evitar duplicados
+            setMessages((prev) => {
+              const exists = prev.some((msg) => msg.id === newMessage.id);
+              if (exists) return prev;
+              return [...prev, newMessage];
+            });
             // Auto-scroll al final
             setTimeout(() => {
               messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1108,11 +1098,16 @@ function Radio() {
       if (mountpoint) {
         setIsLive(true);
 
+        // EL BACKEND ES LA FUENTE DE VERDAD - usar directamente los datos de Icecast
         const icecastTitle =
           mountpoint.title || mountpoint.yp_currently_playing || "En Vivo";
         const icecastArtist = mountpoint.artist || "Radio Vixis";
 
-        // Intentar match con playlist de Supabase
+        // Intentar match con playlist de Supabase SOLO para obtener nombres más limpios
+        // Pero SIEMPRE priorizar lo que dice el backend
+        let finalTitle = icecastTitle;
+        let finalArtist = icecastArtist;
+
         try {
           const playlistData = await getPlaylist();
           if (playlistData && playlistData.length > 0) {
@@ -1139,58 +1134,49 @@ function Radio() {
               return titleMatch || artistMatch;
             });
 
+            // Si encontramos match, usar los nombres de Supabase (más limpios)
+            // pero solo si hay un match claro
             if (matchedSong) {
-              const newSong = {
-                id: "live",
-                title: matchedSong.title,
-                artist: matchedSong.artist,
-                url: ICECAST_STREAM_URL,
-              };
-
-              // Actualizar canción actual
-              setCurrentSong(newSong);
-
-              // Sincronizar audio: si está reproduciendo y el src no coincide, actualizarlo
-              if (isPlaying && audioRef.current) {
-                const currentSrc = audioRef.current.src;
-                if (!currentSrc || !currentSrc.includes(ICECAST_STREAM_URL)) {
-                  audioRef.current.pause();
-                  audioRef.current.src = ICECAST_STREAM_URL;
-                  // NO usar load() para streams OGG en vivo
-                  await audioRef.current.play();
-                }
-              }
-              return;
+              finalTitle = matchedSong.title;
+              finalArtist = matchedSong.artist;
             }
           }
         } catch (playlistError) {
-          // Continuar con datos de Icecast
+          // Continuar con datos de Icecast si falla
         }
 
-        // Usar datos de Icecast
+        // SIEMPRE actualizar con los datos del backend (fuente de verdad)
         const newSong = {
           id: "live",
-          title: icecastTitle,
-          artist: icecastArtist,
+          title: finalTitle,
+          artist: finalArtist,
           url: ICECAST_STREAM_URL,
         };
 
+        // Forzar actualización del texto (sin verificar si cambió)
+        // El backend es la fuente de verdad
         setCurrentSong(newSong);
 
         // Sincronizar audio: SIEMPRE actualizar el src para que coincida con el backend
-        if (isPlaying && audioRef.current) {
+        if (audioRef.current) {
           const currentSrc = audioRef.current.src;
+          // SIEMPRE actualizar el src para sincronizar con el backend
           if (!currentSrc || !currentSrc.includes(ICECAST_STREAM_URL)) {
-            audioRef.current.pause();
-            audioRef.current.src = ICECAST_STREAM_URL;
-            // NO usar load() para streams OGG en vivo
-            await audioRef.current.play();
-          }
-        } else if (!isPlaying && audioRef.current) {
-          // Si no está reproduciendo pero debería estar en vivo, solo actualizar el src
-          // sin reproducir (el usuario decidirá cuándo reproducir)
-          if (!audioRef.current.src.includes(ICECAST_STREAM_URL)) {
-            audioRef.current.src = ICECAST_STREAM_URL;
+            if (isPlaying) {
+              // Si está reproduciendo, actualizar y continuar reproduciendo
+              audioRef.current.pause();
+              audioRef.current.src = ICECAST_STREAM_URL;
+              // NO usar load() para streams OGG en vivo
+              await audioRef.current.play();
+            } else {
+              // Si no está reproduciendo, solo actualizar el src sin reproducir
+              audioRef.current.src = ICECAST_STREAM_URL;
+            }
+          } else if (isPlaying) {
+            // Si ya está apuntando al stream correcto pero está pausado, intentar reproducir
+            if (audioRef.current.paused) {
+              await audioRef.current.play();
+            }
           }
         }
       } else {
@@ -1475,14 +1461,8 @@ function Radio() {
 
       if (error) throw error;
 
-      // Agregar el mensaje al estado local inmediatamente
-      if (data) {
-        setMessages((prev) => [...prev, data as Tables<"messages">]);
-        // Auto-scroll al final
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      }
+      // NO agregar el mensaje manualmente aquí - el listener de Realtime lo agregará automáticamente
+      // Esto evita duplicación cuando el listener de Realtime también recibe el INSERT
 
       setMessageInput("");
       setLastMessageTime(Date.now());
@@ -1935,20 +1915,21 @@ function Radio() {
 
       {/* Contenido principal */}
       <div className="pt-10 md:pt-15 flex-1">
-        <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="max-w-7xl mx-auto px-4 py-12 pb-20">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
             {t("radio.title")}
           </h1>
 
           {/* Placeholder para el chat en tiempo real */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
             <div className="lg:col-span-2">
               <div
                 ref={chatContainerRef}
-                className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] p-4"
+                className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] p-4 mb-8"
                 style={{
                   fontFamily: "'Press Start 2P', monospace",
                   cursor: "default",
+                  minHeight: "200px",
                 }}
               >
                 <h2
