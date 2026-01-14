@@ -1,6 +1,7 @@
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState } from "react";
 import { gsap } from "gsap";
 import { useTranslation } from "../../lib/i18n";
+import { getHomeProjects } from "../../lib/supabase-functions";
 
 interface Project {
   id: string;
@@ -15,30 +16,76 @@ function ScrollableCardStack() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { t, language } = useTranslation();
-  const projects = useMemo<Project[]>(
-    () => [
-      {
-        id: "1",
-        title: "Vixito - Discord Bot",
-        thumbnail: "https://cdn.vixito.gg/Vixito+-+Logo.png",
-        month: t("workExperience.january"),
-        year: 2026,
-        url: "https://vixito.gg",
-      },
-      {
-        id: "2",
-        title: "Filippo Cucine",
-        thumbnail: "https://cdn.vixis.dev/Filippo+Cucine+-+Thumbnail.webp",
-        month: t("workExperience.january"),
-        year: 2026,
-        url: "https://filippo-cucine.com",
-      },
-    ],
-    [t, language]
-  );
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const loadProjects = async () => {
+      try {
+        setLoading(true);
+        const data = await getHomeProjects();
+
+        if (!data || data.length === 0) {
+          setProjects([]);
+          setLoading(false);
+          return;
+        }
+
+        const formattedProjects: Project[] = data.map((project: any) => {
+          // Parsear fecha desde created_at o usar month/year si existen
+          let month = "";
+          let year = 2026;
+
+          if (project.created_at) {
+            const date = new Date(project.created_at);
+            const monthNames = [
+              t("workExperience.january"),
+              t("workExperience.february"),
+              t("workExperience.march"),
+              t("workExperience.april"),
+              t("workExperience.may"),
+              t("workExperience.june"),
+              t("workExperience.july"),
+              t("workExperience.august"),
+              t("workExperience.september"),
+              t("workExperience.october"),
+              t("workExperience.november"),
+              t("workExperience.december"),
+            ];
+            month = monthNames[date.getMonth()] || "";
+            year = date.getFullYear();
+          } else if (project.month && project.year) {
+            month = project.month;
+            year = project.year;
+          }
+
+          return {
+            id: project.id,
+            title: project.title || "",
+            thumbnail: project.thumbnail || project.thumbnail_url || "",
+            month,
+            year,
+            url: project.url || "",
+          };
+        });
+
+        setProjects(formattedProjects);
+      } catch (error) {
+        console.error("Error al cargar proyectos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language]); // Solo recargar si cambia el idioma
+
+  // Este useEffect debe ejecutarse siempre, incluso si hay returns tempranos
+  // para cumplir con las reglas de hooks de React
+  useEffect(() => {
+    // Solo ejecutar la lógica si hay proyectos y el contenedor existe
+    if (!containerRef.current || projects.length === 0) return;
 
     const cards = containerRef.current.querySelectorAll(".stack-card");
 
@@ -69,6 +116,28 @@ function ScrollableCardStack() {
 
     return () => clearInterval(interval);
   }, [currentIndex, projects.length]);
+
+  if (loading) {
+    return (
+      <div className="relative h-64 flex items-center justify-center">
+        <p className="text-sm text-gray-500 dark:text-gray-500">
+          {t("common.loading")}
+        </p>
+      </div>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <div className="relative h-64 flex items-center justify-center">
+        <p className="text-sm text-gray-500 dark:text-gray-500 text-center">
+          {language === "es"
+            ? "No hay proyectos configurados."
+            : "No projects configured."}
+        </p>
+      </div>
+    );
+  }
 
   const handleCardClick = (index: number) => {
     setCurrentIndex(index);

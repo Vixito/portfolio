@@ -1,121 +1,165 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "../../lib/i18n";
 import { useRadioState } from "../../hooks/useRadioState";
 
 function RadioPlayer() {
   const { t } = useTranslation();
+  const location = useLocation();
   const {
     isPlaying: sharedIsPlaying,
     isLive: sharedIsLive,
     currentSong: sharedCurrentSong,
   } = useRadioState();
-  const [isPlaying, setIsPlaying] = useState(sharedIsPlaying);
-  const [isLive, setIsLive] = useState(sharedIsLive);
-  const [currentSong, setCurrentSong] = useState(sharedCurrentSong);
   const audioRef = useRef<HTMLAudioElement>(null);
-
-  // Sincronizar con el estado compartido
-  useEffect(() => {
-    setIsPlaying(sharedIsPlaying);
-    setIsLive(sharedIsLive);
-    setCurrentSong(sharedCurrentSong);
-  }, [sharedIsPlaying, sharedIsLive, sharedCurrentSong]);
 
   // URL del stream de Icecast
   const ICECAST_STREAM_URL =
-    import.meta.env.VITE_ICECAST_STREAM_URL ||
-    "http://localhost:8000/radiovixis";
+    import.meta.env.VITE_ICECAST_STREAM_URL || "https://radio.vixis.dev/vixis";
   const ICECAST_STATUS_URL =
     import.meta.env.VITE_ICECAST_STATUS_URL ||
-    "http://localhost:8000/status-json.xsl";
+    "https://radio.vixis.dev/status-json.xsl";
 
-  // Verificar estado de la radio
+  // Estado local para el audio (solo para control del elemento audio)
+  const [localIsPlaying, setLocalIsPlaying] = useState(false);
+  // Estado local para verificación cuando Radio.tsx no está montado
+  const [localIsLive, setLocalIsLive] = useState(false);
+
+  // Verificar si estamos en /radio (donde Radio.tsx está montado)
+  const isRadioPage = location.pathname === "/radio";
+
+  // Usar el estado compartido como fuente de verdad absoluta cuando Radio.tsx está montado
+  // Si no estamos en /radio, usar verificación local
+  const isLive = isRadioPage ? sharedIsLive : localIsLive;
+  const isPlaying = sharedIsPlaying || localIsPlaying;
+
+  // Verificación local del estado de la radio (solo cuando NO estamos en /radio)
   useEffect(() => {
+    // Si estamos en /radio, Radio.tsx maneja el estado, no necesitamos verificar localmente
+    if (isRadioPage) {
+      return;
+    }
+
     const checkRadioStatus = async () => {
       try {
-        const response = await fetch(ICECAST_STATUS_URL);
+        const response = await fetch(ICECAST_STATUS_URL, {
+          cache: "no-cache",
+        });
+
+        if (!response.ok) {
+          setLocalIsLive(false);
+          return;
+        }
+
         const data = await response.json();
 
-        const mountpoint = data.icestats?.source?.find(
-          (source: any) =>
-            source.server_name?.toLowerCase().includes("vixis") ||
-            source.listenurl?.includes("vixis") ||
-            source.mount?.includes("vixis")
-        );
+        // Usar la misma lógica robusta que Radio.tsx
+        let sources: any[] = [];
 
-        setIsLive(!!mountpoint);
+        if (Array.isArray(data.icestats?.source)) {
+          sources = data.icestats.source;
+        } else if (
+          data.icestats?.source &&
+          typeof data.icestats.source === "object" &&
+          !Array.isArray(data.icestats.source)
+        ) {
+          sources = [data.icestats.source];
+        } else if (data.source && Array.isArray(data.source)) {
+          sources = data.source;
+        } else if (data.source && typeof data.source === "object") {
+          sources = [data.source];
+        }
+
+        // Buscar mountpoint /vixis
+        let mountpoint: any = null;
+        if (sources.length > 0) {
+          mountpoint = sources.find(
+            (source: any) =>
+              source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+          );
+
+          if (!mountpoint) {
+            mountpoint = sources.find(
+              (source: any) =>
+                source?.server_name?.toLowerCase().includes("vixis") ||
+                source?.listenurl?.includes("vixis") ||
+                source?.mount?.includes("vixis")
+            );
+          }
+
+          if (!mountpoint && sources.length > 0) {
+            mountpoint = sources[0];
+          }
+        }
+
+        setLocalIsLive(!!mountpoint);
       } catch (error) {
-        setIsLive(false);
+        setLocalIsLive(false);
       }
     };
 
     checkRadioStatus();
     const interval = setInterval(checkRadioStatus, 30000); // Verificar cada 30 segundos
     return () => clearInterval(interval);
-  }, []);
+  }, [isRadioPage, ICECAST_STATUS_URL]);
 
   // Manejar reproducción/pausa
   const togglePlayPause = async () => {
     if (!audioRef.current) return;
 
+    // Usar el estado compartido como fuente de verdad
+    // Si la radio está online (isLive = true), reproducir el stream
     if (isPlaying) {
       audioRef.current.pause();
-      setIsPlaying(false);
+      setLocalIsPlaying(false);
     } else {
-      // Solo intentar reproducir si la radio está en vivo
-      if (!isLive) {
-        return;
-      }
-
-      try {
-        // Si no hay src, establecerlo
-        if (!audioRef.current.src) {
-          audioRef.current.src = ICECAST_STREAM_URL;
-        }
-
-        // Agregar event listeners para manejar errores
-        const handleError = () => {
-          setIsPlaying(false);
-          if (audioRef.current) {
-            audioRef.current.src = "";
+      // Solo intentar reproducir si la radio está online
+      if (isLive) {
+        try {
+          // Establecer el src del stream
+          if (
+            !audioRef.current.src ||
+            !audioRef.current.src.includes(ICECAST_STREAM_URL)
+          ) {
+            audioRef.current.src = ICECAST_STREAM_URL;
           }
-        };
 
-        const handleCanPlay = () => {
-          // Solo establecer isPlaying cuando realmente puede reproducir
-        };
+          // Agregar event listeners para manejar errores
+          const handleError = () => {
+            setLocalIsPlaying(false);
+            if (audioRef.current) {
+              audioRef.current.src = "";
+            }
+          };
 
-        audioRef.current.addEventListener("error", handleError);
-        audioRef.current.addEventListener("canplay", handleCanPlay);
+          audioRef.current.addEventListener("error", handleError, {
+            once: true,
+          });
 
-        await audioRef.current.play();
-        setIsPlaying(true);
-
-        // Limpiar listeners después de un tiempo
-        setTimeout(() => {
-          if (audioRef.current) {
-            audioRef.current.removeEventListener("error", handleError);
-            audioRef.current.removeEventListener("canplay", handleCanPlay);
-          }
-        }, 1000);
-      } catch (error) {
-        // Silenciar errores en producción
-        if (import.meta.env.DEV) {
-          console.debug("Error al reproducir la radio:", error);
+          await audioRef.current.play();
+          setLocalIsPlaying(true);
+        } catch (error) {
+          setLocalIsPlaying(false);
         }
-        setIsPlaying(false);
       }
+      // Si está offline, no hacer nada (el botón se mantiene en play visualmente)
     }
   };
 
-  // Pausar si la radio se desconecta (solo si realmente se desconecta, no en el primer render)
+  // Sincronizar estado local con el compartido
   useEffect(() => {
-    if (!isLive && audioRef.current && isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
+    if (sharedIsPlaying !== undefined) {
+      setLocalIsPlaying(sharedIsPlaying);
     }
-  }, [isLive]);
+  }, [sharedIsPlaying]);
+
+  // Pausar si la radio se desconecta
+  useEffect(() => {
+    if (!isLive && audioRef.current && localIsPlaying) {
+      audioRef.current.pause();
+      setLocalIsPlaying(false);
+    }
+  }, [isLive, localIsPlaying]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 transition-colors">
@@ -123,10 +167,9 @@ function RadioPlayer() {
         {/* Botón de play a la izquierda con efecto de disco de vinilo */}
         <button
           onClick={togglePlayPause}
-          disabled={!isLive}
-          className={`w-16 h-16 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-90 ${
-            isLive ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-          } ${isPlaying ? "animate-spin" : ""}`}
+          className={`w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-90 cursor-pointer ${
+            isPlaying && isLive ? "animate-spin" : ""
+          }`}
           style={{
             animationDuration: "3s",
           }}

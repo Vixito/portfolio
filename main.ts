@@ -1,8 +1,11 @@
-// Servidor para Deno Deploy que maneja routing SPA
+// Servidor para Deno Deploy / Google Cloud Run que maneja routing SPA
 // Todas las rutas redirigen a index.html para que React Router pueda manejar el routing
 // Los assets están en S3/CloudFront, así que solo servimos archivos JS/CSS generados por Vite
 
-Deno.serve(async (req: Request) => {
+// Cloud Run requiere que escuchemos en el puerto proporcionado por la variable de entorno PORT
+const port = parseInt(Deno.env.get("PORT") || "8080", 10);
+
+Deno.serve({ port }, async (req: Request) => {
   const url = new URL(req.url);
   const pathname = url.pathname;
 

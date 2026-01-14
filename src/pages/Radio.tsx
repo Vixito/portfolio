@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { gsap } from "gsap";
 import { getUpcomingEvents, getPlaylist } from "../lib/supabase-functions";
 import { supabase } from "../lib/supabase";
@@ -23,10 +23,12 @@ function Radio() {
   const marqueeRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [previousVolume, setPreviousVolume] = useState(1); // Para restaurar volumen al desilenciar
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isLive, setIsLive] = useState(false); // Estado para saber si la radio está en vivo
+  const [userPaused, setUserPaused] = useState(false); // Rastrear si el usuario pausó manualmente
   const [events, setEvents] = useState<
     Array<{
       id: string;
@@ -40,6 +42,23 @@ function Radio() {
     }>
   >([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+
+  // Estado para los emojis que aparecen al hacer click (con deltas pre-calculados)
+  const [emojiParticles, setEmojiParticles] = useState<
+    Array<{
+      id: number;
+      startX: number;
+      startY: number;
+      deltaX: number;
+      deltaY: number;
+      rotation: number;
+    }>
+  >([]);
+  const emojiIdCounter = useRef(0);
+  const emojiParticlesCountRef = useRef(0);
+  const emojiButtonRef = useRef<HTMLImageElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const eventsContainerRef = useRef<HTMLDivElement>(null);
 
   // Estados del chat
   const [messages, setMessages] = useState<Tables<"messages">[]>([]);
@@ -68,19 +87,14 @@ function Radio() {
   const playlistLoadedRef = useRef(false);
   const errorCountRef = useRef(0);
   const lastErrorTimeRef = useRef(0);
+  const isPlayingLiveRef = useRef(false); // Para evitar loops en el useEffect de playLive
 
   // URL del stream de Icecast (configurable desde variables de entorno)
   const ICECAST_STREAM_URL =
-    import.meta.env.VITE_ICECAST_STREAM_URL ||
-    "http://localhost:8000/radiovixis";
+    import.meta.env.VITE_ICECAST_STREAM_URL || "https://radio.vixis.dev/vixis";
   const ICECAST_STATUS_URL =
     import.meta.env.VITE_ICECAST_STATUS_URL ||
-    "http://localhost:8000/status-json.xsl";
-
-  // Configuración de AzuraCast (para cuando no esté en transmisión)
-  const AZURACAST_BASE_URL = import.meta.env.VITE_AZURACAST_BASE_URL || "";
-  const AZURACAST_API_KEY = import.meta.env.VITE_AZURACAST_API_KEY || "";
-  const AZURACAST_STATION_ID = import.meta.env.VITE_AZURACAST_STATION_ID || "1";
+    "https://radio.vixis.dev/status-json.xsl";
 
   // Cargar metadata del stream de Icecast y verificar si está en vivo
   useEffect(() => {
@@ -109,18 +123,24 @@ function Radio() {
           clearTimeout(timeoutId);
           if (!isMounted) return;
           setIsLive(false);
-          // No loggear errores de servicio no disponible en producción
-          if (import.meta.env.DEV) {
-            console.debug(
-              `Servicio de radio no disponible (${response.status})`
-            );
-          }
           // Continuar con el flujo normal (playlist o offline) - no hacer throw
-          setCurrentSong({
-            id: "offline",
-            title: t("radio.offlineTitle"),
-            artist: t("radio.waiting"),
-            url: ICECAST_STREAM_URL,
+          const offlineTitle = t("radio.offlineTitle");
+          const offlineArtist = t("radio.waiting");
+          setCurrentSong((prev) => {
+            // Solo actualizar si los valores realmente cambiaron
+            if (
+              prev?.id === "offline" &&
+              prev?.title === offlineTitle &&
+              prev?.artist === offlineArtist
+            ) {
+              return prev;
+            }
+            return {
+              id: "offline",
+              title: offlineTitle,
+              artist: offlineArtist,
+              url: "",
+            };
           });
           return;
         }
@@ -130,79 +150,187 @@ function Radio() {
 
         if (!isMounted) return;
 
-        // Buscar el mountpoint de la radio
-        const mountpoint = data.icestats?.source?.find(
-          (source: any) =>
-            source.server_name?.toLowerCase().includes("vixis") ||
-            source.listenurl?.includes("vixis") ||
-            source.mount?.includes("vixis")
-        );
+        // Manejar diferentes estructuras de respuesta de Icecast
+        // El error "0.find is not a function" indica que source no es un array
+        let sources: any[] = [];
+
+        // Intentar múltiples formas de obtener las fuentes
+        if (Array.isArray(data.icestats?.source)) {
+          sources = data.icestats.source;
+        } else if (
+          data.icestats?.source &&
+          typeof data.icestats.source === "object" &&
+          !Array.isArray(data.icestats.source)
+        ) {
+          // Si source es un objeto único, convertirlo a array
+          sources = [data.icestats.source];
+        } else if (data.source && Array.isArray(data.source)) {
+          // A veces source está directamente en data
+          sources = data.source;
+        } else if (data.source && typeof data.source === "object") {
+          sources = [data.source];
+        } else {
+          // Si no encontramos source, buscar en todas las propiedades de icestats
+          // Buscar cualquier array en icestats que contenga objetos con 'mount'
+          if (data.icestats) {
+            for (const key of Object.keys(data.icestats)) {
+              const value = (data.icestats as any)[key];
+              if (Array.isArray(value) && value.length > 0 && value[0]?.mount) {
+                sources = value;
+                break;
+              }
+            }
+          }
+        }
+
+        // Asegurarse de que sources sea un array antes de usar .find()
+        if (!Array.isArray(sources)) {
+          sources = [];
+        }
+
+        // Buscar por mount /vixis
+        let mountpoint: any = null;
+        if (sources.length > 0) {
+          mountpoint = sources.find(
+            (source: any) =>
+              source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+          );
+
+          // Si no se encuentra, buscar por server_name o listenurl
+          if (!mountpoint) {
+            mountpoint = sources.find(
+              (source: any) =>
+                source?.server_name?.toLowerCase().includes("vixis") ||
+                source?.listenurl?.includes("vixis") ||
+                source?.mount?.includes("vixis")
+            );
+          }
+
+          // Si aún no se encuentra, usar la primera fuente disponible (fallback)
+          if (!mountpoint && sources.length > 0) {
+            mountpoint = sources[0];
+          }
+        }
 
         if (mountpoint) {
           // La radio está activa
           setIsLive(true);
-          const title =
-            mountpoint.title ||
-            mountpoint.yp_currently_playing ||
-            t("radio.liveTitle");
-          const artist = mountpoint.artist || t("radio.liveArtist");
 
+          // Obtener título/artista de Icecast (metadata del MP3)
+          // Usar valores de mountpoint directamente, sin depender de traducciones que cambian
+          const icecastTitle =
+            mountpoint.title || mountpoint.yp_currently_playing || "En Vivo";
+          const icecastArtist = mountpoint.artist || "Radio Vixis";
+
+          // EL BACKEND ES LA FUENTE DE VERDAD - usar directamente los datos de Icecast
+          // Intentar match con playlist de Supabase SOLO para obtener nombres más limpios
+          // Pero SIEMPRE priorizar lo que dice el backend
+          let finalTitle = icecastTitle;
+          let finalArtist = icecastArtist;
+
+          try {
+            const playlistData = await getPlaylist();
+            if (playlistData && playlistData.length > 0) {
+              // Buscar match por título y artista (normalizados para comparación)
+              const normalize = (str: string) =>
+                str.toLowerCase().trim().replace(/\s+/g, " ");
+
+              const normalizedIcecastTitle = normalize(icecastTitle);
+              const normalizedIcecastArtist = normalize(icecastArtist);
+
+              // Buscar en la playlist
+              const matchedSong = playlistData.find((song: any) => {
+                const normalizedSongTitle = normalize(song.title || "");
+                const normalizedSongArtist = normalize(song.artist || "");
+
+                // Match por título exacto o parcial
+                const titleMatch =
+                  normalizedSongTitle === normalizedIcecastTitle ||
+                  normalizedIcecastTitle.includes(normalizedSongTitle) ||
+                  normalizedSongTitle.includes(normalizedIcecastTitle);
+
+                // Match por artista exacto o parcial
+                const artistMatch =
+                  normalizedSongArtist === normalizedIcecastArtist ||
+                  normalizedIcecastArtist.includes(normalizedSongArtist) ||
+                  normalizedSongArtist.includes(normalizedIcecastArtist);
+
+                return titleMatch || artistMatch;
+              });
+
+              // Si encontramos match, usar los nombres de Supabase (más limpios)
+              // pero solo si hay un match claro
+              if (matchedSong) {
+                finalTitle = matchedSong.title;
+                finalArtist = matchedSong.artist;
+              }
+            }
+          } catch (playlistError) {
+            // Si falla obtener playlist, continuar con datos de Icecast
+            // Error silenciado para evitar logs innecesarios
+          }
+
+          // SIEMPRE actualizar con los datos del backend (fuente de verdad)
+          // No verificar si cambió - el backend es la autoridad
           setCurrentSong({
             id: "live",
-            title: title,
-            artist: artist,
+            title: finalTitle,
+            artist: finalArtist,
             url: ICECAST_STREAM_URL,
           });
-        } else {
-          // La radio no está activa, intentar conectar con AzuraCast
-          setIsLive(false);
 
-          // Intentar obtener información de AzuraCast si está configurado
-          if (AZURACAST_BASE_URL && AZURACAST_API_KEY) {
-            try {
-              const azuracastResponse = await fetch(
-                `${AZURACAST_BASE_URL}/api/nowplaying/${AZURACAST_STATION_ID}`,
-                {
-                  headers: {
-                    "X-API-Key": AZURACAST_API_KEY,
-                  },
-                  signal: controller.signal,
-                }
-              );
-
-              if (azuracastResponse.ok) {
-                const azuracastData = await azuracastResponse.json();
-                const nowPlaying = azuracastData.now_playing;
-
-                if (nowPlaying && nowPlaying.song) {
-                  setCurrentSong({
-                    id: "azuracast",
-                    title: nowPlaying.song.title || t("radio.offlineTitle"),
-                    artist: nowPlaying.song.artist || t("radio.waiting"),
-                    url:
-                      nowPlaying.station.listen_url ||
-                      `${AZURACAST_BASE_URL}/radio/${AZURACAST_STATION_ID}`,
-                  });
-                  return; // Salir temprano si AzuraCast funciona
-                }
-              }
-            } catch (azuracastError) {
-              // Silenciar errores de AzuraCast, continuar con fallback
-              if (import.meta.env.DEV) {
-                console.debug(
-                  "Error al conectar con AzuraCast:",
-                  azuracastError
-                );
+          // Sincronizar audio: asegurar que el src coincida con el backend
+          if (audioRef.current) {
+            const currentSrc = audioRef.current.src;
+            // Si el audio no está apuntando al stream en vivo, actualizarlo
+            if (!currentSrc || !currentSrc.includes(ICECAST_STREAM_URL)) {
+              // Solo actualizar si está reproduciendo (no interrumpir si está pausado)
+              if (isPlaying) {
+                audioRef.current.pause();
+                audioRef.current.src = ICECAST_STREAM_URL;
+                // NO usar load() para streams OGG en vivo
+                audioRef.current.play().catch(() => {
+                  // Ignorar errores de autoplay
+                });
+              } else {
+                // Si no está reproduciendo, solo actualizar el src sin reproducir
+                audioRef.current.src = ICECAST_STREAM_URL;
               }
             }
           }
+        } else {
+          // La radio no está activa
+          setIsLive(false);
 
-          // Fallback: mostrar estado offline
-          setCurrentSong({
-            id: "offline",
-            title: t("radio.offlineTitle"),
-            artist: t("radio.waiting"),
-            url: ICECAST_STREAM_URL,
+          // Limpiar el stream si estaba reproduciendo en vivo
+          if (
+            audioRef.current &&
+            audioRef.current.src.includes(ICECAST_STREAM_URL)
+          ) {
+            audioRef.current.pause();
+            audioRef.current.src = "";
+            audioRef.current.load();
+            setIsPlaying(false);
+          }
+
+          // Fallback: mostrar estado offline (sin establecer URL para evitar cargar el stream)
+          const offlineTitle = t("radio.offlineTitle");
+          const offlineArtist = t("radio.waiting");
+          setCurrentSong((prev) => {
+            // Solo actualizar si los valores realmente cambiaron
+            if (
+              prev?.id === "offline" &&
+              prev?.title === offlineTitle &&
+              prev?.artist === offlineArtist
+            ) {
+              return prev;
+            }
+            return {
+              id: "offline",
+              title: offlineTitle,
+              artist: offlineArtist,
+              url: "",
+            };
           });
         }
       } catch (error) {
@@ -210,69 +338,32 @@ function Radio() {
 
         // Silenciar errores de conexión en producción (NetworkError, CORS, etc.)
         // Solo loggear en desarrollo
-        if (import.meta.env.DEV) {
-          console.debug("Error al cargar metadata de Icecast:", error);
-        }
-        // Si no se puede conectar con Icecast, intentar AzuraCast
         setIsLive(false);
 
-        if (AZURACAST_BASE_URL && AZURACAST_API_KEY) {
-          try {
-            const azuracastController = new AbortController();
-            const azuracastTimeout = setTimeout(
-              () => azuracastController.abort(),
-              5000
-            );
-
-            const azuracastResponse = await fetch(
-              `${AZURACAST_BASE_URL}/api/nowplaying/${AZURACAST_STATION_ID}`,
-              {
-                headers: {
-                  "X-API-Key": AZURACAST_API_KEY,
-                },
-                signal: azuracastController.signal,
-              }
-            );
-
-            clearTimeout(azuracastTimeout);
-
-            if (azuracastResponse.ok) {
-              const azuracastData = await azuracastResponse.json();
-              const nowPlaying = azuracastData.now_playing;
-
-              if (nowPlaying && nowPlaying.song) {
-                setCurrentSong({
-                  id: "azuracast",
-                  title: nowPlaying.song.title || t("radio.offlineTitle"),
-                  artist: nowPlaying.song.artist || t("radio.waiting"),
-                  url:
-                    nowPlaying.station.listen_url ||
-                    `${AZURACAST_BASE_URL}/radio/${AZURACAST_STATION_ID}`,
-                });
-                return; // Salir temprano si AzuraCast funciona
-              }
-            }
-          } catch (azuracastError) {
-            // Silenciar errores de AzuraCast
-            if (import.meta.env.DEV) {
-              console.debug("Error al conectar con AzuraCast:", azuracastError);
-            }
+        // Fallback final: mostrar estado offline (sin establecer URL para evitar cargar el stream)
+        const offlineTitle = t("radio.offlineTitle");
+        const offlineArtist = t("radio.waiting");
+        setCurrentSong((prev) => {
+          // Solo actualizar si los valores realmente cambiaron
+          if (
+            prev?.id === "offline" &&
+            prev?.title === offlineTitle &&
+            prev?.artist === offlineArtist
+          ) {
+            return prev;
           }
-        }
-
-        // Fallback final: mostrar estado offline
-        setCurrentSong({
-          id: "offline",
-          title: t("radio.offlineTitle"),
-          artist: t("radio.waiting"),
-          url: ICECAST_STREAM_URL,
+          return {
+            id: "offline",
+            title: offlineTitle,
+            artist: offlineArtist,
+            url: "",
+          };
         });
       }
     };
 
     fetchMetadata();
     // Actualizar metadata cada 30 segundos cuando está en vivo (optimizado para recursos)
-    // Cuando está offline con AzuraCast, actualizar cada 60 segundos para reducir consumo
     const interval = setInterval(() => {
       if (isMounted) {
         fetchMetadata();
@@ -283,26 +374,25 @@ function Radio() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [
-    ICECAST_STATUS_URL,
-    ICECAST_STREAM_URL,
-    AZURACAST_BASE_URL,
-    AZURACAST_API_KEY,
-    AZURACAST_STATION_ID,
-  ]); // Incluir variables de AzuraCast
+  }, [ICECAST_STATUS_URL, ICECAST_STREAM_URL]);
 
   // Cargar playlist cuando no está en vivo
   useEffect(() => {
-    const loadPlaylist = async () => {
-      if (isLive || playlistLoadedRef.current) return;
+    const loadPlaylist = async (forceReload = false) => {
+      if (isLive) return;
+
+      // Si ya se cargó y no es un reload forzado, no recargar
+      if (playlistLoadedRef.current && !forceReload) return;
 
       try {
         const playlistData = await getPlaylist();
+
+        // Verificar si hay canciones en Supabase Storage que no están en la tabla playlist
         if (playlistData && playlistData.length > 0) {
           const songs: Song[] = playlistData.map((item: any) => ({
             id: item.id,
-            title: item.title || t("radio.unknownTitle"),
-            artist: item.artist || t("radio.unknownArtist"),
+            title: item.title || "Título Desconocido",
+            artist: item.artist || "Artista Desconocido",
             url: item.url,
             duration: item.duration || undefined,
           }));
@@ -314,12 +404,7 @@ function Radio() {
               new URL(song.url);
               return true;
             } catch {
-              if (import.meta.env.DEV) {
-                console.debug(
-                  "URL inválida en la playlist, saltando:",
-                  song.url
-                );
-              }
+              // URL inválida, saltar esta canción
               return false;
             }
           });
@@ -328,11 +413,10 @@ function Radio() {
             setPlaylist(validSongs);
             playlistLoadedRef.current = true;
 
-            // Si hay canciones válidas, iniciar la primera automáticamente
+            // Reproducir automáticamente la playlist cuando no está en vivo (solo en /radio)
             if (!isLive) {
               setCurrentPlaylistIndex(0);
               setCurrentSong(validSongs[0]);
-              // Reproducir automáticamente la playlist cuando no está en vivo (solo en /radio)
               const isRadioPage = window.location.pathname === "/radio";
               if (audioRef.current && validSongs[0].url && isRadioPage) {
                 try {
@@ -341,38 +425,20 @@ function Radio() {
 
                   // Esperar a que el audio esté listo antes de reproducir
                   const handleCanPlay = () => {
-                    if (audioRef.current && !isPlaying) {
+                    if (audioRef.current && !isPlaying && !userPaused) {
                       // Asegurar que el audio no esté mutado y el volumen esté configurado
                       audioRef.current.muted = false;
                       audioRef.current.volume = volume;
 
                       // Logging para debug
-                      if (import.meta.env.DEV) {
-                        console.debug(
-                          "Intentando reproducir playlist automáticamente:",
-                          {
-                            url: audioRef.current.src,
-                            volume: audioRef.current.volume,
-                            muted: audioRef.current.muted,
-                            readyState: audioRef.current.readyState,
-                          }
-                        );
-                      }
 
                       audioRef.current
                         .play()
                         .then(() => {
                           setIsPlaying(true);
-                          if (import.meta.env.DEV) {
-                            console.debug("Playlist reproducida exitosamente");
-                          }
                         })
                         .catch((error) => {
                           // Si falla el autoplay (requiere interacción del usuario), no hacer nada
-                          console.warn(
-                            "No se pudo reproducir automáticamente la playlist:",
-                            error
-                          );
                         });
                     }
                     // Remover el listener después de usarlo
@@ -394,62 +460,128 @@ function Radio() {
                   }
                 } catch (error) {
                   if (import.meta.env.DEV) {
-                    console.debug("Error al cargar primera canción:", error);
                   }
                 }
               }
             }
           } else {
             if (import.meta.env.DEV) {
-              console.debug("No hay canciones con URLs válidas en la playlist");
             }
             setPlaylist([]);
           }
         }
       } catch (error) {
         if (import.meta.env.DEV) {
-          console.debug("Error al cargar playlist:", error);
         }
       }
     };
 
     if (!isLive) {
       loadPlaylist();
+
+      // Recargar playlist cada 5 minutos para obtener nuevas canciones
+      const playlistInterval = setInterval(() => {
+        if (!isLive) {
+          playlistLoadedRef.current = false; // Permitir recarga
+          loadPlaylist(true);
+        }
+      }, 5 * 60 * 1000); // 5 minutos
+
+      return () => clearInterval(playlistInterval);
     } else {
       // Resetear cuando vuelve a estar en vivo
       playlistLoadedRef.current = false;
       setPlaylist([]);
       setCurrentPlaylistIndex(0);
     }
-  }, [isLive, t]);
+  }, [isLive]);
 
   // Reproducir automáticamente cuando está en vivo (solo en /radio, no en Home)
+  // PERO solo si el usuario no pausó manualmente
   useEffect(() => {
     // Verificar que estamos en la página /radio (no en Home)
     const isRadioPage = window.location.pathname === "/radio";
 
-    if (isLive && isRadioPage && audioRef.current && !isPlaying) {
+    // Solo reproducir automáticamente si:
+    // 1. Está en vivo
+    // 2. Estamos en la página /radio
+    // 3. No está ya reproduciendo (usar ref para evitar loops)
+    // 4. El usuario NO pausó manualmente
+    // 5. No estamos ya intentando reproducir (evitar múltiples intentos)
+    if (
+      isLive &&
+      isRadioPage &&
+      audioRef.current &&
+      !isPlayingLiveRef.current &&
+      !isPlaying &&
+      !userPaused
+    ) {
+      // Marcar que estamos intentando reproducir para evitar loops
+      isPlayingLiveRef.current = true;
+
       // Cuando está en vivo, reproducir automáticamente
       const playLive = async () => {
+        if (!audioRef.current) {
+          isPlayingLiveRef.current = false;
+          return;
+        }
+
         try {
-          if (
-            !audioRef.current.src ||
-            audioRef.current.src !== currentSong?.url
-          ) {
-            audioRef.current.src = currentSong?.url || ICECAST_STREAM_URL;
+          const targetUrl = ICECAST_STREAM_URL;
+          const currentSrc = audioRef.current.src;
+
+          // Solo cambiar el src si es realmente diferente
+          const needsUpdate = !currentSrc || !currentSrc.includes(targetUrl);
+
+          if (needsUpdate) {
+            // Para streams OGG en vivo, simplemente establecer el src
+            // El navegador manejará el stream automáticamente
+            audioRef.current.pause();
+            audioRef.current.src = targetUrl;
+            // NO usar load() para streams en vivo OGG - interrumpe el stream
           }
-          await audioRef.current.play();
-          setIsPlaying(true);
+
+          // Para streams en vivo OGG, intentar reproducir directamente
+          // No esperar metadata porque puede no emitirse inmediatamente
+          try {
+            // Agregar listener para ver cuando el stream está listo
+            const handleCanPlayThrough = () => {
+              if (import.meta.env.DEV) {
+              }
+            };
+
+            audioRef.current.addEventListener(
+              "canplaythrough",
+              handleCanPlayThrough,
+              { once: true }
+            );
+
+            await audioRef.current.play();
+            setIsPlaying(true);
+            setUserPaused(false); // Resetear cuando se reproduce automáticamente
+          } catch (playError: any) {
+            // Si falla por autoplay policy, esperar a interacción del usuario
+            if (playError.name === "NotAllowedError") {
+              // Autoplay bloqueado, esperando interacción del usuario
+              // El usuario tendrá que hacer click en play
+            } else {
+              // Otro error - manejar silenciosamente
+            }
+            isPlayingLiveRef.current = false;
+          }
         } catch (error) {
-          // Si falla el autoplay (requiere interacción del usuario), no hacer nada
           if (import.meta.env.DEV) {
-            console.debug("No se pudo reproducir automáticamente:", error);
           }
+          isPlayingLiveRef.current = false;
         }
       };
+
       playLive();
+    } else if (!isLive) {
+      // Resetear el ref cuando no está en vivo
+      isPlayingLiveRef.current = false;
     }
-  }, [isLive, currentSong, ICECAST_STREAM_URL]);
+  }, [isLive, ICECAST_STREAM_URL, userPaused]); // Removido isPlaying de las dependencias
 
   // Pausar automáticamente si la radio se desconecta y cambiar a playlist
   useEffect(() => {
@@ -473,12 +605,43 @@ function Radio() {
   }, [isLive, isPlaying, playlist, currentPlaylistIndex]);
 
   // Emitir estado de la radio para que RadioPlayer en HomeSection pueda acceder
+  // Usar useRef para evitar loops infinitos
+  const lastEmittedStateRef = useRef<{
+    isPlaying: boolean;
+    isLive: boolean;
+    currentSongId: string | null;
+    currentSongTitle: string | null;
+    currentSongArtist: string | null;
+  } | null>(null);
+
   useEffect(() => {
-    emitRadioState({
+    const currentState = {
       isPlaying,
       isLive,
-      currentSong,
-    });
+      currentSongId: currentSong?.id || null,
+      currentSongTitle: currentSong?.title || null,
+      currentSongArtist: currentSong?.artist || null,
+    };
+
+    // Solo emitir si el estado realmente cambió
+    if (
+      !lastEmittedStateRef.current ||
+      lastEmittedStateRef.current.isPlaying !== currentState.isPlaying ||
+      lastEmittedStateRef.current.isLive !== currentState.isLive ||
+      lastEmittedStateRef.current.currentSongId !==
+        currentState.currentSongId ||
+      lastEmittedStateRef.current.currentSongTitle !==
+        currentState.currentSongTitle ||
+      lastEmittedStateRef.current.currentSongArtist !==
+        currentState.currentSongArtist
+    ) {
+      lastEmittedStateRef.current = currentState;
+      emitRadioState({
+        isPlaying,
+        isLive,
+        currentSong,
+      });
+    }
   }, [isPlaying, isLive, currentSong]);
 
   // Cargar eventos próximos
@@ -487,10 +650,8 @@ function Radio() {
       try {
         setEventsLoading(true);
         const upcomingEvents = await getUpcomingEvents(5); // Obtener 5 eventos próximos
-        console.log("Eventos obtenidos:", upcomingEvents); // Debug
         setEvents(upcomingEvents || []);
       } catch (error) {
-        console.error("Error al cargar eventos:", error);
         setEvents([]);
       } finally {
         setEventsLoading(false);
@@ -516,7 +677,6 @@ function Radio() {
         // Invertir para mostrar los más antiguos arriba
         setMessages((data || []).reverse());
       } catch (error) {
-        console.error("Error al cargar mensajes:", error);
         setMessages([]);
       } finally {
         setMessagesLoading(false);
@@ -542,7 +702,12 @@ function Radio() {
           },
           (payload) => {
             const newMessage = payload.new as Tables<"messages">;
-            setMessages((prev) => [...prev, newMessage]);
+            // Verificar que el mensaje no exista ya para evitar duplicados
+            setMessages((prev) => {
+              const exists = prev.some((msg) => msg.id === newMessage.id);
+              if (exists) return prev;
+              return [...prev, newMessage];
+            });
             // Auto-scroll al final
             setTimeout(() => {
               messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -552,19 +717,13 @@ function Radio() {
         .subscribe((status) => {
           if (status === "SUBSCRIBED") {
             if (import.meta.env.DEV) {
-              console.debug("WebSocket de Supabase conectado exitosamente");
             }
           } else if (status === "CHANNEL_ERROR") {
-            console.warn(
-              "Error en el WebSocket de Supabase (solo afecta el chat en tiempo real)"
-            );
+            // Error en el WebSocket de Supabase (solo afecta el chat en tiempo real)
           }
         });
     } catch (error) {
-      console.warn(
-        "Error al suscribirse al WebSocket de Supabase (solo afecta el chat en tiempo real):",
-        error
-      );
+      // Error al suscribirse al WebSocket de Supabase (solo afecta el chat en tiempo real)
     }
 
     return () => {
@@ -574,7 +733,6 @@ function Radio() {
         } catch (error) {
           // Ignorar errores al limpiar el canal
           if (import.meta.env.DEV) {
-            console.debug("Error al limpiar el canal de Supabase:", error);
           }
         }
       }
@@ -602,25 +760,75 @@ function Radio() {
   useEffect(() => {
     if (!marqueeRef.current || !currentSong) return;
 
-    const text = `${currentSong.title} - ${currentSong.artist}`;
-    const textWidth = marqueeRef.current.scrollWidth;
-    const containerWidth = marqueeRef.current.parentElement?.offsetWidth || 0;
+    // Limpiar animación anterior inmediatamente
+    gsap.killTweensOf(marqueeRef.current);
+    // Asegurar que comience desde el inicio (x: 0) - FORZAR reset completo
+    gsap.set(marqueeRef.current, {
+      x: 0,
+      clearProps: "transform", // Limpiar cualquier transform anterior
+    });
 
-    // Solo animar si el texto es más largo que el contenedor
-    if (textWidth > containerWidth) {
-      const distance = textWidth - containerWidth + 50; // 50px de padding
+    // Pequeño delay para asegurar que el DOM se actualizó completamente
+    const timeoutId = setTimeout(() => {
+      if (!marqueeRef.current || !currentSong) return;
 
-      gsap.to(marqueeRef.current, {
-        x: -distance,
-        duration: distance / 30, // Velocidad ajustable (píxeles por segundo)
-        ease: "none",
-        repeat: -1,
-      });
-    } else {
-      // Si el texto cabe, centrarlo
+      // Forzar reset una vez más después del delay
       gsap.set(marqueeRef.current, { x: 0 });
-    }
-  }, [currentSong]);
+
+      const text = `${currentSong.title} - ${currentSong.artist}`;
+      const textWidth = marqueeRef.current.scrollWidth;
+      const containerWidth = marqueeRef.current.parentElement?.offsetWidth || 0;
+
+      // Solo animar si el texto es más largo que el contenedor
+      if (textWidth > containerWidth) {
+        // Cuando el texto es más largo, comenzar desde x: 0 para mostrar el inicio
+        // (justify-center centra el texto, pero cuando es más largo necesitamos mostrar desde el inicio)
+        const distance = textWidth - containerWidth + 50; // 50px de padding
+
+        // Asegurar que comience desde el inicio del texto (x: 0)
+        gsap.set(marqueeRef.current, { x: 0 });
+
+        // Crear timeline para controlar mejor la animación
+        const tl = gsap.timeline({ repeat: -1 });
+
+        // 1. Mostrar el texto completo desde el inicio durante 2 segundos
+        tl.to(marqueeRef.current, {
+          x: 0,
+          duration: 2,
+          ease: "none",
+        });
+
+        // 2. Desplazarse hacia la izquierda para mostrar el resto del texto
+        tl.to(marqueeRef.current, {
+          x: -distance,
+          duration: distance / 30, // Velocidad ajustable (píxeles por segundo)
+          ease: "none",
+        });
+
+        // 3. Esperar un momento al final antes de volver al inicio
+        tl.to(marqueeRef.current, {
+          x: -distance,
+          duration: 1,
+          ease: "none",
+        });
+
+        // 4. Volver al inicio (sin animación visible, instantáneo)
+        tl.set(marqueeRef.current, { x: 0 });
+      } else {
+        // Si el texto cabe, centrarlo (x: 0 porque justify-center lo centra)
+        gsap.set(marqueeRef.current, { x: 0 });
+      }
+    }, 100); // Delay de 100ms para asegurar que el DOM se actualizó
+
+    return () => {
+      clearTimeout(timeoutId);
+      gsap.killTweensOf(marqueeRef.current);
+      // Asegurar reset al desmontar
+      if (marqueeRef.current) {
+        gsap.set(marqueeRef.current, { x: 0 });
+      }
+    };
+  }, [currentSong?.title, currentSong?.artist]);
 
   // Event listeners del audio
   useEffect(() => {
@@ -670,17 +878,10 @@ function Radio() {
             // Reproducir automáticamente la siguiente canción
             audioRef.current.play().catch((error) => {
               // Si falla el autoplay, no intentar más automáticamente
-              if (import.meta.env.DEV) {
-                console.debug(
-                  "Error al reproducir siguiente canción (probablemente requiere interacción del usuario):",
-                  error
-                );
-              }
             });
           } catch (urlError) {
             // URL inválida, solo loggear en desarrollo
             if (import.meta.env.DEV) {
-              console.debug("URL inválida en la playlist:", nextSong.url);
             }
             // NO intentar siguiente canción automáticamente para evitar bucles
           }
@@ -696,16 +897,35 @@ function Radio() {
     const handleError = (e: Event) => {
       setIsPlaying(false);
 
+      // Loggear información detallada del error para debug
+      const audio = audioRef.current;
+      if (audio) {
+        const error = audio.error;
+        if (error) {
+          let errorMsg = "Error desconocido";
+          switch (error.code) {
+            case error.MEDIA_ERR_ABORTED:
+              errorMsg = "MEDIA_ERR_ABORTED: La reproducción fue abortada";
+              break;
+            case error.MEDIA_ERR_NETWORK:
+              errorMsg = "MEDIA_ERR_NETWORK: Error de red";
+              break;
+            case error.MEDIA_ERR_DECODE:
+              errorMsg = "MEDIA_ERR_DECODE: Error al decodificar el audio";
+              break;
+            case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              errorMsg = "MEDIA_ERR_SRC_NOT_SUPPORTED: Formato no soportado";
+              break;
+          }
+
+          // Error en el stream de audio - manejar silenciosamente
+        }
+      }
+
       // Evitar bucles infinitos: solo loggear en desarrollo y con throttling
       const now = Date.now();
       if (now - lastErrorTimeRef.current > 2000) {
         // Máximo un error cada 2 segundos
-        if (import.meta.env.DEV) {
-          console.debug(
-            "Error en el stream de audio (probablemente URL inválida o problema de CORS):",
-            e
-          );
-        }
         lastErrorTimeRef.current = now;
       }
 
@@ -714,11 +934,7 @@ function Radio() {
 
       // Si hay más de 5 errores consecutivos, detener completamente y limpiar
       if (errorCountRef.current >= 5) {
-        if (import.meta.env.DEV) {
-          console.debug(
-            "Demasiados errores consecutivos, deteniendo reproducción automática"
-          );
-        }
+        // Demasiados errores consecutivos, deteniendo reproducción automática
         // Limpiar el src para evitar más intentos
         if (audioRef.current) {
           audioRef.current.src = "";
@@ -776,22 +992,294 @@ function Radio() {
     };
   }, []);
 
+  // Función para actualizar y sincronizar con el backend
+  const handleRefresh = async () => {
+    if (!audioRef.current) return;
+
+    try {
+      // Obtener metadata actual del backend
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(ICECAST_STATUS_URL, {
+        cache: "no-cache",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        // Si el backend no está disponible, recargar playlist si no está en vivo
+        if (!isLive && playlist.length > 0) {
+          playlistLoadedRef.current = false;
+          // Forzar recarga de playlist
+          const playlistData = await getPlaylist();
+          if (playlistData && playlistData.length > 0) {
+            const songs: Song[] = playlistData.map((item: any) => ({
+              id: item.id,
+              title: item.title || "Título Desconocido",
+              artist: item.artist || "Artista Desconocido",
+              url: item.url,
+              duration: item.duration || undefined,
+            }));
+
+            const validSongs = songs.filter((song) => {
+              try {
+                if (!song.url || typeof song.url !== "string") return false;
+                new URL(song.url);
+                return true;
+              } catch {
+                return false;
+              }
+            });
+
+            if (validSongs.length > 0) {
+              setPlaylist(validSongs);
+              playlistLoadedRef.current = true;
+              // Sincronizar con la primera canción si no hay una actual
+              if (!currentSong || currentSong.id !== validSongs[0].id) {
+                setCurrentSong(validSongs[0]);
+                setCurrentPlaylistIndex(0);
+                if (isPlaying) {
+                  audioRef.current.src = validSongs[0].url;
+                  audioRef.current.load();
+                  await audioRef.current.play();
+                }
+              }
+            }
+          }
+        }
+        return;
+      }
+
+      const data = await response.json();
+
+      // Procesar la respuesta igual que fetchMetadata
+      let sources: any[] = [];
+      if (Array.isArray(data.icestats?.source)) {
+        sources = data.icestats.source;
+      } else if (
+        data.icestats?.source &&
+        typeof data.icestats.source === "object" &&
+        !Array.isArray(data.icestats.source)
+      ) {
+        sources = [data.icestats.source];
+      } else if (data.source && Array.isArray(data.source)) {
+        sources = data.source;
+      } else if (data.source && typeof data.source === "object") {
+        sources = [data.source];
+      }
+
+      if (!Array.isArray(sources)) {
+        sources = [];
+      }
+
+      let mountpoint: any = null;
+      if (sources.length > 0) {
+        mountpoint = sources.find(
+          (source: any) =>
+            source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+        );
+
+        if (!mountpoint) {
+          mountpoint = sources.find(
+            (source: any) =>
+              source?.server_name?.toLowerCase().includes("vixis") ||
+              source?.listenurl?.includes("vixis") ||
+              source?.mount?.includes("vixis")
+          );
+        }
+
+        if (!mountpoint && sources.length > 0) {
+          mountpoint = sources[0];
+        }
+      }
+
+      if (mountpoint) {
+        setIsLive(true);
+
+        // EL BACKEND ES LA FUENTE DE VERDAD - usar directamente los datos de Icecast
+        const icecastTitle =
+          mountpoint.title || mountpoint.yp_currently_playing || "En Vivo";
+        const icecastArtist = mountpoint.artist || "Radio Vixis";
+
+        // Intentar match con playlist de Supabase SOLO para obtener nombres más limpios
+        // Pero SIEMPRE priorizar lo que dice el backend
+        let finalTitle = icecastTitle;
+        let finalArtist = icecastArtist;
+
+        try {
+          const playlistData = await getPlaylist();
+          if (playlistData && playlistData.length > 0) {
+            const normalize = (str: string) =>
+              str.toLowerCase().trim().replace(/\s+/g, " ");
+
+            const normalizedIcecastTitle = normalize(icecastTitle);
+            const normalizedIcecastArtist = normalize(icecastArtist);
+
+            const matchedSong = playlistData.find((song: any) => {
+              const normalizedSongTitle = normalize(song.title || "");
+              const normalizedSongArtist = normalize(song.artist || "");
+
+              const titleMatch =
+                normalizedSongTitle === normalizedIcecastTitle ||
+                normalizedIcecastTitle.includes(normalizedSongTitle) ||
+                normalizedSongTitle.includes(normalizedIcecastTitle);
+
+              const artistMatch =
+                normalizedSongArtist === normalizedIcecastArtist ||
+                normalizedIcecastArtist.includes(normalizedSongArtist) ||
+                normalizedSongArtist.includes(normalizedIcecastArtist);
+
+              return titleMatch || artistMatch;
+            });
+
+            // Si encontramos match, usar los nombres de Supabase (más limpios)
+            // pero solo si hay un match claro
+            if (matchedSong) {
+              finalTitle = matchedSong.title;
+              finalArtist = matchedSong.artist;
+            }
+          }
+        } catch (playlistError) {
+          // Continuar con datos de Icecast si falla
+        }
+
+        // SIEMPRE actualizar con los datos del backend (fuente de verdad)
+        const newSong = {
+          id: "live",
+          title: finalTitle,
+          artist: finalArtist,
+          url: ICECAST_STREAM_URL,
+        };
+
+        // Forzar actualización del texto (sin verificar si cambió)
+        // El backend es la fuente de verdad
+        setCurrentSong(newSong);
+
+        // Sincronizar audio: SIEMPRE actualizar el src para que coincida con el backend
+        if (audioRef.current) {
+          const currentSrc = audioRef.current.src;
+          // SIEMPRE actualizar el src para sincronizar con el backend
+          if (!currentSrc || !currentSrc.includes(ICECAST_STREAM_URL)) {
+            if (isPlaying) {
+              // Si está reproduciendo, actualizar y continuar reproduciendo
+              audioRef.current.pause();
+              audioRef.current.src = ICECAST_STREAM_URL;
+              // NO usar load() para streams OGG en vivo
+              await audioRef.current.play();
+            } else {
+              // Si no está reproduciendo, solo actualizar el src sin reproducir
+              audioRef.current.src = ICECAST_STREAM_URL;
+            }
+          } else if (isPlaying) {
+            // Si ya está apuntando al stream correcto pero está pausado, intentar reproducir
+            if (audioRef.current.paused) {
+              await audioRef.current.play();
+            }
+          }
+        }
+      } else {
+        setIsLive(false);
+        // Si no está en vivo, sincronizar con la playlist actual
+        if (playlist.length > 0) {
+          // Encontrar qué canción está sonando actualmente basándose en el src del audio
+          const currentSrc = audioRef.current?.src || "";
+          const currentlyPlayingSong = playlist.find(
+            (song) => song.url === currentSrc
+          );
+
+          if (currentlyPlayingSong) {
+            // Sincronizar el texto con la canción que está sonando realmente
+            setCurrentSong(currentlyPlayingSong);
+            const songIndex = playlist.findIndex(
+              (song) => song.id === currentlyPlayingSong.id
+            );
+            if (songIndex >= 0) {
+              setCurrentPlaylistIndex(songIndex);
+            }
+          } else if (currentPlaylistIndex < playlist.length) {
+            // Si no encontramos match, usar el índice actual y sincronizar audio
+            const songToSync = playlist[currentPlaylistIndex];
+            setCurrentSong(songToSync);
+            // Sincronizar audio si está reproduciendo
+            if (isPlaying && audioRef.current) {
+              if (
+                !audioRef.current.src ||
+                audioRef.current.src !== songToSync.url
+              ) {
+                audioRef.current.src = songToSync.url;
+                audioRef.current.load();
+                await audioRef.current.play();
+              }
+            }
+          }
+        } else {
+          // Si no hay playlist, recargarla
+          playlistLoadedRef.current = false;
+          const playlistData = await getPlaylist();
+          if (playlistData && playlistData.length > 0) {
+            const songs: Song[] = playlistData.map((item: any) => ({
+              id: item.id,
+              title: item.title || "Título Desconocido",
+              artist: item.artist || "Artista Desconocido",
+              url: item.url,
+              duration: item.duration || undefined,
+            }));
+
+            const validSongs = songs.filter((song) => {
+              try {
+                if (!song.url || typeof song.url !== "string") return false;
+                new URL(song.url);
+                return true;
+              } catch {
+                return false;
+              }
+            });
+
+            if (validSongs.length > 0) {
+              setPlaylist(validSongs);
+              playlistLoadedRef.current = true;
+              setCurrentSong(validSongs[0]);
+              setCurrentPlaylistIndex(0);
+              // Sincronizar audio si está reproduciendo
+              if (isPlaying && audioRef.current) {
+                audioRef.current.src = validSongs[0].url;
+                audioRef.current.load();
+                await audioRef.current.play();
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // Error silenciado
+    }
+  };
+
   const togglePlayPause = async () => {
     if (!audioRef.current) return;
 
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
+      setUserPaused(true); // Marcar que el usuario pausó manualmente
     } else {
+      setUserPaused(false); // Resetear cuando el usuario reproduce manualmente
       try {
         // Si está en vivo, usar el stream de Icecast
         if (isLive) {
-          if (
-            !audioRef.current.src ||
-            audioRef.current.src !== currentSong?.url
-          ) {
-            audioRef.current.src = currentSong?.url || ICECAST_STREAM_URL;
+          const targetUrl = ICECAST_STREAM_URL;
+          const currentSrc = audioRef.current.src;
+
+          // Solo cambiar el src si es realmente diferente
+          if (!currentSrc || !currentSrc.includes(targetUrl)) {
+            audioRef.current.pause();
+            audioRef.current.src = targetUrl;
+            // NO usar load() para streams en vivo OGG
           }
+
+          // Intentar reproducir directamente
           await audioRef.current.play();
           setIsPlaying(true);
         } else {
@@ -819,7 +1307,6 @@ function Radio() {
           } else {
             // Si no hay playlist, mostrar mensaje
             if (import.meta.env.DEV) {
-              console.debug("No hay playlist disponible");
             }
           }
         }
@@ -827,7 +1314,6 @@ function Radio() {
         // Si falla la reproducción, mantener el estado en false
         setIsPlaying(false);
         if (import.meta.env.DEV) {
-          console.debug("Error al reproducir:", error);
         }
       }
     }
@@ -852,7 +1338,6 @@ function Radio() {
         }
       } catch (error) {
         // Ignorar errores silenciosamente para no bloquear la UI
-        console.debug("Error al cambiar volumen:", error);
       }
     }, 100);
   };
@@ -976,24 +1461,249 @@ function Radio() {
 
       if (error) throw error;
 
-      // Agregar el mensaje al estado local inmediatamente
-      if (data) {
-        setMessages((prev) => [...prev, data as Tables<"messages">]);
-        // Auto-scroll al final
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      }
+      // NO agregar el mensaje manualmente aquí - el listener de Realtime lo agregará automáticamente
+      // Esto evita duplicación cuando el listener de Realtime también recibe el INSERT
 
       setMessageInput("");
       setLastMessageTime(Date.now());
     } catch (error) {
-      console.error("Error al enviar mensaje:", error);
       alert(t("common.error"));
     } finally {
       setIsSending(false);
     }
   };
+
+  // Función para obtener punto de origen aleatorio desde diferentes elementos
+  const getRandomOriginPoint = (): { x: number; y: number } | null => {
+    const origins: Array<() => { x: number; y: number } | null> = [
+      // 1. Desde el emoji clickeado
+      () => {
+        if (emojiButtonRef.current) {
+          const rect = emojiButtonRef.current.getBoundingClientRect();
+          return {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+          };
+        }
+        return null;
+      },
+      // 2. Esquina superior izquierda del viewport
+      () => {
+        return {
+          x: 20,
+          y: 20,
+        };
+      },
+      // 3. Esquina superior derecha del viewport
+      () => {
+        return {
+          x: window.innerWidth - 20,
+          y: 20,
+        };
+      },
+      // 4. Esquina inferior izquierda del viewport (sin incluir el nav)
+      () => {
+        const navHeight = 60;
+        return {
+          x: 20,
+          y: window.innerHeight - navHeight - 20,
+        };
+      },
+      // 5. Esquina inferior derecha del viewport (sin incluir el nav)
+      () => {
+        const navHeight = 60;
+        return {
+          x: window.innerWidth - 20,
+          y: window.innerHeight - navHeight - 20,
+        };
+      },
+      // 6. Borde izquierdo medio
+      () => {
+        return {
+          x: 20,
+          y: window.innerHeight / 2,
+        };
+      },
+      // 7. Borde derecho medio
+      () => {
+        return {
+          x: window.innerWidth - 20,
+          y: window.innerHeight / 2,
+        };
+      },
+      // 8. Borde superior derecho del chat
+      () => {
+        if (chatContainerRef.current) {
+          const rect = chatContainerRef.current.getBoundingClientRect();
+          return {
+            x: rect.right - 20,
+            y: rect.top + 20,
+          };
+        }
+        return null;
+      },
+      // 9. Esquina superior izquierda del chat
+      () => {
+        if (chatContainerRef.current) {
+          const rect = chatContainerRef.current.getBoundingClientRect();
+          return {
+            x: rect.left + 20,
+            y: rect.top + 20,
+          };
+        }
+        return null;
+      },
+      // 10. Encima del chat (centro superior) - limitado al viewport
+      () => {
+        if (chatContainerRef.current) {
+          const rect = chatContainerRef.current.getBoundingClientRect();
+          const y = Math.max(50, rect.top - 20); // Mínimo 50px desde arriba (debajo de la barra negra)
+          return {
+            x: rect.left + rect.width / 2,
+            y: y,
+          };
+        }
+        return null;
+      },
+      // 11. Borde inferior izquierdo del cuadro de eventos (sin incluir el nav)
+      () => {
+        if (eventsContainerRef.current) {
+          const rect = eventsContainerRef.current.getBoundingClientRect();
+          const navHeight = 60;
+          const maxY = window.innerHeight - navHeight - 20;
+          const y = Math.min(rect.bottom - 20, maxY);
+          return {
+            x: rect.left + 20,
+            y: y,
+          };
+        }
+        return null;
+      },
+      // 12. Encima de próximos eventos (centro superior)
+      () => {
+        if (eventsContainerRef.current) {
+          const rect = eventsContainerRef.current.getBoundingClientRect();
+          return {
+            x: rect.left + rect.width / 2,
+            y: rect.top - 20,
+          };
+        }
+        return null;
+      },
+      // 13. Centro de la pantalla
+      () => {
+        return {
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+        };
+      },
+    ];
+
+    // Filtrar orígenes válidos y seleccionar uno aleatorio
+    const validOrigins = origins
+      .map((fn) => fn())
+      .filter((origin): origin is { x: number; y: number } => origin !== null);
+
+    if (validOrigins.length === 0) {
+      // Fallback: centro de la pantalla
+      return {
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      };
+    }
+
+    return validOrigins[Math.floor(Math.random() * validOrigins.length)];
+  };
+
+  // Función para crear emojis al hacer click (efecto confetti optimizado)
+  const handleEmojiClick = useCallback(
+    (e: React.MouseEvent<HTMLImageElement>) => {
+      // Sin límite - permitir clicks ilimitados
+      // Obtener punto de origen aleatorio
+      const origin = getRandomOriginPoint();
+      if (!origin) return;
+
+      // Asegurar que el origen esté dentro del viewport
+      const clampedOrigin = {
+        x: Math.max(20, Math.min(origin.x, window.innerWidth - 20)),
+        y: Math.max(20, Math.min(origin.y, window.innerHeight - 20)),
+      };
+
+      // Generar 5-7 emojis (confetti) - más emojis para mejor efecto
+      const count = Math.floor(Math.random() * 3) + 5; // 5-7 emojis
+      const newParticles: Array<{
+        id: number;
+        startX: number;
+        startY: number;
+        deltaX: number;
+        deltaY: number;
+        rotation: number;
+      }> = [];
+
+      // Obtener límites del viewport (sin incluir el nav que está abajo)
+      const viewportHeight = window.innerHeight;
+      const navHeight = 60; // Altura aproximada del nav
+      const maxY = viewportHeight - navHeight - 40; // 40px de margen
+      const minY = 50; // Debajo de la barra negra superior
+      const maxX = window.innerWidth - 40;
+      const minX = 40;
+
+      for (let i = 0; i < count; i++) {
+        emojiIdCounter.current += 1;
+
+        // Distribución circular desde el punto de origen (como confetti 🎉)
+        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+        // Distancia aleatoria (150-350px) - aumentada para mejor efecto
+        const distance = 150 + Math.random() * 200;
+        // Gravedad simulada
+        const gravity = 80 + Math.random() * 120;
+
+        let endX = clampedOrigin.x + Math.cos(angle) * distance;
+        let endY = clampedOrigin.y + Math.sin(angle) * distance + gravity;
+
+        // Limitar las posiciones finales dentro del viewport (sin sobrepasar límites)
+        endX = Math.max(minX, Math.min(endX, maxX));
+        endY = Math.max(minY, Math.min(endY, maxY));
+
+        // Rotación (2-4 vueltas) - más rotación
+        const rotation = (2 + Math.random() * 2) * 360;
+
+        // Pre-calcular deltas para evitar cálculos en cada render
+        newParticles.push({
+          id: emojiIdCounter.current,
+          startX: clampedOrigin.x,
+          startY: clampedOrigin.y,
+          deltaX: endX - clampedOrigin.x,
+          deltaY: endY - clampedOrigin.y,
+          rotation,
+        });
+      }
+
+      // Actualizar contador de partículas (solo para referencia, sin límite real)
+      emojiParticlesCountRef.current += newParticles.length;
+
+      // Usar requestAnimationFrame para no bloquear el render
+      requestAnimationFrame(() => {
+        setEmojiParticles((prev) => {
+          // Sin límite - agregar todos los emojis
+          return [...prev, ...newParticles];
+        });
+
+        // Limpiar los emojis después de 3.5 segundos (más tiempo que la animación)
+        setTimeout(() => {
+          setEmojiParticles((prev) => {
+            const filtered = prev.filter(
+              (p) => !newParticles.some((np) => np.id === p.id)
+            );
+            // Actualizar contador cuando se limpian
+            emojiParticlesCountRef.current = filtered.length;
+            return filtered;
+          });
+        }, 3500);
+      });
+    },
+    [] // Sin dependencias para evitar loops infinitos
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -1032,24 +1742,34 @@ function Radio() {
                 </svg>
               )}
             </button>
-
+            {/* Botón de actualizar/sincronizar */}
             <button
-              className="hidden md:flex w-8 h-8 items-center justify-center hover:bg-white/20 rounded transition-colors"
-              aria-label={t("radio.previous")}
+              onClick={handleRefresh}
+              className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center hover:bg-white/20 rounded transition-colors cursor-pointer flex-shrink-0"
+              aria-label={t("radio.refresh") || "Actualizar"}
+              title={t("radio.refresh") || "Sincronizar con el backend"}
             >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+              <svg
+                className="w-4 h-4 md:w-6 md:h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
               </svg>
             </button>
-
-            <button
-              className="hidden md:flex w-8 h-8 items-center justify-center hover:bg-white/20 rounded transition-colors"
-              aria-label={t("radio.next")}
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-              </svg>
-            </button>
+            {/* 😎 */}
+            <img
+              src="https://cdn.vixis.dev/Link_Swag.webp"
+              alt="Link Swag 🎵"
+              className="w-6 h-6 md:w-8 md:h-8 flex-shrink-0 ml-4 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handleEmojiClick}
+            />
           </div>
 
           {/* Texto marquee (solo esto tiene animación) */}
@@ -1081,19 +1801,40 @@ function Radio() {
 
           {/* Control de volumen */}
           <div className="hidden md:flex items-center gap-2 min-w-[120px]">
-            <svg
-              className="w-5 h-5 text-gray-400"
-              fill="currentColor"
-              viewBox="0 0 24 24"
+            <button
+              onClick={() => {
+                if (volume === 0) {
+                  // Si está silenciado, restaurar volumen anterior
+                  setVolume(previousVolume);
+                  if (audioRef.current) {
+                    audioRef.current.volume = previousVolume;
+                  }
+                } else {
+                  // Si tiene volumen, silenciar y guardar el volumen actual
+                  setPreviousVolume(volume);
+                  setVolume(0);
+                  if (audioRef.current) {
+                    audioRef.current.volume = 0;
+                  }
+                }
+              }}
+              className="w-5 h-5 flex items-center justify-center hover:bg-white/20 rounded transition-colors cursor-pointer flex-shrink-0"
+              aria-label={volume === 0 ? t("radio.unmute") : t("radio.mute")}
             >
-              {volume === 0 ? (
-                <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
-              ) : volume < 0.5 ? (
-                <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z" />
-              ) : (
-                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-              )}
-            </svg>
+              <svg
+                className="w-5 h-5 text-gray-400"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                {volume === 0 ? (
+                  <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
+                ) : volume < 0.5 ? (
+                  <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z" />
+                ) : (
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                )}
+              </svg>
+            </button>
             <input
               type="range"
               min="0"
@@ -1163,28 +1904,32 @@ function Radio() {
       </div>
 
       {/* Audio element (oculto) */}
+      {/* No usar src directamente en el JSX para streams en vivo - se maneja programáticamente */}
       <audio
         ref={audioRef}
-        src={currentSong?.url}
         muted={false}
-        preload="auto"
+        preload="none"
+        crossOrigin="anonymous"
+        playsInline
       />
 
       {/* Contenido principal */}
       <div className="pt-10 md:pt-15 flex-1">
-        <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="max-w-7xl mx-auto px-4 py-12 pb-20">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
             {t("radio.title")}
           </h1>
 
           {/* Placeholder para el chat en tiempo real */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
             <div className="lg:col-span-2">
               <div
-                className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] p-4"
+                ref={chatContainerRef}
+                className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] p-4 mb-8"
                 style={{
                   fontFamily: "'Press Start 2P', monospace",
                   cursor: "default",
+                  minHeight: "200px",
                 }}
               >
                 <h2
@@ -1352,7 +2097,10 @@ function Radio() {
             </div>
 
             <div>
-              <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+              <div
+                ref={eventsContainerRef}
+                className="bg-white rounded-lg shadow-md p-6 border border-gray-200"
+              >
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   {t("radio.events")}
                 </h2>
@@ -1429,6 +2177,31 @@ function Radio() {
           </div>
         </div>
       </div>
+
+      {/* Emojis confetti que aparecen al hacer click */}
+      {emojiParticles.map((particle) => (
+        <img
+          key={particle.id}
+          src="https://cdn.vixis.dev/Link_Swag.webp"
+          alt="Link Swag 🎵"
+          className="emoji-confetti fixed pointer-events-none z-[9999]"
+          style={
+            {
+              "--delta-x": `${particle.deltaX}px`,
+              "--delta-y": `${particle.deltaY}px`,
+              "--rotation": `${particle.rotation}deg`,
+              left: `${particle.startX}px`,
+              top: `${particle.startY}px`,
+              width: "2.5rem",
+              height: "2.5rem",
+            } as React.CSSProperties & {
+              "--delta-x": string;
+              "--delta-y": string;
+              "--rotation": string;
+            }
+          }
+        />
+      ))}
     </div>
   );
 }

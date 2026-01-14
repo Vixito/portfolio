@@ -42,6 +42,7 @@ export const translations = {
       page: "Página",
       of: "de",
       selectOption: "Seleccionar una opción",
+      optional: "Opcional",
     },
     // Home / Hero
     home: {
@@ -236,6 +237,7 @@ export const translations = {
       unmute: "Activar sonido",
       play: "Reproducir",
       pause: "Pausar",
+      refresh: "Actualizar",
       previous: "Anterior",
       next: "Siguiente",
       loading: "Cargando...",
@@ -615,6 +617,7 @@ export const translations = {
       page: "Page",
       of: "of",
       selectOption: "Select an option",
+      optional: "Optional",
     },
     // Home / Hero
     home: {
@@ -809,6 +812,7 @@ export const translations = {
       unmute: "Unmute",
       play: "Play",
       pause: "Pause",
+      refresh: "Refresh",
       previous: "Previous",
       next: "Next",
       loading: "Loading...",
