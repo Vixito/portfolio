@@ -139,10 +139,6 @@ function RadioPlayer() {
           await audioRef.current.play();
           setLocalIsPlaying(true);
         } catch (error) {
-          // Silenciar errores en producción
-          if (import.meta.env.DEV) {
-            console.debug("Error al reproducir la radio:", error);
-          }
           setLocalIsPlaying(false);
         }
       }

@@ -109,13 +109,7 @@ function Radio() {
         ) {
           clearTimeout(timeoutId);
           if (!isMounted) return;
-          console.log(
-            `🔧 Estableciendo isLive = false (servicio no disponible: ${response.status})`
-          );
           setIsLive(false);
-          console.warn(
-            `⚠️ Servicio de radio no disponible (${response.status})`
-          );
           // Continuar con el flujo normal (playlist o offline) - no hacer throw
           setCurrentSong({
             id: "offline",
@@ -131,11 +125,6 @@ function Radio() {
 
         if (!isMounted) return;
 
-        console.log(
-          "📊 Respuesta completa de Icecast:",
-          JSON.stringify(data, null, 2)
-        );
-
         // Manejar diferentes estructuras de respuesta de Icecast
         // El error "0.find is not a function" indica que source no es un array
         let sources: any[] = [];
@@ -143,7 +132,6 @@ function Radio() {
         // Intentar múltiples formas de obtener las fuentes
         if (Array.isArray(data.icestats?.source)) {
           sources = data.icestats.source;
-          console.log("✅ source es un array con", sources.length, "elementos");
         } else if (
           data.icestats?.source &&
           typeof data.icestats.source === "object" &&
@@ -151,46 +139,27 @@ function Radio() {
         ) {
           // Si source es un objeto único, convertirlo a array
           sources = [data.icestats.source];
-          console.log("✅ source es un objeto, convertido a array");
         } else if (data.source && Array.isArray(data.source)) {
           // A veces source está directamente en data
           sources = data.source;
-          console.log("✅ source encontrado directamente en data");
         } else if (data.source && typeof data.source === "object") {
           sources = [data.source];
-          console.log("✅ source en data es objeto, convertido a array");
         } else {
           // Si no encontramos source, buscar en todas las propiedades de icestats
-          console.warn("⚠️ No se encontró source en la estructura esperada");
-          console.log(
-            "📊 Claves en icestats:",
-            Object.keys(data.icestats || {})
-          );
-
           // Buscar cualquier array en icestats que contenga objetos con 'mount'
           if (data.icestats) {
             for (const key of Object.keys(data.icestats)) {
               const value = (data.icestats as any)[key];
               if (Array.isArray(value) && value.length > 0 && value[0]?.mount) {
                 sources = value;
-                console.log(`✅ Fuentes encontradas en icestats.${key}`);
                 break;
               }
             }
           }
         }
 
-        console.log("🔍 Fuentes encontradas:", sources);
-        console.log("🔍 Número de fuentes:", sources.length);
-        console.log("🔍 Es array:", Array.isArray(sources));
-
         // Asegurarse de que sources sea un array antes de usar .find()
         if (!Array.isArray(sources)) {
-          console.error(
-            "❌ ERROR: sources no es un array:",
-            typeof sources,
-            sources
-          );
           sources = [];
         }
 
@@ -214,32 +183,13 @@ function Radio() {
 
           // Si aún no se encuentra, usar la primera fuente disponible (fallback)
           if (!mountpoint && sources.length > 0) {
-            console.warn(
-              "⚠️ Mountpoint /vixis no encontrado, usando primera fuente disponible:",
-              sources[0]
-            );
             mountpoint = sources[0];
           }
-        } else {
-          console.warn(
-            "⚠️ No hay fuentes disponibles en la respuesta de Icecast"
-          );
         }
-
-        console.log("📡 Mountpoint encontrado:", mountpoint);
 
         if (mountpoint) {
           // La radio está activa
-          console.log("✅ Radio EN VIVO detectada - Configurando stream");
-          console.log("🔧 Estableciendo isLive = true");
-          setIsLive((prevIsLive) => {
-            if (!prevIsLive) {
-              console.log("🔄 isLive cambió de false a true");
-            } else {
-              console.log("ℹ️ isLive ya era true, manteniendo");
-            }
-            return true;
-          });
+          setIsLive(true);
           const title =
             mountpoint.title ||
             mountpoint.yp_currently_playing ||
@@ -266,8 +216,6 @@ function Radio() {
           });
         } else {
           // La radio no está activa
-          console.log("❌ Radio NO está en vivo - mountpoint no encontrado");
-          console.log("🔧 Estableciendo isLive = false");
           setIsLive(false);
 
           // Limpiar el stream si estaba reproduciendo en vivo
@@ -313,7 +261,6 @@ function Radio() {
             } catch (azuracastError) {
               // Silenciar errores de AzuraCast, continuar con fallback
               if (import.meta.env.DEV) {
-                console.debug(
                   "Error al conectar con AzuraCast:",
                   azuracastError
                 );
@@ -334,9 +281,7 @@ function Radio() {
 
         // Silenciar errores de conexión en producción (NetworkError, CORS, etc.)
         // Solo loggear en desarrollo
-        console.warn("⚠️ Error al cargar metadata de Icecast:", error);
         // Si no se puede conectar con Icecast, intentar AzuraCast
-        console.log("🔧 Estableciendo isLive = false (por error de conexión)");
         setIsLive(false);
 
         if (AZURACAST_BASE_URL && AZURACAST_API_KEY) {
@@ -378,7 +323,6 @@ function Radio() {
           } catch (azuracastError) {
             // Silenciar errores de AzuraCast
             if (import.meta.env.DEV) {
-              console.debug("Error al conectar con AzuraCast:", azuracastError);
             }
           }
         }
@@ -423,19 +367,14 @@ function Radio() {
       if (playlistLoadedRef.current && !forceReload) return;
 
       try {
-        console.log("📋 Cargando playlist...");
         const playlistData = await getPlaylist();
-        console.log("📋 Playlist cargada:", playlistData?.length, "canciones");
-        console.log("📋 Detalles de la playlist:", playlistData);
 
         // Verificar si hay canciones en Supabase Storage que no están en la tabla playlist
         if (playlistData && playlistData.length > 0) {
-          console.log(
             "📋 URLs de canciones en playlist:",
             playlistData.map((s: any) => s.url)
           );
         } else {
-          console.warn(
             "⚠️ La playlist está vacía. Verifica que las canciones estén en la tabla 'playlist' de Supabase, no solo en Storage."
           );
         }
@@ -456,7 +395,6 @@ function Radio() {
               return true;
             } catch {
               if (import.meta.env.DEV) {
-                console.debug(
                   "URL inválida en la playlist, saltando:",
                   song.url
                 );
@@ -488,7 +426,6 @@ function Radio() {
 
                       // Logging para debug
                       if (import.meta.env.DEV) {
-                        console.debug(
                           "Intentando reproducir playlist automáticamente:",
                           {
                             url: audioRef.current.src,
@@ -504,12 +441,10 @@ function Radio() {
                         .then(() => {
                           setIsPlaying(true);
                           if (import.meta.env.DEV) {
-                            console.debug("Playlist reproducida exitosamente");
                           }
                         })
                         .catch((error) => {
                           // Si falla el autoplay (requiere interacción del usuario), no hacer nada
-                          console.warn(
                             "No se pudo reproducir automáticamente la playlist:",
                             error
                           );
@@ -534,21 +469,18 @@ function Radio() {
                   }
                 } catch (error) {
                   if (import.meta.env.DEV) {
-                    console.debug("Error al cargar primera canción:", error);
                   }
                 }
               }
             }
           } else {
             if (import.meta.env.DEV) {
-              console.debug("No hay canciones con URLs válidas en la playlist");
             }
             setPlaylist([]);
           }
         }
       } catch (error) {
         if (import.meta.env.DEV) {
-          console.debug("Error al cargar playlist:", error);
         }
       }
     };
@@ -559,7 +491,6 @@ function Radio() {
       // Recargar playlist cada 5 minutos para obtener nuevas canciones
       const playlistInterval = setInterval(() => {
         if (!isLive) {
-          console.log(
             "🔄 Recargando playlist para obtener nuevas canciones..."
           );
           playlistLoadedRef.current = false; // Permitir recarga
@@ -582,7 +513,6 @@ function Radio() {
     // Verificar que estamos en la página /radio (no en Home)
     const isRadioPage = window.location.pathname === "/radio";
 
-    console.log("🎵 Efecto de reproducción en vivo:", {
       isLive,
       isRadioPage,
       hasAudioRef: !!audioRef.current,
@@ -593,9 +523,7 @@ function Radio() {
 
     // Debug: Verificar si isLive cambió
     if (isLive) {
-      console.log("✅ isLive es TRUE - Debería reproducir stream en vivo");
     } else {
-      console.log("❌ isLive es FALSE - No reproducirá stream en vivo");
     }
 
     // Solo reproducir automáticamente si:
@@ -624,16 +552,13 @@ function Radio() {
           if (needsUpdate) {
             // Para streams OGG en vivo, simplemente establecer el src
             // El navegador manejará el stream automáticamente
-            console.log("🔄 Cambiando src del audio a:", targetUrl);
             audioRef.current.pause();
             audioRef.current.src = targetUrl;
             // NO usar load() para streams en vivo OGG - interrumpe el stream
-            console.log(
               "✅ Src establecido. Audio src actual:",
               audioRef.current.src
             );
           } else {
-            console.log(
               "ℹ️ Src ya está configurado correctamente:",
               currentSrc
             );
@@ -645,7 +570,6 @@ function Radio() {
             // Agregar listener para ver cuando el stream está listo
             const handleCanPlayThrough = () => {
               if (import.meta.env.DEV) {
-                console.debug("Stream listo para reproducir:", targetUrl);
               }
             };
 
@@ -659,11 +583,9 @@ function Radio() {
             setIsPlaying(true);
             setUserPaused(false); // Resetear cuando se reproduce automáticamente
 
-            console.log("✅ Stream en vivo iniciado correctamente:", targetUrl);
           } catch (playError: any) {
             // Si falla por autoplay policy, esperar a interacción del usuario
             if (playError.name === "NotAllowedError") {
-              console.warn(
                 "⚠️ Autoplay bloqueado, esperando interacción del usuario"
               );
               // El usuario tendrá que hacer click en play
@@ -681,7 +603,6 @@ function Radio() {
           }
         } catch (error) {
           if (import.meta.env.DEV) {
-            console.debug("Error al configurar stream en vivo:", error);
           }
         }
       };
@@ -726,7 +647,6 @@ function Radio() {
       try {
         setEventsLoading(true);
         const upcomingEvents = await getUpcomingEvents(5); // Obtener 5 eventos próximos
-        console.log("Eventos obtenidos:", upcomingEvents); // Debug
         setEvents(upcomingEvents || []);
       } catch (error) {
         console.error("Error al cargar eventos:", error);
@@ -791,16 +711,13 @@ function Radio() {
         .subscribe((status) => {
           if (status === "SUBSCRIBED") {
             if (import.meta.env.DEV) {
-              console.debug("WebSocket de Supabase conectado exitosamente");
             }
           } else if (status === "CHANNEL_ERROR") {
-            console.warn(
               "Error en el WebSocket de Supabase (solo afecta el chat en tiempo real)"
             );
           }
         });
     } catch (error) {
-      console.warn(
         "Error al suscribirse al WebSocket de Supabase (solo afecta el chat en tiempo real):",
         error
       );
@@ -813,7 +730,6 @@ function Radio() {
         } catch (error) {
           // Ignorar errores al limpiar el canal
           if (import.meta.env.DEV) {
-            console.debug("Error al limpiar el canal de Supabase:", error);
           }
         }
       }
@@ -910,7 +826,6 @@ function Radio() {
             audioRef.current.play().catch((error) => {
               // Si falla el autoplay, no intentar más automáticamente
               if (import.meta.env.DEV) {
-                console.debug(
                   "Error al reproducir siguiente canción (probablemente requiere interacción del usuario):",
                   error
                 );
@@ -919,7 +834,6 @@ function Radio() {
           } catch (urlError) {
             // URL inválida, solo loggear en desarrollo
             if (import.meta.env.DEV) {
-              console.debug("URL inválida en la playlist:", nextSong.url);
             }
             // NO intentar siguiente canción automáticamente para evitar bucles
           }
@@ -978,7 +892,6 @@ function Radio() {
 
       // Si hay más de 5 errores consecutivos, detener completamente y limpiar
       if (errorCountRef.current >= 5) {
-        console.warn(
           "Demasiados errores consecutivos, deteniendo reproducción automática"
         );
         // Limpiar el src para evitar más intentos
@@ -1088,7 +1001,6 @@ function Radio() {
           } else {
             // Si no hay playlist, mostrar mensaje
             if (import.meta.env.DEV) {
-              console.debug("No hay playlist disponible");
             }
           }
         }
@@ -1096,7 +1008,6 @@ function Radio() {
         // Si falla la reproducción, mantener el estado en false
         setIsPlaying(false);
         if (import.meta.env.DEV) {
-          console.debug("Error al reproducir:", error);
         }
       }
     }
@@ -1121,7 +1032,6 @@ function Radio() {
         }
       } catch (error) {
         // Ignorar errores silenciosamente para no bloquear la UI
-        console.debug("Error al cambiar volumen:", error);
       }
     }, 100);
   };
