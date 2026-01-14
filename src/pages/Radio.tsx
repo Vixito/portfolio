@@ -119,7 +119,7 @@ function Radio() {
             id: "offline",
             title: t("radio.offlineTitle"),
             artist: t("radio.waiting"),
-            url: ICECAST_STREAM_URL,
+            url: "", // No establecer URL cuando está offline para evitar intentos de conexión
           });
           return;
         }
@@ -146,15 +146,38 @@ function Radio() {
             t("radio.liveTitle");
           const artist = mountpoint.artist || t("radio.liveArtist");
 
-          setCurrentSong({
-            id: "live",
-            title: title,
-            artist: artist,
-            url: ICECAST_STREAM_URL,
+          // Solo actualizar currentSong si realmente cambió la URL
+          // Esto evita re-renders innecesarios que pueden causar que el stream se aborte
+          setCurrentSong((prev) => {
+            if (prev?.url === ICECAST_STREAM_URL && prev?.id === "live") {
+              // Ya tenemos el mismo stream, solo actualizar título/artista si cambió
+              return {
+                ...prev,
+                title: title,
+                artist: artist,
+              };
+            }
+            return {
+              id: "live",
+              title: title,
+              artist: artist,
+              url: ICECAST_STREAM_URL,
+            };
           });
         } else {
-          // La radio no está activa, intentar conectar con AzuraCast
+          // La radio no está activa
           setIsLive(false);
+
+          // Limpiar el stream si estaba reproduciendo en vivo
+          if (
+            audioRef.current &&
+            audioRef.current.src.includes(ICECAST_STREAM_URL)
+          ) {
+            audioRef.current.pause();
+            audioRef.current.src = "";
+            audioRef.current.load();
+            setIsPlaying(false);
+          }
 
           // Intentar obtener información de AzuraCast si está configurado
           if (AZURACAST_BASE_URL && AZURACAST_API_KEY) {
@@ -196,12 +219,12 @@ function Radio() {
             }
           }
 
-          // Fallback: mostrar estado offline
+          // Fallback: mostrar estado offline (sin establecer URL para evitar cargar el stream)
           setCurrentSong({
             id: "offline",
             title: t("radio.offlineTitle"),
             artist: t("radio.waiting"),
-            url: ICECAST_STREAM_URL,
+            url: "", // No establecer URL cuando está offline para evitar intentos de conexión
           });
         }
       } catch (error) {
@@ -259,12 +282,12 @@ function Radio() {
           }
         }
 
-        // Fallback final: mostrar estado offline
+        // Fallback final: mostrar estado offline (sin establecer URL para evitar cargar el stream)
         setCurrentSong({
           id: "offline",
           title: t("radio.offlineTitle"),
           artist: t("radio.waiting"),
-          url: ICECAST_STREAM_URL,
+          url: "", // No establecer URL cuando está offline para evitar intentos de conexión
         });
       }
     };
@@ -431,12 +454,24 @@ function Radio() {
       // Cuando está en vivo, reproducir automáticamente
       const playLive = async () => {
         try {
-          if (
-            !audioRef.current.src ||
-            audioRef.current.src !== currentSong?.url
-          ) {
-            audioRef.current.src = currentSong?.url || ICECAST_STREAM_URL;
+          const targetUrl = currentSong?.url || ICECAST_STREAM_URL;
+          const currentSrc = audioRef.current.src;
+          const currentSrcUrl = currentSrc ? new URL(currentSrc).pathname : "";
+          const targetUrlPath = new URL(targetUrl).pathname;
+
+          // Solo cambiar el src si es realmente diferente (comparar paths, no URLs completas)
+          // Esto evita que se aborte el stream cuando cambia el currentSong pero la URL es la misma
+          if (!currentSrc || !currentSrc.includes(targetUrlPath)) {
+            // Pausar antes de cambiar el src para evitar abortos
+            audioRef.current.pause();
+            audioRef.current.src = targetUrl;
+            // Para streams en vivo, no usar load() inmediatamente, dejar que el navegador lo maneje
+            audioRef.current.load();
           }
+
+          // Esperar un momento antes de intentar reproducir para que el stream se establezca
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
           await audioRef.current.play();
           setIsPlaying(true);
         } catch (error) {
@@ -448,7 +483,7 @@ function Radio() {
       };
       playLive();
     }
-  }, [isLive, currentSong, ICECAST_STREAM_URL]);
+  }, [isLive, ICECAST_STREAM_URL]); // Remover currentSong de dependencias para evitar cambios innecesarios
 
   // Pausar automáticamente si la radio se desconecta y cambiar a playlist
   useEffect(() => {
@@ -785,12 +820,17 @@ function Radio() {
       try {
         // Si está en vivo, usar el stream de Icecast
         if (isLive) {
-          if (
-            !audioRef.current.src ||
-            audioRef.current.src !== currentSong?.url
-          ) {
-            audioRef.current.src = currentSong?.url || ICECAST_STREAM_URL;
+          const targetUrl = currentSong?.url || ICECAST_STREAM_URL;
+          const currentSrc = audioRef.current.src;
+
+          // Solo cambiar el src si es realmente diferente
+          if (!currentSrc || !currentSrc.includes(targetUrl)) {
+            // Pausar antes de cambiar el src para evitar abortos
+            audioRef.current.pause();
+            audioRef.current.src = targetUrl;
+            audioRef.current.load();
           }
+
           await audioRef.current.play();
           setIsPlaying(true);
         } else {
@@ -1162,11 +1202,12 @@ function Radio() {
       </div>
 
       {/* Audio element (oculto) */}
+      {/* No usar src directamente en el JSX para streams en vivo - se maneja programáticamente */}
       <audio
         ref={audioRef}
-        src={currentSong?.url}
         muted={false}
         preload="auto"
+        crossOrigin="anonymous"
       />
 
       {/* Contenido principal */}
