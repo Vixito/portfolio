@@ -42,6 +42,7 @@ export const translations = {
       page: "Página",
       of: "de",
       selectOption: "Seleccionar una opción",
+      optional: "Opcional",
     },
     // Home / Hero
     home: {
@@ -615,6 +616,7 @@ export const translations = {
       page: "Page",
       of: "of",
       selectOption: "Select an option",
+      optional: "Optional",
     },
     // Home / Hero
     home: {

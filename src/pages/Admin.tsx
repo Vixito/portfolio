@@ -718,9 +718,15 @@ function Admin() {
         formData.base_price_usd = formData.base_price_cop / exchangeRate;
       }
     }
-    // Para testimonios, usar el ID del cliente como client_id
+    // Para testimonios, usar el ID del cliente como client_id (opcional)
     if (activeTab === "testimonials") {
-      formData.client_id = currentItem.id;
+      // Solo asignar client_id si se seleccionó un cliente
+      if (currentItem.id) {
+        formData.client_id = currentItem.id;
+      } else if (crudFormData.client_id) {
+        formData.client_id = crudFormData.client_id;
+      }
+      // Si no hay client_id, dejarlo como null (opcional)
     }
     // Para work_experiences, convertir arrays a formato de lista con ES/EN
     if (activeTab === "work_experiences") {
@@ -2389,42 +2395,70 @@ function Admin() {
                           const newIsActive = !item.is_active;
                           switch (activeTab) {
                             case "products":
-                              await updateProduct(item.id, { is_active: newIsActive });
+                              await updateProduct(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                             case "projects":
-                              await updateProject(item.id, { is_active: newIsActive });
+                              await updateProject(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                             case "clients":
-                              await updateClient(item.id, { is_active: newIsActive });
+                              await updateClient(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                             case "testimonials":
-                              await updateClient(item.id, { is_active: newIsActive });
+                              await updateClient(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                             case "socials":
-                              await updateSocial(item.id, { is_active: newIsActive });
+                              await updateSocial(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                             case "events":
-                              await updateEvent(item.id, { is_active: newIsActive });
+                              await updateEvent(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                             case "work_experiences":
-                              await updateWorkExperience(item.id, { is_active: newIsActive });
+                              await updateWorkExperience(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                             case "technologies":
-                              await updateTechnology(item.id, { is_active: newIsActive });
+                              await updateTechnology(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                             case "studies":
-                              await updateStudy(item.id, { is_active: newIsActive });
+                              await updateStudy(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                             case "blog_posts":
-                              await updateBlogPost(item.id, { is_active: newIsActive });
+                              await updateBlogPost(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                             case "home_content":
-                              await updateHomeContentItem(item.id, { is_active: newIsActive });
+                              await updateHomeContentItem(item.id, {
+                                is_active: newIsActive,
+                              });
                               break;
                           }
                           await loadCRUDData();
                         } catch (error) {
-                          alert(`Error al actualizar: ${error instanceof Error ? error.message : "Error desconocido"}`);
+                          alert(
+                            `Error al actualizar: ${
+                              error instanceof Error
+                                ? error.message
+                                : "Error desconocido"
+                            }`
+                          );
                         }
                       }}
                       className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded transition-colors cursor-pointer ${
@@ -2432,7 +2466,9 @@ function Admin() {
                           ? "bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-white"
                           : "bg-gray-500/20 hover:bg-gray-500/30 border border-gray-500/30 text-gray-400"
                       }`}
-                      title={item.is_active ? t("admin.active") : t("admin.inactive")}
+                      title={
+                        item.is_active ? t("admin.active") : t("admin.inactive")
+                      }
                     >
                       {item.is_active ? "✓" : "○"}
                     </button>
@@ -3787,7 +3823,6 @@ function Admin() {
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        required
                         disabled={!!editingItem}
                       >
                         <option value="">{t("common.selectOption")}</option>
@@ -5199,7 +5234,9 @@ function Admin() {
                         required
                       >
                         <option value="latest_post">Último Post</option>
-                        <option value="work_experience">Experiencia Laboral</option>
+                        <option value="work_experience">
+                          Experiencia Laboral
+                        </option>
                         <option value="projects">Proyectos</option>
                         <option value="cv_download">Descargar CV</option>
                       </select>
@@ -5209,7 +5246,8 @@ function Admin() {
                       <>
                         <div>
                           <label className="block text-gray-300 text-sm mb-2">
-                            Blog Post ID (opcional - dejar vacío para usar el más reciente)
+                            Blog Post ID (opcional - dejar vacío para usar el
+                            más reciente)
                           </label>
                           <input
                             type="text"
@@ -5230,12 +5268,16 @@ function Admin() {
                           </label>
                           <input
                             type="text"
-                            value={crudFormData.latest_post_tags?.join(", ") || ""}
+                            value={
+                              crudFormData.latest_post_tags?.join(", ") || ""
+                            }
                             onChange={(e) =>
                               setCrudFormData({
                                 ...crudFormData,
                                 latest_post_tags: e.target.value
-                                  ? e.target.value.split(",").map((t) => t.trim())
+                                  ? e.target.value
+                                      .split(",")
+                                      .map((t) => t.trim())
                                   : [],
                               })
                             }
@@ -5250,7 +5292,8 @@ function Admin() {
                       <>
                         <div>
                           <label className="block text-gray-300 text-sm mb-2">
-                            Work Experience ID (opcional - dejar vacío para usar datos directos)
+                            Work Experience ID (opcional - dejar vacío para usar
+                            datos directos)
                           </label>
                           <input
                             type="text"
@@ -5272,7 +5315,11 @@ function Admin() {
                           <textarea
                             value={
                               crudFormData.work_experience_data
-                                ? JSON.stringify(crudFormData.work_experience_data, null, 2)
+                                ? JSON.stringify(
+                                    crudFormData.work_experience_data,
+                                    null,
+                                    2
+                                  )
                                 : ""
                             }
                             onChange={(e) => {
@@ -5309,7 +5356,9 @@ function Admin() {
                               setCrudFormData({
                                 ...crudFormData,
                                 project_ids: e.target.value
-                                  ? e.target.value.split(",").map((id) => id.trim())
+                                  ? e.target.value
+                                      .split(",")
+                                      .map((id) => id.trim())
                                   : [],
                               })
                             }
@@ -5340,7 +5389,9 @@ function Admin() {
                             }
                             className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                             placeholder="https://..."
-                            required={crudFormData.content_type === "cv_download"}
+                            required={
+                              crudFormData.content_type === "cv_download"
+                            }
                           />
                         </div>
                         <div>

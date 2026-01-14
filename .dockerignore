@@ -1,24 +1,68 @@
+# Dependencias y builds
 node_modules
 dist
+dist-ssr
+
+# Control de versiones
 .git
+.gitignore
+
+# IDEs y editores
 .vscode
 .idea
-*.log
-.env
-.env.local
-.env.*.local
-.DS_Store
-coverage
+.cursor
 *.swp
 *.swo
 *~
 
-# Archivos específicos de otros deployments
-Dockerfile.icecast
-start-icecast.sh
-icecast.xml
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Archivos de desarrollo
-.cursor
+# Variables de entorno (seguridad)
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Testing y coverage
+coverage
+.nyc_output
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Documentación
 docs.md
 README.md
+
+# Archivos de desarrollo y scripts locales
+*.local
+start.sh
+stream.sh
+liquidsoap-setup.sh
+radio-streaming-liquidsoap.service
+radio.liq
+update-playlist.sh
+start-liquidsoap.sh
+
+# Archivos de configuración de otros servicios
+cloudbuild.yaml
+BingSiteAuth.xml
+
+# Supabase (solo necesarios en runtime, no en build)
+supabase/.temp
+
+# NOTA: NO excluir estos archivos porque Dockerfile.icecast los necesita:
+# - icecast.xml
+# - start-icecast.sh
+# - Dockerfile.icecast (aunque no se use en el build, puede ser útil mantenerlo)
