@@ -15,7 +15,7 @@ function RadioPlayer() {
   const [currentSong, setCurrentSong] = useState(sharedCurrentSong);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Sincronizar con el estado compartido
+  // Sincronizar con el estado compartido (prioridad: usar el estado de Radio.tsx)
   useEffect(() => {
     setIsPlaying(sharedIsPlaying);
     setIsLive(sharedIsLive);
@@ -29,19 +29,67 @@ function RadioPlayer() {
     import.meta.env.VITE_ICECAST_STATUS_URL ||
     "https://radio.vixis.dev/status-json.xsl";
 
-  // Verificar estado de la radio
+  // Verificación de estado como fallback (solo si el estado compartido no está disponible)
+  // Usar la misma lógica robusta que Radio.tsx
   useEffect(() => {
+    // Si ya tenemos estado compartido, usarlo (viene de Radio.tsx que tiene mejor lógica)
+    // Solo verificar localmente si no hay estado compartido o como fallback
+    if (sharedIsLive !== undefined) {
+      // El estado compartido tiene prioridad
+      return;
+    }
+
     const checkRadioStatus = async () => {
       try {
-        const response = await fetch(ICECAST_STATUS_URL);
+        const response = await fetch(ICECAST_STATUS_URL, {
+          cache: "no-cache",
+        });
+
+        if (!response.ok) {
+          setIsLive(false);
+          return;
+        }
+
         const data = await response.json();
 
-        const mountpoint = data.icestats?.source?.find(
-          (source: any) =>
-            source.server_name?.toLowerCase().includes("vixis") ||
-            source.listenurl?.includes("vixis") ||
-            source.mount?.includes("vixis")
-        );
+        // Usar la misma lógica robusta que Radio.tsx
+        let sources: any[] = [];
+
+        if (Array.isArray(data.icestats?.source)) {
+          sources = data.icestats.source;
+        } else if (
+          data.icestats?.source &&
+          typeof data.icestats.source === "object" &&
+          !Array.isArray(data.icestats.source)
+        ) {
+          sources = [data.icestats.source];
+        } else if (data.source && Array.isArray(data.source)) {
+          sources = data.source;
+        } else if (data.source && typeof data.source === "object") {
+          sources = [data.source];
+        }
+
+        // Buscar mountpoint /vixis
+        let mountpoint: any = null;
+        if (sources.length > 0) {
+          mountpoint = sources.find(
+            (source: any) =>
+              source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+          );
+
+          if (!mountpoint) {
+            mountpoint = sources.find(
+              (source: any) =>
+                source?.server_name?.toLowerCase().includes("vixis") ||
+                source?.listenurl?.includes("vixis") ||
+                source?.mount?.includes("vixis")
+            );
+          }
+
+          if (!mountpoint && sources.length > 0) {
+            mountpoint = sources[0];
+          }
+        }
 
         setIsLive(!!mountpoint);
       } catch (error) {
@@ -50,13 +98,16 @@ function RadioPlayer() {
     };
 
     checkRadioStatus();
-    const interval = setInterval(checkRadioStatus, 30000); // Verificar cada 30 segundos
+    const interval = setInterval(checkRadioStatus, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [sharedIsLive, ICECAST_STATUS_URL]);
 
   // Manejar reproducción/pausa
   const togglePlayPause = async () => {
     if (!audioRef.current) return;
+
+    // Usar el estado compartido como fuente de verdad
+    const actualIsLive = sharedIsLive !== undefined ? sharedIsLive : isLive;
 
     // Siempre permitir click, incluso si está offline
     // Si está offline, simplemente no reproducir nada pero cambiar el estado visual
@@ -65,7 +116,7 @@ function RadioPlayer() {
       setIsPlaying(false);
     } else {
       // Solo intentar reproducir si la radio está en vivo
-      if (isLive) {
+      if (actualIsLive) {
         try {
           // Si no hay src, establecerlo
           if (!audioRef.current.src) {
@@ -113,12 +164,14 @@ function RadioPlayer() {
   };
 
   // Pausar si la radio se desconecta (solo si realmente se desconecta, no en el primer render)
+  // Usar el estado compartido como fuente de verdad
   useEffect(() => {
-    if (!isLive && audioRef.current && isPlaying) {
+    const actualIsLive = sharedIsLive !== undefined ? sharedIsLive : isLive;
+    if (!actualIsLive && audioRef.current && isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     }
-  }, [isLive]);
+  }, [sharedIsLive, isLive, isPlaying]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 transition-colors">
@@ -127,7 +180,9 @@ function RadioPlayer() {
         <button
           onClick={togglePlayPause}
           className={`w-16 h-16 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-90 cursor-pointer ${
-            isPlaying && isLive ? "animate-spin" : ""
+            isPlaying && (sharedIsLive !== undefined ? sharedIsLive : isLive)
+              ? "animate-spin"
+              : ""
           }`}
           style={{
             animationDuration: "3s",
@@ -159,7 +214,7 @@ function RadioPlayer() {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
             {t("radio.title")}
           </h3>
-          {isLive ? (
+          {(sharedIsLive !== undefined ? sharedIsLive : isLive) ? (
             <p className="text-xs text-blue-400 dark:text-blue-300 font-semibold animate-pulse flex items-center gap-1">
               <span className="w-2 h-2 bg-blue-400 dark:bg-blue-300 rounded-full"></span>
               {t("radio.online")}
