@@ -772,6 +772,7 @@ function Radio() {
 
     // Limpiar animación anterior inmediatamente
     gsap.killTweensOf(marqueeRef.current);
+    // Asegurar que comience desde el inicio (x: 0) para mostrar el texto completo
     gsap.set(marqueeRef.current, { x: 0 });
 
     // Usar requestAnimationFrame para asegurar que el DOM se actualizó
@@ -790,12 +791,32 @@ function Radio() {
         if (textWidth > containerWidth) {
           const distance = textWidth - containerWidth + 50; // 50px de padding
 
-          gsap.to(marqueeRef.current, {
+          // Crear timeline para controlar mejor la animación
+          const tl = gsap.timeline({ repeat: -1 });
+
+          // 1. Esperar 2 segundos mostrando el texto completo desde el inicio
+          tl.to(marqueeRef.current, {
+            x: 0,
+            duration: 2,
+            ease: "none",
+          });
+
+          // 2. Desplazarse hacia la izquierda para mostrar el resto del texto
+          tl.to(marqueeRef.current, {
             x: -distance,
             duration: distance / 30, // Velocidad ajustable (píxeles por segundo)
             ease: "none",
-            repeat: -1,
           });
+
+          // 3. Esperar un momento al final antes de volver al inicio
+          tl.to(marqueeRef.current, {
+            x: -distance,
+            duration: 1,
+            ease: "none",
+          });
+
+          // 4. Volver rápidamente al inicio (sin animación visible)
+          tl.set(marqueeRef.current, { x: 0 });
         } else {
           // Si el texto cabe, centrarlo
           gsap.set(marqueeRef.current, { x: 0 });
