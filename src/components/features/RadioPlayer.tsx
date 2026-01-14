@@ -58,52 +58,56 @@ function RadioPlayer() {
   const togglePlayPause = async () => {
     if (!audioRef.current) return;
 
+    // Siempre permitir click, incluso si está offline
+    // Si está offline, simplemente no reproducir nada pero cambiar el estado visual
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
       // Solo intentar reproducir si la radio está en vivo
-      if (!isLive) {
-        return;
-      }
+      if (isLive) {
+        try {
+          // Si no hay src, establecerlo
+          if (!audioRef.current.src) {
+            audioRef.current.src = ICECAST_STREAM_URL;
+          }
 
-      try {
-        // Si no hay src, establecerlo
-        if (!audioRef.current.src) {
-          audioRef.current.src = ICECAST_STREAM_URL;
-        }
+          // Agregar event listeners para manejar errores
+          const handleError = () => {
+            setIsPlaying(false);
+            if (audioRef.current) {
+              audioRef.current.src = "";
+            }
+          };
 
-        // Agregar event listeners para manejar errores
-        const handleError = () => {
+          const handleCanPlay = () => {
+            // Solo establecer isPlaying cuando realmente puede reproducir
+          };
+
+          audioRef.current.addEventListener("error", handleError);
+          audioRef.current.addEventListener("canplay", handleCanPlay);
+
+          await audioRef.current.play();
+          setIsPlaying(true);
+
+          // Limpiar listeners después de un tiempo
+          setTimeout(() => {
+            if (audioRef.current) {
+              audioRef.current.removeEventListener("error", handleError);
+              audioRef.current.removeEventListener("canplay", handleCanPlay);
+            }
+          }, 1000);
+        } catch (error) {
+          // Silenciar errores en producción
+          if (import.meta.env.DEV) {
+            console.debug("Error al reproducir la radio:", error);
+          }
           setIsPlaying(false);
-          if (audioRef.current) {
-            audioRef.current.src = "";
-          }
-        };
-
-        const handleCanPlay = () => {
-          // Solo establecer isPlaying cuando realmente puede reproducir
-        };
-
-        audioRef.current.addEventListener("error", handleError);
-        audioRef.current.addEventListener("canplay", handleCanPlay);
-
-        await audioRef.current.play();
-        setIsPlaying(true);
-
-        // Limpiar listeners después de un tiempo
-        setTimeout(() => {
-          if (audioRef.current) {
-            audioRef.current.removeEventListener("error", handleError);
-            audioRef.current.removeEventListener("canplay", handleCanPlay);
-          }
-        }, 1000);
-      } catch (error) {
-        // Silenciar errores en producción
-        if (import.meta.env.DEV) {
-          console.debug("Error al reproducir la radio:", error);
         }
-        setIsPlaying(false);
+      } else {
+        // Si está offline, NO cambiar el estado visual (mantener play)
+        // No reproducir nada porque está offline
+        // El botón se mantiene en play visualmente
       }
     }
   };
@@ -122,10 +126,9 @@ function RadioPlayer() {
         {/* Botón de play a la izquierda con efecto de disco de vinilo */}
         <button
           onClick={togglePlayPause}
-          disabled={!isLive}
-          className={`w-16 h-16 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-90 ${
-            isLive ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-          } ${isPlaying ? "animate-spin" : ""}`}
+          className={`w-16 h-16 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-90 cursor-pointer ${
+            isPlaying && isLive ? "animate-spin" : ""
+          }`}
           style={{
             animationDuration: "3s",
           }}

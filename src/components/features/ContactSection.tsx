@@ -35,13 +35,12 @@ function ContactSection() {
         >
           {t("contactSection.sendRequest")}
         </Link>
-        <a
-          href="https://vixis.dev/socials"
-          rel="noopener noreferrer"
+        <Link
+          to="/socials"
           className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-900 dark:text-gray-100 font-medium transition-colors cursor-pointer text-center text-sm"
         >
           {t("contactSection.contact")}
-        </a>
+        </Link>
       </div>
     </div>
   );

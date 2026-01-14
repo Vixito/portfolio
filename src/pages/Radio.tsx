@@ -23,10 +23,12 @@ function Radio() {
   const marqueeRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [previousVolume, setPreviousVolume] = useState(1); // Para restaurar volumen al desilenciar
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isLive, setIsLive] = useState(false); // Estado para saber si la radio está en vivo
+  const [userPaused, setUserPaused] = useState(false); // Rastrear si el usuario pausó manualmente
   const [events, setEvents] = useState<
     Array<{
       id: string;
@@ -467,11 +469,10 @@ function Radio() {
             setPlaylist(validSongs);
             playlistLoadedRef.current = true;
 
-            // Si hay canciones válidas, iniciar la primera automáticamente
+            // Reproducir automáticamente la playlist cuando no está en vivo (solo en /radio)
             if (!isLive) {
               setCurrentPlaylistIndex(0);
               setCurrentSong(validSongs[0]);
-              // Reproducir automáticamente la playlist cuando no está en vivo (solo en /radio)
               const isRadioPage = window.location.pathname === "/radio";
               if (audioRef.current && validSongs[0].url && isRadioPage) {
                 try {
@@ -480,7 +481,7 @@ function Radio() {
 
                   // Esperar a que el audio esté listo antes de reproducir
                   const handleCanPlay = () => {
-                    if (audioRef.current && !isPlaying) {
+                    if (audioRef.current && !isPlaying && !userPaused) {
                       // Asegurar que el audio no esté mutado y el volumen esté configurado
                       audioRef.current.muted = false;
                       audioRef.current.volume = volume;
@@ -576,6 +577,7 @@ function Radio() {
   }, [isLive, t]);
 
   // Reproducir automáticamente cuando está en vivo (solo en /radio, no en Home)
+  // PERO solo si el usuario no pausó manualmente
   useEffect(() => {
     // Verificar que estamos en la página /radio (no en Home)
     const isRadioPage = window.location.pathname === "/radio";
@@ -586,6 +588,7 @@ function Radio() {
       hasAudioRef: !!audioRef.current,
       currentSrc: audioRef.current?.src,
       ICECAST_STREAM_URL,
+      userPaused,
     });
 
     // Debug: Verificar si isLive cambió
@@ -595,7 +598,18 @@ function Radio() {
       console.log("❌ isLive es FALSE - No reproducirá stream en vivo");
     }
 
-    if (isLive && isRadioPage && audioRef.current) {
+    // Solo reproducir automáticamente si:
+    // 1. Está en vivo
+    // 2. Estamos en la página /radio
+    // 3. No está ya reproduciendo
+    // 4. El usuario NO pausó manualmente
+    if (
+      isLive &&
+      isRadioPage &&
+      audioRef.current &&
+      !isPlaying &&
+      !userPaused
+    ) {
       // Cuando está en vivo, reproducir automáticamente
       const playLive = async () => {
         if (!audioRef.current) return;
@@ -643,6 +657,7 @@ function Radio() {
 
             await audioRef.current.play();
             setIsPlaying(true);
+            setUserPaused(false); // Resetear cuando se reproduce automáticamente
 
             console.log("✅ Stream en vivo iniciado correctamente:", targetUrl);
           } catch (playError: any) {
@@ -671,12 +686,9 @@ function Radio() {
         }
       };
 
-      // Solo intentar reproducir si no está ya reproduciendo
-      if (!isPlaying) {
-        playLive();
-      }
+      playLive();
     }
-  }, [isLive, ICECAST_STREAM_URL, isPlaying]);
+  }, [isLive, ICECAST_STREAM_URL, isPlaying, userPaused]);
 
   // Pausar automáticamente si la radio se desconecta y cambiar a playlist
   useEffect(() => {
@@ -1032,7 +1044,9 @@ function Radio() {
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
+      setUserPaused(true); // Marcar que el usuario pausó manualmente
     } else {
+      setUserPaused(false); // Resetear cuando el usuario reproduce manualmente
       try {
         // Si está en vivo, usar el stream de Icecast
         if (isLive) {
@@ -1287,24 +1301,6 @@ function Radio() {
                 </svg>
               )}
             </button>
-
-            <button
-              className="hidden md:flex w-8 h-8 items-center justify-center hover:bg-white/20 rounded transition-colors"
-              aria-label={t("radio.previous")}
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
-              </svg>
-            </button>
-
-            <button
-              className="hidden md:flex w-8 h-8 items-center justify-center hover:bg-white/20 rounded transition-colors"
-              aria-label={t("radio.next")}
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-              </svg>
-            </button>
           </div>
 
           {/* Texto marquee (solo esto tiene animación) */}
@@ -1336,19 +1332,40 @@ function Radio() {
 
           {/* Control de volumen */}
           <div className="hidden md:flex items-center gap-2 min-w-[120px]">
-            <svg
-              className="w-5 h-5 text-gray-400"
-              fill="currentColor"
-              viewBox="0 0 24 24"
+            <button
+              onClick={() => {
+                if (volume === 0) {
+                  // Si está silenciado, restaurar volumen anterior
+                  setVolume(previousVolume);
+                  if (audioRef.current) {
+                    audioRef.current.volume = previousVolume;
+                  }
+                } else {
+                  // Si tiene volumen, silenciar y guardar el volumen actual
+                  setPreviousVolume(volume);
+                  setVolume(0);
+                  if (audioRef.current) {
+                    audioRef.current.volume = 0;
+                  }
+                }
+              }}
+              className="w-5 h-5 flex items-center justify-center hover:bg-white/20 rounded transition-colors cursor-pointer flex-shrink-0"
+              aria-label={volume === 0 ? t("radio.unmute") : t("radio.mute")}
             >
-              {volume === 0 ? (
-                <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
-              ) : volume < 0.5 ? (
-                <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z" />
-              ) : (
-                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-              )}
-            </svg>
+              <svg
+                className="w-5 h-5 text-gray-400"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                {volume === 0 ? (
+                  <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
+                ) : volume < 0.5 ? (
+                  <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z" />
+                ) : (
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                )}
+              </svg>
+            </button>
             <input
               type="range"
               min="0"
