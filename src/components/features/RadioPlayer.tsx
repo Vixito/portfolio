@@ -171,7 +171,7 @@ function RadioPlayer() {
         {/* Botón de play a la izquierda con efecto de disco de vinilo */}
         <button
           onClick={togglePlayPause}
-          className={`w-16 h-16 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-90 cursor-pointer ${
+          className={`w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-90 cursor-pointer ${
             isPlaying && isLive ? "animate-spin" : ""
           }`}
           style={{
