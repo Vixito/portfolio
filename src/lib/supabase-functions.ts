@@ -1070,6 +1070,7 @@ export async function getSectorMultipliers() {
 
 /**
  * Obtiene la playlist de la radio (para reproducción automática cuando no está en vivo)
+ * Las URLs deben apuntar a Google Cloud Storage (storage.googleapis.com)
  */
 export async function getPlaylist() {
   const { data, error } = await supabase
@@ -1081,5 +1082,13 @@ export async function getPlaylist() {
     throw new Error(`Error al obtener playlist: ${error.message}`);
   }
 
-  return data || [];
+  // Filtrar solo URLs de GCS (ignorar URLs de Supabase Storage para evitar CORS)
+  const gcsPlaylist = (data || []).filter(
+    (item: any) =>
+      item.url &&
+      (item.url.includes("storage.googleapis.com") ||
+        item.url.includes("googleapis.com"))
+  );
+
+  return gcsPlaylist.length > 0 ? gcsPlaylist : data || [];
 }

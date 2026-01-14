@@ -129,34 +129,99 @@ function Radio() {
 
         if (!isMounted) return;
 
-        // Buscar el mountpoint de la radio
-        // Intentar múltiples formas de encontrar el stream
-        const sources = data.icestats?.source || [];
-        console.log("🔍 Buscando mountpoint. Fuentes disponibles:", sources);
-
-        // Buscar por mount /vixis
-        let mountpoint = sources.find(
-          (source: any) =>
-            source.mount === "/vixis" || source.mount?.includes("/vixis")
+        console.log(
+          "📊 Respuesta completa de Icecast:",
+          JSON.stringify(data, null, 2)
         );
 
-        // Si no se encuentra, buscar por server_name o listenurl
-        if (!mountpoint) {
-          mountpoint = sources.find(
-            (source: any) =>
-              source.server_name?.toLowerCase().includes("vixis") ||
-              source.listenurl?.includes("vixis") ||
-              source.mount?.includes("vixis")
+        // Manejar diferentes estructuras de respuesta de Icecast
+        // El error "0.find is not a function" indica que source no es un array
+        let sources: any[] = [];
+
+        // Intentar múltiples formas de obtener las fuentes
+        if (Array.isArray(data.icestats?.source)) {
+          sources = data.icestats.source;
+          console.log("✅ source es un array con", sources.length, "elementos");
+        } else if (
+          data.icestats?.source &&
+          typeof data.icestats.source === "object" &&
+          !Array.isArray(data.icestats.source)
+        ) {
+          // Si source es un objeto único, convertirlo a array
+          sources = [data.icestats.source];
+          console.log("✅ source es un objeto, convertido a array");
+        } else if (data.source && Array.isArray(data.source)) {
+          // A veces source está directamente en data
+          sources = data.source;
+          console.log("✅ source encontrado directamente en data");
+        } else if (data.source && typeof data.source === "object") {
+          sources = [data.source];
+          console.log("✅ source en data es objeto, convertido a array");
+        } else {
+          // Si no encontramos source, buscar en todas las propiedades de icestats
+          console.warn("⚠️ No se encontró source en la estructura esperada");
+          console.log(
+            "📊 Claves en icestats:",
+            Object.keys(data.icestats || {})
           );
+
+          // Buscar cualquier array en icestats que contenga objetos con 'mount'
+          if (data.icestats) {
+            for (const key of Object.keys(data.icestats)) {
+              const value = (data.icestats as any)[key];
+              if (Array.isArray(value) && value.length > 0 && value[0]?.mount) {
+                sources = value;
+                console.log(`✅ Fuentes encontradas en icestats.${key}`);
+                break;
+              }
+            }
+          }
         }
 
-        // Si aún no se encuentra, usar la primera fuente disponible (fallback)
-        if (!mountpoint && sources.length > 0) {
-          console.warn(
-            "⚠️ Mountpoint /vixis no encontrado, usando primera fuente disponible:",
-            sources[0]
+        console.log("🔍 Fuentes encontradas:", sources);
+        console.log("🔍 Número de fuentes:", sources.length);
+        console.log("🔍 Es array:", Array.isArray(sources));
+
+        // Asegurarse de que sources sea un array antes de usar .find()
+        if (!Array.isArray(sources)) {
+          console.error(
+            "❌ ERROR: sources no es un array:",
+            typeof sources,
+            sources
           );
-          mountpoint = sources[0];
+          sources = [];
+        }
+
+        // Buscar por mount /vixis
+        let mountpoint: any = null;
+        if (sources.length > 0) {
+          mountpoint = sources.find(
+            (source: any) =>
+              source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+          );
+
+          // Si no se encuentra, buscar por server_name o listenurl
+          if (!mountpoint) {
+            mountpoint = sources.find(
+              (source: any) =>
+                source?.server_name?.toLowerCase().includes("vixis") ||
+                source?.listenurl?.includes("vixis") ||
+                source?.mount?.includes("vixis")
+            );
+          }
+
+          // Si aún no se encuentra, usar la primera fuente disponible (fallback)
+          if (!mountpoint && sources.length > 0) {
+            console.warn(
+              "⚠️ Mountpoint /vixis no encontrado, usando primera fuente disponible:",
+              sources[0]
+            );
+            mountpoint = sources[0];
+          }
+        } else {
+          console.warn(
+            "⚠️ No hay fuentes disponibles en la respuesta de Icecast"
+          );
         }
 
         console.log("📡 Mountpoint encontrado:", mountpoint);
