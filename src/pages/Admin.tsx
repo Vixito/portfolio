@@ -54,6 +54,10 @@ import {
   createBlogPost,
   updateBlogPost,
   deleteBlogPost,
+  getHomeContentItems,
+  createHomeContentItem,
+  updateHomeContentItem,
+  deleteHomeContentItem,
 } from "../lib/supabase-functions";
 
 function Admin() {
@@ -99,6 +103,7 @@ function Admin() {
     | "technologies"
     | "studies"
     | "blog_posts"
+    | "home_content"
   >("products");
   const [products, setProducts] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -110,6 +115,7 @@ function Admin() {
   const [technologies, setTechnologies] = useState<any[]>([]);
   const [studies, setStudies] = useState<any[]>([]);
   const [blogPosts, setBlogPosts] = useState<any[]>([]);
+  const [homeContentItems, setHomeContentItems] = useState<any[]>([]);
   const [loadingCRUD, setLoadingCRUD] = useState(false);
   const [showCRUDModal, setShowCRUDModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -309,40 +315,44 @@ function Admin() {
           setProducts(productsData || []);
           break;
         case "projects":
-          const projectsData = await getProjects();
+          const projectsData = await getProjects(true); // Incluir inactivos en Admin
           setProjects(projectsData || []);
           break;
         case "clients":
-          const clientsData = await getClients();
+          const clientsData = await getClients(true); // Incluir inactivos en Admin
           setClients(clientsData || []);
           break;
         case "testimonials":
-          const testimonialsData = await getTestimonials();
+          const testimonialsData = await getTestimonials(true); // Incluir inactivos en Admin
           setTestimonials(testimonialsData || []);
           break;
         case "socials":
-          const socialsData = await getSocials();
+          const socialsData = await getSocials(true); // Incluir inactivos en Admin
           setSocials(socialsData || []);
           break;
         case "events":
-          const eventsData = await getEvents();
+          const eventsData = await getEvents(true); // Incluir inactivos en Admin
           setEvents(eventsData || []);
           break;
         case "work_experiences":
-          const workExperiencesData = await getWorkExperiences();
+          const workExperiencesData = await getWorkExperiences(true); // Incluir inactivos en Admin
           setWorkExperiences(workExperiencesData || []);
           break;
         case "technologies":
-          const technologiesData = await getTechnologies();
+          const technologiesData = await getTechnologies(true); // Incluir inactivos en Admin
           setTechnologies(technologiesData || []);
           break;
         case "studies":
-          const studiesData = await getStudies();
+          const studiesData = await getStudies(true); // Incluir inactivos en Admin
           setStudies(studiesData || []);
           break;
         case "blog_posts":
-          const blogPostsData = await getBlogPosts();
+          const blogPostsData = await getBlogPosts(true); // Incluir inactivos en Admin
           setBlogPosts(blogPostsData || []);
+          break;
+        case "home_content":
+          const homeContentData = await getHomeContentItems();
+          setHomeContentItems(homeContentData || []);
           break;
       }
     } catch (error) {
@@ -380,6 +390,9 @@ function Admin() {
         case "blog_posts":
           setBlogPosts([]);
           break;
+        case "home_content":
+          setHomeContentItems([]);
+          break;
       }
     } finally {
       setLoadingCRUD(false);
@@ -403,6 +416,10 @@ function Admin() {
     } else if (activeTab === "blog_posts") {
       defaultFormData.platform = "Dev.to";
       defaultFormData.published_at = new Date().toISOString().split("T")[0];
+    } else if (activeTab === "home_content") {
+      defaultFormData.content_type = "latest_post";
+      defaultFormData.is_active = true;
+      defaultFormData.order_index = 0;
     } else if (activeTab === "products") {
       // Valores por defecto para productos
       defaultFormData.button_type = "buy";
@@ -471,6 +488,9 @@ function Admin() {
         break;
       case "blog_posts":
         currentItem = blogPosts.find((b) => b.id === item.id) || item;
+        break;
+      case "home_content":
+        currentItem = homeContentItems.find((h) => h.id === item.id) || item;
         break;
     }
 
@@ -839,6 +859,9 @@ function Admin() {
           break;
         case "blog_posts":
           await deleteBlogPost(id);
+          break;
+        case "home_content":
+          await deleteHomeContentItem(id);
           break;
       }
       await loadCRUDData();
@@ -1331,6 +1354,9 @@ function Admin() {
           case "blog_posts":
             await updateBlogPost(editingItem.id, crudFormData);
             break;
+          case "home_content":
+            await updateHomeContentItem(editingItem.id, crudFormData);
+            break;
         }
       } else {
         // Crear
@@ -1710,6 +1736,9 @@ function Admin() {
             break;
           case "blog_posts":
             await createBlogPost(crudFormData);
+            break;
+          case "home_content":
+            await createHomeContentItem(crudFormData);
             break;
         }
       }
@@ -2259,6 +2288,7 @@ function Admin() {
                 "technologies",
                 "studies",
                 "blog_posts",
+                "home_content",
               ] as const
             ).map((tab) => (
               <button
@@ -2285,6 +2315,7 @@ function Admin() {
                 {tab === "technologies" && t("admin.technologies")}
                 {tab === "studies" && t("admin.studies")}
                 {tab === "blog_posts" && "Blog Posts"}
+                {tab === "home_content" && "Home Content"}
               </button>
             ))}
           </div>
@@ -2314,6 +2345,8 @@ function Admin() {
                 ? technologies
                 : activeTab === "blog_posts"
                 ? blogPosts
+                : activeTab === "home_content"
+                ? homeContentItems
                 : studies
               ).map((item: any) => (
                 <div
@@ -2341,12 +2374,68 @@ function Admin() {
                             ? item.testimonial_content.substring(0, 50) + "..."
                             : item.testimonial_content
                           : t("admin.noTestimonial")
+                        : activeTab === "home_content"
+                        ? item.content_type || t("admin.noDescription")
                         : item.description ||
                           item.url ||
                           t("admin.noDescription")}
                     </p>
                   </div>
-                  <div className="flex gap-2 w-full sm:w-auto">
+                  <div className="flex gap-2 w-full sm:w-auto items-center">
+                    {/* Toggle is_active */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const newIsActive = !item.is_active;
+                          switch (activeTab) {
+                            case "products":
+                              await updateProduct(item.id, { is_active: newIsActive });
+                              break;
+                            case "projects":
+                              await updateProject(item.id, { is_active: newIsActive });
+                              break;
+                            case "clients":
+                              await updateClient(item.id, { is_active: newIsActive });
+                              break;
+                            case "testimonials":
+                              await updateClient(item.id, { is_active: newIsActive });
+                              break;
+                            case "socials":
+                              await updateSocial(item.id, { is_active: newIsActive });
+                              break;
+                            case "events":
+                              await updateEvent(item.id, { is_active: newIsActive });
+                              break;
+                            case "work_experiences":
+                              await updateWorkExperience(item.id, { is_active: newIsActive });
+                              break;
+                            case "technologies":
+                              await updateTechnology(item.id, { is_active: newIsActive });
+                              break;
+                            case "studies":
+                              await updateStudy(item.id, { is_active: newIsActive });
+                              break;
+                            case "blog_posts":
+                              await updateBlogPost(item.id, { is_active: newIsActive });
+                              break;
+                            case "home_content":
+                              await updateHomeContentItem(item.id, { is_active: newIsActive });
+                              break;
+                          }
+                          await loadCRUDData();
+                        } catch (error) {
+                          alert(`Error al actualizar: ${error instanceof Error ? error.message : "Error desconocido"}`);
+                        }
+                      }}
+                      className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded transition-colors cursor-pointer ${
+                        item.is_active
+                          ? "bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-white"
+                          : "bg-gray-500/20 hover:bg-gray-500/30 border border-gray-500/30 text-gray-400"
+                      }`}
+                      title={item.is_active ? t("admin.active") : t("admin.inactive")}
+                    >
+                      {item.is_active ? "✓" : "○"}
+                    </button>
                     <button
                       onClick={() => handleEdit(item)}
                       className="flex-1 sm:flex-none px-2 md:px-3 py-1 text-xs md:text-sm bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-white rounded transition-colors cursor-pointer"
@@ -2380,6 +2469,8 @@ function Admin() {
                 ? technologies
                 : activeTab === "blog_posts"
                 ? blogPosts
+                : activeTab === "home_content"
+                ? homeContentItems
                 : studies
               ).length === 0 && (
                 <div className="text-center py-8 text-gray-400">
@@ -2414,6 +2505,9 @@ function Admin() {
                   )}
                   {activeTab === "blog_posts" && (
                     <p className="text-lg mb-2">No hay posts de blog</p>
+                  )}
+                  {activeTab === "home_content" && (
+                    <p className="text-lg mb-2">No hay contenido configurado</p>
                   )}
                   <p className="text-sm text-gray-500">
                     {t("admin.createNewToStart")}
@@ -2722,6 +2816,10 @@ function Admin() {
                     ? editingItem
                       ? "Editar Post"
                       : "Crear Post"
+                    : activeTab === "home_content"
+                    ? editingItem
+                      ? "Editar Contenido Home"
+                      : "Crear Contenido Home"
                     : editingItem
                     ? t("admin.editStudy")
                     : t("admin.createStudy")}
@@ -5079,6 +5177,224 @@ function Admin() {
                           {t("admin.inProgress")}
                         </option>
                       </select>
+                    </div>
+                  </>
+                )}
+
+                {activeTab === "home_content" && (
+                  <>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Tipo de Contenido *
+                      </label>
+                      <select
+                        value={crudFormData.content_type || "latest_post"}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            content_type: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      >
+                        <option value="latest_post">Último Post</option>
+                        <option value="work_experience">Experiencia Laboral</option>
+                        <option value="projects">Proyectos</option>
+                        <option value="cv_download">Descargar CV</option>
+                      </select>
+                    </div>
+
+                    {crudFormData.content_type === "latest_post" && (
+                      <>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Blog Post ID (opcional - dejar vacío para usar el más reciente)
+                          </label>
+                          <input
+                            type="text"
+                            value={crudFormData.blog_post_id || ""}
+                            onChange={(e) =>
+                              setCrudFormData({
+                                ...crudFormData,
+                                blog_post_id: e.target.value || undefined,
+                              })
+                            }
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            placeholder="UUID del blog post"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Tags (separados por comas, opcional)
+                          </label>
+                          <input
+                            type="text"
+                            value={crudFormData.latest_post_tags?.join(", ") || ""}
+                            onChange={(e) =>
+                              setCrudFormData({
+                                ...crudFormData,
+                                latest_post_tags: e.target.value
+                                  ? e.target.value.split(",").map((t) => t.trim())
+                                  : [],
+                              })
+                            }
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            placeholder="#Desarrollo, #Git, #Tutorial"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {crudFormData.content_type === "work_experience" && (
+                      <>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Work Experience ID (opcional - dejar vacío para usar datos directos)
+                          </label>
+                          <input
+                            type="text"
+                            value={crudFormData.work_experience_id || ""}
+                            onChange={(e) =>
+                              setCrudFormData({
+                                ...crudFormData,
+                                work_experience_id: e.target.value || undefined,
+                              })
+                            }
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            placeholder="UUID del work experience"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Datos Directos (JSON, opcional si hay ID)
+                          </label>
+                          <textarea
+                            value={
+                              crudFormData.work_experience_data
+                                ? JSON.stringify(crudFormData.work_experience_data, null, 2)
+                                : ""
+                            }
+                            onChange={(e) => {
+                              try {
+                                const parsed = e.target.value
+                                  ? JSON.parse(e.target.value)
+                                  : undefined;
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  work_experience_data: parsed,
+                                });
+                              } catch {
+                                // Ignorar JSON inválido mientras se escribe
+                              }
+                            }}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-xs"
+                            rows={5}
+                            placeholder='{"company": "...", "role": "...", ...}'
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {crudFormData.content_type === "projects" && (
+                      <>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Project IDs (separados por comas, en orden)
+                          </label>
+                          <input
+                            type="text"
+                            value={crudFormData.project_ids?.join(", ") || ""}
+                            onChange={(e) =>
+                              setCrudFormData({
+                                ...crudFormData,
+                                project_ids: e.target.value
+                                  ? e.target.value.split(",").map((id) => id.trim())
+                                  : [],
+                              })
+                            }
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            placeholder="uuid1, uuid2, uuid3"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Dejar vacío para usar los proyectos más recientes
+                          </p>
+                        </div>
+                      </>
+                    )}
+
+                    {crudFormData.content_type === "cv_download" && (
+                      <>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            URL del CV *
+                          </label>
+                          <input
+                            type="url"
+                            value={crudFormData.cv_download_url || ""}
+                            onChange={(e) =>
+                              setCrudFormData({
+                                ...crudFormData,
+                                cv_download_url: e.target.value,
+                              })
+                            }
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            placeholder="https://..."
+                            required={crudFormData.content_type === "cv_download"}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Texto del Botón
+                          </label>
+                          <input
+                            type="text"
+                            value={crudFormData.cv_download_text || ""}
+                            onChange={(e) =>
+                              setCrudFormData({
+                                ...crudFormData,
+                                cv_download_text: e.target.value,
+                              })
+                            }
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            placeholder="Descargar CV"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Orden (order_index)
+                      </label>
+                      <input
+                        type="number"
+                        value={crudFormData.order_index || 0}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            order_index: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={crudFormData.is_active !== false}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            is_active: e.target.checked,
+                          })
+                        }
+                        className="w-4 h-4"
+                      />
+                      <label className="text-gray-300 text-sm">
+                        Activo (visible en frontend)
+                      </label>
                     </div>
                   </>
                 )}

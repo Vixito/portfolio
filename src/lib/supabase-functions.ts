@@ -159,10 +159,11 @@ export async function fetchBlogPosts(params?: {
   platform?: "medium" | "devto" | "all";
   username?: string;
 }) {
-  // Leer desde la tabla blog_posts en Supabase
+  // Leer desde la tabla blog_posts en Supabase (solo activos)
   const { data, error } = await supabase
     .from("blog_posts")
     .select("*")
+    .eq("is_active", true)
     .order("published_at", { ascending: false });
 
   if (error) {
@@ -175,11 +176,17 @@ export async function fetchBlogPosts(params?: {
 /**
  * Obtiene todos los posts de blog (para Admin)
  */
-export async function getBlogPosts() {
-  const { data, error } = await supabase
+export async function getBlogPosts(includeInactive = false) {
+  let query = supabase
     .from("blog_posts")
     .select("*")
     .order("published_at", { ascending: false });
+
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Error al obtener posts: ${error.message}`);
@@ -226,6 +233,7 @@ export async function updateBlogPost(
     thumbnail_url: string;
     published_at: string;
     author: string;
+    is_active?: boolean;
   }>
 ) {
   const { data, error } = await supabase
@@ -363,6 +371,7 @@ export async function updateProduct(
     action_url: string;
     pricing_link: string;
     button_text: string;
+    is_active?: boolean;
   }>
 ) {
   const { data, error } = await supabase
@@ -382,11 +391,18 @@ export async function deleteProduct(id: string) {
 }
 
 // ========== CRUD PROJECTS ==========
-export async function getProjects() {
-  const { data, error } = await supabase
+export async function getProjects(includeInactive = false) {
+  let query = supabase
     .from("projects")
     .select("*")
     .order("created_at", { ascending: false }); // Más nuevo primero
+  
+  // Filtrar por is_active solo si no se incluyen inactivos (frontend)
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+  
+  const { data, error } = await query;
   if (error) throw new Error(`Error al obtener proyectos: ${error.message}`);
   return data;
 }
@@ -421,6 +437,7 @@ export async function updateProject(
     year: number;
     thumbnail: string;
     is_special: boolean;
+    is_active?: boolean;
   }>
 ) {
   const { data, error } = await supabase
@@ -439,11 +456,17 @@ export async function deleteProject(id: string) {
 }
 
 // ========== CRUD CLIENTS ==========
-export async function getClients() {
-  const { data, error } = await supabase
+export async function getClients(includeInactive = false) {
+  let query = supabase
     .from("clients")
     .select("*")
     .order("created_at", { ascending: true });
+  
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+  
+  const { data, error } = await query;
   if (error) throw new Error(`Error al obtener clientes: ${error.message}`);
   return data;
 }
@@ -488,6 +511,7 @@ export async function updateClient(
     testimonial_role: string;
     testimonial_role_translations?: { es?: string; en?: string } | null;
     testimonial_url: string;
+    is_active?: boolean;
   }>
 ) {
   const { data, error } = await supabase
@@ -507,12 +531,18 @@ export async function deleteClient(id: string) {
 
 // ========== CRUD TESTIMONIALS ==========
 // Los testimonios están en la tabla clients, pero los tratamos como entidad separada
-export async function getTestimonials() {
-  const { data, error } = await supabase
+export async function getTestimonials(includeInactive = false) {
+  let query = supabase
     .from("clients")
     .select("*")
     .not("testimonial_content", "is", null)
     .order("created_at", { ascending: true });
+  
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+  
+  const { data, error } = await query;
   if (error) throw new Error(`Error al obtener testimonios: ${error.message}`);
   return data;
 }
@@ -577,11 +607,17 @@ export async function deleteTestimonial(clientId: string) {
 }
 
 // ========== CRUD SOCIALS ==========
-export async function getSocials() {
-  const { data, error } = await supabase
+export async function getSocials(includeInactive = false) {
+  let query = supabase
     .from("socials")
     .select("*")
     .order("created_at", { ascending: true });
+  
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+  
+  const { data, error } = await query;
   if (error)
     throw new Error(`Error al obtener redes sociales: ${error.message}`);
   return data;
@@ -617,6 +653,7 @@ export async function updateSocial(
     url: string;
     image: string;
     category: string;
+    is_active?: boolean;
   }>
 ) {
   const { data, error } = await supabase
@@ -636,11 +673,17 @@ export async function deleteSocial(id: string) {
 }
 
 // ========== CRUD EVENTS ==========
-export async function getEvents() {
-  const { data, error } = await supabase
+export async function getEvents(includeInactive = false) {
+  let query = supabase
     .from("events")
     .select("*")
     .order("date", { ascending: true });
+  
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+  
+  const { data, error } = await query;
   if (error) throw new Error(`Error al obtener eventos: ${error.message}`);
   return data;
 }
@@ -673,6 +716,7 @@ export async function updateEvent(
     description_translations?: { es?: string; en?: string } | null;
     passline_url: string;
     thumbnail_url: string;
+    is_active?: boolean;
   }>
 ) {
   const { data, error } = await supabase
@@ -691,11 +735,18 @@ export async function deleteEvent(id: string) {
 }
 
 // ========== CRUD WORK EXPERIENCES ==========
-export async function getWorkExperiences() {
-  const { data, error } = await supabase
+export async function getWorkExperiences(includeInactive = false) {
+  let query = supabase
     .from("work_experiences")
     .select("*")
     .order("start_date", { ascending: false });
+  
+  // Filtrar por is_active solo si no se incluyen inactivos (frontend)
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+  
+  const { data, error } = await query;
   if (error)
     throw new Error(
       `Error al obtener experiencias laborales: ${error.message}`
@@ -754,6 +805,7 @@ export async function updateWorkExperience(
     technologies: string[];
     type: "full-time" | "part-time" | "contract" | "freelance";
     status: "current" | "past";
+    is_active?: boolean;
   }>
 ) {
   const { data, error } = await supabase
@@ -779,11 +831,17 @@ export async function deleteWorkExperience(id: string) {
 }
 
 // ========== CRUD TECHNOLOGIES ==========
-export async function getTechnologies() {
-  const { data, error } = await supabase
+export async function getTechnologies(includeInactive = false) {
+  let query = supabase
     .from("technologies")
     .select("*")
     .order("name", { ascending: true });
+  
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+  
+  const { data, error } = await query;
   if (error) throw new Error(`Error al obtener tecnologías: ${error.message}`);
   return data;
 }
@@ -832,6 +890,7 @@ export async function updateTechnology(
     icon: string;
     years_of_experience: number;
     start_year?: number;
+    is_active?: boolean;
   }>
 ) {
   const { data, error } = await supabase
@@ -851,11 +910,17 @@ export async function deleteTechnology(id: string) {
 }
 
 // ========== CRUD STUDIES ==========
-export async function getStudies() {
-  const { data, error } = await supabase
+export async function getStudies(includeInactive = false) {
+  let query = supabase
     .from("studies")
     .select("*")
     .order("start_date", { ascending: false });
+  
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+  
+  const { data, error } = await query;
   if (error) throw new Error(`Error al obtener estudios: ${error.message}`);
   return data;
 }
@@ -898,6 +963,7 @@ export async function updateStudy(
     logo: string;
     certificate_url: string;
     status: "completed" | "in-progress";
+    is_active?: boolean;
   }>
 ) {
   const { data, error } = await supabase
@@ -1091,4 +1157,287 @@ export async function getPlaylist() {
   );
 
   return gcsPlaylist.length > 0 ? gcsPlaylist : data || [];
+}
+
+/**
+ * Obtiene el contenido de HomeSection desde Supabase
+ */
+export async function getHomeContent() {
+  const { data, error } = await supabase
+    .from("home_content")
+    .select("*")
+    .eq("is_active", true)
+    .order("order_index", { ascending: true });
+
+  if (error) {
+    throw new Error(`Error al obtener contenido de Home: ${error.message}`);
+  }
+
+  return data || [];
+}
+
+/**
+ * Obtiene el último post de blog para HomeSection
+ */
+export async function getLatestBlogPost() {
+  try {
+    // Primero verificar si hay configuración en home_content
+    const { data: homeContent, error: homeContentError } = await supabase
+      .from("home_content")
+      .select("*")
+      .eq("content_type", "latest_post")
+      .eq("is_active", true)
+      .order("order_index", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!homeContentError && homeContent && homeContent.blog_post_id) {
+      // Si hay referencia a un blog_post, obtenerlo
+      const { data: blogPost, error } = await supabase
+        .from("blog_posts")
+        .select("*")
+        .eq("id", homeContent.blog_post_id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!error && blogPost) {
+        return {
+          ...blogPost,
+          tags: homeContent.latest_post_tags || [],
+        };
+      }
+    }
+
+    // Si no hay configuración o falla, obtener el más reciente
+    const { data: blogPosts, error } = await supabase
+      .from("blog_posts")
+      .select("*")
+      .eq("is_active", true)
+      .order("published_at", { ascending: false })
+      .limit(1);
+
+    if (error || !blogPosts || blogPosts.length === 0) {
+      return null;
+    }
+
+    const post = blogPosts[0];
+    
+    // Parsear tags desde el platform (convertir #Medium a "Medium", etc.)
+    const platform = post.platform || "";
+    const tags = platform ? [`#${platform}`] : [];
+
+    return {
+      ...post,
+      tags: homeContent?.latest_post_tags || tags,
+    };
+  } catch (error) {
+    console.error("Error en getLatestBlogPost:", error);
+    return null;
+  }
+}
+
+/**
+ * Obtiene las experiencias laborales para HomeSection
+ */
+export async function getHomeWorkExperiences() {
+  try {
+    const { data: homeContent, error: homeContentError } = await supabase
+      .from("home_content")
+      .select("*")
+      .eq("content_type", "work_experience")
+      .eq("is_active", true)
+      .order("order_index", { ascending: true })
+      .limit(3);
+
+    if (!homeContentError && homeContent && homeContent.length > 0) {
+      // Si hay configuración, usar esos datos
+      const experiences = [];
+      for (const content of homeContent) {
+        if (content.work_experience_id) {
+          const { data: exp, error: expError } = await supabase
+            .from("work_experiences")
+            .select("*")
+            .eq("id", content.work_experience_id)
+            .eq("is_active", true)
+            .maybeSingle();
+          if (!expError && exp) experiences.push(exp);
+        } else if (content.work_experience_data) {
+          experiences.push(content.work_experience_data);
+        }
+      }
+      if (experiences.length > 0) {
+        return experiences;
+      }
+    }
+
+    // Si no hay configuración, obtener las 3 más recientes
+    const { data: experiences, error } = await supabase
+      .from("work_experiences")
+      .select("*")
+      .eq("is_active", true)
+      .order("start_date", { ascending: false })
+      .limit(3);
+
+    if (error) {
+      console.error("Error al obtener experiencias:", error);
+      return [];
+    }
+
+    return experiences || [];
+  } catch (error) {
+    console.error("Error en getHomeWorkExperiences:", error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene la URL del CV para descarga
+ */
+export async function getCVDownloadUrl() {
+  try {
+    const { data: homeContent, error } = await supabase
+      .from("home_content")
+      .select("*")
+      .eq("content_type", "cv_download")
+      .eq("is_active", true)
+      .order("order_index", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !homeContent || !homeContent.cv_download_url) {
+      return null;
+    }
+
+    return {
+      url: homeContent.cv_download_url,
+      text: homeContent.cv_download_text || "Download CV",
+    };
+  } catch (error) {
+    console.error("Error en getCVDownloadUrl:", error);
+    return null;
+  }
+}
+
+/**
+ * Obtiene los proyectos para HomeSection (ScrollableCardStack)
+ */
+export async function getHomeProjects() {
+  try {
+    const { data: homeContent, error: homeContentError } = await supabase
+      .from("home_content")
+      .select("*")
+      .eq("content_type", "projects")
+      .eq("is_active", true)
+      .order("order_index", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!homeContentError && homeContent && homeContent.project_ids && homeContent.project_ids.length > 0) {
+      // Si hay IDs configurados, obtener esos proyectos
+      const { data: projects, error } = await supabase
+        .from("projects")
+        .select("*")
+        .in("id", homeContent.project_ids)
+        .eq("is_active", true);
+
+      if (!error && projects && projects.length > 0) {
+        // Ordenar según el orden en project_ids
+        return homeContent.project_ids
+          .map((id: string) => projects.find((p) => p.id === id))
+          .filter(Boolean);
+      }
+    }
+
+    // Si no hay configuración o no se encontraron proyectos configurados, devolver vacío
+    return [];
+  } catch (error) {
+    console.error("Error en getHomeProjects:", error);
+    return [];
+  }
+}
+
+/**
+ * CRUD para home_content (Admin Panel)
+ */
+export async function getHomeContentItems() {
+  const { data, error } = await supabase
+    .from("home_content")
+    .select("*")
+    .order("order_index", { ascending: true });
+
+  if (error) {
+    throw new Error(`Error al obtener contenido: ${error.message}`);
+  }
+
+  return data || [];
+}
+
+export async function createHomeContentItem(item: {
+  content_type: "latest_post" | "work_experience" | "projects" | "cv_download";
+  blog_post_id?: string;
+  latest_post_title?: string;
+  latest_post_excerpt?: string;
+  latest_post_url?: string;
+  latest_post_date?: string;
+  latest_post_tags?: string[];
+  work_experience_id?: string;
+  work_experience_data?: any;
+  project_ids?: string[];
+  cv_download_url?: string;
+  cv_download_text?: string;
+  is_active?: boolean;
+  order_index?: number;
+}) {
+  const { data, error } = await supabase
+    .from("home_content")
+    .insert(item)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Error al crear contenido: ${error.message}`);
+  }
+
+  return data;
+}
+
+export async function updateHomeContentItem(
+  id: string,
+  updates: Partial<{
+    content_type: "latest_post" | "work_experience" | "projects" | "cv_download";
+    blog_post_id: string;
+    latest_post_title: string;
+    latest_post_excerpt: string;
+    latest_post_url: string;
+    latest_post_date: string;
+    latest_post_tags: string[];
+    work_experience_id: string;
+    work_experience_data: any;
+    project_ids: string[];
+    cv_download_url: string;
+    cv_download_text: string;
+    is_active: boolean;
+    order_index: number;
+  }>
+) {
+  const { data, error } = await supabase
+    .from("home_content")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Error al actualizar contenido: ${error.message}`);
+  }
+
+  return data;
+}
+
+export async function deleteHomeContentItem(id: string) {
+  const { error } = await supabase.from("home_content").delete().eq("id", id);
+
+  if (error) {
+    throw new Error(`Error al eliminar contenido: ${error.message}`);
+  }
 }
