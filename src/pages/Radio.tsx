@@ -107,13 +107,13 @@ function Radio() {
         ) {
           clearTimeout(timeoutId);
           if (!isMounted) return;
+          console.log(
+            `🔧 Estableciendo isLive = false (servicio no disponible: ${response.status})`
+          );
           setIsLive(false);
-          // No loggear errores de servicio no disponible en producción
-          if (import.meta.env.DEV) {
-            console.debug(
-              `Servicio de radio no disponible (${response.status})`
-            );
-          }
+          console.warn(
+            `⚠️ Servicio de radio no disponible (${response.status})`
+          );
           // Continuar con el flujo normal (playlist o offline) - no hacer throw
           setCurrentSong({
             id: "offline",
@@ -164,7 +164,15 @@ function Radio() {
         if (mountpoint) {
           // La radio está activa
           console.log("✅ Radio EN VIVO detectada - Configurando stream");
-          setIsLive(true);
+          console.log("🔧 Estableciendo isLive = true");
+          setIsLive((prevIsLive) => {
+            if (!prevIsLive) {
+              console.log("🔄 isLive cambió de false a true");
+            } else {
+              console.log("ℹ️ isLive ya era true, manteniendo");
+            }
+            return true;
+          });
           const title =
             mountpoint.title ||
             mountpoint.yp_currently_playing ||
@@ -192,6 +200,7 @@ function Radio() {
         } else {
           // La radio no está activa
           console.log("❌ Radio NO está en vivo - mountpoint no encontrado");
+          console.log("🔧 Estableciendo isLive = false");
           setIsLive(false);
 
           // Limpiar el stream si estaba reproduciendo en vivo
@@ -258,10 +267,9 @@ function Radio() {
 
         // Silenciar errores de conexión en producción (NetworkError, CORS, etc.)
         // Solo loggear en desarrollo
-        if (import.meta.env.DEV) {
-          console.debug("Error al cargar metadata de Icecast:", error);
-        }
+        console.warn("⚠️ Error al cargar metadata de Icecast:", error);
         // Si no se puede conectar con Icecast, intentar AzuraCast
+        console.log("🔧 Estableciendo isLive = false (por error de conexión)");
         setIsLive(false);
 
         if (AZURACAST_BASE_URL && AZURACAST_API_KEY) {
@@ -351,6 +359,19 @@ function Radio() {
         console.log("📋 Cargando playlist...");
         const playlistData = await getPlaylist();
         console.log("📋 Playlist cargada:", playlistData?.length, "canciones");
+        console.log("📋 Detalles de la playlist:", playlistData);
+
+        // Verificar si hay canciones en Supabase Storage que no están en la tabla playlist
+        if (playlistData && playlistData.length > 0) {
+          console.log(
+            "📋 URLs de canciones en playlist:",
+            playlistData.map((s: any) => s.url)
+          );
+        } else {
+          console.warn(
+            "⚠️ La playlist está vacía. Verifica que las canciones estén en la tabla 'playlist' de Supabase, no solo en Storage."
+          );
+        }
         if (playlistData && playlistData.length > 0) {
           const songs: Song[] = playlistData.map((item: any) => ({
             id: item.id,
@@ -499,7 +520,15 @@ function Radio() {
       isRadioPage,
       hasAudioRef: !!audioRef.current,
       currentSrc: audioRef.current?.src,
+      ICECAST_STREAM_URL,
     });
+
+    // Debug: Verificar si isLive cambió
+    if (isLive) {
+      console.log("✅ isLive es TRUE - Debería reproducir stream en vivo");
+    } else {
+      console.log("❌ isLive es FALSE - No reproducirá stream en vivo");
+    }
 
     if (isLive && isRadioPage && audioRef.current) {
       // Cuando está en vivo, reproducir automáticamente
