@@ -88,7 +88,21 @@ if [ -n "$JINGLE_URL" ] && [ "$song_count" -gt 0 ]; then
       song_counter=$((song_counter + 1))
       
       # Si es el momento de insertar jingle (cada N canciones, empezando después de la primera)
-      if [ "$song_counter" -gt 1 ] && [ $((song_counter % JINGLE_INTERVAL)) -eq 1 ]; then
+      # Lógica:
+      # - Si intervalo = 1: insertar después de cada canción (song_counter > 1)
+      # - Si intervalo > 1: insertar después de la primera (song_counter == 2) y luego cada N (song_counter % JINGLE_INTERVAL == 1)
+      should_insert_jingle=false
+      if [ "$song_counter" -gt 1 ]; then
+        if [ "$JINGLE_INTERVAL" -eq 1 ]; then
+          # Intervalo = 1: insertar después de cada canción
+          should_insert_jingle=true
+        elif [ "$song_counter" -eq 2 ] || [ $((song_counter % JINGLE_INTERVAL)) -eq 1 ]; then
+          # Intervalo > 1: insertar después de la primera y cada N canciones
+          should_insert_jingle=true
+        fi
+      fi
+      
+      if [ "$should_insert_jingle" = true ]; then
         echo "🎶 Insertando jingle después de $((song_counter - 1)) canciones" >&2
         # Insertar jingle antes de esta canción
         echo "#EXTINF:-1,Radio Vixis Station ID" >> "$PLAYLIST_FILE"
