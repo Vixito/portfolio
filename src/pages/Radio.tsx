@@ -147,9 +147,17 @@ function Radio() {
           clearTimeout(timeoutId);
           if (!isMounted) return;
           // NO cambiar a offline si el audio está reproduciendo (puede ser error temporal)
-          if (!isPlaying || !audioRef.current || audioRef.current.paused) {
+          // Verificar el estado REAL del audio element, no solo el estado de React
+          const audioIsActuallyPlaying =
+            audioRef.current &&
+            !audioRef.current.paused &&
+            !audioRef.current.ended &&
+            audioRef.current.readyState > 2; // HAVE_CURRENT_DATA o superior
+
+          if (!audioIsActuallyPlaying) {
             setIsLive(false);
           }
+          // Si está reproduciendo, mantener el estado actual y no hacer nada
           return;
         }
 
@@ -164,9 +172,16 @@ function Radio() {
           clearTimeout(timeoutId);
           if (!isMounted) return;
 
+          // Verificar el estado REAL del audio element, no solo el estado de React
+          const audioIsActuallyPlaying =
+            audioRef.current &&
+            !audioRef.current.paused &&
+            !audioRef.current.ended &&
+            audioRef.current.readyState > 2; // HAVE_CURRENT_DATA o superior
+
           // Si el audio está reproduciendo, mantener el estado actual (no cambiar a offline)
           // Solo cambiar a offline si realmente no hay stream activo
-          if (!isPlaying || !audioRef.current || audioRef.current.paused) {
+          if (!audioIsActuallyPlaying) {
             setIsLive(false);
             const offlineTitle = t("radio.offlineTitle");
             const offlineArtist = t("radio.waiting");
@@ -401,7 +416,14 @@ function Radio() {
         // Silenciar errores de conexión en producción (NetworkError, CORS, etc.)
         // Si el audio está reproduciendo, NO cambiar a offline (puede ser error temporal de metadata)
         // Solo cambiar a offline si realmente no hay stream activo
-        if (!isPlaying || !audioRef.current || audioRef.current.paused) {
+        // Verificar el estado REAL del audio element, no solo el estado de React
+        const audioIsActuallyPlaying =
+          audioRef.current &&
+          !audioRef.current.paused &&
+          !audioRef.current.ended &&
+          audioRef.current.readyState > 2; // HAVE_CURRENT_DATA o superior
+
+        if (!audioIsActuallyPlaying) {
           setIsLive(false);
           const offlineTitle = t("radio.offlineTitle");
           const offlineArtist = t("radio.waiting");
