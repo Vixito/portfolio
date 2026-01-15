@@ -38,6 +38,16 @@ export async function createRequest(params: {
     p_email: params.email,
     p_request_type: params.request_type,
     p_message: params.message,
+    p_phone: params.phone || null,
+    p_currency: params.currency || null,
+    p_investment_range: params.investmentRange || null,
+    // Guardar currency e investmentRange también en metadata por si acaso
+    p_metadata: params.currency || params.investmentRange
+      ? {
+          currency: params.currency || null,
+          investmentRange: params.investmentRange || null,
+        }
+      : null,
   });
 
   if (error) {
