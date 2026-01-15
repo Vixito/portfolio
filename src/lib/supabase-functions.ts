@@ -44,27 +44,29 @@ export async function createRequest(params: {
     throw new Error(`Error al crear petición: ${error.message}`);
   }
 
-  // Llamar al webhook de n8n para enviar email (no bloquea si falla)
+  // Llamar al webhook de Make.com para enviar email y notificar a Slack (no bloquea si falla)
   const webhookUrl =
-    import.meta.env.VITE_N8N_WEBHOOK_URL ||
-    "https://n8n-production-cde5.up.railway.app/webhook/status-form";
-  try {
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: params.name,
-        email: params.email,
-        phone: params.phone || "",
-        currency: params.currency || "",
-        investmentRange: params.investmentRange || "",
-        requestType: params.request_type,
-        message: params.message,
-      }),
-    });
-  } catch (webhookError) {
-    console.error("Error al enviar webhook:", webhookError);
-    // No lanzar error, solo loguear
+    import.meta.env.VITE_MAKE_WEBHOOK_URL ||
+    import.meta.env.VITE_N8N_WEBHOOK_URL; // Fallback a n8n si existe
+  if (webhookUrl) {
+    try {
+      await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: params.name,
+          email: params.email,
+          phone: params.phone || "",
+          currency: params.currency || "",
+          investmentRange: params.investmentRange || "",
+          requestType: params.request_type,
+          message: params.message,
+        }),
+      });
+    } catch (webhookError) {
+      console.error("Error al enviar webhook a Make.com:", webhookError);
+      // No lanzar error, solo loguear
+    }
   }
 
   return data;
