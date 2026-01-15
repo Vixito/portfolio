@@ -69,7 +69,7 @@ function Studio() {
       specs: [
         {
           label: t("studio.technologies"),
-          value: "Deno + Tailwind CSS + AWS + Supabase",
+          value: "Deno + Tailwind CSS + IaaS + Supabase",
         },
         { label: t("studio.status"), value: t("studio.comingSoon") },
         { label: t("studio.client"), value: "B2B" },
