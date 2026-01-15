@@ -1571,39 +1571,66 @@ export async function updateRadioSettings(settings: {
   jingle_interval?: number;
   is_active?: boolean;
 }) {
-  // Primero intentar obtener la configuración existente
-  const { data: existing } = await supabase
-    .from("radio_settings")
-    .select("*")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (existing) {
-    // Actualizar existente
-    const { data, error } = await supabase
+  try {
+    // Primero intentar obtener la configuración existente (activa o inactiva)
+    const { data: existing, error: fetchError } = await supabase
       .from("radio_settings")
-      .update(settings)
-      .eq("id", existing.id)
-      .select()
-      .single();
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (error) throw error;
-    return data;
-  } else {
-    // Crear nueva configuración
-    const { data, error } = await supabase
-      .from("radio_settings")
-      .insert({
-        jingle_url: settings.jingle_url || "",
-        jingle_interval: settings.jingle_interval || 5,
-        is_active: settings.is_active !== undefined ? settings.is_active : true,
-      })
-      .select()
-      .single();
+    if (fetchError && fetchError.code !== "PGRST116") {
+      // PGRST116 es "no rows returned", que es válido si no hay registros
+      throw new Error(`Error al obtener configuración: ${fetchError.message}`);
+    }
 
-    if (error) throw error;
-    return data;
+    // Preparar datos para insertar/actualizar
+    const settingsData: {
+      jingle_url?: string;
+      jingle_interval?: number;
+      is_active?: boolean;
+      updated_at?: string;
+    } = {
+      ...settings,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (existing) {
+      // Actualizar existente
+      const { data, error } = await supabase
+        .from("radio_settings")
+        .update(settingsData)
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Error al actualizar configuración: ${error.message} (código: ${error.code})`);
+      }
+      return data;
+    } else {
+      // Crear nueva configuración
+      const { data, error } = await supabase
+        .from("radio_settings")
+        .insert({
+          jingle_url: settings.jingle_url || "",
+          jingle_interval: settings.jingle_interval || 5,
+          is_active: settings.is_active !== undefined ? settings.is_active : true,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Error al crear configuración: ${error.message} (código: ${error.code})`);
+      }
+      return data;
+    }
+  } catch (error) {
+    // Re-lanzar con mensaje más descriptivo
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Error desconocido al actualizar configuración de radio: ${String(error)}`);
   }
 }

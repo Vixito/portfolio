@@ -2381,11 +2381,12 @@ function Admin() {
                     );
                     setCrudFormData({});
                   } catch (error) {
+                    console.error("Error al guardar configuración de radio:", error);
                     alert(
                       `Error: ${
                         error instanceof Error
                           ? error.message
-                          : "Error desconocido"
+                          : String(error) || "Error desconocido"
                       }`
                     );
                   }
