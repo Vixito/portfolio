@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { gsap } from "gsap";
-import { getUpcomingEvents, getPlaylist, getRadioSettings } from "../lib/supabase-functions";
+import {
+  getUpcomingEvents,
+  getPlaylist,
+  getRadioSettings,
+} from "../lib/supabase-functions";
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
@@ -665,7 +669,7 @@ function Radio() {
       try {
         setEventsLoading(true);
         const upcomingEvents = await getUpcomingEvents(5); // Obtener 5 eventos próximos
-        
+
         setEvents(upcomingEvents || []);
       } catch (error) {
         setEvents([]);
@@ -948,12 +952,15 @@ function Radio() {
             jingleAudioRef.current.volume = volume;
           }
 
-          jingleAudioRef.current.src = JINGLE_URL;
+          jingleAudioRef.current.src = jingleConfig.jingle_url;
           jingleAudioRef.current.load();
 
           // Cuando el jingle termine, reproducir la siguiente canción
           const handleJingleEnded = () => {
-            jingleAudioRef.current?.removeEventListener("ended", handleJingleEnded);
+            jingleAudioRef.current?.removeEventListener(
+              "ended",
+              handleJingleEnded
+            );
             playNextSong();
           };
 
@@ -1035,17 +1042,17 @@ function Radio() {
 
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateDuration);
-      audio.addEventListener("ended", handleEnded);
-      
-      // Limpiar jingle al desmontar
-      return () => {
-        audio.removeEventListener("ended", handleEnded);
-        if (jingleAudioRef.current) {
-          jingleAudioRef.current.pause();
-          jingleAudioRef.current.src = "";
-          jingleAudioRef.current = null;
-        }
-      };
+    audio.addEventListener("ended", handleEnded);
+
+    // Limpiar jingle al desmontar
+    return () => {
+      audio.removeEventListener("ended", handleEnded);
+      if (jingleAudioRef.current) {
+        jingleAudioRef.current.pause();
+        jingleAudioRef.current.src = "";
+        jingleAudioRef.current = null;
+      }
+    };
     audio.addEventListener("play", handlePlay);
     audio.addEventListener("pause", handlePause);
     audio.addEventListener("error", handleError);
@@ -1054,7 +1061,7 @@ function Radio() {
       audio.removeEventListener("timeupdate", updateTime);
       audio.removeEventListener("loadedmetadata", updateDuration);
       audio.removeEventListener("ended", handleEnded);
-      
+
       // Limpiar jingle al desmontar
       if (jingleAudioRef.current) {
         jingleAudioRef.current.pause();
@@ -1259,10 +1266,10 @@ function Radio() {
         // Forzar actualización INMEDIATA del texto (sin verificar si cambió)
         // El backend es la fuente de verdad - actualizar inmediatamente
         setCurrentSong(newSong);
-        
+
         // Resetear contador de canciones cuando está en vivo (no aplica jingle en vivo)
         songsPlayedCountRef.current = 0;
-        
+
         // Forzar re-render del marquee inmediatamente
         if (marqueeRef.current) {
           gsap.killTweensOf(marqueeRef.current);
