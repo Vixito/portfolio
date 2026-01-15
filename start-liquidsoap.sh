@@ -6,7 +6,10 @@
 set -e
 
 # Cargar variables de entorno desde Doppler
+# Usar 'set -a' para auto-exportar todas las variables que se definan
+set -a
 eval "$(doppler secrets download --no-file --format env --project vixis-portfolio --config cloud)"
+set +a
 
 # Exportar las variables necesarias para Liquidsoap
 # Doppler puede exportar ICECAST_PASSWORD, pero Liquidsoap busca ICECAST_SOURCE_PASSWORD
@@ -15,8 +18,18 @@ if [ -n "$ICECAST_PASSWORD" ] && [ -z "$ICECAST_SOURCE_PASSWORD" ]; then
   export ICECAST_SOURCE_PASSWORD="$ICECAST_PASSWORD"
 fi
 
+# Debug: Verificar que las variables de jingle estén disponibles
+if [ -n "$RADIO_JINGLE_URL" ]; then
+  echo "✅ DEBUG: RADIO_JINGLE_URL está disponible: ${RADIO_JINGLE_URL:0:50}..." >&2
+else
+  echo "⚠️ DEBUG: RADIO_JINGLE_URL NO está disponible" >&2
+fi
+echo "🔍 DEBUG: RADIO_JINGLE_INTERVAL=${RADIO_JINGLE_INTERVAL:-NO_CONFIGURADA}" >&2
+
 # Actualizar playlist antes de iniciar Liquidsoap
-/home/radio/liquidsoap/update-playlist.sh
+# Redirigir stderr a stdout para que los mensajes aparezcan en los logs de systemd
+# Las variables de Doppler ya están exportadas y disponibles
+/home/radio/liquidsoap/update-playlist.sh 2>&1
 
 # Ejecutar Liquidsoap con todas las variables de entorno cargadas
 exec /usr/bin/liquidsoap /home/radio/liquidsoap/radio.liq

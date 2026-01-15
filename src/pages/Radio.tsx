@@ -125,9 +125,16 @@ function Radio() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        const response = await fetch(ICECAST_STATUS_URL, {
+        // Agregar timestamp para evitar cache del navegador
+        const statusUrlWithCacheBust = `${ICECAST_STATUS_URL}?t=${Date.now()}`;
+        const response = await fetch(statusUrlWithCacheBust, {
           cache: "no-cache",
           signal: controller.signal,
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+          },
         });
 
         // Si el servicio no está disponible (503, 502, etc.), manejar silenciosamente
@@ -237,9 +244,26 @@ function Radio() {
 
           // Obtener título/artista de Icecast (metadata del MP3)
           // Usar valores de mountpoint directamente, sin depender de traducciones que cambian
+          // Priorizar server_name que puede tener metadata más actualizada
           const icecastTitle =
-            mountpoint.title || mountpoint.yp_currently_playing || "En Vivo";
-          const icecastArtist = mountpoint.artist || "Radio Vixis";
+            mountpoint.server_name ||
+            mountpoint.title ||
+            mountpoint.yp_currently_playing ||
+            mountpoint.listeners?.title ||
+            "En Vivo";
+          const icecastArtist =
+            mountpoint.artist ||
+            mountpoint.listeners?.artist ||
+            "Radio Vixis";
+          
+          // Debug en desarrollo: mostrar metadata recibida
+          if (import.meta.env.DEV) {
+            console.log("🎵 Icecast metadata:", {
+              title: icecastTitle,
+              artist: icecastArtist,
+              mountpoint: mountpoint,
+            });
+          }
 
           // EL BACKEND ES LA FUENTE DE VERDAD - usar directamente los datos de Icecast
           // Intentar match con playlist de Supabase SOLO para obtener nombres más limpios

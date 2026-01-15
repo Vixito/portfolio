@@ -12,8 +12,17 @@ TEMP_PLAYLIST="/tmp/radio-playlist-temp.m3u"
 JINGLE_URL="${RADIO_JINGLE_URL:-}"
 JINGLE_INTERVAL="${RADIO_JINGLE_INTERVAL:-5}"
 
+# Debug: mostrar configuración (solo si está configurada)
+if [ -n "$JINGLE_URL" ]; then
+  echo "🔍 DEBUG: JINGLE_URL está configurada: ${JINGLE_URL:0:50}..." >&2
+else
+  echo "⚠️ DEBUG: JINGLE_URL NO está configurada (variable RADIO_JINGLE_URL)" >&2
+fi
+echo "🔍 DEBUG: JINGLE_INTERVAL=${JINGLE_INTERVAL}" >&2
+
 # Convertir intervalo a número (default: 5)
 if ! [[ "$JINGLE_INTERVAL" =~ ^[0-9]+$ ]] || [ "$JINGLE_INTERVAL" -lt 1 ]; then
+  echo "⚠️ DEBUG: JINGLE_INTERVAL inválido, usando default: 5" >&2
   JINGLE_INTERVAL=5
 fi
 
@@ -67,7 +76,7 @@ song_count=$(grep -c "^#EXTINF" "$TEMP_PLAYLIST" 2>/dev/null || echo "0")
 
 # Si hay jingle configurado y hay canciones, insertar jingles cada N canciones
 if [ -n "$JINGLE_URL" ] && [ "$song_count" -gt 0 ]; then
-  echo "🎵 Configurando jingle: URL=${JINGLE_URL}, Intervalo=${JINGLE_INTERVAL} canciones"
+  echo "🎵 Configurando jingle: URL=${JINGLE_URL}, Intervalo=${JINGLE_INTERVAL} canciones" >&2
   
   # Generar playlist final con jingles intercalados
   echo "#EXTM3U" > "$PLAYLIST_FILE"
@@ -80,7 +89,7 @@ if [ -n "$JINGLE_URL" ] && [ "$song_count" -gt 0 ]; then
       
       # Si es el momento de insertar jingle (cada N canciones, empezando después de la primera)
       if [ "$song_counter" -gt 1 ] && [ $((song_counter % JINGLE_INTERVAL)) -eq 1 ]; then
-        echo "🎶 Insertando jingle después de $((song_counter - 1)) canciones"
+        echo "🎶 Insertando jingle después de $((song_counter - 1)) canciones" >&2
         # Insertar jingle antes de esta canción
         echo "#EXTINF:-1,Radio Vixis Station ID" >> "$PLAYLIST_FILE"
         echo "$JINGLE_URL" >> "$PLAYLIST_FILE"
@@ -98,12 +107,16 @@ if [ -n "$JINGLE_URL" ] && [ "$song_count" -gt 0 ]; then
   final_count=$(grep -c "^#EXTINF" "$PLAYLIST_FILE" 2>/dev/null || echo "0")
   jingle_count=$((final_count - song_count))
   
-  echo "✅ Playlist actualizada: ${song_count} canciones + ${jingle_count} jingles = ${final_count} entradas totales"
+  echo "✅ Playlist actualizada: ${song_count} canciones + ${jingle_count} jingles = ${final_count} entradas totales" >&2
 else
   # Sin jingle, usar playlist temporal directamente
   mv "$TEMP_PLAYLIST" "$PLAYLIST_FILE"
-  echo "✅ Playlist actualizada: ${song_count} entradas (sin jingles)"
+  if [ -z "$JINGLE_URL" ]; then
+    echo "ℹ️ Playlist actualizada: ${song_count} entradas (sin jingles - RADIO_JINGLE_URL no configurada)" >&2
+  else
+    echo "✅ Playlist actualizada: ${song_count} entradas (sin jingles - no hay canciones)" >&2
+  fi
 fi
 
-echo "📋 Contenido de la playlist:"
-cat "$PLAYLIST_FILE" | head -30  # Mostrar primeras 30 líneas para debug
+echo "📋 Contenido de la playlist (primeras 30 líneas):" >&2
+cat "$PLAYLIST_FILE" | head -30 >&2
