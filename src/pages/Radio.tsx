@@ -127,17 +127,34 @@ function Radio() {
 
         // Agregar timestamp para evitar cache del navegador
         const statusUrlWithCacheBust = `${ICECAST_STATUS_URL}?t=${Date.now()}`;
-        const response = await fetch(statusUrlWithCacheBust, {
-          cache: "no-cache",
-          signal: controller.signal,
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
-          },
-        });
+        let response: Response | null = null;
+
+        try {
+          response = await fetch(statusUrlWithCacheBust, {
+            cache: "no-cache",
+            signal: controller.signal,
+            mode: "cors", // Permitir CORS explícitamente
+            credentials: "omit", // No enviar cookies para evitar problemas CORS
+            headers: {
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+              Pragma: "no-cache",
+              Expires: "0",
+            },
+          });
+        } catch (fetchError) {
+          // Si hay error de CORS o red, no hacer throw - solo retornar
+          // Esto permite que el código continúe sin cambiar a offline si el audio está reproduciendo
+          clearTimeout(timeoutId);
+          if (!isMounted) return;
+          // NO cambiar a offline si el audio está reproduciendo (puede ser error temporal)
+          if (!isPlaying || !audioRef.current || audioRef.current.paused) {
+            setIsLive(false);
+          }
+          return;
+        }
 
         // Si el servicio no está disponible (503, 502, etc.), manejar silenciosamente
+        // NO cambiar a offline si el audio ya está reproduciendo (puede ser un error temporal)
         if (
           !response.ok &&
           (response.status === 503 ||
@@ -146,26 +163,30 @@ function Radio() {
         ) {
           clearTimeout(timeoutId);
           if (!isMounted) return;
-          setIsLive(false);
-          // Continuar con el flujo normal (playlist o offline) - no hacer throw
-          const offlineTitle = t("radio.offlineTitle");
-          const offlineArtist = t("radio.waiting");
-          setCurrentSong((prev) => {
-            // Solo actualizar si los valores realmente cambiaron
-            if (
-              prev?.id === "offline" &&
-              prev?.title === offlineTitle &&
-              prev?.artist === offlineArtist
-            ) {
-              return prev;
-            }
-            return {
-              id: "offline",
-              title: offlineTitle,
-              artist: offlineArtist,
-              url: "",
-            };
-          });
+
+          // Si el audio está reproduciendo, mantener el estado actual (no cambiar a offline)
+          // Solo cambiar a offline si realmente no hay stream activo
+          if (!isPlaying || !audioRef.current || audioRef.current.paused) {
+            setIsLive(false);
+            const offlineTitle = t("radio.offlineTitle");
+            const offlineArtist = t("radio.waiting");
+            setCurrentSong((prev) => {
+              if (
+                prev?.id === "offline" &&
+                prev?.title === offlineTitle &&
+                prev?.artist === offlineArtist
+              ) {
+                return prev;
+              }
+              return {
+                id: "offline",
+                title: offlineTitle,
+                artist: offlineArtist,
+                url: "",
+              };
+            });
+          }
+          // Si está reproduciendo, mantener el estado actual y no hacer nada
           return;
         }
 
@@ -252,10 +273,8 @@ function Radio() {
             mountpoint.listeners?.title ||
             "En Vivo";
           const icecastArtist =
-            mountpoint.artist ||
-            mountpoint.listeners?.artist ||
-            "Radio Vixis";
-          
+            mountpoint.artist || mountpoint.listeners?.artist || "Radio Vixis";
+
           // Debug en desarrollo: mostrar metadata recibida
           if (import.meta.env.DEV) {
             console.log("🎵 Icecast metadata:", {
@@ -380,28 +399,29 @@ function Radio() {
         if (!isMounted) return;
 
         // Silenciar errores de conexión en producción (NetworkError, CORS, etc.)
-        // Solo loggear en desarrollo
-        setIsLive(false);
-
-        // Fallback final: mostrar estado offline (sin establecer URL para evitar cargar el stream)
-        const offlineTitle = t("radio.offlineTitle");
-        const offlineArtist = t("radio.waiting");
-        setCurrentSong((prev) => {
-          // Solo actualizar si los valores realmente cambiaron
-          if (
-            prev?.id === "offline" &&
-            prev?.title === offlineTitle &&
-            prev?.artist === offlineArtist
-          ) {
-            return prev;
-          }
-          return {
-            id: "offline",
-            title: offlineTitle,
-            artist: offlineArtist,
-            url: "",
-          };
-        });
+        // Si el audio está reproduciendo, NO cambiar a offline (puede ser error temporal de metadata)
+        // Solo cambiar a offline si realmente no hay stream activo
+        if (!isPlaying || !audioRef.current || audioRef.current.paused) {
+          setIsLive(false);
+          const offlineTitle = t("radio.offlineTitle");
+          const offlineArtist = t("radio.waiting");
+          setCurrentSong((prev) => {
+            if (
+              prev?.id === "offline" &&
+              prev?.title === offlineTitle &&
+              prev?.artist === offlineArtist
+            ) {
+              return prev;
+            }
+            return {
+              id: "offline",
+              title: offlineTitle,
+              artist: offlineArtist,
+              url: "",
+            };
+          });
+        }
+        // Si está reproduciendo, mantener el estado actual y no hacer nada
       }
     };
 
@@ -1010,30 +1030,54 @@ function Radio() {
     };
     const handlePause = () => setIsPlaying(false);
     const handleError = (e: Event) => {
-      setIsPlaying(false);
-
-      // Loggear información detallada del error para debug
+      // NO pausar automáticamente para errores de red temporales
+      // Solo pausar si es un error crítico de decodificación
       const audio = audioRef.current;
       if (audio) {
         const error = audio.error;
         if (error) {
           let errorMsg = "Error desconocido";
+          let shouldPause = false;
+
           switch (error.code) {
             case error.MEDIA_ERR_ABORTED:
-              errorMsg = "MEDIA_ERR_ABORTED: La reproducción fue abortada";
-              break;
+              // Abortado por el usuario o cambio de fuente - no hacer nada
+              return;
             case error.MEDIA_ERR_NETWORK:
-              errorMsg = "MEDIA_ERR_NETWORK: Error de red";
+              // Error de red - NO pausar, dejar que el stream se recupere
+              errorMsg =
+                "MEDIA_ERR_NETWORK: Error de red (intentando recuperar)";
+              shouldPause = false;
               break;
             case error.MEDIA_ERR_DECODE:
+              // Error de decodificación - pausar solo si es crítico
               errorMsg = "MEDIA_ERR_DECODE: Error al decodificar el audio";
+              shouldPause = true;
               break;
             case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              // Formato no soportado - pausar
               errorMsg = "MEDIA_ERR_SRC_NOT_SUPPORTED: Formato no soportado";
+              shouldPause = true;
               break;
           }
 
-          // Error en el stream de audio - manejar silenciosamente
+          // Solo pausar si es un error crítico
+          if (shouldPause) {
+            setIsPlaying(false);
+          }
+
+          // Solo loggear en desarrollo
+          if (import.meta.env.DEV) {
+            console.error("Audio error:", errorMsg, error);
+          }
+        } else {
+          // Si no hay error específico, puede ser un error temporal de red
+          // NO pausar automáticamente
+          if (import.meta.env.DEV) {
+            console.warn(
+              "Audio error event sin código de error específico (posible error temporal de red)"
+            );
+          }
         }
       }
 
@@ -1055,6 +1099,7 @@ function Radio() {
           audioRef.current.src = "";
           audioRef.current.load();
         }
+        setIsPlaying(false);
         // NO intentar cambiar de canción automáticamente para evitar bucles infinitos
         return;
       }
@@ -1133,10 +1178,22 @@ function Radio() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      const response = await fetch(ICECAST_STATUS_URL, {
-        cache: "no-cache",
-        signal: controller.signal,
-      });
+      let response: Response | null = null;
+
+      try {
+        response = await fetch(ICECAST_STATUS_URL, {
+          cache: "no-cache",
+          signal: controller.signal,
+          mode: "cors",
+          credentials: "omit",
+        });
+      } catch (fetchError) {
+        // Si hay error de CORS o red, manejar silenciosamente
+        clearTimeout(timeoutId);
+        return;
+      }
+
+      if (!response) return;
 
       clearTimeout(timeoutId);
 
