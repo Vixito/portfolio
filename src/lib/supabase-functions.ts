@@ -33,19 +33,24 @@ export async function createRequest(params: {
   currency?: string;
   investmentRange?: string;
 }) {
+  // Preparar los parámetros, convirtiendo strings vacíos a null
+  const phoneValue = params.phone?.trim() || null;
+  const currencyValue = params.currency?.trim() || null;
+  const investmentRangeValue = params.investmentRange?.trim() || null;
+
   const { data, error } = await supabase.rpc("create_request", {
     p_name: params.name,
     p_email: params.email,
     p_request_type: params.request_type,
     p_message: params.message,
-    p_phone: params.phone || null,
-    p_currency: params.currency || null,
-    p_investment_range: params.investmentRange || null,
+    p_phone: phoneValue,
+    p_currency: currencyValue,
+    p_investment_range: investmentRangeValue,
     // Guardar currency e investmentRange también en metadata por si acaso
-    p_metadata: params.currency || params.investmentRange
+    p_metadata: currencyValue || investmentRangeValue
       ? {
-          currency: params.currency || null,
-          investmentRange: params.investmentRange || null,
+          currency: currencyValue,
+          investmentRange: investmentRangeValue,
         }
       : null,
   });
