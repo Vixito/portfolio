@@ -24,7 +24,7 @@ steps:
       - "push"
       - "gcr.io/$PROJECT_ID/portfolio:$SHORT_SHA"
 
-  # Deploy a Cloud Run con el label del desafío
+  # Deploy a Cloud Run con el label del desafío y dominio personalizado
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
@@ -50,6 +50,8 @@ steps:
       - "0"
       - "--max-instances"
       - "10"
+      - "--set-env-vars"
+      - "PORT=8080"
 
 images:
   - "gcr.io/$PROJECT_ID/portfolio:$SHORT_SHA"
