@@ -1515,3 +1515,95 @@ export async function deleteHomeContentItem(id: string) {
     throw new Error(`Error al eliminar contenido: ${error.message}`);
   }
 }
+
+/**
+ * Obtener configuración de la radio (jingle, etc.)
+ */
+export async function getRadioSettings() {
+  try {
+    const { data, error } = await supabase
+      .from("radio_settings")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      // Si la tabla no existe, retornar valores por defecto
+      if (error.code === "42P01") {
+        return {
+          jingle_url: import.meta.env.VITE_RADIO_JINGLE_URL || "",
+          jingle_interval: parseInt(
+            import.meta.env.VITE_RADIO_JINGLE_INTERVAL || "5",
+            10
+          ),
+        };
+      }
+      throw error;
+    }
+
+    // Si hay configuración, usarla; si no, usar valores por defecto
+    return {
+      jingle_url: data?.jingle_url || import.meta.env.VITE_RADIO_JINGLE_URL || "",
+      jingle_interval: data?.jingle_interval || parseInt(
+        import.meta.env.VITE_RADIO_JINGLE_INTERVAL || "5",
+        10
+      ),
+    };
+  } catch (error) {
+    // Si falla, usar valores por defecto desde variables de entorno
+    return {
+      jingle_url: import.meta.env.VITE_RADIO_JINGLE_URL || "",
+      jingle_interval: parseInt(
+        import.meta.env.VITE_RADIO_JINGLE_INTERVAL || "5",
+        10
+      ),
+    };
+  }
+}
+
+/**
+ * Actualizar configuración de la radio
+ */
+export async function updateRadioSettings(settings: {
+  jingle_url?: string;
+  jingle_interval?: number;
+  is_active?: boolean;
+}) {
+  // Primero intentar obtener la configuración existente
+  const { data: existing } = await supabase
+    .from("radio_settings")
+    .select("*")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    // Actualizar existente
+    const { data, error } = await supabase
+      .from("radio_settings")
+      .update(settings)
+      .eq("id", existing.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } else {
+    // Crear nueva configuración
+    const { data, error } = await supabase
+      .from("radio_settings")
+      .insert({
+        jingle_url: settings.jingle_url || "",
+        jingle_interval: settings.jingle_interval || 5,
+        is_active: settings.is_active !== undefined ? settings.is_active : true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+}

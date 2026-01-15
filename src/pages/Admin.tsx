@@ -58,6 +58,8 @@ import {
   createHomeContentItem,
   updateHomeContentItem,
   deleteHomeContentItem,
+  getRadioSettings,
+  updateRadioSettings,
 } from "../lib/supabase-functions";
 
 function Admin() {
@@ -104,6 +106,7 @@ function Admin() {
     | "studies"
     | "blog_posts"
     | "home_content"
+    | "radio_settings"
   >("products");
   const [products, setProducts] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -116,6 +119,7 @@ function Admin() {
   const [studies, setStudies] = useState<any[]>([]);
   const [blogPosts, setBlogPosts] = useState<any[]>([]);
   const [homeContentItems, setHomeContentItems] = useState<any[]>([]);
+  const [radioSettings, setRadioSettings] = useState<any | null>(null);
   const [loadingCRUD, setLoadingCRUD] = useState(false);
   const [showCRUDModal, setShowCRUDModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -354,6 +358,10 @@ function Admin() {
           const homeContentData = await getHomeContentItems();
           setHomeContentItems(homeContentData || []);
           break;
+        case "radio_settings":
+          const radioSettingsData = await getRadioSettings();
+          setRadioSettings(radioSettingsData);
+          break;
       }
     } catch (error) {
       // Solo loggear el error, no mostrar alerta
@@ -393,6 +401,9 @@ function Admin() {
         case "home_content":
           setHomeContentItems([]);
           break;
+        case "radio_settings":
+          setRadioSettings(null);
+          break;
       }
     } finally {
       setLoadingCRUD(false);
@@ -420,6 +431,17 @@ function Admin() {
       defaultFormData.content_type = "latest_post";
       defaultFormData.is_active = true;
       defaultFormData.order_index = 0;
+    } else if (activeTab === "radio_settings") {
+      // Cargar configuración actual de radio
+      if (radioSettings) {
+        defaultFormData.jingle_url = radioSettings.jingle_url || "";
+        defaultFormData.jingle_interval = radioSettings.jingle_interval || 5;
+        defaultFormData.is_active = radioSettings.is_active !== false;
+      } else {
+        defaultFormData.jingle_url = "";
+        defaultFormData.jingle_interval = 5;
+        defaultFormData.is_active = true;
+      }
     } else if (activeTab === "products") {
       // Valores por defecto para productos
       defaultFormData.button_type = "buy";
@@ -2295,6 +2317,7 @@ function Admin() {
                 "studies",
                 "blog_posts",
                 "home_content",
+                "radio_settings",
               ] as const
             ).map((tab) => (
               <button
@@ -2322,12 +2345,146 @@ function Admin() {
                 {tab === "studies" && t("admin.studies")}
                 {tab === "blog_posts" && "Blog Posts"}
                 {tab === "home_content" && "Home Content"}
+                {tab === "radio_settings" && "Radio Settings"}
               </button>
             ))}
           </div>
 
-          {/* Lista de items */}
-          {loadingCRUD ? (
+          {/* Lista de items o formulario de radio_settings */}
+          {activeTab === "radio_settings" ? (
+            <div className="admin-card bg-gray-900 rounded-lg p-4 md:p-6 border border-white/20">
+              <h2 className="text-xl md:text-2xl font-bold text-white mb-4 md:mb-6">
+                Configuración de Radio
+              </h2>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await updateRadioSettings({
+                      jingle_url:
+                        crudFormData.jingle_url ||
+                        radioSettings?.jingle_url ||
+                        "",
+                      jingle_interval:
+                        crudFormData.jingle_interval ||
+                        radioSettings?.jingle_interval ||
+                        5,
+                      is_active:
+                        crudFormData.is_active !== undefined
+                          ? crudFormData.is_active
+                          : true,
+                    });
+                    await loadCRUDData();
+                    alert(
+                      t("admin.saveSuccess") ||
+                        "Configuración guardada exitosamente"
+                    );
+                    setCrudFormData({});
+                  } catch (error) {
+                    alert(
+                      `Error: ${
+                        error instanceof Error
+                          ? error.message
+                          : "Error desconocido"
+                      }`
+                    );
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-gray-300 text-sm mb-2">
+                    URL del Jingle/Station ID *
+                  </label>
+                  <input
+                    type="url"
+                    value={
+                      crudFormData.jingle_url !== undefined
+                        ? crudFormData.jingle_url
+                        : radioSettings?.jingle_url || ""
+                    }
+                    onChange={(e) =>
+                      setCrudFormData({
+                        ...crudFormData,
+                        jingle_url: e.target.value,
+                      })
+                    }
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                    placeholder="https://cdn.vixis.dev/jingle.m4a"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    URL del archivo de audio del jingle (formato .m4a, .mp3,
+                    etc.)
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm mb-2">
+                    Intervalo (cada cuántas canciones) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={
+                      crudFormData.jingle_interval !== undefined
+                        ? crudFormData.jingle_interval
+                        : radioSettings?.jingle_interval || 5
+                    }
+                    onChange={(e) =>
+                      setCrudFormData({
+                        ...crudFormData,
+                        jingle_interval: parseInt(e.target.value) || 5,
+                      })
+                    }
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                    placeholder="5"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Cada cuántas canciones se reproducirá el jingle (mínimo: 1)
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={
+                      crudFormData.is_active !== undefined
+                        ? crudFormData.is_active
+                        : radioSettings?.is_active !== false
+                    }
+                    onChange={(e) =>
+                      setCrudFormData({
+                        ...crudFormData,
+                        is_active: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4"
+                  />
+                  <label className="text-gray-300 text-sm">
+                    Activo (el jingle se reproducirá)
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors cursor-pointer"
+                  >
+                    {t("common.save")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCrudFormData({});
+                      loadCRUDData();
+                    }}
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors cursor-pointer"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : loadingCRUD ? (
             <div className="text-center py-8 text-gray-400">
               {t("common.loading")}
             </div>
@@ -5384,12 +5541,14 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                             placeholder="uuid1, uuid2, uuid3"
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Dejar vacío para crear un proyecto fuera de /projects (usar campos de abajo)
+                            Dejar vacío para crear un proyecto fuera de
+                            /projects (usar campos de abajo)
                           </p>
                         </div>
                         <div>
                           <label className="block text-gray-300 text-sm mb-2">
-                            Nombre del Proyecto * (requerido si no hay Project IDs)
+                            Nombre del Proyecto * (requerido si no hay Project
+                            IDs)
                           </label>
                           <input
                             type="text"
@@ -5407,7 +5566,8 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                             placeholder="Nombre del proyecto"
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Nombre que se mostrará en la Home. Requerido si no usas Project IDs.
+                            Nombre que se mostrará en la Home. Requerido si no
+                            usas Project IDs.
                           </p>
                         </div>
                         <div>
@@ -5441,7 +5601,9 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                           </label>
                           <input
                             type="url"
-                            value={crudFormData.project_data?.thumbnail_url || ""}
+                            value={
+                              crudFormData.project_data?.thumbnail_url || ""
+                            }
                             onChange={(e) =>
                               setCrudFormData({
                                 ...crudFormData,
@@ -5463,7 +5625,8 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block text-gray-300 text-sm mb-2">
-                              Mes (string, opcional - para proyectos que no están en /projects)
+                              Mes (string, opcional - para proyectos que no
+                              están en /projects)
                             </label>
                             <input
                               type="text"
@@ -5486,25 +5649,26 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                           </div>
                           <div>
                             <label className="block text-gray-300 text-sm mb-2">
-                              Año (number, opcional - para proyectos que no están en /projects)
+                              Año (number, opcional - para proyectos que no
+                              están en /projects)
                             </label>
-                              <input
-                                type="number"
-                                value={crudFormData.project_data?.year || ""}
-                                onChange={(e) =>
-                                  setCrudFormData({
-                                    ...crudFormData,
-                                    project_data: {
-                                      ...crudFormData.project_data,
-                                      year: e.target.value
-                                        ? parseInt(e.target.value)
-                                        : undefined,
-                                    },
-                                  })
-                                }
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                                placeholder="2026"
-                              />
+                            <input
+                              type="number"
+                              value={crudFormData.project_data?.year || ""}
+                              onChange={(e) =>
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  project_data: {
+                                    ...crudFormData.project_data,
+                                    year: e.target.value
+                                      ? parseInt(e.target.value)
+                                      : undefined,
+                                  },
+                                })
+                              }
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                              placeholder="2026"
+                            />
                             <p className="text-xs text-gray-500 mt-1">
                               Ejemplo: 2026
                             </p>

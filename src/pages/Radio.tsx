@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { gsap } from "gsap";
-import { getUpcomingEvents, getPlaylist } from "../lib/supabase-functions";
+import { getUpcomingEvents, getPlaylist, getRadioSettings } from "../lib/supabase-functions";
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
@@ -97,13 +97,17 @@ function Radio() {
   const ICECAST_STATUS_URL =
     import.meta.env.VITE_ICECAST_STATUS_URL ||
     "https://radio.vixis.dev/status-json.xsl";
-  // URL del jingle/station ID (reproducir cada cierta cantidad de canciones)
-  const JINGLE_URL =
-    import.meta.env.VITE_RADIO_JINGLE_URL || "";
-  const JINGLE_INTERVAL = parseInt(
-    import.meta.env.VITE_RADIO_JINGLE_INTERVAL || "5",
-    10
-  ); // Cada cuántas canciones reproducir el jingle (default: 5)
+  // Configuración del jingle/station ID (cargada desde Supabase o variables de entorno)
+  const [jingleConfig, setJingleConfig] = useState<{
+    jingle_url: string;
+    jingle_interval: number;
+  }>({
+    jingle_url: import.meta.env.VITE_RADIO_JINGLE_URL || "",
+    jingle_interval: parseInt(
+      import.meta.env.VITE_RADIO_JINGLE_INTERVAL || "5",
+      10
+    ),
+  });
 
   // Cargar metadata del stream de Icecast y verificar si está en vivo
   useEffect(() => {
@@ -661,6 +665,7 @@ function Radio() {
       try {
         setEventsLoading(true);
         const upcomingEvents = await getUpcomingEvents(5); // Obtener 5 eventos próximos
+        
         setEvents(upcomingEvents || []);
       } catch (error) {
         setEvents([]);
@@ -670,6 +675,33 @@ function Radio() {
     };
 
     loadEvents();
+  }, []);
+
+  // Cargar configuración del jingle desde Supabase (y recargar periódicamente)
+  useEffect(() => {
+    const loadJingleConfig = async () => {
+      try {
+        const radioSettings = await getRadioSettings();
+        setJingleConfig({
+          jingle_url: radioSettings.jingle_url,
+          jingle_interval: radioSettings.jingle_interval,
+        });
+      } catch (error) {
+        // Si falla, usar valores por defecto de variables de entorno
+        setJingleConfig({
+          jingle_url: import.meta.env.VITE_RADIO_JINGLE_URL || "",
+          jingle_interval: parseInt(
+            import.meta.env.VITE_RADIO_JINGLE_INTERVAL || "5",
+            10
+          ),
+        });
+      }
+    };
+
+    loadJingleConfig();
+    // Recargar cada 30 segundos para detectar cambios desde Admin
+    const interval = setInterval(loadJingleConfig, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Cargar mensajes iniciales
@@ -878,9 +910,9 @@ function Radio() {
 
         // Verificar si debemos reproducir el jingle/station ID
         const shouldPlayJingle =
-          JINGLE_URL &&
+          jingleConfig.jingle_url &&
           songsPlayedCountRef.current > 0 &&
-          songsPlayedCountRef.current % JINGLE_INTERVAL === 0;
+          songsPlayedCountRef.current % jingleConfig.jingle_interval === 0;
 
         const playNextSong = () => {
           const nextIndex = (currentPlaylistIndex + 1) % playlist.length;
