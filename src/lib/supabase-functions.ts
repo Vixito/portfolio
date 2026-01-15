@@ -1323,16 +1323,22 @@ export async function getCVDownloadUrl() {
  */
 export async function getHomeProjects() {
   try {
-    const { data: homeContent, error: homeContentError } = await supabase
+    // Obtener TODOS los registros de home_content con content_type = "projects"
+    const { data: homeContentList, error: homeContentError } = await supabase
       .from("home_content")
       .select("*")
       .eq("content_type", "projects")
       .eq("is_active", true)
-      .order("order_index", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .order("order_index", { ascending: true });
 
-    if (!homeContentError && homeContent) {
+    if (homeContentError || !homeContentList || homeContentList.length === 0) {
+      return [];
+    }
+
+    const allProjects: any[] = [];
+
+    // Procesar cada registro de home_content
+    for (const homeContent of homeContentList) {
       // Caso 1: Hay project_ids configurados - obtener proyectos de la tabla projects
       if (homeContent.project_ids && homeContent.project_ids.length > 0) {
         const { data: projects, error } = await supabase
@@ -1343,7 +1349,7 @@ export async function getHomeProjects() {
 
         if (!error && projects && projects.length > 0) {
           // Ordenar según el orden en project_ids y aplicar overrides de home_content
-          return homeContent.project_ids
+          const mappedProjects = homeContent.project_ids
             .map((id: string) => {
               const project = projects.find((p) => p.id === id);
               if (!project) return null;
@@ -1363,6 +1369,8 @@ export async function getHomeProjects() {
               };
             })
             .filter(Boolean);
+
+          allProjects.push(...mappedProjects);
         }
       }
 
@@ -1375,23 +1383,21 @@ export async function getHomeProjects() {
         const projectData = homeContent.project_data;
         // Si hay datos suficientes (al menos título o thumbnail), crear el proyecto
         if (projectData.title || projectData.thumbnail_url) {
-          return [
-            {
-              id: `home-content-${homeContent.id}`, // ID virtual
-              title: projectData.title || "Proyecto",
-              url: projectData.url || "",
-              thumbnail: projectData.thumbnail_url || "",
-              month: projectData.month || "",
-              year: projectData.year || new Date().getFullYear(),
-              created_at: homeContent.created_at || new Date().toISOString(),
-            },
-          ];
+          allProjects.push({
+            id: `home-content-${homeContent.id}`, // ID virtual
+            title: projectData.title || "Proyecto",
+            url: projectData.url || "",
+            thumbnail: projectData.thumbnail_url || "",
+            month: projectData.month || "",
+            year: projectData.year || new Date().getFullYear(),
+            created_at: homeContent.created_at || new Date().toISOString(),
+          });
         }
       }
     }
 
-    // Si no hay configuración o no se encontraron proyectos configurados, devolver vacío
-    return [];
+    // Retornar todos los proyectos combinados
+    return allProjects;
   } catch (error) {
     console.error("Error en getHomeProjects:", error);
     return [];
