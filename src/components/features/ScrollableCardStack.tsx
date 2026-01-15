@@ -39,7 +39,28 @@ function ScrollableCardStack() {
 
           if (project.month && project.year) {
             // Prioridad 1: month y year del proyecto (puede venir de project_data o del proyecto)
-            month = project.month;
+            // Si month es un string como "Enero", traducirlo usando las traducciones
+            const monthString = project.month;
+            const monthNames = [
+              t("workExperience.january"),
+              t("workExperience.february"),
+              t("workExperience.march"),
+              t("workExperience.april"),
+              t("workExperience.may"),
+              t("workExperience.june"),
+              t("workExperience.july"),
+              t("workExperience.august"),
+              t("workExperience.september"),
+              t("workExperience.october"),
+              t("workExperience.november"),
+              t("workExperience.december"),
+            ];
+            // Buscar si el mes coincide con alguna traducción (en cualquier idioma)
+            const monthIndex = monthNames.findIndex(
+              (name) => name.toLowerCase() === monthString.toLowerCase()
+            );
+            // Si encontramos match, usar la traducción; si no, usar el string original
+            month = monthIndex >= 0 ? monthNames[monthIndex] : monthString;
             year = project.year;
           } else if (project.created_at) {
             // Fallback: usar created_at solo si no hay month/year

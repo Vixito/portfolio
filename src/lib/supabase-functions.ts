@@ -1415,9 +1415,17 @@ export async function createHomeContentItem(item: {
   is_active?: boolean;
   order_index?: number;
 }) {
+  // Preparar el item para insertar, manejando project_data como JSONB
+  const insertData: any = { ...item };
+  
+  // Si project_data existe, asegurarse de que se guarde como JSONB
+  // Supabase automáticamente convierte objetos a JSONB si la columna existe
+  // Si la columna no existe, necesitamos crearla primero en Supabase
+  // Por ahora, intentamos insertar y si falla, el usuario necesitará crear la columna
+  
   const { data, error } = await supabase
     .from("home_content")
-    .insert(item)
+    .insert(insertData)
     .select()
     .single();
 

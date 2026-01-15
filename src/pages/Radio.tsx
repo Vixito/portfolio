@@ -88,6 +88,8 @@ function Radio() {
   const errorCountRef = useRef(0);
   const lastErrorTimeRef = useRef(0);
   const isPlayingLiveRef = useRef(false); // Para evitar loops en el useEffect de playLive
+  const songsPlayedCountRef = useRef(0); // Contador de canciones reproducidas para el jingle
+  const jingleAudioRef = useRef<HTMLAudioElement | null>(null); // Audio para el jingle/station ID
 
   // URL del stream de Icecast (configurable desde variables de entorno)
   const ICECAST_STREAM_URL =
@@ -95,6 +97,13 @@ function Radio() {
   const ICECAST_STATUS_URL =
     import.meta.env.VITE_ICECAST_STATUS_URL ||
     "https://radio.vixis.dev/status-json.xsl";
+  // URL del jingle/station ID (reproducir cada cierta cantidad de canciones)
+  const JINGLE_URL =
+    import.meta.env.VITE_RADIO_JINGLE_URL || "";
+  const JINGLE_INTERVAL = parseInt(
+    import.meta.env.VITE_RADIO_JINGLE_INTERVAL || "5",
+    10
+  ); // Cada cuántas canciones reproducir el jingle (default: 5)
 
   // Cargar metadata del stream de Icecast y verificar si está en vivo
   useEffect(() => {
@@ -215,6 +224,8 @@ function Radio() {
         if (mountpoint) {
           // La radio está activa
           setIsLive(true);
+          // Resetear contador de canciones cuando está en vivo (no aplica jingle en vivo)
+          songsPlayedCountRef.current = 0;
 
           // Obtener título/artista de Icecast (metadata del MP3)
           // Usar valores de mountpoint directamente, sin depender de traducciones que cambian
@@ -862,29 +873,70 @@ function Radio() {
 
       // Si no está en vivo y hay playlist, pasar a la siguiente canción
       if (!isLive && playlist.length > 0) {
-        const nextIndex = (currentPlaylistIndex + 1) % playlist.length;
-        const nextSong = playlist[nextIndex];
+        // Incrementar contador de canciones reproducidas
+        songsPlayedCountRef.current += 1;
 
-        if (audioRef.current && nextSong && nextSong.url) {
-          // Validar URL antes de intentar cargar
-          try {
-            new URL(nextSong.url);
-            setCurrentPlaylistIndex(nextIndex);
-            setCurrentSong(nextSong);
-            audioRef.current.src = nextSong.url;
-            audioRef.current.volume = volume; // Configurar volumen antes de cargar
-            audioRef.current.muted = false; // Asegurar que no esté mutado
-            audioRef.current.load();
-            // Reproducir automáticamente la siguiente canción
-            audioRef.current.play().catch((error) => {
-              // Si falla el autoplay, no intentar más automáticamente
-            });
-          } catch (urlError) {
-            // URL inválida, solo loggear en desarrollo
-            if (import.meta.env.DEV) {
+        // Verificar si debemos reproducir el jingle/station ID
+        const shouldPlayJingle =
+          JINGLE_URL &&
+          songsPlayedCountRef.current > 0 &&
+          songsPlayedCountRef.current % JINGLE_INTERVAL === 0;
+
+        const playNextSong = () => {
+          const nextIndex = (currentPlaylistIndex + 1) % playlist.length;
+          const nextSong = playlist[nextIndex];
+
+          if (audioRef.current && nextSong && nextSong.url) {
+            // Validar URL antes de intentar cargar
+            try {
+              new URL(nextSong.url);
+              setCurrentPlaylistIndex(nextIndex);
+              setCurrentSong(nextSong);
+              audioRef.current.src = nextSong.url;
+              audioRef.current.volume = volume; // Configurar volumen antes de cargar
+              audioRef.current.muted = false; // Asegurar que no esté mutado
+              audioRef.current.load();
+              // Reproducir automáticamente la siguiente canción
+              audioRef.current.play().catch((error) => {
+                // Si falla el autoplay, no intentar más automáticamente
+              });
+            } catch (urlError) {
+              // URL inválida, solo loggear en desarrollo
+              if (import.meta.env.DEV) {
+              }
+              // NO intentar siguiente canción automáticamente para evitar bucles
             }
-            // NO intentar siguiente canción automáticamente para evitar bucles
           }
+        };
+
+        if (shouldPlayJingle) {
+          // Reproducir jingle/station ID antes de la siguiente canción
+          if (!jingleAudioRef.current) {
+            jingleAudioRef.current = new Audio();
+            jingleAudioRef.current.volume = volume;
+          }
+
+          jingleAudioRef.current.src = JINGLE_URL;
+          jingleAudioRef.current.load();
+
+          // Cuando el jingle termine, reproducir la siguiente canción
+          const handleJingleEnded = () => {
+            jingleAudioRef.current?.removeEventListener("ended", handleJingleEnded);
+            playNextSong();
+          };
+
+          jingleAudioRef.current.addEventListener("ended", handleJingleEnded, {
+            once: true,
+          });
+
+          // Reproducir el jingle
+          jingleAudioRef.current.play().catch((error) => {
+            // Si falla reproducir el jingle, continuar con la siguiente canción
+            playNextSong();
+          });
+        } else {
+          // No reproducir jingle, pasar directamente a la siguiente canción
+          playNextSong();
         }
       }
     };
@@ -951,7 +1003,17 @@ function Radio() {
 
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateDuration);
-    audio.addEventListener("ended", handleEnded);
+      audio.addEventListener("ended", handleEnded);
+      
+      // Limpiar jingle al desmontar
+      return () => {
+        audio.removeEventListener("ended", handleEnded);
+        if (jingleAudioRef.current) {
+          jingleAudioRef.current.pause();
+          jingleAudioRef.current.src = "";
+          jingleAudioRef.current = null;
+        }
+      };
     audio.addEventListener("play", handlePlay);
     audio.addEventListener("pause", handlePause);
     audio.addEventListener("error", handleError);
@@ -960,6 +1022,13 @@ function Radio() {
       audio.removeEventListener("timeupdate", updateTime);
       audio.removeEventListener("loadedmetadata", updateDuration);
       audio.removeEventListener("ended", handleEnded);
+      
+      // Limpiar jingle al desmontar
+      if (jingleAudioRef.current) {
+        jingleAudioRef.current.pause();
+        jingleAudioRef.current.src = "";
+        jingleAudioRef.current = null;
+      }
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("error", handleError);
@@ -1097,6 +1166,8 @@ function Radio() {
 
       if (mountpoint) {
         setIsLive(true);
+        // Resetear contador de canciones cuando está en vivo (no aplica jingle en vivo)
+        songsPlayedCountRef.current = 0;
 
         // EL BACKEND ES LA FUENTE DE VERDAD - usar directamente los datos de Icecast
         const icecastTitle =
@@ -1156,7 +1227,10 @@ function Radio() {
         // Forzar actualización INMEDIATA del texto (sin verificar si cambió)
         // El backend es la fuente de verdad - actualizar inmediatamente
         setCurrentSong(newSong);
-
+        
+        // Resetear contador de canciones cuando está en vivo (no aplica jingle en vivo)
+        songsPlayedCountRef.current = 0;
+        
         // Forzar re-render del marquee inmediatamente
         if (marqueeRef.current) {
           gsap.killTweensOf(marqueeRef.current);
@@ -1918,6 +1992,8 @@ function Radio() {
         crossOrigin="anonymous"
         playsInline
       />
+      {/* Audio element para jingle/station ID (oculto) */}
+      {/* Se crea dinámicamente en handleEnded, pero lo dejamos aquí por si acaso */}
 
       {/* Contenido principal */}
       <div className="pt-10 md:pt-15 flex-1">
