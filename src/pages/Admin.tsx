@@ -5394,11 +5394,14 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                           </label>
                           <input
                             type="url"
-                            value={crudFormData.project_url || ""}
+                            value={crudFormData.project_data?.url || ""}
                             onChange={(e) =>
                               setCrudFormData({
                                 ...crudFormData,
-                                project_url: e.target.value,
+                                project_data: {
+                                  ...crudFormData.project_data,
+                                  url: e.target.value,
+                                },
                               })
                             }
                             className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -5415,11 +5418,14 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                           </label>
                           <input
                             type="url"
-                            value={crudFormData.thumbnail_url || ""}
+                            value={crudFormData.project_data?.thumbnail_url || ""}
                             onChange={(e) =>
                               setCrudFormData({
                                 ...crudFormData,
-                                thumbnail_url: e.target.value,
+                                project_data: {
+                                  ...crudFormData.project_data,
+                                  thumbnail_url: e.target.value,
+                                },
                               })
                             }
                             className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -5430,6 +5436,56 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                             hacer click en la imagen, se abrirá el link del
                             proyecto en una nueva pestaña.
                           </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Mes (string, opcional - para proyectos que no están en /projects)
+                            </label>
+                            <input
+                              type="text"
+                              value={crudFormData.project_data?.month || ""}
+                              onChange={(e) =>
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  project_data: {
+                                    ...crudFormData.project_data,
+                                    month: e.target.value,
+                                  },
+                                })
+                              }
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                              placeholder="Enero"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Ejemplo: Enero, Febrero, Marzo...
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Año (number, opcional - para proyectos que no están en /projects)
+                            </label>
+                              <input
+                                type="number"
+                                value={crudFormData.project_data?.year || ""}
+                                onChange={(e) =>
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    project_data: {
+                                      ...crudFormData.project_data,
+                                      year: e.target.value
+                                        ? parseInt(e.target.value)
+                                        : undefined,
+                                    },
+                                  })
+                                }
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                placeholder="2026"
+                              />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Ejemplo: 2026
+                            </p>
+                          </div>
                         </div>
                       </>
                     )}

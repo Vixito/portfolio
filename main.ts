@@ -19,13 +19,25 @@ Deno.serve({ port }, async (req: Request) => {
       ["js", "css", "json", "map", "woff", "woff2", "ttf", "eot"].includes(ext)
     ) {
       try {
-        const file = await Deno.readFile(`./dist${pathname}`);
+        // Intentar desde dist primero (build de producción)
+        const distPath = `./dist${pathname}`;
+        const file = await Deno.readFile(distPath);
         const contentType = getContentType(ext);
         return new Response(file, {
           headers: { "Content-Type": contentType },
         });
       } catch {
-        // Si el archivo no existe, continuar para servir index.html
+        // Si no existe en dist, intentar desde la raíz
+        try {
+          const rootPath = `.${pathname}`;
+          const file = await Deno.readFile(rootPath);
+          const contentType = getContentType(ext);
+          return new Response(file, {
+            headers: { "Content-Type": contentType },
+          });
+        } catch {
+          // Si el archivo no existe, continuar para servir index.html
+        }
       }
     }
   }
@@ -35,8 +47,8 @@ Deno.serve({ port }, async (req: Request) => {
   // CRÍTICO: Siempre devolver index.html para rutas no estáticas
   // React Router se encargará de mostrar NotFound.tsx para rutas inválidas
   const possiblePaths = [
-    "./dist/index.html", // Build de producción
-    "./index.html", // Fallback
+    "./dist/index.html", // Build de producción (Cloud Run)
+    "./index.html", // Fallback directo
     "dist/index.html",
     "index.html",
   ];
@@ -57,7 +69,7 @@ Deno.serve({ port }, async (req: Request) => {
   if (indexHtml) {
     return new Response(indexHtml, {
       headers: {
-        "Content-Type": "text/html",
+        "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-cache, no-store, must-revalidate",
       },
     });

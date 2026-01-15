@@ -1351,15 +1351,18 @@ export async function getHomeProjects() {
           .map((id: string) => {
             const project = projects.find((p) => p.id === id);
             if (!project) return null;
-            // Si hay project_url o thumbnail_url en home_content, usarlos como override
+            // Si hay project_data en home_content, usarlo como override
+            const projectData = homeContent.project_data || {};
             return {
               ...project,
-              url: homeContent.project_url || project.url || "",
+              url: projectData.url || project.url || "",
               thumbnail:
-                homeContent.thumbnail_url ||
+                projectData.thumbnail_url ||
                 project.thumbnail ||
                 project.thumbnail_url ||
                 "",
+              month: projectData.month || project.month || "",
+              year: projectData.year || project.year || new Date().getFullYear(),
             };
           })
           .filter(Boolean);
@@ -1401,8 +1404,12 @@ export async function createHomeContentItem(item: {
   work_experience_id?: string;
   work_experience_data?: any;
   project_ids?: string[];
-  project_url?: string;
-  thumbnail_url?: string;
+  project_data?: {
+    url?: string;
+    thumbnail_url?: string;
+    month?: string;
+    year?: number;
+  };
   cv_download_url?: string;
   cv_download_text?: string;
   is_active?: boolean;
@@ -1438,8 +1445,12 @@ export async function updateHomeContentItem(
     work_experience_id: string;
     work_experience_data: any;
     project_ids: string[];
-    project_url: string;
-    thumbnail_url: string;
+    project_data: {
+      url?: string;
+      thumbnail_url?: string;
+      month?: string;
+      year?: number;
+    };
     cv_download_url: string;
     cv_download_text: string;
     is_active: boolean;

@@ -32,11 +32,17 @@ function ScrollableCardStack() {
         }
 
         const formattedProjects: Project[] = data.map((project: any) => {
-          // Parsear fecha desde created_at o usar month/year si existen
+          // Priorizar month/year del proyecto (viene de home_content.project_data o del proyecto mismo)
+          // Solo usar created_at como fallback si no hay month/year
           let month = "";
-          let year = 2026;
+          let year = new Date().getFullYear();
 
-          if (project.created_at) {
+          if (project.month && project.year) {
+            // Prioridad 1: month y year del proyecto (puede venir de project_data o del proyecto)
+            month = project.month;
+            year = project.year;
+          } else if (project.created_at) {
+            // Fallback: usar created_at solo si no hay month/year
             const date = new Date(project.created_at);
             const monthNames = [
               t("workExperience.january"),
@@ -54,9 +60,6 @@ function ScrollableCardStack() {
             ];
             month = monthNames[date.getMonth()] || "";
             year = date.getFullYear();
-          } else if (project.month && project.year) {
-            month = project.month;
-            year = project.year;
           }
 
           return {

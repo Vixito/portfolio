@@ -1153,9 +1153,15 @@ function Radio() {
           url: ICECAST_STREAM_URL,
         };
 
-        // Forzar actualización del texto (sin verificar si cambió)
-        // El backend es la fuente de verdad
+        // Forzar actualización INMEDIATA del texto (sin verificar si cambió)
+        // El backend es la fuente de verdad - actualizar inmediatamente
         setCurrentSong(newSong);
+
+        // Forzar re-render del marquee inmediatamente
+        if (marqueeRef.current) {
+          gsap.killTweensOf(marqueeRef.current);
+          gsap.set(marqueeRef.current, { x: 0, clearProps: "transform" });
+        }
 
         // Sincronizar audio: SIEMPRE actualizar el src para que coincida con el backend
         if (audioRef.current) {
