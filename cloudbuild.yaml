@@ -50,8 +50,6 @@ steps:
       - "0"
       - "--max-instances"
       - "10"
-      - "--set-env-vars"
-      - "PORT=8080"
 
 images:
   - "gcr.io/$PROJECT_ID/portfolio:$SHORT_SHA"
