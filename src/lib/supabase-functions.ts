@@ -1332,40 +1332,61 @@ export async function getHomeProjects() {
       .limit(1)
       .maybeSingle();
 
-    if (
-      !homeContentError &&
-      homeContent &&
-      homeContent.project_ids &&
-      homeContent.project_ids.length > 0
-    ) {
-      // Si hay IDs configurados, obtener esos proyectos
-      const { data: projects, error } = await supabase
-        .from("projects")
-        .select("*")
-        .in("id", homeContent.project_ids)
-        .eq("is_active", true);
+    if (!homeContentError && homeContent) {
+      // Caso 1: Hay project_ids configurados - obtener proyectos de la tabla projects
+      if (homeContent.project_ids && homeContent.project_ids.length > 0) {
+        const { data: projects, error } = await supabase
+          .from("projects")
+          .select("*")
+          .in("id", homeContent.project_ids)
+          .eq("is_active", true);
 
-      if (!error && projects && projects.length > 0) {
-        // Ordenar según el orden en project_ids y aplicar overrides de home_content
-        return homeContent.project_ids
-          .map((id: string) => {
-            const project = projects.find((p) => p.id === id);
-            if (!project) return null;
-            // Si hay project_data en home_content, usarlo como override
-            const projectData = homeContent.project_data || {};
-            return {
-              ...project,
-              url: projectData.url || project.url || "",
-              thumbnail:
-                projectData.thumbnail_url ||
-                project.thumbnail ||
-                project.thumbnail_url ||
-                "",
-              month: projectData.month || project.month || "",
-              year: projectData.year || project.year || new Date().getFullYear(),
-            };
-          })
-          .filter(Boolean);
+        if (!error && projects && projects.length > 0) {
+          // Ordenar según el orden en project_ids y aplicar overrides de home_content
+          return homeContent.project_ids
+            .map((id: string) => {
+              const project = projects.find((p) => p.id === id);
+              if (!project) return null;
+              // Si hay project_data en home_content, usarlo como override
+              const projectData = homeContent.project_data || {};
+              return {
+                ...project,
+                url: projectData.url || project.url || "",
+                thumbnail:
+                  projectData.thumbnail_url ||
+                  project.thumbnail ||
+                  project.thumbnail_url ||
+                  "",
+                month: projectData.month || project.month || "",
+                year:
+                  projectData.year || project.year || new Date().getFullYear(),
+              };
+            })
+            .filter(Boolean);
+        }
+      }
+
+      // Caso 2: No hay project_ids pero hay project_data - crear proyecto virtual
+      // Esto permite agregar proyectos que no están en /projects
+      if (
+        (!homeContent.project_ids || homeContent.project_ids.length === 0) &&
+        homeContent.project_data
+      ) {
+        const projectData = homeContent.project_data;
+        // Si hay datos suficientes (al menos título o thumbnail), crear el proyecto
+        if (projectData.title || projectData.thumbnail_url) {
+          return [
+            {
+              id: `home-content-${homeContent.id}`, // ID virtual
+              title: projectData.title || "Proyecto",
+              url: projectData.url || "",
+              thumbnail: projectData.thumbnail_url || "",
+              month: projectData.month || "",
+              year: projectData.year || new Date().getFullYear(),
+              created_at: homeContent.created_at || new Date().toISOString(),
+            },
+          ];
+        }
       }
     }
 
@@ -1405,6 +1426,7 @@ export async function createHomeContentItem(item: {
   work_experience_data?: any;
   project_ids?: string[];
   project_data?: {
+    title?: string;
     url?: string;
     thumbnail_url?: string;
     month?: string;
@@ -1417,12 +1439,12 @@ export async function createHomeContentItem(item: {
 }) {
   // Preparar el item para insertar, manejando project_data como JSONB
   const insertData: any = { ...item };
-  
+
   // Si project_data existe, asegurarse de que se guarde como JSONB
   // Supabase automáticamente convierte objetos a JSONB si la columna existe
   // Si la columna no existe, necesitamos crearla primero en Supabase
   // Por ahora, intentamos insertar y si falla, el usuario necesitará crear la columna
-  
+
   const { data, error } = await supabase
     .from("home_content")
     .insert(insertData)
@@ -1454,6 +1476,7 @@ export async function updateHomeContentItem(
     work_experience_data: any;
     project_ids: string[];
     project_data: {
+      title?: string;
       url?: string;
       thumbnail_url?: string;
       month?: string;

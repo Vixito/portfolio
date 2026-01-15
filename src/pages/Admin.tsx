@@ -5384,7 +5384,30 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                             placeholder="uuid1, uuid2, uuid3"
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Dejar vacío para usar los proyectos más recientes
+                            Dejar vacío para crear un proyecto fuera de /projects (usar campos de abajo)
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Nombre del Proyecto * (requerido si no hay Project IDs)
+                          </label>
+                          <input
+                            type="text"
+                            value={crudFormData.project_data?.title || ""}
+                            onChange={(e) =>
+                              setCrudFormData({
+                                ...crudFormData,
+                                project_data: {
+                                  ...crudFormData.project_data,
+                                  title: e.target.value,
+                                },
+                              })
+                            }
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            placeholder="Nombre del proyecto"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Nombre que se mostrará en la Home. Requerido si no usas Project IDs.
                           </p>
                         </div>
                         <div>

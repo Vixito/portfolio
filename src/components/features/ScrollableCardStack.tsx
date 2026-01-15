@@ -40,7 +40,7 @@ function ScrollableCardStack() {
           if (project.month && project.year) {
             // Prioridad 1: month y year del proyecto (puede venir de project_data o del proyecto)
             // Si month es un string como "Enero", traducirlo usando las traducciones
-            const monthString = project.month;
+            const monthString = project.month.trim();
             const monthNames = [
               t("workExperience.january"),
               t("workExperience.february"),
@@ -55,12 +55,29 @@ function ScrollableCardStack() {
               t("workExperience.november"),
               t("workExperience.december"),
             ];
-            // Buscar si el mes coincide con alguna traducción (en cualquier idioma)
-            const monthIndex = monthNames.findIndex(
-              (name) => name.toLowerCase() === monthString.toLowerCase()
-            );
-            // Si encontramos match, usar la traducción; si no, usar el string original
-            month = monthIndex >= 0 ? monthNames[monthIndex] : monthString;
+            
+            // Mapeo de nombres de meses en español e inglés para detectar el mes
+            const monthMap: Record<string, number> = {
+              enero: 0, january: 0, jan: 0,
+              febrero: 1, february: 1, feb: 1,
+              marzo: 2, march: 2, mar: 2,
+              abril: 3, april: 3, apr: 3,
+              mayo: 4, may: 4,
+              junio: 5, june: 5, jun: 5,
+              julio: 6, july: 6, jul: 6,
+              agosto: 7, august: 7, aug: 7,
+              septiembre: 8, september: 8, sep: 8, sept: 8,
+              octubre: 9, october: 9, oct: 9,
+              noviembre: 10, november: 10, nov: 10,
+              diciembre: 11, december: 11, dec: 11,
+            };
+            
+            // Buscar el índice del mes usando el mapeo
+            const monthKey = monthString.toLowerCase();
+            const monthIndex = monthMap[monthKey];
+            
+            // Si encontramos el mes en el mapeo, usar la traducción; si no, usar el string original
+            month = monthIndex !== undefined ? monthNames[monthIndex] : monthString;
             year = project.year;
           } else if (project.created_at) {
             // Fallback: usar created_at solo si no hay month/year
