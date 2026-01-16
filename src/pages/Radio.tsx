@@ -830,8 +830,10 @@ function Radio() {
         .subscribe((status) => {
           if (status === "SUBSCRIBED") {
             if (import.meta.env.DEV) {
+              console.log("✅ Realtime suscrito a radio_messages");
             }
           } else if (status === "CHANNEL_ERROR") {
+            console.error("❌ Error en Realtime subscription:", status);
             // Error en el WebSocket de Supabase (solo afecta el chat en tiempo real)
           }
         });
@@ -1622,7 +1624,10 @@ function Radio() {
 
     // Validar mensaje
     const trimmedMsg = msg.trim();
-    if (trimmedMsg.length < 1 || trimmedMsg.length > 200) {
+    if (trimmedMsg.length < 1) {
+      return t("radio.messageTooShort");
+    }
+    if (trimmedMsg.length > 200) {
       return t("radio.messageTooLong");
     }
 
@@ -1671,6 +1676,12 @@ function Radio() {
         200
       );
 
+      // Verificar que el mensaje sanitizado no esté vacío
+      if (!sanitizedMessage || sanitizedMessage.trim().length === 0) {
+        alert(t("radio.messageTooShort"));
+        return;
+      }
+
       // Insertar mensaje en la base de datos
       const { data, error } = await supabase
         .from("radio_messages")
@@ -1683,13 +1694,54 @@ function Radio() {
 
       if (error) throw error;
 
-      // NO agregar el mensaje manualmente aquí - el listener de Realtime lo agregará automáticamente
-      // Esto evita duplicación cuando el listener de Realtime también recibe el INSERT
+      // Agregar el mensaje localmente inmediatamente para feedback instantáneo
+      // El listener de Realtime también lo agregará, pero con esta verificación evitamos duplicados
+      if (data) {
+        const newMessage = data as Tables<"radio_messages">;
+        if (import.meta.env.DEV) {
+          console.log("✅ Mensaje insertado en base de datos:", newMessage);
+        }
+        setMessages((prev) => {
+          // Verificar que no exista ya (por si el listener de Realtime llegó primero)
+          const exists = prev.some((msg) => msg.id === newMessage.id);
+          if (exists) {
+            if (import.meta.env.DEV) {
+              console.log(
+                "⚠️ Mensaje ya existe (Realtime llegó primero), ignorando duplicado"
+              );
+            }
+            return prev;
+          }
+          if (import.meta.env.DEV) {
+            console.log("✅ Mensaje agregado localmente:", newMessage.id);
+          }
+          return [...prev, newMessage];
+        });
+        // Auto-scroll al final
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      }
 
       setMessageInput("");
       setLastMessageTime(Date.now());
     } catch (error) {
-      alert(t("common.error"));
+      // Mostrar mensaje de error más descriptivo
+      let errorMessage = t("common.error");
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // Si es un error de Supabase, extraer el mensaje más legible
+        if (error.message.includes("new row violates row-level security")) {
+          errorMessage = "Error de permisos. Por favor, recarga la página.";
+        } else if (error.message.includes("duplicate key")) {
+          errorMessage = "Este mensaje ya fue enviado.";
+        } else if (error.message.includes("violates check constraint")) {
+          errorMessage =
+            "El mensaje no cumple con los requisitos de validación.";
+        }
+      }
+      console.error("Error al enviar mensaje:", error);
+      alert(errorMessage);
     } finally {
       setIsSending(false);
     }
