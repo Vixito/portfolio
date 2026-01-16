@@ -777,6 +777,9 @@ function Radio() {
 
   // Cargar mensajes iniciales
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log("📥 Cargando mensajes iniciales...");
+    }
     const loadMessages = async () => {
       try {
         setMessagesLoading(true);
@@ -786,11 +789,18 @@ function Radio() {
           .order("created_at", { ascending: false })
           .limit(50);
 
-        if (error) throw error;
+        if (error) {
+          console.error("❌ Error al cargar mensajes:", error);
+          throw error;
+        }
 
+        if (import.meta.env.DEV) {
+          console.log("✅ Mensajes cargados:", data?.length || 0, "mensajes");
+        }
         // Invertir para mostrar los más antiguos arriba
         setMessages((data || []).reverse());
       } catch (error) {
+        console.error("❌ Error en loadMessages:", error);
         setMessages([]);
       } finally {
         setMessagesLoading(false);
@@ -802,17 +812,21 @@ function Radio() {
 
   // Suscripción Realtime para nuevos mensajes
   useEffect(() => {
-    console.log("🔧 Inicializando suscripción Realtime...");
-    console.log(
-      "🔧 Supabase URL:",
-      import.meta.env.VITE_SUPABASE_URL ? "✅ Configurado" : "❌ No configurado"
-    );
-    console.log(
-      "🔧 Supabase Key:",
-      import.meta.env.VITE_SUPABASE_ANON_KEY
-        ? "✅ Configurado"
-        : "❌ No configurado"
-    );
+    if (import.meta.env.DEV) {
+      console.log("🔧 Inicializando suscripción Realtime...");
+      console.log(
+        "🔧 Supabase URL:",
+        import.meta.env.VITE_SUPABASE_URL
+          ? "✅ Configurado"
+          : "❌ No configurado"
+      );
+      console.log(
+        "🔧 Supabase Key:",
+        import.meta.env.VITE_SUPABASE_ANON_KEY
+          ? "✅ Configurado"
+          : "❌ No configurado"
+      );
+    }
 
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
@@ -828,30 +842,41 @@ function Radio() {
           },
           (payload) => {
             const newMessage = payload.new as Tables<"radio_messages">;
-            console.log("📨 Nuevo mensaje recibido vía Realtime:", newMessage);
+            if (import.meta.env.DEV) {
+              console.log(
+                "📨 Nuevo mensaje recibido vía Realtime:",
+                newMessage
+              );
+            }
 
             // Verificar que el mensaje no exista ya para evitar duplicados
             setMessages((prev) => {
-              console.log(
-                "📝 Estado actual antes de Realtime:",
-                prev.length,
-                "mensajes"
-              );
+              if (import.meta.env.DEV) {
+                console.log(
+                  "📝 Estado actual antes de Realtime:",
+                  prev.length,
+                  "mensajes"
+                );
+              }
 
               const exists = prev.some((msg) => msg.id === newMessage.id);
               if (exists) {
-                console.log(
-                  "⚠️ Mensaje duplicado ignorado (ya existe localmente):",
-                  newMessage.id
-                );
+                if (import.meta.env.DEV) {
+                  console.log(
+                    "⚠️ Mensaje duplicado ignorado (ya existe localmente):",
+                    newMessage.id
+                  );
+                }
                 return prev;
               }
 
-              console.log(
-                "✅ Agregando mensaje vía Realtime:",
-                newMessage.id,
-                newMessage.message
-              );
+              if (import.meta.env.DEV) {
+                console.log(
+                  "✅ Agregando mensaje vía Realtime:",
+                  newMessage.id,
+                  newMessage.message
+                );
+              }
 
               // Agregar y ordenar por created_at para mantener orden cronológico
               const updated = [...prev, newMessage];
@@ -861,11 +886,13 @@ function Radio() {
                   new Date(b.created_at).getTime()
               );
 
-              console.log(
-                "📊 Mensajes después de Realtime:",
-                sorted.length,
-                "mensajes"
-              );
+              if (import.meta.env.DEV) {
+                console.log(
+                  "📊 Mensajes después de Realtime:",
+                  sorted.length,
+                  "mensajes"
+                );
+              }
               return sorted;
             });
 
@@ -876,9 +903,13 @@ function Radio() {
           }
         )
         .subscribe((status) => {
-          console.log("🔌 Estado de Realtime subscription:", status);
+          if (import.meta.env.DEV) {
+            console.log("🔌 Estado de Realtime subscription:", status);
+          }
           if (status === "SUBSCRIBED") {
-            console.log("✅ Realtime suscrito a radio_messages");
+            if (import.meta.env.DEV) {
+              console.log("✅ Realtime suscrito a radio_messages");
+            }
           } else if (status === "CHANNEL_ERROR") {
             console.error("❌ Error en Realtime subscription:", status);
             // Error en el WebSocket de Supabase (solo afecta el chat en tiempo real)
@@ -1735,7 +1766,9 @@ function Radio() {
       }
 
       // Insertar mensaje en la base de datos
-      console.log("📤 Enviando mensaje a Supabase...");
+      if (import.meta.env.DEV) {
+        console.log("📤 Enviando mensaje a Supabase...");
+      }
       const { data, error } = await supabase
         .from("radio_messages")
         .insert({
@@ -1750,10 +1783,12 @@ function Radio() {
         throw error;
       }
 
-      console.log(
-        "✅ Respuesta de Supabase:",
-        data ? "Data recibida" : "Sin data"
-      );
+      if (import.meta.env.DEV) {
+        console.log(
+          "✅ Respuesta de Supabase:",
+          data ? "Data recibida" : "Sin data"
+        );
+      }
 
       // Agregar el mensaje localmente INMEDIATAMENTE para feedback instantáneo
       // Esto asegura que el mensaje aparezca sin esperar a Realtime
@@ -1763,26 +1798,34 @@ function Radio() {
       }
 
       const newMessage = data as Tables<"radio_messages">;
-      console.log("✅ Mensaje insertado en base de datos:", newMessage);
+      if (import.meta.env.DEV) {
+        console.log("✅ Mensaje insertado en base de datos:", newMessage);
+      }
 
       // Agregar inmediatamente al estado (sin esperar Realtime)
       setMessages((prev) => {
-        console.log("📝 Estado actual de mensajes:", prev.length, "mensajes");
+        if (import.meta.env.DEV) {
+          console.log("📝 Estado actual de mensajes:", prev.length, "mensajes");
+        }
 
         // Verificar que no exista ya (por si el listener de Realtime llegó primero)
         const exists = prev.some((msg) => msg.id === newMessage.id);
         if (exists) {
-          console.log(
-            "⚠️ Mensaje ya existe (Realtime llegó primero), ignorando duplicado"
-          );
+          if (import.meta.env.DEV) {
+            console.log(
+              "⚠️ Mensaje ya existe (Realtime llegó primero), ignorando duplicado"
+            );
+          }
           return prev;
         }
 
-        console.log(
-          "✅ Agregando mensaje localmente:",
-          newMessage.id,
-          newMessage.message
-        );
+        if (import.meta.env.DEV) {
+          console.log(
+            "✅ Agregando mensaje localmente:",
+            newMessage.id,
+            newMessage.message
+          );
+        }
 
         // Agregar al final y ordenar por created_at para mantener orden cronológico
         const updated = [...prev, newMessage];
@@ -1791,11 +1834,13 @@ function Radio() {
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
 
-        console.log(
-          "📊 Mensajes después de agregar:",
-          sorted.length,
-          "mensajes"
-        );
+        if (import.meta.env.DEV) {
+          console.log(
+            "📊 Mensajes después de agregar:",
+            sorted.length,
+            "mensajes"
+          );
+        }
         return sorted;
       });
 
