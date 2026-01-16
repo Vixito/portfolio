@@ -1308,9 +1308,10 @@ export async function getHomeWorkExperiences() {
 }
 
 /**
- * Obtiene la URL del CV para descarga
+ * Obtiene la URL del CV para descarga según el idioma
+ * @param language - Idioma actual ("es" | "en")
  */
-export async function getCVDownloadUrl() {
+export async function getCVDownloadUrl(language: "es" | "en" = "es") {
   try {
     const { data: homeContent, error } = await supabase
       .from("home_content")
@@ -1321,13 +1322,25 @@ export async function getCVDownloadUrl() {
       .limit(1)
       .maybeSingle();
 
-    if (error || !homeContent || !homeContent.cv_download_url) {
+    if (error || !homeContent) {
+      return null;
+    }
+
+    // Obtener URL y texto según el idioma
+    const urlField = language === "es" ? "cv_download_url_es" : "cv_download_url_en";
+    const textField = language === "es" ? "cv_download_text_es" : "cv_download_text_en";
+    
+    // Fallback a campos antiguos si los nuevos no existen (compatibilidad)
+    const url = homeContent[urlField] || homeContent.cv_download_url || null;
+    const text = homeContent[textField] || homeContent.cv_download_text || (language === "es" ? "Descargar CV" : "Download CV");
+
+    if (!url) {
       return null;
     }
 
     return {
-      url: homeContent.cv_download_url,
-      text: homeContent.cv_download_text || "Download CV",
+      url,
+      text,
     };
   } catch (error) {
     console.error("Error en getCVDownloadUrl:", error);
@@ -1455,8 +1468,12 @@ export async function createHomeContentItem(item: {
     month?: string;
     year?: number;
   };
-  cv_download_url?: string;
-  cv_download_text?: string;
+  cv_download_url?: string; // Campo antiguo (compatibilidad)
+  cv_download_text?: string; // Campo antiguo (compatibilidad)
+  cv_download_url_es?: string;
+  cv_download_url_en?: string;
+  cv_download_text_es?: string;
+  cv_download_text_en?: string;
   is_active?: boolean;
   order_index?: number;
 }) {
@@ -1505,8 +1522,12 @@ export async function updateHomeContentItem(
       month?: string;
       year?: number;
     };
-    cv_download_url: string;
-    cv_download_text: string;
+    cv_download_url: string; // Campo antiguo (compatibilidad)
+    cv_download_text: string; // Campo antiguo (compatibilidad)
+    cv_download_url_es: string;
+    cv_download_url_en: string;
+    cv_download_text_es: string;
+    cv_download_text_en: string;
     is_active: boolean;
     order_index: number;
   }>

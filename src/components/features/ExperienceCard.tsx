@@ -33,7 +33,7 @@ function ExperienceCard() {
         setLoading(true);
         const [exps, cv] = await Promise.all([
           getHomeWorkExperiences(),
-          getCVDownloadUrl(),
+          getCVDownloadUrl(language),
         ]);
 
         // Formatear experiencias

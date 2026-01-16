@@ -519,6 +519,19 @@ function Admin() {
     setEditingItem(currentItem);
     const formData = { ...currentItem };
 
+    // Migrar campos antiguos de CV a nuevos campos por idioma (compatibilidad)
+    if (activeTab === "home_content" && currentItem.content_type === "cv_download") {
+      // Si existen campos antiguos pero no los nuevos, migrar
+      if (currentItem.cv_download_url && !currentItem.cv_download_url_es && !currentItem.cv_download_url_en) {
+        formData.cv_download_url_es = currentItem.cv_download_url;
+        formData.cv_download_url_en = currentItem.cv_download_url;
+      }
+      if (currentItem.cv_download_text && !currentItem.cv_download_text_es && !currentItem.cv_download_text_en) {
+        formData.cv_download_text_es = currentItem.cv_download_text;
+        formData.cv_download_text_en = currentItem.cv_download_text;
+      }
+    }
+
     // Extraer traducciones de campos JSONB a campos separados ES/EN
     if (activeTab === "products") {
       const titleTrans = extractTranslations(
@@ -2381,7 +2394,10 @@ function Admin() {
                     );
                     setCrudFormData({});
                   } catch (error) {
-                    console.error("Error al guardar configuración de radio:", error);
+                    console.error(
+                      "Error al guardar configuración de radio:",
+                      error
+                    );
                     alert(
                       `Error: ${
                         error instanceof Error
@@ -5680,42 +5696,95 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
 
                     {crudFormData.content_type === "cv_download" && (
                       <>
-                        <div>
-                          <label className="block text-gray-300 text-sm mb-2">
-                            URL del CV *
-                          </label>
-                          <input
-                            type="url"
-                            value={crudFormData.cv_download_url || ""}
-                            onChange={(e) =>
-                              setCrudFormData({
-                                ...crudFormData,
-                                cv_download_url: e.target.value,
-                              })
-                            }
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                            placeholder="https://..."
-                            required={
-                              crudFormData.content_type === "cv_download"
-                            }
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-gray-300 text-sm mb-2">
-                            Texto del Botón
-                          </label>
-                          <input
-                            type="text"
-                            value={crudFormData.cv_download_text || ""}
-                            onChange={(e) =>
-                              setCrudFormData({
-                                ...crudFormData,
-                                cv_download_text: e.target.value,
-                              })
-                            }
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                            placeholder="Descargar CV"
-                          />
+                        <div className="space-y-4">
+                          <div className="border-b border-gray-700 pb-2">
+                            <h3 className="text-gray-300 font-semibold text-sm mb-3">
+                              CV en Español
+                            </h3>
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-gray-300 text-sm mb-2">
+                                  URL del CV (Español) *
+                                </label>
+                                <input
+                                  type="url"
+                                  value={crudFormData.cv_download_url_es || ""}
+                                  onChange={(e) =>
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      cv_download_url_es: e.target.value,
+                                    })
+                                  }
+                                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                  placeholder="https://..."
+                                  required={
+                                    crudFormData.content_type === "cv_download"
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-gray-300 text-sm mb-2">
+                                  Texto del Botón (Español)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={crudFormData.cv_download_text_es || ""}
+                                  onChange={(e) =>
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      cv_download_text_es: e.target.value,
+                                    })
+                                  }
+                                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                  placeholder="Descargar CV"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <h3 className="text-gray-300 font-semibold text-sm mb-3">
+                              CV en Inglés
+                            </h3>
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-gray-300 text-sm mb-2">
+                                  URL del CV (Inglés) *
+                                </label>
+                                <input
+                                  type="url"
+                                  value={crudFormData.cv_download_url_en || ""}
+                                  onChange={(e) =>
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      cv_download_url_en: e.target.value,
+                                    })
+                                  }
+                                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                  placeholder="https://..."
+                                  required={
+                                    crudFormData.content_type === "cv_download"
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-gray-300 text-sm mb-2">
+                                  Texto del Botón (Inglés)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={crudFormData.cv_download_text_en || ""}
+                                  onChange={(e) =>
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      cv_download_text_en: e.target.value,
+                                    })
+                                  }
+                                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                  placeholder="Download CV"
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </>
                     )}
