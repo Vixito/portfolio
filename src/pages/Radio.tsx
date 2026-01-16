@@ -815,32 +815,47 @@ function Radio() {
           },
           (payload) => {
             const newMessage = payload.new as Tables<"radio_messages">;
-            if (import.meta.env.DEV) {
-              console.log(
-                "📨 Nuevo mensaje recibido vía Realtime:",
-                newMessage
-              );
-            }
+            console.log("📨 Nuevo mensaje recibido vía Realtime:", newMessage);
+
             // Verificar que el mensaje no exista ya para evitar duplicados
             setMessages((prev) => {
+              console.log(
+                "📝 Estado actual antes de Realtime:",
+                prev.length,
+                "mensajes"
+              );
+
               const exists = prev.some((msg) => msg.id === newMessage.id);
               if (exists) {
-                if (import.meta.env.DEV) {
-                  console.log("⚠️ Mensaje duplicado ignorado:", newMessage.id);
-                }
+                console.log(
+                  "⚠️ Mensaje duplicado ignorado (ya existe localmente):",
+                  newMessage.id
+                );
                 return prev;
               }
-              if (import.meta.env.DEV) {
-                console.log("✅ Mensaje agregado vía Realtime:", newMessage.id);
-              }
+
+              console.log(
+                "✅ Agregando mensaje vía Realtime:",
+                newMessage.id,
+                newMessage.message
+              );
+
               // Agregar y ordenar por created_at para mantener orden cronológico
               const updated = [...prev, newMessage];
-              return updated.sort(
+              const sorted = updated.sort(
                 (a, b) =>
                   new Date(a.created_at).getTime() -
                   new Date(b.created_at).getTime()
               );
+
+              console.log(
+                "📊 Mensajes después de Realtime:",
+                sorted.length,
+                "mensajes"
+              );
+              return sorted;
             });
+
             // Auto-scroll al final
             setTimeout(() => {
               messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1716,44 +1731,52 @@ function Radio() {
 
       // Agregar el mensaje localmente INMEDIATAMENTE para feedback instantáneo
       // Esto asegura que el mensaje aparezca sin esperar a Realtime
-      if (data) {
-        const newMessage = data as Tables<"radio_messages">;
-        if (import.meta.env.DEV) {
-          console.log("✅ Mensaje insertado en base de datos:", newMessage);
+      if (!data) {
+        console.error("❌ No se recibió data después de insertar mensaje");
+        throw new Error("No se recibió data del servidor");
+      }
+
+      const newMessage = data as Tables<"radio_messages">;
+      console.log("✅ Mensaje insertado en base de datos:", newMessage);
+
+      // Agregar inmediatamente al estado (sin esperar Realtime)
+      setMessages((prev) => {
+        console.log("📝 Estado actual de mensajes:", prev.length, "mensajes");
+
+        // Verificar que no exista ya (por si el listener de Realtime llegó primero)
+        const exists = prev.some((msg) => msg.id === newMessage.id);
+        if (exists) {
+          console.log(
+            "⚠️ Mensaje ya existe (Realtime llegó primero), ignorando duplicado"
+          );
+          return prev;
         }
 
-        // Agregar inmediatamente al estado (sin esperar Realtime)
-        setMessages((prev) => {
-          // Verificar que no exista ya (por si el listener de Realtime llegó primero)
-          const exists = prev.some((msg) => msg.id === newMessage.id);
-          if (exists) {
-            if (import.meta.env.DEV) {
-              console.log(
-                "⚠️ Mensaje ya existe (Realtime llegó primero), ignorando duplicado"
-              );
-            }
-            return prev;
-          }
-          if (import.meta.env.DEV) {
-            console.log("✅ Mensaje agregado localmente:", newMessage.id);
-          }
-          // Agregar al final y ordenar por created_at para mantener orden cronológico
-          const updated = [...prev, newMessage];
-          return updated.sort(
-            (a, b) =>
-              new Date(a.created_at).getTime() -
-              new Date(b.created_at).getTime()
-          );
-        });
+        console.log(
+          "✅ Agregando mensaje localmente:",
+          newMessage.id,
+          newMessage.message
+        );
 
-        // Auto-scroll al final inmediatamente
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 50);
-      } else {
-        // Si no hay data, algo salió mal
-        console.error("❌ No se recibió data después de insertar mensaje");
-      }
+        // Agregar al final y ordenar por created_at para mantener orden cronológico
+        const updated = [...prev, newMessage];
+        const sorted = updated.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+
+        console.log(
+          "📊 Mensajes después de agregar:",
+          sorted.length,
+          "mensajes"
+        );
+        return sorted;
+      });
+
+      // Auto-scroll al final inmediatamente
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
 
       setMessageInput("");
       setLastMessageTime(Date.now());
