@@ -22,6 +22,7 @@ interface Song {
 }
 
 function Radio() {
+  console.log("🎵 Componente Radio montado");
   const { t, language } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const marqueeRef = useRef<HTMLDivElement>(null);
@@ -801,6 +802,18 @@ function Radio() {
 
   // Suscripción Realtime para nuevos mensajes
   useEffect(() => {
+    console.log("🔧 Inicializando suscripción Realtime...");
+    console.log(
+      "🔧 Supabase URL:",
+      import.meta.env.VITE_SUPABASE_URL ? "✅ Configurado" : "❌ No configurado"
+    );
+    console.log(
+      "🔧 Supabase Key:",
+      import.meta.env.VITE_SUPABASE_ANON_KEY
+        ? "✅ Configurado"
+        : "❌ No configurado"
+    );
+
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     try {
@@ -863,16 +876,20 @@ function Radio() {
           }
         )
         .subscribe((status) => {
+          console.log("🔌 Estado de Realtime subscription:", status);
           if (status === "SUBSCRIBED") {
-            if (import.meta.env.DEV) {
-              console.log("✅ Realtime suscrito a radio_messages");
-            }
+            console.log("✅ Realtime suscrito a radio_messages");
           } else if (status === "CHANNEL_ERROR") {
             console.error("❌ Error en Realtime subscription:", status);
             // Error en el WebSocket de Supabase (solo afecta el chat en tiempo real)
+          } else if (status === "TIMED_OUT") {
+            console.error("⏱️ Realtime subscription TIMED_OUT");
+          } else if (status === "CLOSED") {
+            console.warn("🔴 Realtime subscription CLOSED");
           }
         });
     } catch (error) {
+      console.error("❌ Error al suscribirse a Realtime:", error);
       // Error al suscribirse al WebSocket de Supabase (solo afecta el chat en tiempo real)
     }
 
@@ -1718,6 +1735,7 @@ function Radio() {
       }
 
       // Insertar mensaje en la base de datos
+      console.log("📤 Enviando mensaje a Supabase...");
       const { data, error } = await supabase
         .from("radio_messages")
         .insert({
@@ -1727,7 +1745,15 @@ function Radio() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Error al insertar mensaje:", error);
+        throw error;
+      }
+
+      console.log(
+        "✅ Respuesta de Supabase:",
+        data ? "Data recibida" : "Sin data"
+      );
 
       // Agregar el mensaje localmente INMEDIATAMENTE para feedback instantáneo
       // Esto asegura que el mensaje aparezca sin esperar a Realtime
