@@ -65,7 +65,7 @@ function Radio() {
   const eventsContainerRef = useRef<HTMLDivElement>(null);
 
   // Estados del chat
-  const [messages, setMessages] = useState<Tables<"messages">[]>([]);
+  const [messages, setMessages] = useState<Tables<"radio_messages">[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [username, setUsername] = useState<string>(() => {
     // Cargar username del localStorage si existe
@@ -780,7 +780,7 @@ function Radio() {
       try {
         setMessagesLoading(true);
         const { data, error } = await supabase
-          .from("messages")
+          .from("radio_messages")
           .select("*")
           .order("created_at", { ascending: false })
           .limit(50);
@@ -1673,7 +1673,7 @@ function Radio() {
 
       // Insertar mensaje en la base de datos
       const { data, error } = await supabase
-        .from("messages")
+        .from("radio_messages")
         .insert({
           username: sanitizedUsername,
           message: sanitizedMessage,

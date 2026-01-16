@@ -47,7 +47,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      messages: {
+      radio_messages: {
         Row: {
           created_at: string;
           id: string;
