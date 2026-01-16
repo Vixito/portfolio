@@ -811,10 +811,10 @@ function Radio() {
           {
             event: "INSERT",
             schema: "public",
-            table: "messages",
+            table: "radio_messages",
           },
           (payload) => {
-            const newMessage = payload.new as Tables<"messages">;
+            const newMessage = payload.new as Tables<"radio_messages">;
             // Verificar que el mensaje no exista ya para evitar duplicados
             setMessages((prev) => {
               const exists = prev.some((msg) => msg.id === newMessage.id);
