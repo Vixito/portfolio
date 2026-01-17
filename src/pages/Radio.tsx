@@ -333,13 +333,13 @@ function Radio() {
           songsPlayedCountRef.current = 0;
 
           // Obtener título/artista de Icecast (metadata del MP3)
-          // Usar valores de mountpoint directamente, sin depender de traducciones que cambian
-          // Priorizar server_name que puede tener metadata más actualizada
+          // NO usar server_name como título porque es el nombre del stream ("Radio Vixis"), no el título de la canción
+          // Priorizar campos que contienen el título/artista real de la canción
           const icecastTitle =
-            mountpoint.server_name ||
             mountpoint.title ||
             mountpoint.yp_currently_playing ||
             mountpoint.listeners?.title ||
+            mountpoint.server_name || // Solo como último fallback
             "En Vivo";
           const icecastArtist =
             mountpoint.artist || mountpoint.listeners?.artist || "Radio Vixis";
@@ -407,32 +407,14 @@ function Radio() {
           // Para /vixis: usar directamente icecastTitle e icecastArtist (metadatos de archivos MP3)
 
           // Actualizar con los datos (Supabase si hay match, Icecast si no)
+          // NOTA: No actualizar el src del audio aquí - dejar que el useEffect se encargue
+          // para evitar conflictos con la lógica de cambio de mount
           setCurrentSong({
             id: "live",
             title: finalTitle,
             artist: finalArtist,
             url: currentStreamUrl,
           });
-
-          // Sincronizar audio: asegurar que el src coincida con el backend
-          if (audioRef.current) {
-            const currentSrc = audioRef.current.src;
-            // Si el audio no está apuntando al stream en vivo, actualizarlo
-            if (!currentSrc || !currentSrc.includes(currentStreamUrl)) {
-              // Solo actualizar si está reproduciendo (no interrumpir si está pausado)
-              if (isPlaying) {
-                audioRef.current.pause();
-                audioRef.current.src = currentStreamUrl;
-                // NO usar load() para streams OGG en vivo
-                audioRef.current.play().catch(() => {
-                  // Ignorar errores de autoplay
-                });
-              } else {
-                // Si no está reproduciendo, solo actualizar el src sin reproducir
-                audioRef.current.src = currentStreamUrl;
-              }
-            }
-          }
         } else {
           // La radio no está activa
           setIsLive(false);
@@ -737,6 +719,7 @@ function Radio() {
   }, [isLive, currentStreamUrl, userPaused]); // Removido isPlaying de las dependencias
 
   // Actualizar el stream cuando cambia el mount activo (/live vs /vixis)
+  // Este efecto se ejecuta siempre que cambia currentStreamUrl o activeMount, incluso si ya está reproduciendo
   useEffect(() => {
     const isRadioPage = window.location.pathname === "/radio";
     
@@ -760,7 +743,18 @@ function Radio() {
       if (!audioRef.current) return;
       
       try {
-        const wasPlaying = isPlaying && !audioRef.current.paused;
+        // Verificar si estaba reproduciendo ANTES de cambiar el src
+        const wasPlaying = audioRef.current && !audioRef.current.paused && isPlaying && !userPaused;
+        
+        if (import.meta.env.DEV) {
+          console.log("🔄 Cambiando stream:", {
+            from: currentMount,
+            to: targetMount,
+            wasPlaying,
+            currentSrc: currentSrc.substring(0, 50),
+            newUrl: currentStreamUrl.substring(0, 50),
+          });
+        }
         
         // Pausar el stream actual
         audioRef.current.pause();
@@ -769,23 +763,34 @@ function Radio() {
         audioRef.current.src = currentStreamUrl;
         
         // Si estaba reproduciendo, continuar reproduciendo el nuevo stream
-        if (wasPlaying && !userPaused) {
+        if (wasPlaying) {
           // Esperar un momento para que el nuevo stream se cargue
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 300));
           
           try {
-            await audioRef.current.play();
-            setIsPlaying(true);
+            if (audioRef.current) {
+              await audioRef.current.play();
+              setIsPlaying(true);
+              if (import.meta.env.DEV) {
+                console.log("✅ Stream cambiado y reproduciendo:", targetMount);
+              }
+            }
           } catch (playError: any) {
             if (import.meta.env.DEV) {
-              console.error("Error al reproducir nuevo stream:", playError);
+              console.error("❌ Error al reproducir nuevo stream:", playError);
             }
             // Si falla por autoplay policy, el usuario tendrá que hacer click
+            setIsPlaying(false);
+          }
+        } else {
+          // Si no estaba reproduciendo, solo actualizar el src
+          if (import.meta.env.DEV) {
+            console.log("⏸️ Stream cambiado pero no estaba reproduciendo:", targetMount);
           }
         }
       } catch (error) {
         if (import.meta.env.DEV) {
-          console.error("Error al cambiar de stream:", error);
+          console.error("❌ Error al cambiar de stream:", error);
         }
       }
     };
@@ -1532,12 +1537,13 @@ function Radio() {
         songsPlayedCountRef.current = 0;
 
         // EL BACKEND ES LA FUENTE DE VERDAD - usar los metadatos de Icecast
-        // Priorizar server_name que puede tener metadata más actualizada
+        // NO usar server_name como título porque es el nombre del stream ("Radio Vixis"), no el título de la canción
+        // Priorizar campos que contienen el título/artista real de la canción
         const icecastTitle =
-          mountpoint.server_name ||
           mountpoint.title ||
           mountpoint.yp_currently_playing ||
           mountpoint.listeners?.title ||
+          mountpoint.server_name || // Solo como último fallback
           "En Vivo";
         const icecastArtist =
           mountpoint.artist || mountpoint.listeners?.artist || "Radio Vixis";
@@ -1611,28 +1617,8 @@ function Radio() {
           gsap.set(marqueeRef.current, { x: 0, clearProps: "transform" });
         }
 
-        // Sincronizar audio: SIEMPRE actualizar el src para que coincida con el backend
-        if (audioRef.current) {
-          const currentSrc = audioRef.current.src;
-          // SIEMPRE actualizar el src para sincronizar con el backend
-          if (!currentSrc || !currentSrc.includes(currentStreamUrl)) {
-            if (isPlaying) {
-              // Si está reproduciendo, actualizar y continuar reproduciendo
-              audioRef.current.pause();
-              audioRef.current.src = currentStreamUrl;
-              // NO usar load() para streams OGG en vivo
-              await audioRef.current.play();
-            } else {
-              // Si no está reproduciendo, solo actualizar el src sin reproducir
-              audioRef.current.src = currentStreamUrl;
-            }
-          } else if (isPlaying) {
-            // Si ya está apuntando al stream correcto pero está pausado, intentar reproducir
-            if (audioRef.current.paused) {
-              await audioRef.current.play();
-            }
-          }
-        }
+        // NOTA: No actualizar el src del audio aquí - dejar que el useEffect se encargue
+        // del cambio de stream cuando cambia currentStreamUrl o activeMount
       } else {
         setIsLive(false);
         // Si no está en vivo, sincronizar con la playlist actual
