@@ -97,11 +97,16 @@ function Radio() {
   const jingleAudioRef = useRef<HTMLAudioElement | null>(null); // Audio para el jingle/station ID
 
   // URL del stream de Icecast (configurable desde variables de entorno)
-  const ICECAST_STREAM_URL =
+  const ICECAST_STREAM_URL_VIXIS =
     import.meta.env.VITE_ICECAST_STREAM_URL || "https://radio.vixis.dev/vixis";
+  const ICECAST_STREAM_URL_LIVE = "https://radio.vixis.dev/live";
   const ICECAST_STATUS_URL =
     import.meta.env.VITE_ICECAST_STATUS_URL ||
     "https://radio.vixis.dev/status-json.xsl";
+  
+  // Estado para trackear el mount activo y la URL del stream
+  const [activeMount, setActiveMount] = useState<string | null>(null);
+  const [currentStreamUrl, setCurrentStreamUrl] = useState<string>(ICECAST_STREAM_URL_VIXIS);
   // Configuración del jingle/station ID (cargada desde Supabase o variables de entorno)
   const [jingleConfig, setJingleConfig] = useState<{
     jingle_url: string;
@@ -251,12 +256,18 @@ function Radio() {
 
         // Buscar mount activo: priorizar /live (transmisión en vivo) sobre /vixis (automático)
         let mountpoint: any = null;
+        let detectedMount: string | null = null;
+        
         if (sources.length > 0) {
           // Primero buscar /live (transmisión en vivo con BUTT)
           mountpoint = sources.find(
             (source: any) =>
               source?.mount === "/live" || source?.mount?.includes("/live")
           );
+          
+          if (mountpoint) {
+            detectedMount = "/live";
+          }
 
           // Si no hay /live, buscar /vixis (transmisión automática con Liquidsoap)
           if (!mountpoint) {
@@ -264,6 +275,10 @@ function Radio() {
               (source: any) =>
                 source?.mount === "/vixis" || source?.mount?.includes("/vixis")
             );
+            
+            if (mountpoint) {
+              detectedMount = "/vixis";
+            }
           }
 
           // Si no se encuentra, buscar por server_name o listenurl
@@ -275,12 +290,40 @@ function Radio() {
                 source?.mount?.includes("vixis") ||
                 source?.mount?.includes("live")
             );
+            
+            if (mountpoint) {
+              // Intentar detectar el mount desde listenurl o mount
+              if (mountpoint.mount) {
+                detectedMount = mountpoint.mount;
+              } else if (mountpoint.listenurl) {
+                const match = mountpoint.listenurl.match(/\/[^\/]+(?:\/|$)/);
+                if (match) detectedMount = match[0].replace(/\/$/, "");
+              }
+            }
           }
 
           // Si aún no se encuentra, usar la primera fuente disponible (fallback)
           if (!mountpoint && sources.length > 0) {
             mountpoint = sources[0];
+            if (mountpoint?.mount) {
+              detectedMount = mountpoint.mount;
+            }
           }
+        }
+        
+        // Actualizar el mount activo y la URL del stream
+        if (detectedMount && detectedMount !== activeMount) {
+          setActiveMount(detectedMount);
+          // Cambiar la URL del stream según el mount activo
+          if (detectedMount === "/live") {
+            setCurrentStreamUrl(ICECAST_STREAM_URL_LIVE);
+          } else if (detectedMount === "/vixis") {
+            setCurrentStreamUrl(ICECAST_STREAM_URL_VIXIS);
+          }
+        } else if (!detectedMount && activeMount) {
+          // Si no hay mount activo, resetear
+          setActiveMount(null);
+          setCurrentStreamUrl(ICECAST_STREAM_URL_VIXIS);
         }
 
         if (mountpoint) {
@@ -364,25 +407,25 @@ function Radio() {
             id: "live",
             title: finalTitle,
             artist: finalArtist,
-            url: ICECAST_STREAM_URL,
+            url: currentStreamUrl,
           });
 
           // Sincronizar audio: asegurar que el src coincida con el backend
           if (audioRef.current) {
             const currentSrc = audioRef.current.src;
             // Si el audio no está apuntando al stream en vivo, actualizarlo
-            if (!currentSrc || !currentSrc.includes(ICECAST_STREAM_URL)) {
+            if (!currentSrc || !currentSrc.includes(currentStreamUrl)) {
               // Solo actualizar si está reproduciendo (no interrumpir si está pausado)
               if (isPlaying) {
                 audioRef.current.pause();
-                audioRef.current.src = ICECAST_STREAM_URL;
+                audioRef.current.src = currentStreamUrl;
                 // NO usar load() para streams OGG en vivo
                 audioRef.current.play().catch(() => {
                   // Ignorar errores de autoplay
                 });
               } else {
                 // Si no está reproduciendo, solo actualizar el src sin reproducir
-                audioRef.current.src = ICECAST_STREAM_URL;
+                audioRef.current.src = currentStreamUrl;
               }
             }
           }
@@ -393,7 +436,7 @@ function Radio() {
           // Limpiar el stream si estaba reproduciendo en vivo
           if (
             audioRef.current &&
-            audioRef.current.src.includes(ICECAST_STREAM_URL)
+            audioRef.current.src.includes(currentStreamUrl) || audioRef.current.src.includes(ICECAST_STREAM_URL_VIXIS) || audioRef.current.src.includes(ICECAST_STREAM_URL_LIVE)
           ) {
             audioRef.current.pause();
             audioRef.current.src = "";
@@ -470,7 +513,7 @@ function Radio() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [ICECAST_STATUS_URL, ICECAST_STREAM_URL]);
+  }, [ICECAST_STATUS_URL, currentStreamUrl, activeMount]);
 
   // Cargar playlist cuando no está en vivo
   useEffect(() => {
@@ -623,7 +666,8 @@ function Radio() {
         }
 
         try {
-          const targetUrl = ICECAST_STREAM_URL;
+          // Usar currentStreamUrl que cambia dinámicamente según el mount activo (/live o /vixis)
+          const targetUrl = currentStreamUrl;
           const currentSrc = audioRef.current.src;
 
           // Solo cambiar el src si es realmente diferente
@@ -677,7 +721,7 @@ function Radio() {
       // Resetear el ref cuando no está en vivo
       isPlayingLiveRef.current = false;
     }
-  }, [isLive, ICECAST_STREAM_URL, userPaused]); // Removido isPlaying de las dependencias
+  }, [isLive, currentStreamUrl, userPaused]); // Removido isPlaying de las dependencias
 
   // Pausar automáticamente si la radio se desconecta y cambiar a playlist
   useEffect(() => {
@@ -1597,7 +1641,7 @@ function Radio() {
       try {
         // Si está en vivo, usar el stream de Icecast
         if (isLive) {
-          const targetUrl = ICECAST_STREAM_URL;
+          const targetUrl = currentStreamUrl;
           const currentSrc = audioRef.current.src;
 
           // Solo cambiar el src si es realmente diferente
