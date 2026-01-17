@@ -136,16 +136,15 @@ function Radio() {
         let response: Response | null = null;
 
         try {
+          // NO enviar headers personalizados que causen preflight CORS
+          // El navegador ya maneja el cache con cache: "no-cache" y el timestamp en la URL
           response = await fetch(statusUrlWithCacheBust, {
-            cache: "no-cache",
+            cache: "no-cache", // Esto es suficiente para evitar cache
             signal: controller.signal,
             mode: "cors", // Permitir CORS explícitamente
             credentials: "omit", // No enviar cookies para evitar problemas CORS
-            headers: {
-              "Cache-Control": "no-cache, no-store, must-revalidate",
-              Pragma: "no-cache",
-              Expires: "0",
-            },
+            // REMOVIDO: headers personalizados que causan preflight CORS
+            // El timestamp en la URL (?t=) ya previene el cache
           });
         } catch (fetchError) {
           // Si hay error de CORS o red, no hacer throw - solo retornar
