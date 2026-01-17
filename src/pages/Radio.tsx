@@ -665,21 +665,30 @@ function Radio() {
           return;
         }
 
-        try {
-          // Usar currentStreamUrl que cambia dinámicamente según el mount activo (/live o /vixis)
-          const targetUrl = currentStreamUrl;
-          const currentSrc = audioRef.current.src;
+          try {
+            // Usar currentStreamUrl que cambia dinámicamente según el mount activo (/live o /vixis)
+            const targetUrl = currentStreamUrl;
+            const currentSrc = audioRef.current.src;
 
-          // Solo cambiar el src si es realmente diferente
-          const needsUpdate = !currentSrc || !currentSrc.includes(targetUrl);
+            // Detectar si necesita actualización comparando específicamente /live vs /vixis
+            const isCurrentlyLive = currentSrc && currentSrc.includes("/live");
+            const isTargetLive = targetUrl.includes("/live");
+            const isCurrentlyVixis = currentSrc && currentSrc.includes("/vixis");
+            const isTargetVixis = targetUrl.includes("/vixis");
+            
+            // Necesita actualizar si está escuchando /vixis y debe cambiar a /live, o viceversa
+            const needsUpdate = !currentSrc || 
+              (isCurrentlyLive && isTargetVixis) || 
+              (isCurrentlyVixis && isTargetLive) ||
+              (!currentSrc.includes("/live") && !currentSrc.includes("/vixis"));
 
-          if (needsUpdate) {
-            // Para streams OGG en vivo, simplemente establecer el src
-            // El navegador manejará el stream automáticamente
-            audioRef.current.pause();
-            audioRef.current.src = targetUrl;
-            // NO usar load() para streams en vivo OGG - interrumpe el stream
-          }
+            if (needsUpdate) {
+              // Para streams OGG en vivo, simplemente establecer el src
+              // El navegador manejará el stream automáticamente
+              audioRef.current.pause();
+              audioRef.current.src = targetUrl;
+              // NO usar load() para streams en vivo OGG - interrumpe el stream
+            }
 
           // Para streams en vivo OGG, intentar reproducir directamente
           // No esperar metadata porque puede no emitirse inmediatamente
@@ -729,36 +738,55 @@ function Radio() {
     
     if (!isLive || !isRadioPage || !audioRef.current) return;
     
-    // Si el audio ya está apuntando a la URL correcta, no hacer nada
+    // Verificar si el audio necesita actualizarse comparando las URLs completas
     const currentSrc = audioRef.current.src;
-    if (currentSrc && currentSrc.includes(currentStreamUrl)) return;
     
-    // Solo actualizar si está reproduciendo (para no interrumpir si está pausado)
-    if (isPlaying && !userPaused) {
-      const updateStream = async () => {
-        if (!audioRef.current) return;
+    // Extraer el mount point del src actual y del target
+    const currentMount = currentSrc.includes("/live") ? "/live" : 
+                        (currentSrc.includes("/vixis") ? "/vixis" : null);
+    const targetMount = currentStreamUrl.includes("/live") ? "/live" : "/vixis";
+    
+    // Necesita actualizar si el mount es diferente o si no hay src
+    const needsUpdate = !currentSrc || !currentMount || (currentMount !== targetMount);
+    
+    if (!needsUpdate) return;
+    
+    // Actualizar el stream cuando cambia el mount
+    const updateStream = async () => {
+      if (!audioRef.current) return;
+      
+      try {
+        const wasPlaying = isPlaying && !audioRef.current.paused;
         
-        try {
-          audioRef.current.pause();
-          audioRef.current.src = currentStreamUrl;
+        // Pausar el stream actual
+        audioRef.current.pause();
+        
+        // Cambiar al nuevo stream
+        audioRef.current.src = currentStreamUrl;
+        
+        // Si estaba reproduciendo, continuar reproduciendo el nuevo stream
+        if (wasPlaying && !userPaused) {
+          // Esperar un momento para que el nuevo stream se cargue
+          await new Promise(resolve => setTimeout(resolve, 200));
           
-          // Esperar un momento antes de reproducir para que el nuevo stream se cargue
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          await audioRef.current.play();
-          setIsPlaying(true);
-        } catch (error) {
-          if (import.meta.env.DEV) {
-            console.error("Error al cambiar de stream:", error);
+          try {
+            await audioRef.current.play();
+            setIsPlaying(true);
+          } catch (playError: any) {
+            if (import.meta.env.DEV) {
+              console.error("Error al reproducir nuevo stream:", playError);
+            }
+            // Si falla por autoplay policy, el usuario tendrá que hacer click
           }
         }
-      };
-      
-      updateStream();
-    } else {
-      // Si no está reproduciendo, solo actualizar el src sin reproducir
-      audioRef.current.src = currentStreamUrl;
-    }
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error("Error al cambiar de stream:", error);
+        }
+      }
+    };
+    
+    updateStream();
   }, [currentStreamUrl, activeMount, isLive, isPlaying, userPaused]);
 
   // Pausar automáticamente si la radio se desconecta y cambiar a playlist
