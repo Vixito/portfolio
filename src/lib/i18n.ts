@@ -276,6 +276,7 @@ export const translations = {
       bannedWords: "El mensaje contiene palabras no permitidas",
       requestSong: "Pide tu canción",
       songRequestUrlNotConfigured: "URL de Typeform no configurada",
+      jingleTitle: "¡Sintonízate!",
     },
     // Blog
     blog: {
@@ -850,6 +851,7 @@ export const translations = {
       bannedWords: "The message contains banned words",
       requestSong: "Request a Song",
       songRequestUrlNotConfigured: "Typeform URL not configured",
+      jingleTitle: "Tune in!",
     },
     // Blog
     blog: {
