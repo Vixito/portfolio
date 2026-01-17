@@ -22,8 +22,14 @@ interface Song {
 }
 
 function Radio() {
-  console.log("🎵 Componente Radio montado");
   const { t, language } = useTranslation();
+  
+  // Log de montaje solo una vez en desarrollo
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log("🎵 Componente Radio montado");
+    }
+  }, []);
   const audioRef = useRef<HTMLAudioElement>(null);
   const marqueeRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -334,12 +340,10 @@ function Radio() {
           // Obtener título/artista de Icecast (metadata del MP3)
           // NO usar server_name como título porque es el nombre del stream ("Radio Vixis"), no el título de la canción
           // Priorizar campos que contienen el título/artista real de la canción
-          const icecastTitle =
-            mountpoint.title ||
-            mountpoint.yp_currently_playing ||
-            mountpoint.listeners?.title ||
-            mountpoint.server_name || // Solo como último fallback
-            "En Vivo";
+          // Durante el jingle, el backend devuelve "Currently playing:" vacío (null/undefined/string vacío)
+          const rawTitle = mountpoint.title || mountpoint.yp_currently_playing || mountpoint.listeners?.title || mountpoint.server_name || "";
+          // Limpiar el título (trim) y usar "En Vivo" solo si está completamente vacío
+          const icecastTitle = (rawTitle && rawTitle.trim() !== "") ? rawTitle.trim() : "En Vivo";
           const icecastArtist =
             mountpoint.artist || mountpoint.listeners?.artist || "Radio Vixis";
 
@@ -405,12 +409,17 @@ function Radio() {
           }
           // Para /vixis: usar directamente icecastTitle e icecastArtist (metadatos de archivos MP3)
 
-          // Detectar si es jingle (cuando title y artist son iguales o cuando el título es "Radio Vixis")
+          // Detectar si es jingle (cuando title y artist son iguales o cuando el título está vacío/es "Radio Vixis")
+          // Durante el jingle, el backend devuelve "Currently playing:" vacío, así que finalTitle será "En Vivo" o vacío
           // En ese caso, usar el texto traducido del jingle
-          if (
-            (finalTitle === finalArtist && finalTitle === "Radio Vixis") ||
-            (!finalTitle || finalTitle === "Radio Vixis" || finalTitle === "En Vivo")
-          ) {
+          const isJingle = 
+            !finalTitle || 
+            finalTitle.trim() === "" ||
+            finalTitle === "Radio Vixis" || 
+            finalTitle === "En Vivo" ||
+            (finalTitle === finalArtist && finalTitle === "Radio Vixis");
+          
+          if (isJingle) {
             finalTitle = t("radio.jingleTitle");
             finalArtist = "Radio Vixis";
           }
@@ -757,76 +766,81 @@ function Radio() {
       return;
     }
     
-    // Actualizar el stream cuando cambia el mount
-    const updateStream = async () => {
-      if (!audioRef.current) return;
-      
-      try {
-        // Verificar si estaba reproduciendo ANTES de cambiar el src
-        const wasPlaying = !audioRef.current.paused && isPlaying && !userPaused;
-        
-        if (import.meta.env.DEV) {
-          console.log("🔄 Cambiando stream:", {
-            from: currentMount,
-            to: targetMount,
-            wasPlaying,
-            isPlaying,
-            userPaused,
-            currentSrc: currentSrc.substring(0, 60),
-            newUrl: currentStreamUrl.substring(0, 60),
-          });
-        }
-        
-        // Pausar el stream actual
-        audioRef.current.pause();
-        
-        // IMPORTANTE: Resetear el src a string vacío primero para forzar el cambio
-        audioRef.current.src = "";
-        
-        // Pequeño delay para asegurar que el reset se procese
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Cambiar al nuevo stream
-        audioRef.current.src = currentStreamUrl;
-        
-        // Si estaba reproduciendo, continuar reproduciendo el nuevo stream
-        if (wasPlaying) {
-          // Esperar un momento para que el nuevo stream se cargue
-          await new Promise(resolve => setTimeout(resolve, 400));
+        // Actualizar el stream cuando cambia el mount
+        const updateStream = async () => {
+          if (!audioRef.current) return;
           
           try {
-            if (audioRef.current && audioRef.current.src === currentStreamUrl) {
-              await audioRef.current.play();
-              setIsPlaying(true);
-              if (import.meta.env.DEV) {
-                console.log("✅ Stream cambiado y reproduciendo:", targetMount);
-              }
-            } else {
-              if (import.meta.env.DEV) {
-                console.warn("⚠️ audioRef.current cambió durante la espera");
-              }
-            }
-          } catch (playError: any) {
+            // Verificar si estaba reproduciendo ANTES de cambiar el src
+            const wasPlaying = !audioRef.current.paused && isPlaying && !userPaused;
+            
             if (import.meta.env.DEV) {
-              console.error("❌ Error al reproducir nuevo stream:", playError);
+              console.log("🔄 Cambiando stream:", {
+                from: currentMount,
+                to: targetMount,
+                wasPlaying,
+                isPlaying,
+                userPaused,
+                activeMount,
+                currentStreamUrl,
+                currentSrc: currentSrc.substring(0, 60),
+                newUrl: currentStreamUrl.substring(0, 60),
+              });
             }
-            // Si falla por autoplay policy, el usuario tendrá que hacer click
-            setIsPlaying(false);
+            
+            // Pausar el stream actual y limpiar
+            audioRef.current.pause();
+            audioRef.current.load(); // Forzar limpieza completa
+            
+            // IMPORTANTE: Resetear el src a string vacío primero para forzar el cambio
+            audioRef.current.src = "";
+            
+            // Pequeño delay para asegurar que el reset se procese
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Cambiar al nuevo stream
+            if (audioRef.current) {
+              audioRef.current.src = currentStreamUrl;
+              
+              // Si estaba reproduciendo, continuar reproduciendo el nuevo stream
+              if (wasPlaying) {
+                // Esperar un momento para que el nuevo stream se cargue
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                try {
+                  if (audioRef.current && audioRef.current.src && audioRef.current.src.includes(targetMount)) {
+                    await audioRef.current.play();
+                    setIsPlaying(true);
+                    if (import.meta.env.DEV) {
+                      console.log("✅ Stream cambiado y reproduciendo:", targetMount);
+                    }
+                  } else {
+                    if (import.meta.env.DEV) {
+                      console.warn("⚠️ audioRef.current cambió durante la espera o src no coincide");
+                    }
+                  }
+                } catch (playError: any) {
+                  if (import.meta.env.DEV) {
+                    console.error("❌ Error al reproducir nuevo stream:", playError);
+                  }
+                  // Si falla por autoplay policy, el usuario tendrá que hacer click
+                  setIsPlaying(false);
+                }
+              } else {
+                // Si no estaba reproduciendo, solo actualizar el src
+                if (import.meta.env.DEV) {
+                  console.log("⏸️ Stream cambiado pero no estaba reproduciendo:", targetMount);
+                }
+              }
+            }
+          } catch (error) {
+            if (import.meta.env.DEV) {
+              console.error("❌ Error al cambiar de stream:", error);
+            }
           }
-        } else {
-          // Si no estaba reproduciendo, solo actualizar el src
-          if (import.meta.env.DEV) {
-            console.log("⏸️ Stream cambiado pero no estaba reproduciendo:", targetMount);
-          }
-        }
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error("❌ Error al cambiar de stream:", error);
-        }
-      }
-    };
-    
-    updateStream();
+        };
+        
+        updateStream();
   }, [currentStreamUrl, activeMount, isLive, isPlaying, userPaused]);
 
   // Pausar automáticamente si la radio se desconecta y cambiar a playlist
@@ -1113,6 +1127,38 @@ function Radio() {
       }, 100);
     }
   }, [messages.length]);
+
+  // Actualizar el jingle cuando cambia el idioma
+  useEffect(() => {
+    if (!currentSong) return;
+    
+    // Detectar si es jingle (cuando artist es "Radio Vixis" y el título está vacío/es "En Vivo"/es un jingle conocido)
+    const jingleTitleES = "¡Sintonízate!";
+    const jingleTitleEN = "Tune in!";
+    const title = currentSong.title || "";
+    const isJingle = 
+      currentSong.artist === "Radio Vixis" && (
+        !title ||
+        title.trim() === "" ||
+        title === "Radio Vixis" ||
+        title === "En Vivo" ||
+        title === jingleTitleES ||
+        title === jingleTitleEN ||
+        (title === currentSong.artist && title === "Radio Vixis")
+      );
+    
+    // Si es jingle, actualizar el título con la traducción actual del idioma
+    if (isJingle) {
+      const newJingleTitle = t("radio.jingleTitle");
+      // Solo actualizar si el título cambió (evitar loops infinitos)
+      if (title !== newJingleTitle && title.trim() !== newJingleTitle) {
+        setCurrentSong({
+          ...currentSong,
+          title: newJingleTitle,
+        });
+      }
+    }
+  }, [language, currentSong, t]);
 
   // Efecto marquee para el texto (desplazamiento continuo)
   useEffect(() => {
@@ -1627,12 +1673,17 @@ function Radio() {
         }
         // Para /vixis: usar directamente icecastTitle e icecastArtist (metadatos de archivos MP3)
 
-        // Detectar si es jingle (cuando title y artist son iguales o cuando el título es "Radio Vixis")
+        // Detectar si es jingle (cuando title y artist son iguales o cuando el título está vacío/es "Radio Vixis")
+        // Durante el jingle, el backend devuelve "Currently playing:" vacío, así que finalTitle será "En Vivo" o vacío
         // En ese caso, usar el texto traducido del jingle
-        if (
-          (finalTitle === finalArtist && finalTitle === "Radio Vixis") ||
-          (!finalTitle || finalTitle === "Radio Vixis" || finalTitle === "En Vivo")
-        ) {
+        const isJingle = 
+          !finalTitle || 
+          finalTitle.trim() === "" ||
+          finalTitle === "Radio Vixis" || 
+          finalTitle === "En Vivo" ||
+          (finalTitle === finalArtist && finalTitle === "Radio Vixis");
+        
+        if (isJingle) {
           finalTitle = t("radio.jingleTitle");
           finalArtist = "Radio Vixis";
         }
