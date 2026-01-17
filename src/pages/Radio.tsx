@@ -353,9 +353,9 @@ function Radio() {
             });
           }
 
-          // EL BACKEND ES LA FUENTE DE VERDAD - usar directamente los datos de Icecast
-          // Intentar match con playlist de Supabase SOLO para obtener nombres más limpios
-          // Pero SIEMPRE priorizar lo que dice el backend
+          // EL BACKEND ES LA FUENTE DE VERDAD - usar los metadatos de Icecast
+          // Intentar hacer match con Supabase para obtener nombres más limpios
+          // Si hay match, usar Supabase (más limpio); si no, usar Icecast directamente
           let finalTitle = icecastTitle;
           let finalArtist = icecastArtist;
 
@@ -369,7 +369,7 @@ function Radio() {
               const normalizedIcecastTitle = normalize(icecastTitle);
               const normalizedIcecastArtist = normalize(icecastArtist);
 
-              // Buscar en la playlist
+              // Buscar en la playlist de Supabase
               const matchedSong = playlistData.find((song: any) => {
                 const normalizedSongTitle = normalize(song.title || "");
                 const normalizedSongArtist = normalize(song.artist || "");
@@ -390,19 +390,19 @@ function Radio() {
               });
 
               // Si encontramos match, usar los nombres de Supabase (más limpios)
-              // pero solo si hay un match claro
+              // Si no hay match, usar los metadatos de Icecast directamente
               if (matchedSong) {
                 finalTitle = matchedSong.title;
                 finalArtist = matchedSong.artist;
               }
+              // Si no hay match, finalTitle y finalArtist ya tienen los valores de Icecast
             }
           } catch (playlistError) {
             // Si falla obtener playlist, continuar con datos de Icecast
             // Error silenciado para evitar logs innecesarios
           }
 
-          // SIEMPRE actualizar con los datos del backend (fuente de verdad)
-          // No verificar si cambió - el backend es la autoridad
+          // Actualizar con los datos (Supabase si hay match, Icecast si no)
           setCurrentSong({
             id: "live",
             title: finalTitle,
@@ -1499,13 +1499,19 @@ function Radio() {
         // Resetear contador de canciones cuando está en vivo (no aplica jingle en vivo)
         songsPlayedCountRef.current = 0;
 
-        // EL BACKEND ES LA FUENTE DE VERDAD - usar directamente los datos de Icecast
+        // EL BACKEND ES LA FUENTE DE VERDAD - usar los metadatos de Icecast
+        // Priorizar server_name que puede tener metadata más actualizada
         const icecastTitle =
-          mountpoint.title || mountpoint.yp_currently_playing || "En Vivo";
-        const icecastArtist = mountpoint.artist || "Radio Vixis";
+          mountpoint.server_name ||
+          mountpoint.title ||
+          mountpoint.yp_currently_playing ||
+          mountpoint.listeners?.title ||
+          "En Vivo";
+        const icecastArtist =
+          mountpoint.artist || mountpoint.listeners?.artist || "Radio Vixis";
 
-        // Intentar match con playlist de Supabase SOLO para obtener nombres más limpios
-        // Pero SIEMPRE priorizar lo que dice el backend
+        // Intentar hacer match con Supabase para obtener nombres más limpios
+        // Si hay match, usar Supabase (más limpio); si no, usar Icecast directamente
         let finalTitle = icecastTitle;
         let finalArtist = icecastArtist;
 
@@ -1536,22 +1542,23 @@ function Radio() {
             });
 
             // Si encontramos match, usar los nombres de Supabase (más limpios)
-            // pero solo si hay un match claro
+            // Si no hay match, usar los metadatos de Icecast directamente
             if (matchedSong) {
               finalTitle = matchedSong.title;
               finalArtist = matchedSong.artist;
             }
+            // Si no hay match, finalTitle y finalArtist ya tienen los valores de Icecast
           }
         } catch (playlistError) {
-          // Continuar con datos de Icecast si falla
+          // Si falla obtener playlist, continuar con datos de Icecast
         }
 
-        // SIEMPRE actualizar con los datos del backend (fuente de verdad)
+        // Actualizar con los datos (Supabase si hay match, Icecast si no)
         const newSong = {
           id: "live",
           title: finalTitle,
           artist: finalArtist,
-          url: ICECAST_STREAM_URL,
+          url: currentStreamUrl,
         };
 
         // Forzar actualización INMEDIATA del texto (sin verificar si cambió)
@@ -1571,16 +1578,16 @@ function Radio() {
         if (audioRef.current) {
           const currentSrc = audioRef.current.src;
           // SIEMPRE actualizar el src para sincronizar con el backend
-          if (!currentSrc || !currentSrc.includes(ICECAST_STREAM_URL)) {
+          if (!currentSrc || !currentSrc.includes(currentStreamUrl)) {
             if (isPlaying) {
               // Si está reproduciendo, actualizar y continuar reproduciendo
               audioRef.current.pause();
-              audioRef.current.src = ICECAST_STREAM_URL;
+              audioRef.current.src = currentStreamUrl;
               // NO usar load() para streams OGG en vivo
               await audioRef.current.play();
             } else {
               // Si no está reproduciendo, solo actualizar el src sin reproducir
-              audioRef.current.src = ICECAST_STREAM_URL;
+              audioRef.current.src = currentStreamUrl;
             }
           } else if (isPlaying) {
             // Si ya está apuntando al stream correcto pero está pausado, intentar reproducir
