@@ -354,53 +354,57 @@ function Radio() {
           }
 
           // EL BACKEND ES LA FUENTE DE VERDAD - usar los metadatos de Icecast
-          // Intentar hacer match con Supabase para obtener nombres más limpios
-          // Si hay match, usar Supabase (más limpio); si no, usar Icecast directamente
+          // Para /vixis: usar SOLO metadatos de archivos MP3 (sin match con Supabase)
+          // Para /live: intentar match con Supabase para nombres más limpios, sino usar Icecast
           let finalTitle = icecastTitle;
           let finalArtist = icecastArtist;
 
-          try {
-            const playlistData = await getPlaylist();
-            if (playlistData && playlistData.length > 0) {
-              // Buscar match por título y artista (normalizados para comparación)
-              const normalize = (str: string) =>
-                str.toLowerCase().trim().replace(/\s+/g, " ");
+          // Solo hacer match con Supabase si es /live (transmisión en vivo con BUTT)
+          if (detectedMount === "/live") {
+            try {
+              const playlistData = await getPlaylist();
+              if (playlistData && playlistData.length > 0) {
+                // Buscar match por título y artista (normalizados para comparación)
+                const normalize = (str: string) =>
+                  str.toLowerCase().trim().replace(/\s+/g, " ");
 
-              const normalizedIcecastTitle = normalize(icecastTitle);
-              const normalizedIcecastArtist = normalize(icecastArtist);
+                const normalizedIcecastTitle = normalize(icecastTitle);
+                const normalizedIcecastArtist = normalize(icecastArtist);
 
-              // Buscar en la playlist de Supabase
-              const matchedSong = playlistData.find((song: any) => {
-                const normalizedSongTitle = normalize(song.title || "");
-                const normalizedSongArtist = normalize(song.artist || "");
+                // Buscar en la playlist de Supabase
+                const matchedSong = playlistData.find((song: any) => {
+                  const normalizedSongTitle = normalize(song.title || "");
+                  const normalizedSongArtist = normalize(song.artist || "");
 
-                // Match por título exacto o parcial
-                const titleMatch =
-                  normalizedSongTitle === normalizedIcecastTitle ||
-                  normalizedIcecastTitle.includes(normalizedSongTitle) ||
-                  normalizedSongTitle.includes(normalizedIcecastTitle);
+                  // Match por título exacto o parcial
+                  const titleMatch =
+                    normalizedSongTitle === normalizedIcecastTitle ||
+                    normalizedIcecastTitle.includes(normalizedSongTitle) ||
+                    normalizedSongTitle.includes(normalizedIcecastTitle);
 
-                // Match por artista exacto o parcial
-                const artistMatch =
-                  normalizedSongArtist === normalizedIcecastArtist ||
-                  normalizedIcecastArtist.includes(normalizedSongArtist) ||
-                  normalizedSongArtist.includes(normalizedIcecastArtist);
+                  // Match por artista exacto o parcial
+                  const artistMatch =
+                    normalizedSongArtist === normalizedIcecastArtist ||
+                    normalizedIcecastArtist.includes(normalizedSongArtist) ||
+                    normalizedSongArtist.includes(normalizedIcecastArtist);
 
-                return titleMatch || artistMatch;
-              });
+                  return titleMatch || artistMatch;
+                });
 
-              // Si encontramos match, usar los nombres de Supabase (más limpios)
-              // Si no hay match, usar los metadatos de Icecast directamente
-              if (matchedSong) {
-                finalTitle = matchedSong.title;
-                finalArtist = matchedSong.artist;
+                // Si encontramos match, usar los nombres de Supabase (más limpios)
+                // Si no hay match, usar los metadatos de Icecast directamente
+                if (matchedSong) {
+                  finalTitle = matchedSong.title;
+                  finalArtist = matchedSong.artist;
+                }
+                // Si no hay match, finalTitle y finalArtist ya tienen los valores de Icecast
               }
-              // Si no hay match, finalTitle y finalArtist ya tienen los valores de Icecast
+            } catch (playlistError) {
+              // Si falla obtener playlist, continuar con datos de Icecast
+              // Error silenciado para evitar logs innecesarios
             }
-          } catch (playlistError) {
-            // Si falla obtener playlist, continuar con datos de Icecast
-            // Error silenciado para evitar logs innecesarios
           }
+          // Para /vixis: usar directamente icecastTitle e icecastArtist (metadatos de archivos MP3)
 
           // Actualizar con los datos (Supabase si hay match, Icecast si no)
           setCurrentSong({
@@ -1538,48 +1542,53 @@ function Radio() {
         const icecastArtist =
           mountpoint.artist || mountpoint.listeners?.artist || "Radio Vixis";
 
-        // Intentar hacer match con Supabase para obtener nombres más limpios
-        // Si hay match, usar Supabase (más limpio); si no, usar Icecast directamente
+        // Para /vixis: usar SOLO metadatos de archivos MP3 (sin match con Supabase)
+        // Para /live: intentar match con Supabase para nombres más limpios, sino usar Icecast
         let finalTitle = icecastTitle;
         let finalArtist = icecastArtist;
 
-        try {
-          const playlistData = await getPlaylist();
-          if (playlistData && playlistData.length > 0) {
-            const normalize = (str: string) =>
-              str.toLowerCase().trim().replace(/\s+/g, " ");
+        // Solo hacer match con Supabase si es /live (transmisión en vivo con BUTT)
+        const currentMount = mountpoint.mount || "";
+        if (currentMount === "/live" || currentMount.includes("/live")) {
+          try {
+            const playlistData = await getPlaylist();
+            if (playlistData && playlistData.length > 0) {
+              const normalize = (str: string) =>
+                str.toLowerCase().trim().replace(/\s+/g, " ");
 
-            const normalizedIcecastTitle = normalize(icecastTitle);
-            const normalizedIcecastArtist = normalize(icecastArtist);
+              const normalizedIcecastTitle = normalize(icecastTitle);
+              const normalizedIcecastArtist = normalize(icecastArtist);
 
-            const matchedSong = playlistData.find((song: any) => {
-              const normalizedSongTitle = normalize(song.title || "");
-              const normalizedSongArtist = normalize(song.artist || "");
+              const matchedSong = playlistData.find((song: any) => {
+                const normalizedSongTitle = normalize(song.title || "");
+                const normalizedSongArtist = normalize(song.artist || "");
 
-              const titleMatch =
-                normalizedSongTitle === normalizedIcecastTitle ||
-                normalizedIcecastTitle.includes(normalizedSongTitle) ||
-                normalizedSongTitle.includes(normalizedIcecastTitle);
+                const titleMatch =
+                  normalizedSongTitle === normalizedIcecastTitle ||
+                  normalizedIcecastTitle.includes(normalizedSongTitle) ||
+                  normalizedSongTitle.includes(normalizedIcecastTitle);
 
-              const artistMatch =
-                normalizedSongArtist === normalizedIcecastArtist ||
-                normalizedIcecastArtist.includes(normalizedSongArtist) ||
-                normalizedSongArtist.includes(normalizedIcecastArtist);
+                const artistMatch =
+                  normalizedSongArtist === normalizedIcecastArtist ||
+                  normalizedIcecastArtist.includes(normalizedSongArtist) ||
+                  normalizedSongArtist.includes(normalizedIcecastArtist);
 
-              return titleMatch || artistMatch;
-            });
+                return titleMatch || artistMatch;
+              });
 
-            // Si encontramos match, usar los nombres de Supabase (más limpios)
-            // Si no hay match, usar los metadatos de Icecast directamente
-            if (matchedSong) {
-              finalTitle = matchedSong.title;
-              finalArtist = matchedSong.artist;
+              // Si encontramos match, usar los nombres de Supabase (más limpios)
+              // Si no hay match, usar los metadatos de Icecast directamente
+              if (matchedSong) {
+                finalTitle = matchedSong.title;
+                finalArtist = matchedSong.artist;
+              }
+              // Si no hay match, finalTitle y finalArtist ya tienen los valores de Icecast
             }
-            // Si no hay match, finalTitle y finalArtist ya tienen los valores de Icecast
+          } catch (playlistError) {
+            // Si falla obtener playlist, continuar con datos de Icecast
           }
-        } catch (playlistError) {
-          // Si falla obtener playlist, continuar con datos de Icecast
         }
+        // Para /vixis: usar directamente icecastTitle e icecastArtist (metadatos de archivos MP3)
 
         // Actualizar con los datos (Supabase si hay match, Icecast si no)
         const newSong = {
