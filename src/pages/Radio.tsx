@@ -723,6 +723,44 @@ function Radio() {
     }
   }, [isLive, currentStreamUrl, userPaused]); // Removido isPlaying de las dependencias
 
+  // Actualizar el stream cuando cambia el mount activo (/live vs /vixis)
+  useEffect(() => {
+    const isRadioPage = window.location.pathname === "/radio";
+    
+    if (!isLive || !isRadioPage || !audioRef.current) return;
+    
+    // Si el audio ya está apuntando a la URL correcta, no hacer nada
+    const currentSrc = audioRef.current.src;
+    if (currentSrc && currentSrc.includes(currentStreamUrl)) return;
+    
+    // Solo actualizar si está reproduciendo (para no interrumpir si está pausado)
+    if (isPlaying && !userPaused) {
+      const updateStream = async () => {
+        if (!audioRef.current) return;
+        
+        try {
+          audioRef.current.pause();
+          audioRef.current.src = currentStreamUrl;
+          
+          // Esperar un momento antes de reproducir para que el nuevo stream se cargue
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          await audioRef.current.play();
+          setIsPlaying(true);
+        } catch (error) {
+          if (import.meta.env.DEV) {
+            console.error("Error al cambiar de stream:", error);
+          }
+        }
+      };
+      
+      updateStream();
+    } else {
+      // Si no está reproduciendo, solo actualizar el src sin reproducir
+      audioRef.current.src = currentStreamUrl;
+    }
+  }, [currentStreamUrl, activeMount, isLive, isPlaying, userPaused]);
+
   // Pausar automáticamente si la radio se desconecta y cambiar a playlist
   useEffect(() => {
     if (!isLive && audioRef.current && isPlaying) {
