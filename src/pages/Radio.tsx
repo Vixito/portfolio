@@ -249,13 +249,22 @@ function Radio() {
           sources = [];
         }
 
-        // Buscar por mount /vixis
+        // Buscar mount activo: priorizar /live (transmisión en vivo) sobre /vixis (automático)
         let mountpoint: any = null;
         if (sources.length > 0) {
+          // Primero buscar /live (transmisión en vivo con BUTT)
           mountpoint = sources.find(
             (source: any) =>
-              source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+              source?.mount === "/live" || source?.mount?.includes("/live")
           );
+
+          // Si no hay /live, buscar /vixis (transmisión automática con Liquidsoap)
+          if (!mountpoint) {
+            mountpoint = sources.find(
+              (source: any) =>
+                source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+            );
+          }
 
           // Si no se encuentra, buscar por server_name o listenurl
           if (!mountpoint) {
@@ -263,7 +272,8 @@ function Radio() {
               (source: any) =>
                 source?.server_name?.toLowerCase().includes("vixis") ||
                 source?.listenurl?.includes("vixis") ||
-                source?.mount?.includes("vixis")
+                source?.mount?.includes("vixis") ||
+                source?.mount?.includes("live")
             );
           }
 
@@ -1370,19 +1380,30 @@ function Radio() {
         sources = [];
       }
 
+      // Buscar mount activo: priorizar /live (transmisión en vivo) sobre /vixis (automático)
       let mountpoint: any = null;
       if (sources.length > 0) {
+        // Primero buscar /live (transmisión en vivo con BUTT)
         mountpoint = sources.find(
           (source: any) =>
-            source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+            source?.mount === "/live" || source?.mount?.includes("/live")
         );
+
+        // Si no hay /live, buscar /vixis (transmisión automática con Liquidsoap)
+        if (!mountpoint) {
+          mountpoint = sources.find(
+            (source: any) =>
+              source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+          );
+        }
 
         if (!mountpoint) {
           mountpoint = sources.find(
             (source: any) =>
               source?.server_name?.toLowerCase().includes("vixis") ||
               source?.listenurl?.includes("vixis") ||
-              source?.mount?.includes("vixis")
+              source?.mount?.includes("vixis") ||
+              source?.mount?.includes("live")
           );
         }
 
