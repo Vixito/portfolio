@@ -95,8 +95,10 @@ function Store() {
             full_description: product.full_description,
             full_description_translations:
               product.full_description_translations,
-            base_price_usd: Number(product.base_price_usd || 0),
-            base_price_cop: product.base_price_cop
+            base_price_usd: product.base_price_usd !== null && product.base_price_usd !== undefined 
+              ? Number(product.base_price_usd) 
+              : null,
+            base_price_cop: product.base_price_cop !== null && product.base_price_cop !== undefined
               ? Number(product.base_price_cop)
               : null,
             thumbnail_url: product.thumbnail_url,
@@ -290,15 +292,20 @@ function Store() {
   // Formatear precio (simplificado, sin detección de país por IP)
   const formatPrice = (item: StoreItem) => {
     const pricing = item.product_pricing?.[0];
-    const basePrice = item.base_price_usd || 0;
-    const currentPrice = pricing?.current_price_usd || basePrice;
+    // Si base_price_usd es null o undefined, considerar como sin precio
+    const basePrice = item.base_price_usd !== null && item.base_price_usd !== undefined ? item.base_price_usd : null;
+    const currentPrice = pricing?.current_price_usd ?? basePrice;
     
-    // Si es tipo "request" y no hay precio (null o 0), retornar null para no mostrar precio
+    // Si no hay precio (null) y es tipo "request", retornar null para no mostrar precio
     if (item.button_type === "request") {
-      const hasPrice = currentPrice > 0;
-      if (!hasPrice) {
+      if (currentPrice === null || currentPrice === undefined) {
         return null; // No mostrar precio si es "request" y no tiene precio
       }
+    }
+    
+    // Si el precio es null o undefined, retornar null (no mostrar precio)
+    if (currentPrice === null || currentPrice === undefined) {
+      return null;
     }
     
     // Si el precio es 0, mostrar "Gratis"/"Free"
@@ -312,12 +319,15 @@ function Store() {
     
     if (!pricing) {
       // Fallback: mostrar precio en USD si no hay pricing
+      if (basePrice === null || basePrice === undefined) {
+        return null;
+      }
       return (
         <span className="text-2xl font-bold text-purple">
           {new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: "USD",
-          }).format(basePrice)}
+          }).format(basePrice as number)}
         </span>
       );
     }
@@ -684,9 +694,11 @@ function Store() {
               </div>
 
               {/* Información */}
-              <div className="flex flex-col h-full">
-                <div className="mb-4 flex-1">
-                  <div className="mb-2">{formatPrice(selectedItem)}</div>
+              <div className="flex flex-col justify-between h-full">
+                <div className="mb-4">
+                  {formatPrice(selectedItem) && (
+                    <div className="mb-2">{formatPrice(selectedItem)}</div>
+                  )}
                   <div 
                     className="text-gray-600 prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{
@@ -703,7 +715,7 @@ function Store() {
                   />
                 </div>
 
-                <div className="space-y-3 mt-auto">
+                <div className="space-y-3">
                   {selectedItem.button_type === "buy" &&
                   selectedItem.buy_button_type === "external_link" &&
                   Array.isArray(selectedItem.buy_button_url) &&
@@ -766,14 +778,14 @@ function Store() {
                       {getButtonText(selectedItem)}
                     </Button>
                   ) : (
-                    // Otros tipos de botones
+                    // Otros tipos de botones (incluyendo "request" sin precio)
                     <Button
                       variant="primary"
                       onClick={() => {
                         handleAction(selectedItem);
                         setIsModalOpen(false);
                       }}
-                      className="w-full"
+                      className={`w-full ${!formatPrice(selectedItem) ? "mt-auto" : ""}`}
                     >
                       {getButtonText(selectedItem)}
                     </Button>

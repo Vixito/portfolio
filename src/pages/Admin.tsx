@@ -1175,13 +1175,18 @@ function Admin() {
             // Determinar moneda y convertir precios
             const priceCurrency = updateProductData.price_currency || "USD";
 
-            if (priceCurrency === "COP" && updateProductData.base_price_cop) {
+            // Si no hay precio (null o undefined), establecer ambos como null
+            if (updateProductData.base_price_usd === null || updateProductData.base_price_usd === undefined) {
+              updateProductData.base_price_usd = null;
+              updateProductData.base_price_cop = null;
+            } else if (priceCurrency === "COP" && updateProductData.base_price_cop !== null && updateProductData.base_price_cop !== undefined) {
               // Si se ingresó en COP, calcular USD
               updateProductData.base_price_usd =
                 updateProductData.base_price_cop / rate;
             } else if (
               priceCurrency === "USD" &&
-              updateProductData.base_price_usd
+              updateProductData.base_price_usd !== null &&
+              updateProductData.base_price_usd !== undefined
             ) {
               // Si se ingresó en USD, calcular COP
               updateProductData.base_price_cop =
@@ -1614,13 +1619,18 @@ function Admin() {
             // Determinar moneda y convertir precios
             const createPriceCurrency = productData.price_currency || "USD";
 
-            if (createPriceCurrency === "COP" && productData.base_price_cop) {
+            // Si no hay precio (null o undefined), establecer ambos como null
+            if (productData.base_price_usd === null || productData.base_price_usd === undefined) {
+              productData.base_price_usd = null;
+              productData.base_price_cop = null;
+            } else if (createPriceCurrency === "COP" && productData.base_price_cop !== null && productData.base_price_cop !== undefined) {
               // Si se ingresó en COP, calcular USD
               productData.base_price_usd =
                 productData.base_price_cop / createRate;
             } else if (
               createPriceCurrency === "USD" &&
-              productData.base_price_usd
+              productData.base_price_usd !== null &&
+              productData.base_price_usd !== undefined
             ) {
               // Si se ingresó en USD, calcular COP
               productData.base_price_cop =
@@ -3365,25 +3375,34 @@ function Admin() {
                     {crudFormData.price_currency === "COP" ? (
                       <div>
                         <label className="block text-gray-300 text-sm mb-2">
-                          Precio en COP *
+                          Precio en COP
                         </label>
                         <input
                           type="number"
                           step="0.01"
-                          value={crudFormData.base_price_cop || ""}
+                          value={crudFormData.base_price_cop !== undefined && crudFormData.base_price_cop !== null ? crudFormData.base_price_cop : ""}
                           onChange={(e) => {
-                            const copPrice = parseFloat(e.target.value) || 0;
-                            const usdPrice = exchangeRate
-                              ? copPrice / exchangeRate
-                              : 0;
-                            setCrudFormData({
-                              ...crudFormData,
-                              base_price_cop: copPrice,
-                              base_price_usd: usdPrice,
-                            });
+                            const value = e.target.value;
+                            if (value === "" || value === null || value === undefined) {
+                              // Si está vacío, establecer como null (sin precio)
+                              setCrudFormData({
+                                ...crudFormData,
+                                base_price_cop: null,
+                                base_price_usd: null,
+                              });
+                            } else {
+                              const copPrice = parseFloat(value) || 0;
+                              const usdPrice = exchangeRate
+                                ? copPrice / exchangeRate
+                                : null;
+                              setCrudFormData({
+                                ...crudFormData,
+                                base_price_cop: copPrice,
+                                base_price_usd: usdPrice,
+                              });
+                            }
                           }}
                           className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                          required
                         />
                         {exchangeRate && crudFormData.base_price_cop && (
                           <p className="text-xs text-gray-400 mt-1">
@@ -3394,25 +3413,35 @@ function Admin() {
                     ) : (
                       <div>
                         <label className="block text-gray-300 text-sm mb-2">
-                          Precio en USD *
+                          Precio en USD
                         </label>
                         <input
                           type="number"
                           step="0.01"
-                          value={crudFormData.base_price_usd || ""}
+                          min="0"
+                          value={crudFormData.base_price_usd !== undefined && crudFormData.base_price_usd !== null ? crudFormData.base_price_usd : ""}
                           onChange={(e) => {
-                            const usdPrice = parseFloat(e.target.value) || 0;
-                            const copPrice = exchangeRate
-                              ? usdPrice * exchangeRate
-                              : 0;
-                            setCrudFormData({
-                              ...crudFormData,
-                              base_price_usd: usdPrice,
-                              base_price_cop: copPrice,
-                            });
+                            const value = e.target.value;
+                            if (value === "" || value === null || value === undefined) {
+                              // Si está vacío, establecer como null (sin precio)
+                              setCrudFormData({
+                                ...crudFormData,
+                                base_price_usd: null,
+                                base_price_cop: null,
+                              });
+                            } else {
+                              const usdPrice = parseFloat(value) || 0;
+                              const copPrice = exchangeRate
+                                ? usdPrice * exchangeRate
+                                : null;
+                              setCrudFormData({
+                                ...crudFormData,
+                                base_price_usd: usdPrice,
+                                base_price_cop: copPrice,
+                              });
+                            }
                           }}
                           className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                          required
                         />
                         {exchangeRate && crudFormData.base_price_usd && (
                           <p className="text-xs text-gray-400 mt-1">
