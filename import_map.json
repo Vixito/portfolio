@@ -26,6 +26,8 @@
     "@hookform/resolvers": "npm:@hookform/resolvers",
     "@hookform/resolvers/zod": "npm:@hookform/resolvers/zod",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
-    "canvas-confetti": "npm:canvas-confetti@1.9.3"
+    "canvas-confetti": "npm:canvas-confetti@1.9.3",
+    "react-quill": "npm:react-quill@2.0.0",
+    "quill": "npm:quill@1.3.7"
   }
 }

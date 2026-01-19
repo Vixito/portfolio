@@ -68,6 +68,7 @@ import {
 } from "../lib/supabase-functions";
 import { supabase } from "../lib/supabase";
 import Invoice from "../components/features/Invoice";
+import RichTextEditor from "../components/ui/RichTextEditor";
 
 function Admin() {
   const { t } = useTranslation();
@@ -3400,48 +3401,32 @@ function Admin() {
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
                         {t("admin.fieldFullDescription")} (Español)
-                        <span className="text-gray-500 text-xs ml-2">
-                          (Soporta HTML: &lt;strong&gt;, &lt;em&gt;, &lt;u&gt;, &lt;br/&gt;)
-                        </span>
                       </label>
-                      <textarea
+                      <RichTextEditor
                         value={crudFormData.full_description_es || ""}
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setCrudFormData({
                             ...crudFormData,
-                            full_description_es: e.target.value,
+                            full_description_es: value,
                           })
                         }
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-sm"
-                        rows={8}
-                        placeholder="Puedes usar HTML: &lt;strong&gt;negrita&lt;/strong&gt;, &lt;em&gt;cursiva&lt;/em&gt;, &lt;u&gt;subrayado&lt;/u&gt;, &lt;br/&gt; para saltos de línea"
+                        placeholder="Escribe la descripción completa del producto en español..."
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Ejemplo: &lt;strong&gt;Texto en negrita&lt;/strong&gt;&lt;br/&gt;&lt;em&gt;Texto en cursiva&lt;/em&gt;
-                      </p>
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
                         {t("admin.fieldFullDescription")} (English)
-                        <span className="text-gray-500 text-xs ml-2">
-                          (Supports HTML: &lt;strong&gt;, &lt;em&gt;, &lt;u&gt;, &lt;br/&gt;)
-                        </span>
                       </label>
-                      <textarea
+                      <RichTextEditor
                         value={crudFormData.full_description_en || ""}
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setCrudFormData({
                             ...crudFormData,
-                            full_description_en: e.target.value,
+                            full_description_en: value,
                           })
                         }
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-sm"
-                        rows={8}
-                        placeholder="You can use HTML: &lt;strong&gt;bold&lt;/strong&gt;, &lt;em&gt;italic&lt;/em&gt;, &lt;u&gt;underline&lt;/u&gt;, &lt;br/&gt; for line breaks"
+                        placeholder="Write the full product description in English..."
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Example: &lt;strong&gt;Bold text&lt;/strong&gt;&lt;br/&gt;&lt;em&gt;Italic text&lt;/em&gt;
-                      </p>
                     </div>
                     {/* Selector de moneda */}
                     <div>
@@ -6304,22 +6289,65 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                         }
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Selector de moneda para el precio total */}
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Moneda del precio total *
+                      </label>
+                      <select
+                        value={crudFormData.currency || "USD"}
+                        onChange={(e) => {
+                          const currency = e.target.value as "USD" | "COP";
+                          setCrudFormData({
+                            ...crudFormData,
+                            currency: currency,
+                          });
+                        }}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                        disabled={
+                          editingItem &&
+                          (editingItem.status === "paid" ||
+                            editingItem.status === "completed")
+                        }
+                      >
+                        <option value="USD">USD (Dólares)</option>
+                        <option value="COP">COP (Pesos Colombianos)</option>
+                      </select>
+                    </div>
+
+                    {/* Campo de precio total según moneda seleccionada */}
+                    {crudFormData.currency === "COP" ? (
                       <div>
                         <label className="block text-gray-300 text-sm mb-2">
-                          Amount *
+                          Precio Total en COP *
                         </label>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
                           value={crudFormData.amount || ""}
-                          onChange={(e) =>
-                            setCrudFormData({
-                              ...crudFormData,
-                              amount: parseFloat(e.target.value) || 0,
-                            })
-                          }
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "" || value === null || value === undefined) {
+                              setCrudFormData({
+                                ...crudFormData,
+                                amount: null,
+                              });
+                            } else {
+                              const copAmount = parseFloat(value);
+                              if (!isNaN(copAmount)) {
+                                const usdAmount = exchangeRate
+                                  ? copAmount / exchangeRate
+                                  : null;
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  amount: copAmount,
+                                  amount_usd: usdAmount,
+                                });
+                              }
+                            }
+                          }}
                           className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                           required
                           disabled={
@@ -6328,19 +6356,43 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                               editingItem.status === "completed")
                           }
                         />
+                        {exchangeRate && crudFormData.amount && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            ≈ ${((crudFormData.amount as number) / exchangeRate).toFixed(2)} USD
+                          </p>
+                        )}
                       </div>
+                    ) : (
                       <div>
                         <label className="block text-gray-300 text-sm mb-2">
-                          Currency *
+                          Precio Total en USD *
                         </label>
-                        <select
-                          value={crudFormData.currency || "USD"}
-                          onChange={(e) =>
-                            setCrudFormData({
-                              ...crudFormData,
-                              currency: e.target.value,
-                            })
-                          }
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={crudFormData.amount || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "" || value === null || value === undefined) {
+                              setCrudFormData({
+                                ...crudFormData,
+                                amount: null,
+                              });
+                            } else {
+                              const usdAmount = parseFloat(value);
+                              if (!isNaN(usdAmount)) {
+                                const copAmount = exchangeRate
+                                  ? usdAmount * exchangeRate
+                                  : null;
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  amount: usdAmount,
+                                  amount_cop: copAmount,
+                                });
+                              }
+                            }
+                          }}
                           className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
                           required
                           disabled={
@@ -6348,12 +6400,14 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                             (editingItem.status === "paid" ||
                               editingItem.status === "completed")
                           }
-                        >
-                          <option value="USD">USD</option>
-                          <option value="COP">COP</option>
-                        </select>
+                        />
+                        {exchangeRate && crudFormData.amount && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            ≈ ${((crudFormData.amount as number) * exchangeRate).toFixed(2)} COP
+                          </p>
+                        )}
                       </div>
-                    </div>
+                    )}
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
                         Approximate Delivery Time *
@@ -6417,66 +6471,220 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                       editingItem.status === "completed")
                                   }
                                 />
-                                <div className="flex gap-2">
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="Price"
-                                    value={feature.price || ""}
-                                    onChange={(e) => {
-                                      const features = [
-                                        ...(crudFormData.custom_fields
-                                          ?.features || []),
-                                      ];
-                                      features[index] = {
-                                        ...features[index],
-                                        price: parseFloat(e.target.value) || 0,
-                                      };
-                                      setCrudFormData({
-                                        ...crudFormData,
-                                        custom_fields: {
-                                          ...crudFormData.custom_fields,
-                                          features,
-                                        },
-                                      });
-                                    }}
-                                    className="flex-1 bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
-                                    disabled={
-                                      editingItem &&
-                                      (editingItem.status === "paid" ||
-                                        editingItem.status === "completed")
-                                    }
-                                  />
-                                  <select
-                                    value={feature.currency || "USD"}
-                                    onChange={(e) => {
-                                      const features = [
-                                        ...(crudFormData.custom_fields
-                                          ?.features || []),
-                                      ];
-                                      features[index] = {
-                                        ...features[index],
-                                        currency: e.target.value,
-                                      };
-                                      setCrudFormData({
-                                        ...crudFormData,
-                                        custom_fields: {
-                                          ...crudFormData.custom_fields,
-                                          features,
-                                        },
-                                      });
-                                    }}
-                                    className="bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
-                                    disabled={
-                                      editingItem &&
-                                      (editingItem.status === "paid" ||
-                                        editingItem.status === "completed")
-                                    }
-                                  >
-                                    <option value="USD">USD</option>
-                                    <option value="COP">COP</option>
-                                  </select>
-                                </div>
+                                
+                                {/* Selector de tipo: precio o porcentaje */}
+                                <select
+                                  value={feature.type || "price"}
+                                  onChange={(e) => {
+                                    const features = [
+                                      ...(crudFormData.custom_fields?.features ||
+                                        []),
+                                    ];
+                                    const newType = e.target.value;
+                                    features[index] = {
+                                      ...features[index],
+                                      type: newType,
+                                      // Limpiar campos según el tipo
+                                      price: newType === "price" ? (features[index].price || 0) : undefined,
+                                      percentage: newType === "percentage" ? (features[index].percentage || 0) : undefined,
+                                      currency: newType === "price" ? (features[index].currency || "USD") : undefined,
+                                    };
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      custom_fields: {
+                                        ...crudFormData.custom_fields,
+                                        features,
+                                      },
+                                    });
+                                  }}
+                                  className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
+                                  disabled={
+                                    editingItem &&
+                                    (editingItem.status === "paid" ||
+                                      editingItem.status === "completed")
+                                  }
+                                >
+                                  <option value="price">Precio</option>
+                                  <option value="percentage">Porcentaje</option>
+                                </select>
+
+                                {/* Mostrar campos según el tipo seleccionado */}
+                                {feature.type === "percentage" ? (
+                                  <div>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      placeholder="Porcentaje (puede ser negativo)"
+                                      value={feature.percentage !== undefined ? feature.percentage : ""}
+                                      onChange={(e) => {
+                                        const features = [
+                                          ...(crudFormData.custom_fields?.features ||
+                                            []),
+                                        ];
+                                        features[index] = {
+                                          ...features[index],
+                                          percentage: parseFloat(e.target.value) || 0,
+                                        };
+                                        setCrudFormData({
+                                          ...crudFormData,
+                                          custom_fields: {
+                                            ...crudFormData.custom_fields,
+                                            features,
+                                          },
+                                        });
+                                      }}
+                                      className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
+                                      disabled={
+                                        editingItem &&
+                                        (editingItem.status === "paid" ||
+                                          editingItem.status === "completed")
+                                      }
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Usa valores negativos para descuentos (ej: -10) o positivos para recargos (ej: +15)
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {/* Selector de moneda para precio */}
+                                    <select
+                                      value={feature.currency || "USD"}
+                                      onChange={(e) => {
+                                        const features = [
+                                          ...(crudFormData.custom_fields?.features ||
+                                            []),
+                                        ];
+                                        features[index] = {
+                                          ...features[index],
+                                          currency: e.target.value,
+                                        };
+                                        setCrudFormData({
+                                          ...crudFormData,
+                                          custom_fields: {
+                                            ...crudFormData.custom_fields,
+                                            features,
+                                          },
+                                        });
+                                      }}
+                                      className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
+                                      disabled={
+                                        editingItem &&
+                                        (editingItem.status === "paid" ||
+                                          editingItem.status === "completed")
+                                      }
+                                    >
+                                      <option value="USD">USD (Dólares)</option>
+                                      <option value="COP">COP (Pesos Colombianos)</option>
+                                    </select>
+                                    
+                                    {/* Campo de precio con conversión en tiempo real */}
+                                    {feature.currency === "COP" ? (
+                                      <div>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="Precio en COP"
+                                          value={feature.price !== undefined ? feature.price : ""}
+                                          onChange={(e) => {
+                                            const value = e.target.value;
+                                            const features = [
+                                              ...(crudFormData.custom_fields?.features ||
+                                                []),
+                                            ];
+                                            if (value === "" || value === null || value === undefined) {
+                                              features[index] = {
+                                                ...features[index],
+                                                price: null,
+                                              };
+                                            } else {
+                                              const copPrice = parseFloat(value);
+                                              if (!isNaN(copPrice)) {
+                                                const usdPrice = exchangeRate
+                                                  ? copPrice / exchangeRate
+                                                  : null;
+                                                features[index] = {
+                                                  ...features[index],
+                                                  price: copPrice,
+                                                  price_usd: usdPrice,
+                                                };
+                                              }
+                                            }
+                                            setCrudFormData({
+                                              ...crudFormData,
+                                              custom_fields: {
+                                                ...crudFormData.custom_fields,
+                                                features,
+                                              },
+                                            });
+                                          }}
+                                          className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
+                                          disabled={
+                                            editingItem &&
+                                            (editingItem.status === "paid" ||
+                                              editingItem.status === "completed")
+                                          }
+                                        />
+                                        {exchangeRate && feature.price && (
+                                          <p className="text-xs text-gray-400 mt-1">
+                                            ≈ ${((feature.price as number) / exchangeRate).toFixed(2)} USD
+                                          </p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="Precio en USD"
+                                          value={feature.price !== undefined ? feature.price : ""}
+                                          onChange={(e) => {
+                                            const value = e.target.value;
+                                            const features = [
+                                              ...(crudFormData.custom_fields?.features ||
+                                                []),
+                                            ];
+                                            if (value === "" || value === null || value === undefined) {
+                                              features[index] = {
+                                                ...features[index],
+                                                price: null,
+                                              };
+                                            } else {
+                                              const usdPrice = parseFloat(value);
+                                              if (!isNaN(usdPrice)) {
+                                                const copPrice = exchangeRate
+                                                  ? usdPrice * exchangeRate
+                                                  : null;
+                                                features[index] = {
+                                                  ...features[index],
+                                                  price: usdPrice,
+                                                  price_cop: copPrice,
+                                                };
+                                              }
+                                            }
+                                            setCrudFormData({
+                                              ...crudFormData,
+                                              custom_fields: {
+                                                ...crudFormData.custom_fields,
+                                                features,
+                                              },
+                                            });
+                                          }}
+                                          className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
+                                          disabled={
+                                            editingItem &&
+                                            (editingItem.status === "paid" ||
+                                              editingItem.status === "completed")
+                                          }
+                                        />
+                                        {exchangeRate && feature.price && (
+                                          <p className="text-xs text-gray-400 mt-1">
+                                            ≈ ${((feature.price as number) * exchangeRate).toFixed(2)} COP
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                               <button
                                 type="button"
@@ -6516,7 +6724,7 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                 features: [
                                   ...(crudFormData.custom_fields?.features ||
                                     []),
-                                  { name: "", price: 0, currency: "USD" },
+                                  { name: "", type: "price", price: 0, currency: "USD" },
                                 ],
                               },
                             });
