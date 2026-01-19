@@ -252,10 +252,25 @@ function Store() {
 
   // Formatear precio (simplificado, sin detección de país por IP)
   const formatPrice = (item: StoreItem) => {
+    // Si es tipo "request" y no hay precio, retornar null para no mostrar precio
+    if (item.button_type === "request") {
+      const pricing = item.product_pricing?.[0];
+      const hasPrice = pricing?.current_price_usd && pricing.current_price_usd > 0;
+      const hasBasePrice = item.base_price_usd && item.base_price_usd > 0;
+      
+      if (!hasPrice && !hasBasePrice) {
+        return null; // No mostrar precio si es "request" y no tiene precio
+      }
+    }
+    
     const pricing = item.product_pricing?.[0];
     if (!pricing) {
       // Fallback: mostrar precio en USD si no hay pricing
       const price = item.base_price_usd || 0;
+      // Si el precio es 0 y es tipo "request", no mostrar
+      if (price === 0 && item.button_type === "request") {
+        return null;
+      }
       return (
         <span className="text-2xl font-bold text-purple">
           {new Intl.NumberFormat("en-US", {
@@ -428,8 +443,10 @@ function Store() {
                       item.description_translations || item.description
                     ) || t("common.noContent")}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">{formatPrice(item)}</div>
+                  <div className={`flex items-center ${formatPrice(item) ? "justify-between" : "justify-end"}`}>
+                    {formatPrice(item) && (
+                      <div className="flex-1">{formatPrice(item)}</div>
+                    )}
                     {item.button_type === "buy" &&
                     item.buy_button_type === "external_link" &&
                     Array.isArray(item.buy_button_url) &&
@@ -469,7 +486,7 @@ function Store() {
                             handleItemClick(item);
                           }
                         }}
-                        className="px-4 py-2 cursor-pointer text-sm"
+                        className={`px-4 py-2 cursor-pointer text-sm ${!formatPrice(item) ? "w-full" : ""}`}
                       >
                         {getButtonText(item)}
                       </Button>

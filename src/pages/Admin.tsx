@@ -536,6 +536,7 @@ function Admin() {
       defaultFormData.button_type = "buy";
       defaultFormData.buy_button_type = "external_link";
       defaultFormData.price_currency = "USD";
+      defaultFormData.is_active = true;
     } else if (activeTab === "invoices") {
       // Valores por defecto para facturas
       defaultFormData.currency = "USD";
@@ -1643,6 +1644,11 @@ function Admin() {
             delete productData.sale_percentage;
             delete productData.sale_starts_at;
             delete productData.sale_ends_at;
+
+            // Asegurar que is_active esté incluido (por defecto true si no está definido)
+            if (productData.is_active === undefined) {
+              productData.is_active = true;
+            }
 
             // Crear producto
             const newProduct = await createProduct(productData);
