@@ -328,6 +328,18 @@ export async function extractEventData(url: string) {
 }
 
 // ========== CRUD PRODUCTS ==========
+/**
+ * Genera un ID público aleatorio para productos (8 caracteres alfanuméricos)
+ */
+function generatePublicId(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Sin I, O, 0, 1 para evitar confusión
+  let result = "";
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 export async function createProduct(product: {
   title: string;
   description?: string;
@@ -350,9 +362,34 @@ export async function createProduct(product: {
   pricing_link?: string;
   button_text?: string;
 }) {
+  // Generar public_id único
+  let publicId = generatePublicId();
+  let attempts = 0;
+  const maxAttempts = 10;
+  
+  // Verificar que el public_id sea único
+  while (attempts < maxAttempts) {
+    const { data: existing } = await supabase
+      .from("products")
+      .select("id")
+      .eq("public_id", publicId)
+      .maybeSingle();
+    
+    if (!existing) {
+      break; // public_id es único
+    }
+    
+    publicId = generatePublicId();
+    attempts++;
+  }
+  
+  if (attempts >= maxAttempts) {
+    throw new Error("No se pudo generar un ID público único después de varios intentos");
+  }
+  
   const { data, error } = await supabase
     .from("products")
-    .insert(product)
+    .insert({ ...product, public_id: publicId })
     .select()
     .single();
 
@@ -1174,7 +1211,7 @@ export async function getInvoices() {
     .from("invoices")
     .select(`
       *,
-      products (id, title)
+      products (id, public_id, title)
     `)
     .order("invoice_number", { ascending: false });
 
@@ -1199,7 +1236,7 @@ export async function getInvoice(id: string) {
     .from("invoices")
     .select(`
       *,
-      products (id, title, description, full_description)
+      products (id, public_id, title, description, full_description)
     `)
     .eq("id", id)
     .single();

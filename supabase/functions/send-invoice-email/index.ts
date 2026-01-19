@@ -37,7 +37,7 @@ serve(async (req) => {
       .from("invoices")
       .select(`
         *,
-        products (id, title, description, full_description)
+        products (id, public_id, title, description, full_description)
       `)
       .eq("id", invoice_id)
       .single();
@@ -107,24 +107,45 @@ serve(async (req) => {
       border: 0;
       margin: 2px 0;
     }
-    .studio { margin: 4px 0; font-size: 0.9em; }
+    .studio { 
+      margin: 4px 0; 
+      font-size: 0.9em; 
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .studio-logo {
+      height: 20px;
+      width: auto;
+    }
     .user-info { margin: 4px 0; display: flex; justify-content: space-between; }
     .calories-info {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
     }
-    .left-container { display: flex; flex-direction: column; }
+    .left-container { 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: flex-end;
+    }
     .small-text { font-size: 0.85rem; margin: 0; font-weight: 400; }
     .amount-label {
-      margin: -5px -2px;
-      font-size: 2em;
-      font-weight: 700;
+      margin: -5px -2px 0 -2px;
+      font-size: 1.5em;
+      font-weight: 400;
+    }
+    .amount-to-pay {
+      font-size: 0.85rem;
+      font-weight: 800;
+      margin: 2px 0;
     }
     .amount-value {
       margin: -7px -2px;
       font-size: 2.4em;
       font-weight: 700;
+      text-align: right;
     }
     .daily-value { font-size: 0.85rem; }
     .delivery-time {
@@ -134,21 +155,28 @@ serve(async (req) => {
       border-bottom: 1px solid #888989;
       padding-bottom: 2px;
     }
+    .delivery-time span:last-child {
+      text-align: right;
+    }
     .payment-button-container {
       display: flex;
       flex-direction: column;
       gap: 8px;
       margin: 10px 0;
+      align-items: center;
     }
     .payment-button {
       display: block;
       padding: 10px 20px;
-      background-color: #2093c4;
-      color: white;
+      background-color: #0d0d0d;
+      color: #03fff6;
       text-align: center;
       text-decoration: none;
       border-radius: 4px;
       font-weight: 700;
+    }
+    .feature-price {
+      text-align: right;
     }
     .note {
       font-size: 0.6rem;
@@ -193,7 +221,7 @@ serve(async (req) => {
         <div class="divider"></div>
         <p>
           <span class="bold">${feature.name || "Feature"}</span>
-          <span>${formatPrice(feature.price || 0, feature.currency || "USD")}</span>
+          <span class="feature-price">${formatPrice(feature.price || 0, feature.currency || "USD")}</span>
         </p>
       `
               )
@@ -203,17 +231,18 @@ serve(async (req) => {
       <div class="divider-large"></div>
       <div class="payment-button-container">
         <a 
-          href="https://app.airtm.com/ivt/vixis" 
+          href="#" 
           class="payment-button" 
-          target="_blank"
-          onclick="window.open('https://airtm.me/Vixis', '_blank'); return true;"
+          onclick="event.preventDefault(); window.open('https://app.airtm.com/ivt/vixis', '_blank'); window.open('https://airtm.me/Vixis', '_blank'); return false;"
         >
           Pay Now
         </a>
       </div>
       <div class="divider-medium"></div>
       <p class="note">
-        * In the payment note you must put: Product #${invoice.product_id} - Invoice #${invoice.invoice_number} - Vixis
+        * In the payment note you must put:
+        <br>
+        Product #${(invoice.products as any)?.public_id || invoice.product_id} - Invoice #${invoice.invoice_number} - Vixis
       </p>
     </div>
   </div>

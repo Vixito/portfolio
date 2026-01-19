@@ -3008,7 +3008,7 @@ function Admin() {
                   </div>
                 </div>
               ))}
-              {(activeTab === "products"
+              {((activeTab === "products"
                 ? products
                 : activeTab === "projects"
                 ? projects
@@ -3028,8 +3028,10 @@ function Admin() {
                 ? blogPosts
                 : activeTab === "home_content"
                 ? homeContentItems
+                : activeTab === "invoices"
+                ? invoices
                 : studies
-              ).length === 0 && (
+              ) || []).length === 0 && (
                 <div className="text-center py-8 text-gray-400">
                   {activeTab === "products" && (
                     <p className="text-lg mb-2">{t("admin.noProducts")}</p>
