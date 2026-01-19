@@ -1208,18 +1208,29 @@ export async function createInvoice(invoice: {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
   const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
   
-  // Si hay service_role_key, usarlo; si no, usar cliente anónimo de Supabase (fallback técnico)
-  const adminSupabase = supabaseServiceKey
-    ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
-    : supabase;
+  // Validar que service_role_key esté configurado
+  if (!supabaseServiceKey) {
+    throw new Error(
+      "VITE_SUPABASE_SERVICE_ROLE_KEY no está configurado. " +
+      "Agrega esta variable en Doppler para poder crear facturas desde Admin."
+    );
+  }
+  
+  // Crear cliente con service_role_key (bypass RLS)
+  const adminSupabase = createSupabaseClient(supabaseUrl, supabaseServiceKey);
   
   // Obtener el siguiente número de factura
-  const { data: lastInvoice } = await adminSupabase
+  const { data: lastInvoice, error: lastInvoiceError } = await adminSupabase
     .from("invoices")
     .select("invoice_number")
     .order("invoice_number", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
+
+  if (lastInvoiceError && lastInvoiceError.code !== "PGRST116") {
+    // PGRST116 es "no rows returned", que es válido si no hay facturas
+    throw new Error(`Error al obtener último número de factura: ${lastInvoiceError.message}`);
+  }
 
   const nextInvoiceNumber = lastInvoice?.invoice_number
     ? lastInvoice.invoice_number + 1
@@ -1236,6 +1247,14 @@ export async function createInvoice(invoice: {
     .single();
 
   if (error) {
+    // Mensaje de error más descriptivo
+    if (error.message.includes("users")) {
+      throw new Error(
+        `Error al crear factura: ${error.message}. ` +
+        `Esto puede deberse a un trigger en la base de datos que intenta acceder a la tabla 'users'. ` +
+        `Verifica que el trigger tenga permisos adecuados o que la tabla 'users' tenga RLS configurado correctamente.`
+      );
+    }
     throw new Error(`Error al crear factura: ${error.message}`);
   }
 
@@ -1273,7 +1292,7 @@ export async function updateInvoice(
     throw new Error("No se puede editar una factura que ya está pagada o completada");
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("invoices")
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", id)
@@ -1291,9 +1310,16 @@ export async function deleteInvoice(id: string) {
   // Usar service_role_key para bypass RLS (solo para Admin)
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
   const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
-  const adminSupabase = supabaseServiceKey
-    ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
-    : supabase;
+  
+  // Validar que service_role_key esté configurado
+  if (!supabaseServiceKey) {
+    throw new Error(
+      "VITE_SUPABASE_SERVICE_ROLE_KEY no está configurado. " +
+      "Agrega esta variable en Doppler para poder eliminar facturas desde Admin."
+    );
+  }
+  
+  const adminSupabase = createSupabaseClient(supabaseUrl, supabaseServiceKey);
   
   // Verificar que la factura no esté pagada antes de eliminar
   const { data: currentInvoice } = await adminSupabase
