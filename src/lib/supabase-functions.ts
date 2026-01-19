@@ -1118,8 +1118,8 @@ export async function updateProductPricing(
 /**
  * Obtiene todos los productos con su pricing
  */
-export async function getProductsWithPricing() {
-  const { data, error } = await supabase
+export async function getProductsWithPricing(includeInactive = false) {
+  let query = supabase
     .from("products")
     .select(
       `
@@ -1127,8 +1127,14 @@ export async function getProductsWithPricing() {
       product_pricing (*)
     `
     )
-    .eq("is_active", true)
     .order("created_at", { ascending: false });
+
+  // Filtrar por is_active solo si no se incluyen inactivos (frontend)
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Error al obtener productos: ${error.message}`);

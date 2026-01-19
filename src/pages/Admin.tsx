@@ -399,7 +399,8 @@ function Admin() {
       switch (activeTab) {
         case "products":
           // Usar getProductsWithPricing para incluir product_pricing en la relación
-          const productsData = await getProductsWithPricing();
+          // Pasar true para incluir productos inactivos en Admin
+          const productsData = await getProductsWithPricing(true);
           setProducts(productsData || []);
           break;
         case "projects":
@@ -2847,16 +2848,31 @@ function Admin() {
               ).map((item: any) => (
                 <div
                   key={item.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 p-3 md:p-4 bg-black/20 rounded-lg border border-white/10 hover:border-white/20 transition-colors"
+                  className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 p-3 md:p-4 rounded-lg border transition-colors ${
+                    activeTab !== "invoices" && item.is_active === false
+                      ? "bg-gray-900/40 border-gray-600/30 hover:border-gray-600/50 opacity-75"
+                      : "bg-black/20 border-white/10 hover:border-white/20"
+                  }`}
                 >
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-semibold text-sm md:text-base truncate">
-                      {activeTab === "testimonials"
-                        ? item.name || item.title || t("admin.noClient")
-                        : activeTab === "invoices"
-                        ? `Invoice #${item.invoice_number} - ${item.user_name}`
-                        : item.title || item.name}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className={`font-semibold text-sm md:text-base truncate ${
+                        activeTab !== "invoices" && item.is_active === false
+                          ? "text-gray-400"
+                          : "text-white"
+                      }`}>
+                        {activeTab === "testimonials"
+                          ? item.name || item.title || t("admin.noClient")
+                          : activeTab === "invoices"
+                          ? `Invoice #${item.invoice_number} - ${item.user_name}`
+                          : item.title || item.name}
+                      </h3>
+                      {activeTab !== "invoices" && item.is_active === false && (
+                        <span className="px-2 py-0.5 text-xs bg-gray-700/50 text-gray-400 rounded border border-gray-600/50">
+                          Inactivo
+                        </span>
+                      )}
+                    </div>
                     <p className="text-gray-400 text-xs md:text-sm line-clamp-2">
                       {activeTab === "events"
                         ? item.date
