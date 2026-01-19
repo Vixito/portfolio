@@ -3057,6 +3057,9 @@ function Admin() {
                   {activeTab === "studies" && (
                     <p className="text-lg mb-2">{t("admin.noStudies")}</p>
                   )}
+                  {activeTab === "invoices" && (
+                    <p className="text-lg mb-2">{t("admin.noInvoices")}</p>
+                  )}
                   {activeTab === "blog_posts" && (
                     <p className="text-lg mb-2">No hay posts de blog</p>
                   )}
