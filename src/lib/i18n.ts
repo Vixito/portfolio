@@ -85,6 +85,7 @@ export const translations = {
       showingResults: "Mostrando",
       of: "de",
       products: "productos",
+      categoryLabel: "Categoría",
       category: {
         programming: "Programación",
         clothing: "Ropa",
@@ -665,6 +666,7 @@ export const translations = {
       showingResults: "Showing",
       of: "of",
       products: "products",
+      categoryLabel: "Category",
       category: {
         programming: "Programming",
         clothing: "Clothing",

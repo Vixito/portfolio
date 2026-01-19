@@ -456,7 +456,7 @@ function Store() {
                       />
                     </svg>
                     <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
-                      {t("store.category") || "Categoría"}
+                      {t("store.categoryLabel") || "Categoría"}
                     </span>
                     <select
                       value={selectedCategory}
