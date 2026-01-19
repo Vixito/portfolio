@@ -221,16 +221,15 @@ serve(async (req) => {
 </html>
     `;
 
-    // Obtener webhook URL de Make.com desde variables de entorno
+    // Obtener webhook URL de Make.com desde variables de entorno (opcional)
     const makeWebhookUrl = Deno.env.get("MAKE_INVOICE_WEBHOOK_URL");
     
-    // También intentar enviar directamente vía Resend o SendGrid si está configurado
+    // API Key de Resend (requerido si no hay Make webhook)
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    const sendgridApiKey = Deno.env.get("SENDGRID_API_KEY");
 
     let emailSent = false;
 
-    // Prioridad: Make.com webhook > Resend > SendGrid
+    // Prioridad: Make.com webhook > Resend
     if (makeWebhookUrl) {
       // Enviar a Make.com para que envíe el email
       try {
@@ -262,7 +261,7 @@ serve(async (req) => {
         }
       } catch (webhookError) {
         console.error("Error al enviar webhook a Make.com:", webhookError);
-        // Intentar con Resend o SendGrid como fallback
+        // Intentar con Resend como fallback
         if (resendApiKey) {
           try {
             const resendResponse = await fetch("https://api.resend.com/emails", {
@@ -280,30 +279,12 @@ serve(async (req) => {
             });
             if (resendResponse.ok) {
               emailSent = true;
+            } else {
+              const errorText = await resendResponse.text();
+              console.error("Resend API error:", errorText);
             }
           } catch (resendError) {
             console.error("Error al enviar con Resend:", resendError);
-          }
-        } else if (sendgridApiKey) {
-          try {
-            const sendgridResponse = await fetch("https://api.sendgrid.com/v3/mail/send", {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${sendgridApiKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                from: { email: "noreply@vixis.dev", name: "Vixis Studio" },
-                to: [{ email: invoice.user_email }],
-                subject: `Invoice #${invoice.invoice_number} - Vixis Studio`,
-                content: [{ type: "text/html", value: invoiceHTML }],
-              }),
-            });
-            if (sendgridResponse.ok) {
-              emailSent = true;
-            }
-          } catch (sendgridError) {
-            console.error("Error al enviar con SendGrid:", sendgridError);
           }
         }
       }
@@ -323,46 +304,24 @@ serve(async (req) => {
             html: invoiceHTML,
           }),
         });
+        
         if (resendResponse.ok) {
           emailSent = true;
         } else {
-          throw new Error(`Resend failed: ${resendResponse.statusText}`);
+          const errorText = await resendResponse.text();
+          console.error("Resend API error:", errorText);
+          throw new Error(`Resend failed: ${resendResponse.statusText} - ${errorText}`);
         }
       } catch (resendError) {
         console.error("Error al enviar con Resend:", resendError);
         throw resendError;
       }
-    } else if (sendgridApiKey) {
-      // Enviar directamente con SendGrid
-      try {
-        const sendgridResponse = await fetch("https://api.sendgrid.com/v3/mail/send", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${sendgridApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: { email: "noreply@vixis.dev", name: "Vixis Studio" },
-            to: [{ email: invoice.user_email }],
-            subject: `Invoice #${invoice.invoice_number} - Vixis Studio`,
-            content: [{ type: "text/html", value: invoiceHTML }],
-          }),
-        });
-        if (sendgridResponse.ok) {
-          emailSent = true;
-        } else {
-          throw new Error(`SendGrid failed: ${sendgridResponse.statusText}`);
-        }
-      } catch (sendgridError) {
-        console.error("Error al enviar con SendGrid:", sendgridError);
-        throw sendgridError;
-      }
     } else {
-      console.warn("No hay servicio de email configurado. Configura MAKE_INVOICE_WEBHOOK_URL, RESEND_API_KEY o SENDGRID_API_KEY");
+      console.warn("No hay servicio de email configurado. Configura RESEND_API_KEY en Supabase Edge Functions o MAKE_INVOICE_WEBHOOK_URL");
       return new Response(
         JSON.stringify({
           error: "No email service configured",
-          message: "Configure MAKE_INVOICE_WEBHOOK_URL, RESEND_API_KEY or SENDGRID_API_KEY",
+          message: "Configure RESEND_API_KEY in Supabase Edge Functions secrets, or MAKE_INVOICE_WEBHOOK_URL",
         }),
         {
           status: 400,

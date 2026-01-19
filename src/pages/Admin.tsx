@@ -2083,18 +2083,21 @@ function Admin() {
               });
               if (emailResponse.error) {
                 console.error("Error al enviar email:", emailResponse.error);
-                alert(`Factura creada (ID: ${newInvoice.invoice_number}) pero error al enviar email. Verifica la configuración en Doppler: MAKE_INVOICE_WEBHOOK_URL, RESEND_API_KEY o SENDGRID_API_KEY`);
+                const errorMsg = emailResponse.error.message || emailResponse.error;
+                alert(`Factura creada (ID: ${newInvoice.invoice_number}) pero error al enviar email: ${errorMsg}\n\nVerifica que RESEND_API_KEY esté configurado en Supabase Edge Functions secrets (no en Doppler).`);
               } else {
                 const result = emailResponse.data;
                 if (result?.error) {
-                  alert(`Factura creada (ID: ${newInvoice.invoice_number}) pero error al enviar email: ${result.error}`);
+                  const errorMsg = result.message || result.error;
+                  alert(`Factura creada (ID: ${newInvoice.invoice_number}) pero error al enviar email: ${errorMsg}\n\nVerifica que RESEND_API_KEY esté configurado en Supabase Edge Functions secrets (no en Doppler).`);
                 } else {
                   alert(`Factura #${newInvoice.invoice_number} creada y email enviado exitosamente a ${createInvoiceData.user_email}`);
                 }
               }
-            } catch (emailError) {
+            } catch (emailError: any) {
               console.error("Error al enviar email:", emailError);
-              alert(`Factura creada (ID: ${newInvoice.invoice_number}) pero error al enviar email. Verifica la configuración en Doppler.`);
+              const errorMsg = emailError?.message || emailError?.toString() || "Error desconocido";
+              alert(`Factura creada (ID: ${newInvoice.invoice_number}) pero error al enviar email: ${errorMsg}\n\nVerifica que RESEND_API_KEY esté configurado en Supabase Edge Functions secrets (no en Doppler).`);
               // No fallar la creación si el email falla
             }
             // Guardar referencia de la factura creada para descarga
