@@ -485,7 +485,7 @@ export async function getClients(includeInactive = false) {
   }
 
   const { data, error } = await query;
-  if (error) throw new Error(`Error al obtener clientes: ${error.message}`);
+  if (error) throw new Error(`Error al obtener abonadores: ${error.message}`);
   return data;
 }
 
@@ -509,7 +509,7 @@ export async function createClient(client: {
     .insert(client)
     .select()
     .single();
-  if (error) throw new Error(`Error al crear cliente: ${error.message}`);
+  if (error) throw new Error(`Error al crear abonador: ${error.message}`);
   return data;
 }
 
@@ -538,17 +538,17 @@ export async function updateClient(
     .eq("id", id)
     .select()
     .single();
-  if (error) throw new Error(`Error al actualizar cliente: ${error.message}`);
+  if (error) throw new Error(`Error al actualizar abonador: ${error.message}`);
   return data;
 }
 
 export async function deleteClient(id: string) {
   const { error } = await supabase.from("clients").delete().eq("id", id);
-  if (error) throw new Error(`Error al eliminar cliente: ${error.message}`);
+  if (error) throw new Error(`Error al eliminar abonador: ${error.message}`);
 }
 
 // ========== CRUD TESTIMONIALS ==========
-// Los testimonios están en la tabla clients, pero los tratamos como entidad separada
+// Los testimonios están en la tabla clients, pero los tratamos como entidad separada (nota: "clients" es el nombre técnico de la tabla, pero conceptualmente son "abonadores")
 export async function getTestimonials(includeInactive = false) {
   let query = supabase
     .from("clients")
@@ -608,7 +608,7 @@ export async function updateTestimonial(
 }
 
 export async function deleteTestimonial(clientId: string) {
-  // Eliminar el testimonio (poner campos en null) pero mantener el cliente
+  // Eliminar el testimonio (poner campos en null) pero mantener el abonador
   const { data, error } = await supabase
     .from("clients")
     .update({
@@ -1208,7 +1208,7 @@ export async function createInvoice(invoice: {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
   const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
   
-  // Si hay service_role_key, usarlo; si no, usar cliente anónimo (fallback)
+  // Si hay service_role_key, usarlo; si no, usar cliente anónimo de Supabase (fallback técnico)
   const adminSupabase = supabaseServiceKey
     ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
     : supabase;

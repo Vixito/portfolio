@@ -17,7 +17,7 @@ function Navigation() {
 
   const trabajoItems = [
     { path: "/projects", label: language === "es" ? "Proyectos" : "Projects" },
-    { path: "/clients", label: language === "es" ? "Clientes" : "Clients" },
+    { path: "/clients", label: language === "es" ? "Abonadores" : "Payers" },
     {
       path: "/workxp",
       label: language === "es" ? "Experiencia Laboral" : "Work Experience",
