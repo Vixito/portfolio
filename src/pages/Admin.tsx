@@ -1251,6 +1251,9 @@ function Admin() {
             delete updateProductData.sale_starts_at;
             delete updateProductData.sale_ends_at;
 
+            // Eliminar product_pricing si existe (es una relación, no una columna)
+            delete updateProductData.product_pricing;
+
             // Debug: ver qué se está enviando
             console.log("Actualizando producto con datos:", {
               id: editingItem.id,
@@ -1739,6 +1742,9 @@ function Admin() {
             delete productData.sale_percentage;
             delete productData.sale_starts_at;
             delete productData.sale_ends_at;
+
+            // Eliminar product_pricing si existe (es una relación, no una columna)
+            delete productData.product_pricing;
 
             // Asegurar que is_active esté incluido (por defecto true si no está definido)
             if (productData.is_active === undefined) {
