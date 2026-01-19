@@ -369,8 +369,8 @@ export async function updateProduct(
     description_translations?: { es?: string; en?: string } | null;
     full_description: string;
     full_description_translations?: { es?: string; en?: string } | null;
-    base_price_usd: number;
-    base_price_cop: number;
+    base_price_usd: number | null;
+    base_price_cop: number | null;
     price_currency: "USD" | "COP";
     sector: string;
     thumbnail_url: string;

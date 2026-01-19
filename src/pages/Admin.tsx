@@ -8,6 +8,7 @@ import { useStatusStore } from "../stores/useStatusStore";
 import { useLanguageStore } from "../stores/useLanguageStore";
 import {
   getProducts,
+  getProductsWithPricing,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -397,7 +398,8 @@ function Admin() {
     try {
       switch (activeTab) {
         case "products":
-          const productsData = await getProducts();
+          // Usar getProductsWithPricing para incluir product_pricing en la relación
+          const productsData = await getProductsWithPricing();
           setProducts(productsData || []);
           break;
         case "projects":
@@ -590,7 +592,19 @@ function Admin() {
     let currentItem = item;
     switch (activeTab) {
       case "products":
+        // Buscar en la lista actualizada de productos (que ahora incluye product_pricing)
         currentItem = products.find((p) => p.id === item.id) || item;
+        // Si no se encontró con product_pricing, intentar obtenerlo directamente
+        if (!currentItem.product_pricing || currentItem.product_pricing.length === 0) {
+          try {
+            const pricing = await getProductPricing(item.id);
+            if (pricing) {
+              currentItem.product_pricing = [pricing];
+            }
+          } catch (error) {
+            console.error("Error al obtener pricing:", error);
+          }
+        }
         break;
       case "projects":
         currentItem = projects.find((p) => p.id === item.id) || item;
@@ -852,22 +866,9 @@ function Admin() {
     }
 
     if (activeTab === "products") {
-      // Cargar pricing del producto (incluyendo ofertas)
-      try {
-        const pricing = await getProductPricing(currentItem.id);
-        if (pricing) {
-          formData.is_on_sale = pricing.is_on_sale;
-          formData.sale_percentage = pricing.sale_percentage;
-          formData.sale_starts_at = pricing.sale_starts_at
-            ? new Date(pricing.sale_starts_at).toISOString().slice(0, 16)
-            : "";
-          formData.sale_ends_at = pricing.sale_ends_at
-            ? new Date(pricing.sale_ends_at).toISOString().slice(0, 16)
-            : "";
-        }
-      } catch (error) {
-        console.error("Error al cargar pricing:", error);
-      }
+      // Cargar pricing del producto (incluyendo ofertas) - ya se cargó arriba desde product_pricing
+      // Este bloque es redundante pero se mantiene por compatibilidad
+      // Los datos de ofertas ya se cargaron en las líneas 694-705
 
       // Si no hay price_currency, usar USD por defecto
       if (!formData.price_currency) {
@@ -1595,6 +1596,9 @@ function Admin() {
             break;
           case "invoices":
             const updateInvoiceData: any = { ...crudFormData };
+            // Eliminar campos que no existen en la tabla invoices
+            delete updateInvoiceData.amount_usd;
+            delete updateInvoiceData.amount_cop;
             // Parsear custom_fields si es string
             if (typeof updateInvoiceData.custom_fields === "string") {
               try {
@@ -2052,6 +2056,9 @@ function Admin() {
             break;
           case "invoices":
             const createInvoiceData: any = { ...crudFormData };
+            // Eliminar campos que no existen en la tabla invoices
+            delete createInvoiceData.amount_usd;
+            delete createInvoiceData.amount_cop;
             // Parsear custom_fields si es string
             if (typeof createInvoiceData.custom_fields === "string") {
               try {
@@ -6435,7 +6442,6 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                 setCrudFormData({
                                   ...crudFormData,
                                   amount: copAmount,
-                                  amount_usd: usdAmount,
                                 });
                               }
                             }
@@ -6480,7 +6486,6 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                 setCrudFormData({
                                   ...crudFormData,
                                   amount: usdAmount,
-                                  amount_cop: copAmount,
                                 });
                               }
                             }

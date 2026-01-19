@@ -22,3 +22,27 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase CLI - archivos privados y temporales
+supabase/.temp/
+supabase/.temp/**
+supabase/.branches/
+supabase/.config.toml
+supabase/.env.local
+supabase/.env.*.local
+# Archivos específicos de Supabase CLI que contienen información privada
+**/.temp/
+**/.temp/**
+
+# Archivos de configuración privados
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# Archivos de Doppler (si se usan localmente)
+.doppler/
+doppler.yaml
+doppler.yml
