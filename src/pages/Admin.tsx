@@ -60,6 +60,11 @@ import {
   deleteHomeContentItem,
   getRadioSettings,
   updateRadioSettings,
+  getInvoices,
+  getInvoice,
+  createInvoice,
+  updateInvoice,
+  deleteInvoice,
 } from "../lib/supabase-functions";
 
 function Admin() {
@@ -107,6 +112,7 @@ function Admin() {
     | "blog_posts"
     | "home_content"
     | "radio_settings"
+    | "invoices"
   >("products");
   const [products, setProducts] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -120,6 +126,7 @@ function Admin() {
   const [blogPosts, setBlogPosts] = useState<any[]>([]);
   const [homeContentItems, setHomeContentItems] = useState<any[]>([]);
   const [radioSettings, setRadioSettings] = useState<any | null>(null);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [loadingCRUD, setLoadingCRUD] = useState(false);
   const [showCRUDModal, setShowCRUDModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -362,6 +369,11 @@ function Admin() {
           const radioSettingsData = await getRadioSettings();
           setRadioSettings(radioSettingsData);
           break;
+        case "invoices":
+          const invoicesData = await getInvoices();
+          setInvoices(invoicesData || []);
+          break;
+          break;
       }
     } catch (error) {
       // Solo loggear el error, no mostrar alerta
@@ -403,6 +415,9 @@ function Admin() {
           break;
         case "radio_settings":
           setRadioSettings(null);
+          break;
+        case "invoices":
+          setInvoices([]);
           break;
       }
     } finally {
@@ -447,6 +462,20 @@ function Admin() {
       defaultFormData.button_type = "buy";
       defaultFormData.buy_button_type = "external_link";
       defaultFormData.price_currency = "USD";
+    } else if (activeTab === "invoices") {
+      // Valores por defecto para facturas
+      defaultFormData.currency = "USD";
+      defaultFormData.status = "pending";
+      defaultFormData.custom_fields = {};
+      // Cargar productos si no están cargados
+      if (products.length === 0) {
+        getProducts().then(setProducts).catch(console.error);
+      }
+    } else if (activeTab === "invoices") {
+      // Valores por defecto para facturas
+      defaultFormData.currency = "USD";
+      defaultFormData.status = "pending";
+      defaultFormData.custom_fields = {};
     }
     setCrudFormData(defaultFormData);
     setEventUrl("");
@@ -513,6 +542,12 @@ function Admin() {
         break;
       case "home_content":
         currentItem = homeContentItems.find((h) => h.id === item.id) || item;
+        break;
+      case "invoices":
+        currentItem = invoices.find((i) => i.id === item.id) || item;
+        break;
+      case "invoices":
+        currentItem = invoices.find((i) => i.id === item.id) || item;
         break;
     }
 
@@ -903,6 +938,9 @@ function Admin() {
           break;
         case "home_content":
           await deleteHomeContentItem(id);
+          break;
+        case "invoices":
+          await deleteInvoice(id);
           break;
       }
       await loadCRUDData();
@@ -1398,6 +1436,18 @@ function Admin() {
           case "home_content":
             await updateHomeContentItem(editingItem.id, crudFormData);
             break;
+          case "invoices":
+            const updateInvoiceData: any = { ...crudFormData };
+            // Parsear custom_fields si es string
+            if (typeof updateInvoiceData.custom_fields === "string") {
+              try {
+                updateInvoiceData.custom_fields = JSON.parse(updateInvoiceData.custom_fields);
+              } catch {
+                updateInvoiceData.custom_fields = {};
+              }
+            }
+            await updateInvoice(editingItem.id, updateInvoiceData);
+            break;
         }
       } else {
         // Crear
@@ -1780,6 +1830,28 @@ function Admin() {
             break;
           case "home_content":
             await createHomeContentItem(crudFormData);
+            break;
+          case "invoices":
+            const createInvoiceData: any = { ...crudFormData };
+            // Parsear custom_fields si es string
+            if (typeof createInvoiceData.custom_fields === "string") {
+              try {
+                createInvoiceData.custom_fields = JSON.parse(createInvoiceData.custom_fields);
+              } catch {
+                createInvoiceData.custom_fields = {};
+              }
+            }
+            // Crear factura y enviar email automáticamente
+            const newInvoice = await createInvoice(createInvoiceData);
+            // Enviar email con la factura
+            try {
+              await supabase.functions.invoke("send-invoice-email", {
+                body: { invoice_id: newInvoice.id },
+              });
+            } catch (emailError) {
+              console.error("Error al enviar email:", emailError);
+              // No fallar la creación si el email falla
+            }
             break;
         }
       }
@@ -2331,6 +2403,7 @@ function Admin() {
                 "blog_posts",
                 "home_content",
                 "radio_settings",
+                "invoices",
               ] as const
             ).map((tab) => (
               <button
@@ -2359,6 +2432,7 @@ function Admin() {
                 {tab === "blog_posts" && "Blog Posts"}
                 {tab === "home_content" && "Home Content"}
                 {tab === "radio_settings" && "Radio Settings"}
+                {tab === "invoices" && "Invoices"}
               </button>
             ))}
           </div>
@@ -2527,6 +2601,8 @@ function Admin() {
                 ? blogPosts
                 : activeTab === "home_content"
                 ? homeContentItems
+                : activeTab === "invoices"
+                ? invoices
                 : studies
               ).map((item: any) => (
                 <div
@@ -2537,6 +2613,8 @@ function Admin() {
                     <h3 className="text-white font-semibold text-sm md:text-base truncate">
                       {activeTab === "testimonials"
                         ? item.name || item.title || t("admin.noClient")
+                        : activeTab === "invoices"
+                        ? `Invoice #${item.invoice_number} - ${item.user_name}`
                         : item.title || item.name}
                     </h3>
                     <p className="text-gray-400 text-xs md:text-sm line-clamp-2">
@@ -2556,15 +2634,18 @@ function Admin() {
                           : t("admin.noTestimonial")
                         : activeTab === "home_content"
                         ? item.content_type || t("admin.noDescription")
+                        : activeTab === "invoices"
+                        ? `${item.request_type} - ${item.currency} ${item.amount} - ${item.status}`
                         : item.description ||
                           item.url ||
                           t("admin.noDescription")}
                     </p>
                   </div>
                   <div className="flex gap-2 w-full sm:w-auto items-center">
-                    {/* Toggle is_active */}
-                    <button
-                      onClick={async () => {
+                    {/* Toggle is_active (ocultar para invoices) */}
+                    {activeTab !== "invoices" && (
+                      <button
+                        onClick={async () => {
                         try {
                           const newIsActive = !item.is_active;
                           switch (activeTab) {
@@ -2645,7 +2726,8 @@ function Admin() {
                       }
                     >
                       {item.is_active ? "✓" : "○"}
-                    </button>
+                      </button>
+                    )}
                     <button
                       onClick={() => handleEdit(item)}
                       className="flex-1 sm:flex-none px-2 md:px-3 py-1 text-xs md:text-sm bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-white rounded transition-colors cursor-pointer"
@@ -3030,6 +3112,10 @@ function Admin() {
                     ? editingItem
                       ? "Editar Contenido Home"
                       : "Crear Contenido Home"
+                    : activeTab === "invoices"
+                    ? editingItem
+                      ? `Edit Invoice #${editingItem.invoice_number || ""}`
+                      : "Create Invoice"
                     : editingItem
                     ? t("admin.editStudy")
                     : t("admin.createStudy")}
@@ -5821,6 +5907,252 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                       <label className="text-gray-300 text-sm">
                         Activo (visible en frontend)
                       </label>
+                    </div>
+                  </>
+                )}
+
+                {activeTab === "invoices" && (
+                  <>
+                    {editingItem && (
+                      <div className="mb-4 p-3 bg-gray-800 rounded-lg border border-gray-700">
+                        <p className="text-gray-300 text-sm">
+                          <span className="font-semibold">Invoice Number:</span>{" "}
+                          {editingItem.invoice_number}
+                        </p>
+                        <p className="text-gray-300 text-sm mt-1">
+                          <span className="font-semibold">Status:</span>{" "}
+                          <span
+                            className={
+                              editingItem.status === "paid" ||
+                              editingItem.status === "completed"
+                                ? "text-red-400"
+                                : "text-green-400"
+                            }
+                          >
+                            {editingItem.status}
+                          </span>
+                        </p>
+                        {(editingItem.status === "paid" ||
+                          editingItem.status === "completed") && (
+                          <p className="text-red-400 text-xs mt-2">
+                            ⚠️ This invoice cannot be edited or deleted because it has been paid or completed.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Product * (Select product ID)
+                      </label>
+                      <select
+                        value={crudFormData.product_id || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            product_id: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                        disabled={
+                          editingItem &&
+                          (editingItem.status === "paid" ||
+                            editingItem.status === "completed")
+                        }
+                      >
+                        <option value="">Select a product</option>
+                        {products.map((product: any) => (
+                          <option key={product.id} value={product.id}>
+                            {product.id} - {product.title || "No title"}
+                          </option>
+                        ))}
+                      </select>
+                      {crudFormData.product_id && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Selected Product ID: {crudFormData.product_id}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        User Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.user_name || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            user_name: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                        disabled={
+                          editingItem &&
+                          (editingItem.status === "paid" ||
+                            editingItem.status === "completed")
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        User Email * (for sending invoice)
+                      </label>
+                      <input
+                        type="email"
+                        value={crudFormData.user_email || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            user_email: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                        disabled={
+                          editingItem &&
+                          (editingItem.status === "paid" ||
+                            editingItem.status === "completed")
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Request Type *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.request_type || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            request_type: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="e.g., Consultation, Project, etc."
+                        required
+                        disabled={
+                          editingItem &&
+                          (editingItem.status === "paid" ||
+                            editingItem.status === "completed")
+                        }
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-gray-300 text-sm mb-2">
+                          Amount *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={crudFormData.amount || ""}
+                          onChange={(e) =>
+                            setCrudFormData({
+                              ...crudFormData,
+                              amount: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                          required
+                          disabled={
+                            editingItem &&
+                            (editingItem.status === "paid" ||
+                              editingItem.status === "completed")
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-300 text-sm mb-2">
+                          Currency *
+                        </label>
+                        <select
+                          value={crudFormData.currency || "USD"}
+                          onChange={(e) =>
+                            setCrudFormData({
+                              ...crudFormData,
+                              currency: e.target.value,
+                            })
+                          }
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                          required
+                          disabled={
+                            editingItem &&
+                            (editingItem.status === "paid" ||
+                              editingItem.status === "completed")
+                          }
+                        >
+                          <option value="USD">USD</option>
+                          <option value="COP">COP</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Approximate Delivery Time *
+                      </label>
+                      <input
+                        type="text"
+                        value={crudFormData.delivery_time || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            delivery_time: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="e.g., 2 weeks, 1 month, etc."
+                        required
+                        disabled={
+                          editingItem &&
+                          (editingItem.status === "paid" ||
+                            editingItem.status === "completed")
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Custom Fields (JSON)
+                      </label>
+                      <textarea
+                        value={
+                          typeof crudFormData.custom_fields === "string"
+                            ? crudFormData.custom_fields
+                            : JSON.stringify(
+                                crudFormData.custom_fields || {},
+                                null,
+                                2
+                              )
+                        }
+                        onChange={(e) => {
+                          try {
+                            const parsed = JSON.parse(e.target.value);
+                            setCrudFormData({
+                              ...crudFormData,
+                              custom_fields: parsed,
+                            });
+                          } catch {
+                            setCrudFormData({
+                              ...crudFormData,
+                              custom_fields: e.target.value,
+                            });
+                          }
+                        }}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-xs"
+                        rows={4}
+                        placeholder='{"field1": "value1", "field2": "value2"}'
+                        disabled={
+                          editingItem &&
+                          (editingItem.status === "paid" ||
+                            editingItem.status === "completed")
+                        }
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Add custom fields as JSON object (optional)
+                      </p>
                     </div>
                   </>
                 )}

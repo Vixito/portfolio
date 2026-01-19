@@ -277,6 +277,7 @@ export const translations = {
       requestSong: "Pide tu canción",
       songRequestUrlNotConfigured: "URL de Typeform no configurada",
       jingleTitle: "¡Sintonízate!",
+      connecting: "Conectando...",
     },
     // Blog
     blog: {
@@ -852,6 +853,7 @@ export const translations = {
       requestSong: "Request a Song",
       songRequestUrlNotConfigured: "Typeform URL not configured",
       jingleTitle: "Tune in!",
+      connecting: "Connecting...",
     },
     // Blog
     blog: {

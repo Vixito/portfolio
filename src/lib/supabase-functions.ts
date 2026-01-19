@@ -1151,6 +1151,157 @@ export async function getSectorMultipliers() {
   return data;
 }
 
+// ========== CRUD INVOICES ==========
+export async function getInvoices() {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select(`
+      *,
+      products (id, title)
+    `)
+    .order("invoice_number", { ascending: false });
+
+  if (error) {
+    throw new Error(`Error al obtener facturas: ${error.message}`);
+  }
+
+  return data;
+}
+
+export async function getInvoice(id: string) {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select(`
+      *,
+      products (id, title, description, full_description)
+    `)
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    throw new Error(`Error al obtener factura: ${error.message}`);
+  }
+
+  return data;
+}
+
+export async function createInvoice(invoice: {
+  product_id: string;
+  user_name: string;
+  user_email: string;
+  request_type: string;
+  amount: number;
+  currency: "USD" | "COP";
+  delivery_time: string;
+  custom_fields?: Record<string, any>;
+  status?: "pending" | "paid" | "completed" | "cancelled";
+}) {
+  // Obtener el siguiente número de factura
+  const { data: lastInvoice } = await supabase
+    .from("invoices")
+    .select("invoice_number")
+    .order("invoice_number", { ascending: false })
+    .limit(1)
+    .single();
+
+  const nextInvoiceNumber = lastInvoice?.invoice_number
+    ? lastInvoice.invoice_number + 1
+    : 1;
+
+  const { data, error } = await supabase
+    .from("invoices")
+    .insert({
+      ...invoice,
+      invoice_number: nextInvoiceNumber,
+      status: invoice.status || "pending",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Error al crear factura: ${error.message}`);
+  }
+
+  return data;
+}
+
+export async function updateInvoice(
+  id: string,
+  updates: Partial<{
+    user_name: string;
+    user_email: string;
+    request_type: string;
+    amount: number;
+    currency: "USD" | "COP";
+    delivery_time: string;
+    custom_fields: Record<string, any>;
+    status: "pending" | "paid" | "completed" | "cancelled";
+  }>
+) {
+  // Verificar que la factura no esté pagada antes de actualizar
+  const { data: currentInvoice } = await supabase
+    .from("invoices")
+    .select("status")
+    .eq("id", id)
+    .single();
+
+  if (currentInvoice?.status === "paid" || currentInvoice?.status === "completed") {
+    throw new Error("No se puede editar una factura que ya está pagada o completada");
+  }
+
+  const { data, error } = await supabase
+    .from("invoices")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Error al actualizar factura: ${error.message}`);
+  }
+
+  return data;
+}
+
+export async function deleteInvoice(id: string) {
+  // Verificar que la factura no esté pagada antes de eliminar
+  const { data: currentInvoice } = await supabase
+    .from("invoices")
+    .select("status")
+    .eq("id", id)
+    .single();
+
+  if (currentInvoice?.status === "paid" || currentInvoice?.status === "completed") {
+    throw new Error("No se puede eliminar una factura que ya está pagada o completada");
+  }
+
+  const { error } = await supabase.from("invoices").delete().eq("id", id);
+
+  if (error) {
+    throw new Error(`Error al eliminar factura: ${error.message}`);
+  }
+}
+
+export async function markInvoiceAsPaid(id: string, transactionId: string) {
+  const { data, error } = await supabase
+    .from("invoices")
+    .update({
+      status: "paid",
+      transaction_id: transactionId,
+      paid_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Error al marcar factura como pagada: ${error.message}`);
+  }
+
+  return data;
+}
+
 /**
  * Obtiene la playlist de la radio (para reproducción automática cuando no está en vivo)
  * Las URLs deben apuntar a Google Cloud Storage (storage.googleapis.com)
