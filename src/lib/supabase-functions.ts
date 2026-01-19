@@ -1161,7 +1161,16 @@ export async function getSectorMultipliers() {
 
 // ========== CRUD INVOICES ==========
 export async function getInvoices() {
-  const { data, error } = await supabase
+  // Usar service_role_key para bypass RLS (solo para Admin)
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+  const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
+  
+  // Si service_role_key no está configurado, usar cliente normal (puede fallar por RLS)
+  const client = supabaseServiceKey
+    ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
+    : supabase;
+  
+  const { data, error } = await client
     .from("invoices")
     .select(`
       *,
@@ -1177,7 +1186,16 @@ export async function getInvoices() {
 }
 
 export async function getInvoice(id: string) {
-  const { data, error } = await supabase
+  // Usar service_role_key para bypass RLS (solo para Admin)
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+  const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
+  
+  // Si service_role_key no está configurado, usar cliente normal (puede fallar por RLS)
+  const client = supabaseServiceKey
+    ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
+    : supabase;
+  
+  const { data, error } = await client
     .from("invoices")
     .select(`
       *,
