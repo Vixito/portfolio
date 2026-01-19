@@ -54,6 +54,8 @@ function Store() {
   const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchName, setSearchName] = useState<string>("");
+  const [priceFilter, setPriceFilter] = useState<string>("all");
   const itemsPerPage = 12;
 
   // Categorías disponibles (deben coincidir con las opciones en Admin)
@@ -229,17 +231,52 @@ function Store() {
     }
   };
 
-  // Resetear página cuando cambia el filtro
+  // Resetear página cuando cambia cualquier filtro
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory]);
+  }, [selectedCategory, searchName, priceFilter]);
 
-  // Filtrar productos por categoría/sector
+  // Filtrar productos por categoría/sector, nombre y precio
   const filteredItems = items.filter((item) => {
-    if (selectedCategory === "all") {
-      return true;
+    // Filtro por categoría
+    if (selectedCategory !== "all" && item.sector !== selectedCategory) {
+      return false;
     }
-    return item.sector === selectedCategory;
+    
+    // Filtro por nombre
+    if (searchName) {
+      const title = getTranslatedText(item.title_translations || item.title) || "";
+      if (!title.toLowerCase().includes(searchName.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    // Filtro por precio
+    if (priceFilter !== "all") {
+      const pricing = item.product_pricing?.[0];
+      const basePrice = item.base_price_usd || 0;
+      const currentPrice = pricing?.current_price_usd || basePrice;
+      
+      switch (priceFilter) {
+        case "free":
+          if (currentPrice !== 0) return false;
+          break;
+        case "0-25":
+          if (currentPrice === 0 || currentPrice > 25) return false;
+          break;
+        case "25-50":
+          if (currentPrice <= 25 || currentPrice > 50) return false;
+          break;
+        case "50-100":
+          if (currentPrice <= 50 || currentPrice > 100) return false;
+          break;
+        case "100+":
+          if (currentPrice <= 100) return false;
+          break;
+      }
+    }
+    
+    return true;
   });
 
   // Calcular páginas con productos filtrados
@@ -252,31 +289,35 @@ function Store() {
 
   // Formatear precio (simplificado, sin detección de país por IP)
   const formatPrice = (item: StoreItem) => {
-    // Si es tipo "request" y no hay precio, retornar null para no mostrar precio
+    const pricing = item.product_pricing?.[0];
+    const basePrice = item.base_price_usd || 0;
+    const currentPrice = pricing?.current_price_usd || basePrice;
+    
+    // Si es tipo "request" y no hay precio (null o 0), retornar null para no mostrar precio
     if (item.button_type === "request") {
-      const pricing = item.product_pricing?.[0];
-      const hasPrice = pricing?.current_price_usd && pricing.current_price_usd > 0;
-      const hasBasePrice = item.base_price_usd && item.base_price_usd > 0;
-      
-      if (!hasPrice && !hasBasePrice) {
+      const hasPrice = currentPrice > 0;
+      if (!hasPrice) {
         return null; // No mostrar precio si es "request" y no tiene precio
       }
     }
     
-    const pricing = item.product_pricing?.[0];
+    // Si el precio es 0, mostrar "Gratis"/"Free"
+    if (currentPrice === 0) {
+      return (
+        <span className="text-2xl font-bold text-purple">
+          {t("store.free")}
+        </span>
+      );
+    }
+    
     if (!pricing) {
       // Fallback: mostrar precio en USD si no hay pricing
-      const price = item.base_price_usd || 0;
-      // Si el precio es 0 y es tipo "request", no mostrar
-      if (price === 0 && item.button_type === "request") {
-        return null;
-      }
       return (
         <span className="text-2xl font-bold text-purple">
           {new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: "USD",
-          }).format(price)}
+          }).format(basePrice)}
         </span>
       );
     }
@@ -366,24 +407,103 @@ function Store() {
           {t("store.title")}
         </h1>
 
-        {/* Filtro por categoría/sector */}
+        {/* Header de filtros estilo tabla */}
         {items.length > 0 && (
-          <div className="mb-8 flex justify-start">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2 pl-1">
-                {t("store.filterByCategory") || "Filtrar por categoría:"}
-              </label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full md:w-64 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-gray-900 dark:text-gray-100 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#2093c4] focus:border-[#2093c4] hover:border-[#2093c4] animate-dropdown-open cursor-pointer"
-              >
-                {categories.map((category) => (
-                  <option key={category.value} value={category.value}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
+          <div className="mb-8 bg-white rounded-lg shadow-md border border-gray-200 overflow-x-auto">
+            <div className="min-w-full">
+              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* Búsqueda por nombre */}
+                  <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                    <svg
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                    <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                      {t("store.title")}
+                    </span>
+                    <input
+                      type="text"
+                      placeholder={t("store.searchPlaceholder") || "Buscar por nombre..."}
+                      value={searchName}
+                      onChange={(e) => setSearchName(e.target.value)}
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple dark:focus:border-cyan-200 flex-1 min-w-[150px]"
+                    />
+                  </div>
+
+                  {/* Filtro por categoría */}
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                      />
+                    </svg>
+                    <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                      {t("store.category") || "Categoría"}
+                    </span>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple dark:focus:border-cyan-200"
+                    >
+                      {categories.map((category) => (
+                        <option key={category.value} value={category.value}>
+                          {category.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Filtro por precio */}
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                      {t("store.price") || "Precio"}
+                    </span>
+                    <select
+                      value={priceFilter}
+                      onChange={(e) => setPriceFilter(e.target.value)}
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple dark:focus:border-cyan-200"
+                    >
+                      <option value="all">{t("store.allPrices") || "Todos"}</option>
+                      <option value="free">{t("store.free")}</option>
+                      <option value="0-25">$0 - $25</option>
+                      <option value="25-50">$25 - $50</option>
+                      <option value="50-100">$50 - $100</option>
+                      <option value="100+">$100+</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -409,7 +529,7 @@ function Store() {
             {currentItems.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow border border-gray-200"
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow border border-gray-200 flex flex-col"
               >
                 {/* Thumbnail */}
                 <div
@@ -431,19 +551,21 @@ function Store() {
                 </div>
 
                 {/* Contenido */}
-                <div className="p-4">
-                  <h3
-                    className="text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-purple transition-colors"
-                    onClick={() => handleItemClick(item)}
-                  >
-                    {getTranslatedText(item.title_translations || item.title)}
-                  </h3>
-                  <div className="text-gray-600 text-sm mb-4 line-clamp-2 prose prose-sm max-w-none">
-                    {getTranslatedText(
-                      item.description_translations || item.description
-                    ) || t("common.noContent")}
+                <div className="p-4 flex flex-col h-full">
+                  <div className="flex-1">
+                    <h3
+                      className="text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-purple transition-colors"
+                      onClick={() => handleItemClick(item)}
+                    >
+                      {getTranslatedText(item.title_translations || item.title)}
+                    </h3>
+                    <div className="text-gray-600 text-sm mb-4 line-clamp-2 prose prose-sm max-w-none">
+                      {getTranslatedText(
+                        item.description_translations || item.description
+                      ) || t("common.noContent")}
+                    </div>
                   </div>
-                  <div className={`flex items-center ${formatPrice(item) ? "justify-between" : "justify-end"}`}>
+                  <div className={`flex items-center mt-auto ${formatPrice(item) ? "justify-between" : "justify-end"}`}>
                     {formatPrice(item) && (
                       <div className="flex-1">{formatPrice(item)}</div>
                     )}
@@ -562,8 +684,8 @@ function Store() {
               </div>
 
               {/* Información */}
-              <div>
-                <div className="mb-4">
+              <div className="flex flex-col h-full">
+                <div className="mb-4 flex-1">
                   <div className="mb-2">{formatPrice(selectedItem)}</div>
                   <div 
                     className="text-gray-600 prose prose-sm max-w-none"
@@ -581,7 +703,7 @@ function Store() {
                   />
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 mt-auto">
                   {selectedItem.button_type === "buy" &&
                   selectedItem.buy_button_type === "external_link" &&
                   Array.isArray(selectedItem.buy_button_url) &&

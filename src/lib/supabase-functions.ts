@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Calcula el precio adaptativo de un producto
@@ -1197,8 +1198,17 @@ export async function createInvoice(invoice: {
   custom_fields?: Record<string, any>;
   status?: "pending" | "paid" | "completed" | "cancelled";
 }) {
+  // Usar service_role_key para bypass RLS (solo para Admin)
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+  const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
+  
+  // Si hay service_role_key, usarlo; si no, usar cliente anónimo (fallback)
+  const adminSupabase = supabaseServiceKey
+    ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
+    : supabase;
+  
   // Obtener el siguiente número de factura
-  const { data: lastInvoice } = await supabase
+  const { data: lastInvoice } = await adminSupabase
     .from("invoices")
     .select("invoice_number")
     .order("invoice_number", { ascending: false })
@@ -1209,7 +1219,7 @@ export async function createInvoice(invoice: {
     ? lastInvoice.invoice_number + 1
     : 1;
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("invoices")
     .insert({
       ...invoice,
@@ -1239,8 +1249,15 @@ export async function updateInvoice(
     status: "pending" | "paid" | "completed" | "cancelled";
   }>
 ) {
+  // Usar service_role_key para bypass RLS (solo para Admin)
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+  const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
+  const adminSupabase = supabaseServiceKey
+    ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
+    : supabase;
+  
   // Verificar que la factura no esté pagada antes de actualizar
-  const { data: currentInvoice } = await supabase
+  const { data: currentInvoice } = await adminSupabase
     .from("invoices")
     .select("status")
     .eq("id", id)
@@ -1265,8 +1282,15 @@ export async function updateInvoice(
 }
 
 export async function deleteInvoice(id: string) {
+  // Usar service_role_key para bypass RLS (solo para Admin)
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+  const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
+  const adminSupabase = supabaseServiceKey
+    ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
+    : supabase;
+  
   // Verificar que la factura no esté pagada antes de eliminar
-  const { data: currentInvoice } = await supabase
+  const { data: currentInvoice } = await adminSupabase
     .from("invoices")
     .select("status")
     .eq("id", id)
@@ -1276,7 +1300,7 @@ export async function deleteInvoice(id: string) {
     throw new Error("No se puede eliminar una factura que ya está pagada o completada");
   }
 
-  const { error } = await supabase.from("invoices").delete().eq("id", id);
+  const { error } = await adminSupabase.from("invoices").delete().eq("id", id);
 
   if (error) {
     throw new Error(`Error al eliminar factura: ${error.message}`);
