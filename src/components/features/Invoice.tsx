@@ -54,16 +54,27 @@ export default function Invoice({ invoice }: InvoiceProps) {
           <span style={invoiceStyles.bold}>Approximate delivery time</span>
           <span>{invoice.delivery_time}</span>
         </p>
-        {invoice.custom_fields &&
-          Object.entries(invoice.custom_fields).map(([key, value]) => (
-            <div key={key}>
-              <div style={invoiceStyles.divider}></div>
-              <p>
-                <span style={invoiceStyles.bold}>{key}</span>
-                <span>{String(value)}</span>
-              </p>
-            </div>
-          ))}
+        {invoice.custom_fields?.features &&
+          Array.isArray(invoice.custom_fields.features) &&
+          invoice.custom_fields.features.length > 0 && (
+            <>
+              {invoice.custom_fields.features.map((feature: any, index: number) => (
+                <div key={index}>
+                  <div style={invoiceStyles.divider}></div>
+                  <p>
+                    <span style={invoiceStyles.bold}>{feature.name || `Feature ${index + 1}`}</span>
+                    <span>
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: feature.currency === "USD" ? "USD" : "COP",
+                        minimumFractionDigits: feature.currency === "USD" ? 2 : 0,
+                      }).format(feature.price || 0)}
+                    </span>
+                  </p>
+                </div>
+              ))}
+            </>
+          )}
         <div style={invoiceStyles.dividerLarge}></div>
         <div style={invoiceStyles.paymentButtonContainer}>
           <a
@@ -71,16 +82,13 @@ export default function Invoice({ invoice }: InvoiceProps) {
             target="_blank"
             rel="noopener noreferrer"
             style={invoiceStyles.paymentButton}
+            onClick={(e) => {
+              e.preventDefault();
+              window.open("https://app.airtm.com/ivt/vixis", "_blank");
+              window.open("https://airtm.me/Vixis", "_blank");
+            }}
           >
             Pay Now
-          </a>
-          <a
-            href="https://airtm.me/Vixis"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={invoiceStyles.paymentButton}
-          >
-            Alternative Payment
           </a>
         </div>
         <div style={invoiceStyles.dividerMedium}></div>

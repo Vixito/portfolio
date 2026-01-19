@@ -548,17 +548,20 @@ function Store() {
               <div>
                 <div className="mb-4">
                   <div className="mb-2">{formatPrice(selectedItem)}</div>
-                  <div className="text-gray-600 prose prose-sm max-w-none">
-                    {getTranslatedText(
-                      selectedItem.full_description_translations ||
-                        selectedItem.full_description
-                    ) ||
-                      getTranslatedText(
-                        selectedItem.description_translations ||
-                          selectedItem.description
+                  <div 
+                    className="text-gray-600 prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{
+                      __html: getTranslatedText(
+                        selectedItem.full_description_translations ||
+                          selectedItem.full_description
                       ) ||
-                      t("common.noContent")}
-                  </div>
+                        getTranslatedText(
+                          selectedItem.description_translations ||
+                            selectedItem.description
+                        ) ||
+                        t("common.noContent")
+                    }}
+                  />
                 </div>
 
                 <div className="space-y-3">

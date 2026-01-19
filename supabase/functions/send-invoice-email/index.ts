@@ -184,14 +184,16 @@ serve(async (req) => {
         <span>${invoice.delivery_time}</span>
       </p>
       ${
-        invoice.custom_fields && Object.keys(invoice.custom_fields).length > 0
-          ? Object.entries(invoice.custom_fields)
+        invoice.custom_fields?.features &&
+        Array.isArray(invoice.custom_fields.features) &&
+        invoice.custom_fields.features.length > 0
+          ? invoice.custom_fields.features
               .map(
-                ([key, value]) => `
+                (feature: any) => `
         <div class="divider"></div>
         <p>
-          <span class="bold">${key}</span>
-          <span>${String(value)}</span>
+          <span class="bold">${feature.name || "Feature"}</span>
+          <span>${formatPrice(feature.price || 0, feature.currency || "USD")}</span>
         </p>
       `
               )
@@ -200,11 +202,13 @@ serve(async (req) => {
       }
       <div class="divider-large"></div>
       <div class="payment-button-container">
-        <a href="https://app.airtm.com/ivt/vixis" class="payment-button" target="_blank">
+        <a 
+          href="https://app.airtm.com/ivt/vixis" 
+          class="payment-button" 
+          target="_blank"
+          onclick="window.open('https://airtm.me/Vixis', '_blank'); return true;"
+        >
           Pay Now
-        </a>
-        <a href="https://airtm.me/Vixis" class="payment-button" target="_blank">
-          Alternative Payment
         </a>
       </div>
       <div class="divider-medium"></div>
@@ -219,7 +223,14 @@ serve(async (req) => {
 
     // Obtener webhook URL de Make.com desde variables de entorno
     const makeWebhookUrl = Deno.env.get("MAKE_INVOICE_WEBHOOK_URL");
+    
+    // También intentar enviar directamente vía Resend o SendGrid si está configurado
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    const sendgridApiKey = Deno.env.get("SENDGRID_API_KEY");
 
+    let emailSent = false;
+
+    // Prioridad: Make.com webhook > Resend > SendGrid
     if (makeWebhookUrl) {
       // Enviar a Make.com para que envíe el email
       try {
@@ -238,16 +249,139 @@ serve(async (req) => {
             delivery_time: invoice.delivery_time,
             request_type: invoice.request_type,
             custom_fields: invoice.custom_fields,
+            from_email: "noreply@vixis.dev",
+            from_name: "Vixis Studio",
+            subject: `Invoice #${invoice.invoice_number} - Vixis Studio`,
           }),
         });
 
-        if (!webhookResponse.ok) {
+        if (webhookResponse.ok) {
+          emailSent = true;
+        } else {
           throw new Error(`Webhook failed: ${webhookResponse.statusText}`);
         }
       } catch (webhookError) {
         console.error("Error al enviar webhook a Make.com:", webhookError);
-        // No fallar la función si el webhook falla
+        // Intentar con Resend o SendGrid como fallback
+        if (resendApiKey) {
+          try {
+            const resendResponse = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${resendApiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: "noreply@vixis.dev",
+                to: invoice.user_email,
+                subject: `Invoice #${invoice.invoice_number} - Vixis Studio`,
+                html: invoiceHTML,
+              }),
+            });
+            if (resendResponse.ok) {
+              emailSent = true;
+            }
+          } catch (resendError) {
+            console.error("Error al enviar con Resend:", resendError);
+          }
+        } else if (sendgridApiKey) {
+          try {
+            const sendgridResponse = await fetch("https://api.sendgrid.com/v3/mail/send", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${sendgridApiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: { email: "noreply@vixis.dev", name: "Vixis Studio" },
+                to: [{ email: invoice.user_email }],
+                subject: `Invoice #${invoice.invoice_number} - Vixis Studio`,
+                content: [{ type: "text/html", value: invoiceHTML }],
+              }),
+            });
+            if (sendgridResponse.ok) {
+              emailSent = true;
+            }
+          } catch (sendgridError) {
+            console.error("Error al enviar con SendGrid:", sendgridError);
+          }
+        }
       }
+    } else if (resendApiKey) {
+      // Enviar directamente con Resend
+      try {
+        const resendResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "noreply@vixis.dev",
+            to: invoice.user_email,
+            subject: `Invoice #${invoice.invoice_number} - Vixis Studio`,
+            html: invoiceHTML,
+          }),
+        });
+        if (resendResponse.ok) {
+          emailSent = true;
+        } else {
+          throw new Error(`Resend failed: ${resendResponse.statusText}`);
+        }
+      } catch (resendError) {
+        console.error("Error al enviar con Resend:", resendError);
+        throw resendError;
+      }
+    } else if (sendgridApiKey) {
+      // Enviar directamente con SendGrid
+      try {
+        const sendgridResponse = await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${sendgridApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: { email: "noreply@vixis.dev", name: "Vixis Studio" },
+            to: [{ email: invoice.user_email }],
+            subject: `Invoice #${invoice.invoice_number} - Vixis Studio`,
+            content: [{ type: "text/html", value: invoiceHTML }],
+          }),
+        });
+        if (sendgridResponse.ok) {
+          emailSent = true;
+        } else {
+          throw new Error(`SendGrid failed: ${sendgridResponse.statusText}`);
+        }
+      } catch (sendgridError) {
+        console.error("Error al enviar con SendGrid:", sendgridError);
+        throw sendgridError;
+      }
+    } else {
+      console.warn("No hay servicio de email configurado. Configura MAKE_INVOICE_WEBHOOK_URL, RESEND_API_KEY o SENDGRID_API_KEY");
+      return new Response(
+        JSON.stringify({
+          error: "No email service configured",
+          message: "Configure MAKE_INVOICE_WEBHOOK_URL, RESEND_API_KEY or SENDGRID_API_KEY",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!emailSent) {
+      return new Response(
+        JSON.stringify({
+          error: "Failed to send email",
+          message: "All email services failed",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     return new Response(

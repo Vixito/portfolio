@@ -66,6 +66,8 @@ import {
   updateInvoice,
   deleteInvoice,
 } from "../lib/supabase-functions";
+import { supabase } from "../lib/supabase";
+import Invoice from "../components/features/Invoice";
 
 function Admin() {
   const { t } = useTranslation();
@@ -128,6 +130,78 @@ function Admin() {
   const [radioSettings, setRadioSettings] = useState<any | null>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loadingCRUD, setLoadingCRUD] = useState(false);
+  
+  // Función para descargar factura como PDF (usando window.print)
+  const downloadInvoicePDF = async (invoice: any) => {
+    try {
+      // Obtener producto completo si no está incluido
+      let fullInvoice = invoice;
+      if (!invoice.product && invoice.product_id) {
+        const product = products.find((p: any) => p.id === invoice.product_id);
+        fullInvoice = { ...invoice, product };
+      }
+      
+      // Crear ventana temporal para mostrar Invoice y permitir imprimir/guardar como PDF
+      const printWindow = window.open("", "_blank", "width=800,height=600");
+      if (!printWindow) {
+        alert("Por favor, permite ventanas emergentes para descargar la factura");
+        return;
+      }
+      
+      // Obtener HTML del componente Invoice (simplificado)
+      // Por ahora, mostrar mensaje y usar print del navegador
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Invoice #${fullInvoice.invoice_number}</title>
+          <meta charset="UTF-8">
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              padding: 20px;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+            }
+            .invoice-container {
+              border: 2px solid black;
+              padding: 20px;
+              max-width: 600px;
+            }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-container">
+            <h1>Invoice #${fullInvoice.invoice_number}</h1>
+            <p><strong>User:</strong> ${fullInvoice.user_name}</p>
+            <p><strong>Request Type:</strong> ${fullInvoice.request_type}</p>
+            <p><strong>Amount:</strong> ${fullInvoice.currency} ${fullInvoice.amount}</p>
+            <p><strong>Delivery Time:</strong> ${fullInvoice.delivery_time}</p>
+            <div class="no-print" style="margin-top: 20px;">
+              <button onclick="window.print()" style="padding: 10px 20px; background: #2093c4; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Imprimir / Guardar como PDF
+              </button>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      
+      // Nota: Para una solución más completa con el diseño exacto, 
+      // se necesitaría usar jsPDF + html2canvas o una librería similar
+    } catch (error) {
+      console.error("Error al generar PDF:", error);
+      alert("Error al generar PDF. Usa la función de imprimir del navegador.");
+    }
+  };
   const [showCRUDModal, setShowCRUDModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [crudFormData, setCrudFormData] = useState<any>({});
@@ -475,7 +549,7 @@ function Admin() {
       // Valores por defecto para facturas
       defaultFormData.currency = "USD";
       defaultFormData.status = "pending";
-      defaultFormData.custom_fields = {};
+      defaultFormData.custom_fields = { features: [] };
     }
     setCrudFormData(defaultFormData);
     setEventUrl("");
@@ -542,9 +616,6 @@ function Admin() {
         break;
       case "home_content":
         currentItem = homeContentItems.find((h) => h.id === item.id) || item;
-        break;
-      case "invoices":
-        currentItem = invoices.find((i) => i.id === item.id) || item;
         break;
       case "invoices":
         currentItem = invoices.find((i) => i.id === item.id) || item;
@@ -1845,13 +1916,27 @@ function Admin() {
             const newInvoice = await createInvoice(createInvoiceData);
             // Enviar email con la factura
             try {
-              await supabase.functions.invoke("send-invoice-email", {
+              const emailResponse = await supabase.functions.invoke("send-invoice-email", {
                 body: { invoice_id: newInvoice.id },
               });
+              if (emailResponse.error) {
+                console.error("Error al enviar email:", emailResponse.error);
+                alert(`Factura creada (ID: ${newInvoice.invoice_number}) pero error al enviar email. Verifica la configuración en Doppler: MAKE_INVOICE_WEBHOOK_URL, RESEND_API_KEY o SENDGRID_API_KEY`);
+              } else {
+                const result = emailResponse.data;
+                if (result?.error) {
+                  alert(`Factura creada (ID: ${newInvoice.invoice_number}) pero error al enviar email: ${result.error}`);
+                } else {
+                  alert(`Factura #${newInvoice.invoice_number} creada y email enviado exitosamente a ${createInvoiceData.user_email}`);
+                }
+              }
             } catch (emailError) {
               console.error("Error al enviar email:", emailError);
+              alert(`Factura creada (ID: ${newInvoice.invoice_number}) pero error al enviar email. Verifica la configuración en Doppler.`);
               // No fallar la creación si el email falla
             }
+            // Guardar referencia de la factura creada para descarga
+            setEditingItem(newInvoice);
             break;
         }
       }
@@ -3205,6 +3290,9 @@ function Admin() {
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
                         {t("admin.fieldFullDescription")} (Español)
+                        <span className="text-gray-500 text-xs ml-2">
+                          (Soporta HTML: &lt;strong&gt;, &lt;em&gt;, &lt;u&gt;, &lt;br/&gt;)
+                        </span>
                       </label>
                       <textarea
                         value={crudFormData.full_description_es || ""}
@@ -3214,13 +3302,20 @@ function Admin() {
                             full_description_es: e.target.value,
                           })
                         }
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        rows={5}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-sm"
+                        rows={8}
+                        placeholder="Puedes usar HTML: &lt;strong&gt;negrita&lt;/strong&gt;, &lt;em&gt;cursiva&lt;/em&gt;, &lt;u&gt;subrayado&lt;/u&gt;, &lt;br/&gt; para saltos de línea"
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Ejemplo: &lt;strong&gt;Texto en negrita&lt;/strong&gt;&lt;br/&gt;&lt;em&gt;Texto en cursiva&lt;/em&gt;
+                      </p>
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
                         {t("admin.fieldFullDescription")} (English)
+                        <span className="text-gray-500 text-xs ml-2">
+                          (Supports HTML: &lt;strong&gt;, &lt;em&gt;, &lt;u&gt;, &lt;br/&gt;)
+                        </span>
                       </label>
                       <textarea
                         value={crudFormData.full_description_en || ""}
@@ -3230,9 +3325,13 @@ function Admin() {
                             full_description_en: e.target.value,
                           })
                         }
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        rows={5}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-sm"
+                        rows={8}
+                        placeholder="You can use HTML: &lt;strong&gt;bold&lt;/strong&gt;, &lt;em&gt;italic&lt;/em&gt;, &lt;u&gt;underline&lt;/u&gt;, &lt;br/&gt; for line breaks"
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Example: &lt;strong&gt;Bold text&lt;/strong&gt;&lt;br/&gt;&lt;em&gt;Italic text&lt;/em&gt;
+                      </p>
                     </div>
                     {/* Selector de moneda */}
                     <div>
@@ -6115,43 +6214,160 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Custom Fields (JSON)
+                        Features & Pricing
                       </label>
-                      <textarea
-                        value={
-                          typeof crudFormData.custom_fields === "string"
-                            ? crudFormData.custom_fields
-                            : JSON.stringify(
-                                crudFormData.custom_fields || {},
-                                null,
-                                2
-                              )
-                        }
-                        onChange={(e) => {
-                          try {
-                            const parsed = JSON.parse(e.target.value);
+                      <div className="space-y-3">
+                        {(crudFormData.custom_fields?.features || []).map(
+                          (feature: any, index: number) => (
+                            <div
+                              key={index}
+                              className="flex gap-2 items-start p-3 bg-gray-800 rounded-lg border border-gray-700"
+                            >
+                              <div className="flex-1 space-y-2">
+                                <input
+                                  type="text"
+                                  placeholder="Feature name"
+                                  value={feature.name || ""}
+                                  onChange={(e) => {
+                                    const features = [
+                                      ...(crudFormData.custom_fields?.features ||
+                                        []),
+                                    ];
+                                    features[index] = {
+                                      ...features[index],
+                                      name: e.target.value,
+                                    };
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      custom_fields: {
+                                        ...crudFormData.custom_fields,
+                                        features,
+                                      },
+                                    });
+                                  }}
+                                  className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
+                                  disabled={
+                                    editingItem &&
+                                    (editingItem.status === "paid" ||
+                                      editingItem.status === "completed")
+                                  }
+                                />
+                                <div className="flex gap-2">
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="Price"
+                                    value={feature.price || ""}
+                                    onChange={(e) => {
+                                      const features = [
+                                        ...(crudFormData.custom_fields
+                                          ?.features || []),
+                                      ];
+                                      features[index] = {
+                                        ...features[index],
+                                        price: parseFloat(e.target.value) || 0,
+                                      };
+                                      setCrudFormData({
+                                        ...crudFormData,
+                                        custom_fields: {
+                                          ...crudFormData.custom_fields,
+                                          features,
+                                        },
+                                      });
+                                    }}
+                                    className="flex-1 bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
+                                    disabled={
+                                      editingItem &&
+                                      (editingItem.status === "paid" ||
+                                        editingItem.status === "completed")
+                                    }
+                                  />
+                                  <select
+                                    value={feature.currency || "USD"}
+                                    onChange={(e) => {
+                                      const features = [
+                                        ...(crudFormData.custom_fields
+                                          ?.features || []),
+                                      ];
+                                      features[index] = {
+                                        ...features[index],
+                                        currency: e.target.value,
+                                      };
+                                      setCrudFormData({
+                                        ...crudFormData,
+                                        custom_fields: {
+                                          ...crudFormData.custom_fields,
+                                          features,
+                                        },
+                                      });
+                                    }}
+                                    className="bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
+                                    disabled={
+                                      editingItem &&
+                                      (editingItem.status === "paid" ||
+                                        editingItem.status === "completed")
+                                    }
+                                  >
+                                    <option value="USD">USD</option>
+                                    <option value="COP">COP</option>
+                                  </select>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const features = [
+                                    ...(crudFormData.custom_fields?.features ||
+                                      []),
+                                  ];
+                                  features.splice(index, 1);
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    custom_fields: {
+                                      ...crudFormData.custom_fields,
+                                      features,
+                                    },
+                                  });
+                                }}
+                                className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors cursor-pointer"
+                                disabled={
+                                  editingItem &&
+                                  (editingItem.status === "paid" ||
+                                    editingItem.status === "completed")
+                                }
+                              >
+                                ×
+                              </button>
+                            </div>
+                          )
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
                             setCrudFormData({
                               ...crudFormData,
-                              custom_fields: parsed,
+                              custom_fields: {
+                                ...(crudFormData.custom_fields || {}),
+                                features: [
+                                  ...(crudFormData.custom_fields?.features ||
+                                    []),
+                                  { name: "", price: 0, currency: "USD" },
+                                ],
+                              },
                             });
-                          } catch {
-                            setCrudFormData({
-                              ...crudFormData,
-                              custom_fields: e.target.value,
-                            });
+                          }}
+                          className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors cursor-pointer"
+                          disabled={
+                            editingItem &&
+                            (editingItem.status === "paid" ||
+                              editingItem.status === "completed")
                           }
-                        }}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white font-mono text-xs"
-                        rows={4}
-                        placeholder='{"field1": "value1", "field2": "value2"}'
-                        disabled={
-                          editingItem &&
-                          (editingItem.status === "paid" ||
-                            editingItem.status === "completed")
-                        }
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Add custom fields as JSON object (optional)
+                        >
+                          + Add Feature
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Add features with their prices (optional)
                       </p>
                     </div>
                   </>
@@ -6168,6 +6384,14 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                   >
                     {t("common.cancel")}
                   </button>
+                  {activeTab === "invoices" && editingItem && (
+                    <button
+                      onClick={() => downloadInvoicePDF(editingItem)}
+                      className="flex-1 sm:flex-none px-4 py-2 text-sm md:text-base bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors cursor-pointer"
+                    >
+                      📥 Download Invoice
+                    </button>
+                  )}
                   <button
                     onClick={handleSave}
                     className="flex-1 sm:flex-none px-4 py-2 text-sm md:text-base text-white rounded-lg transition-colors cursor-pointer"
