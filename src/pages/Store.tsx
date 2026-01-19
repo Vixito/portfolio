@@ -569,7 +569,7 @@ function Store() {
                     >
                       {getTranslatedText(item.title_translations || item.title)}
                     </h3>
-                    <div className="text-gray-600 text-sm mb-4 line-clamp-2 prose prose-sm max-w-none">
+                    <div className="text-gray-600 text-sm mb-4 prose prose-sm max-w-none">
                       {getTranslatedText(
                         item.description_translations || item.description
                       ) || t("common.noContent")}

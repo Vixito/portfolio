@@ -663,6 +663,33 @@ function Admin() {
       formData.full_description_es = fullDescTrans.es;
       formData.full_description_en = fullDescTrans.en;
 
+      // Cargar todos los campos del producto
+      formData.button_type = currentItem.button_type || "buy";
+      formData.buy_button_type = currentItem.buy_button_type || "external_link";
+      formData.request_button_type = currentItem.request_button_type || "external_link";
+      formData.sector = currentItem.sector || "";
+      formData.price_currency = currentItem.price_currency || "USD";
+      formData.base_price_usd = currentItem.base_price_usd || null;
+      formData.base_price_cop = currentItem.base_price_cop || null;
+      formData.is_active = currentItem.is_active !== undefined ? currentItem.is_active : true;
+      
+      // Cargar imágenes
+      formData.images = Array.isArray(currentItem.images) ? currentItem.images : [];
+      
+      // Cargar datos de ofertas desde product_pricing si existe
+      if (currentItem.product_pricing && currentItem.product_pricing.length > 0) {
+        const pricing = currentItem.product_pricing[0];
+        formData.is_on_sale = pricing.is_on_sale || false;
+        formData.sale_percentage = pricing.sale_percentage || null;
+        formData.sale_starts_at = pricing.sale_starts_at ? new Date(pricing.sale_starts_at).toISOString().slice(0, 16) : null;
+        formData.sale_ends_at = pricing.sale_ends_at ? new Date(pricing.sale_ends_at).toISOString().slice(0, 16) : null;
+      } else {
+        formData.is_on_sale = false;
+        formData.sale_percentage = null;
+        formData.sale_starts_at = null;
+        formData.sale_ends_at = null;
+      }
+      
       // Manejar buy_button_url como array de links externos
       if (currentItem.buy_button_type === "external_link") {
         // Si es un string (legacy), convertir a array
@@ -685,6 +712,16 @@ function Admin() {
         } else {
           formData.buy_external_links = [];
         }
+      } else if (currentItem.buy_button_type === "custom_checkout") {
+        // Si es custom_checkout, preservar el buy_button_url como string
+        formData.buy_button_url = currentItem.buy_button_url || "";
+      }
+      
+      // Manejar request_button_url
+      if (currentItem.request_button_type === "external_link") {
+        formData.request_button_url = currentItem.request_button_url || "";
+      } else if (currentItem.request_button_type === "custom_form") {
+        formData.request_button_url = currentItem.request_button_url || "";
       }
     } else if (activeTab === "projects") {
       const titleTrans = extractTranslations(
@@ -3673,7 +3710,7 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        {t("admin.fieldThumbnailUrl")}
+                        {t("admin.fieldThumbnailUrl")} (Imagen Principal)
                       </label>
                       <input
                         type="url"
@@ -3685,7 +3722,62 @@ function Admin() {
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="https://..."
                       />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Imágenes Adicionales (Thumbnails)
+                      </label>
+                      <div className="space-y-2">
+                        {(crudFormData.images || []).map((image: string, index: number) => (
+                          <div key={index} className="flex gap-2">
+                            <input
+                              type="url"
+                              value={image || ""}
+                              onChange={(e) => {
+                                const images = [...(crudFormData.images || [])];
+                                images[index] = e.target.value;
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  images: images,
+                                });
+                              }}
+                              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                              placeholder="https://..."
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const images = [...(crudFormData.images || [])];
+                                images.splice(index, 1);
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  images: images.length > 0 ? images : [],
+                                });
+                              }}
+                              className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCrudFormData({
+                              ...crudFormData,
+                              images: [...(crudFormData.images || []), ""],
+                            });
+                          }}
+                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                        >
+                          + Agregar Imagen
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Puedes agregar múltiples imágenes que se mostrarán como thumbnails en la página del producto
+                      </p>
                     </div>
                     {/* Nueva estructura clara de botones */}
                     <div className="border-t border-gray-700 pt-4">
