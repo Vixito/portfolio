@@ -660,7 +660,7 @@ function Store() {
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Imágenes */}
-              <div>
+              <div className="flex flex-col h-full">
                 <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden mb-4">
                   <img
                     src={
@@ -674,7 +674,7 @@ function Store() {
                   />
                 </div>
                 {selectedItem.images && selectedItem.images.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2 mb-4">
                     {selectedItem.images.map((image, index) => (
                       <div
                         key={index}
@@ -691,11 +691,13 @@ function Store() {
                     ))}
                   </div>
                 )}
+                {/* Spacer invisible para alinear con el botón */}
+                <div className="flex-1"></div>
               </div>
 
               {/* Información */}
-              <div className="flex flex-col justify-between h-full">
-                <div className="mb-4">
+              <div className="flex flex-col h-full">
+                <div className="mb-4 flex-1">
                   {formatPrice(selectedItem) && (
                     <div className="mb-2">{formatPrice(selectedItem)}</div>
                   )}
@@ -715,7 +717,7 @@ function Store() {
                   />
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 mt-auto">
                   {selectedItem.button_type === "buy" &&
                   selectedItem.buy_button_type === "external_link" &&
                   Array.isArray(selectedItem.buy_button_url) &&

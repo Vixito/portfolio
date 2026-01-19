@@ -1228,12 +1228,54 @@ function Admin() {
             // Debug: ver qué se devolvió
             console.log("Producto actualizado, respuesta:", updatedProduct);
 
-            // Guardar pricing y ofertas
-            if (saleData.is_on_sale && saleData.sale_percentage) {
-              await updateProductPricing(editingItem.id, saleData);
+            // Actualizar o crear product_pricing solo si hay precio
+            if (updateProductData.base_price_usd !== null && updateProductData.base_price_usd !== undefined) {
+              // Verificar si ya existe pricing
+              const existingPricing = await getProductPricing(editingItem.id);
+              
+              if (existingPricing) {
+                // Actualizar pricing existente
+                await supabase
+                  .from("product_pricing")
+                  .update({
+                    current_price_usd: updateProductData.base_price_usd,
+                    current_price_cop: updateProductData.base_price_cop || (updateProductData.base_price_usd * rate),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("product_id", editingItem.id);
+
+                // Guardar pricing y ofertas
+                if (saleData.is_on_sale && saleData.sale_percentage) {
+                  await updateProductPricing(editingItem.id, saleData);
+                } else {
+                  // Si no hay oferta, desactivarla
+                  await updateProductPricing(editingItem.id, { is_on_sale: false });
+                }
+              } else {
+                // Crear nuevo pricing
+                await supabase
+                  .from("product_pricing")
+                  .insert({
+                    product_id: editingItem.id,
+                    current_price_usd: updateProductData.base_price_usd,
+                    current_price_cop: updateProductData.base_price_cop || (updateProductData.base_price_usd * rate),
+                    is_on_sale: false,
+                  });
+
+                // Guardar pricing y ofertas si hay
+                if (saleData.is_on_sale && saleData.sale_percentage) {
+                  await updateProductPricing(editingItem.id, saleData);
+                }
+              }
             } else {
-              // Si no hay oferta, desactivarla
-              await updateProductPricing(editingItem.id, { is_on_sale: false });
+              // Si no hay precio, eliminar pricing si existe
+              const existingPricing = await getProductPricing(editingItem.id);
+              if (existingPricing) {
+                await supabase
+                  .from("product_pricing")
+                  .delete()
+                  .eq("product_id", editingItem.id);
+              }
             }
             break;
           case "projects":
@@ -1626,7 +1668,7 @@ function Admin() {
             } else if (createPriceCurrency === "COP" && productData.base_price_cop !== null && productData.base_price_cop !== undefined) {
               // Si se ingresó en COP, calcular USD
               productData.base_price_usd =
-                productData.base_price_cop / createRate;
+                productData.base_price_cop / exchangeRate;
             } else if (
               createPriceCurrency === "USD" &&
               productData.base_price_usd !== null &&
@@ -1634,7 +1676,7 @@ function Admin() {
             ) {
               // Si se ingresó en USD, calcular COP
               productData.base_price_cop =
-                productData.base_price_usd * createRate;
+                productData.base_price_usd * exchangeRate;
             }
 
             // Separar datos de oferta del producto
@@ -1661,11 +1703,63 @@ function Admin() {
             }
 
             // Crear producto
+            // IMPORTANTE: Si no hay precio, el trigger de la BD intentará crear product_pricing con null
+            // Por eso necesitas modificar el trigger o permitir NULL en current_price_cop
             const newProduct = await createProduct(productData);
 
-            // Guardar pricing y ofertas si hay
-            if (createSaleData.is_on_sale && createSaleData.sale_percentage) {
-              await updateProductPricing(newProduct.id, createSaleData);
+            // Si hay un trigger que crea product_pricing automáticamente, necesitamos manejarlo
+            // Opción 1: Si el trigger falla, eliminamos el registro creado y creamos uno nuevo solo si hay precio
+            // Opción 2: Modificar el trigger para que solo cree product_pricing si hay precio
+            
+            // Verificar si se creó product_pricing automáticamente (por trigger)
+            const existingPricing = await getProductPricing(newProduct.id);
+            
+            if (existingPricing) {
+              // Si existe pero no hay precio, eliminarlo
+              if (productData.base_price_usd === null || productData.base_price_usd === undefined) {
+                await supabase
+                  .from("product_pricing")
+                  .delete()
+                  .eq("product_id", newProduct.id);
+              } else {
+                // Si existe y hay precio, actualizarlo
+                await supabase
+                  .from("product_pricing")
+                  .update({
+                    current_price_usd: productData.base_price_usd,
+                    current_price_cop: productData.base_price_cop || (productData.base_price_usd * exchangeRate),
+                    is_on_sale: false,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("product_id", newProduct.id);
+
+                // Guardar pricing y ofertas si hay
+                if (createSaleData.is_on_sale && createSaleData.sale_percentage) {
+                  await updateProductPricing(newProduct.id, createSaleData);
+                }
+              }
+            } else {
+              // Si no existe, crearlo solo si hay precio
+              if (productData.base_price_usd !== null && productData.base_price_usd !== undefined) {
+                const { error: pricingError } = await supabase
+                  .from("product_pricing")
+                  .insert({
+                    product_id: newProduct.id,
+                    current_price_usd: productData.base_price_usd,
+                    current_price_cop: productData.base_price_cop || (productData.base_price_usd * exchangeRate),
+                    is_on_sale: false,
+                  });
+
+                if (pricingError) {
+                  console.error("Error al crear pricing:", pricingError);
+                  throw new Error(`Error al crear pricing: ${pricingError.message}`);
+                }
+
+                // Guardar pricing y ofertas si hay
+                if (createSaleData.is_on_sale && createSaleData.sale_percentage) {
+                  await updateProductPricing(newProduct.id, createSaleData);
+                }
+              }
             }
             break;
           case "projects":
@@ -3391,14 +3485,32 @@ function Admin() {
                                 base_price_usd: null,
                               });
                             } else {
-                              const copPrice = parseFloat(value) || 0;
-                              const usdPrice = exchangeRate
-                                ? copPrice / exchangeRate
-                                : null;
+                              const copPrice = parseFloat(value);
+                              if (isNaN(copPrice)) {
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  base_price_cop: null,
+                                  base_price_usd: null,
+                                });
+                              } else {
+                                const usdPrice = exchangeRate
+                                  ? copPrice / exchangeRate
+                                  : null;
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  base_price_cop: copPrice,
+                                  base_price_usd: usdPrice,
+                                });
+                              }
+                            }
+                          }}
+                          onBlur={(e) => {
+                            // Si el campo queda vacío después de perder el foco, establecer como null
+                            if (e.target.value === "") {
                               setCrudFormData({
                                 ...crudFormData,
-                                base_price_cop: copPrice,
-                                base_price_usd: usdPrice,
+                                base_price_cop: null,
+                                base_price_usd: null,
                               });
                             }
                           }}
@@ -3430,14 +3542,32 @@ function Admin() {
                                 base_price_cop: null,
                               });
                             } else {
-                              const usdPrice = parseFloat(value) || 0;
-                              const copPrice = exchangeRate
-                                ? usdPrice * exchangeRate
-                                : null;
+                              const usdPrice = parseFloat(value);
+                              if (isNaN(usdPrice)) {
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  base_price_usd: null,
+                                  base_price_cop: null,
+                                });
+                              } else {
+                                const copPrice = exchangeRate
+                                  ? usdPrice * exchangeRate
+                                  : null;
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  base_price_usd: usdPrice,
+                                  base_price_cop: copPrice,
+                                });
+                              }
+                            }
+                          }}
+                          onBlur={(e) => {
+                            // Si el campo queda vacío después de perder el foco, establecer como null
+                            if (e.target.value === "") {
                               setCrudFormData({
                                 ...crudFormData,
-                                base_price_usd: usdPrice,
-                                base_price_cop: copPrice,
+                                base_price_usd: null,
+                                base_price_cop: null,
                               });
                             }
                           }}
