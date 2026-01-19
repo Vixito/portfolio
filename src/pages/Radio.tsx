@@ -334,7 +334,6 @@ function Radio() {
         if (mountpoint) {
           // La radio está activa
           setIsLive(true);
-          setIsConnecting(false); // Ya está conectado
           // Resetear contador de canciones cuando está en vivo (no aplica jingle en vivo)
           songsPlayedCountRef.current = 0;
 
@@ -438,7 +437,6 @@ function Radio() {
           // La radio no está activa
           setIsLive(false);
           // Si no hay mountpoint, la radio está apagada
-          // NO resetear isConnecting aquí - se maneja cuando el usuario intenta reproducir
 
           // Limpiar el stream si estaba reproduciendo en vivo
           if (
@@ -1182,11 +1180,7 @@ function Radio() {
       // Forzar reset una vez más después del delay
       gsap.set(marqueeRef.current, { x: 0 });
 
-      // Si está conectando, mostrar mensaje especial con traducción
-      const connectingText = t("radio.connecting");
-      const text = isConnecting
-        ? `${connectingText} - Radio Vixis`
-        : `${currentSong.title} - ${currentSong.artist}`;
+      const text = `${currentSong.title} - ${currentSong.artist}`;
       const textWidth = marqueeRef.current.scrollWidth;
       const containerWidth = marqueeRef.current.parentElement?.offsetWidth || 0;
 
@@ -1239,7 +1233,7 @@ function Radio() {
         gsap.set(marqueeRef.current, { x: 0 });
       }
     };
-  }, [currentSong?.title, currentSong?.artist, isConnecting, t, language]);
+  }, [currentSong?.title, currentSong?.artist, t, language]);
 
   // Event listeners del audio
   useEffect(() => {
@@ -1806,22 +1800,6 @@ function Radio() {
     } else {
       setUserPaused(false); // Resetear cuando el usuario reproduce manualmente
       
-      // Si la radio NO está en vivo (offline/apagada), mostrar "Conectando..."
-      if (!isLive) {
-        setIsConnecting(true);
-        // Mostrar mensaje de conexión con traducción
-        const connectingText = t("radio.connecting");
-        setCurrentSong({
-          id: "connecting",
-          title: connectingText,
-          artist: "Radio Vixis",
-          url: "",
-        });
-        
-        // Forzar actualización de metadata para detectar cuando se reactive
-        fetchMetadata();
-      }
-      
       try {
         // Si está en vivo, usar el stream de Icecast
         if (isLive) {
@@ -1838,7 +1816,6 @@ function Radio() {
           // Intentar reproducir directamente
           await audioRef.current.play();
           setIsPlaying(true);
-          setIsConnecting(false); // Ya está conectado
         } else {
           // Si no está en vivo, usar la playlist
           if (playlist.length > 0) {
@@ -1861,7 +1838,6 @@ function Radio() {
 
             await audioRef.current.play();
             setIsPlaying(true);
-            setIsConnecting(false); // Ya está conectado
           } else {
             // Si no hay playlist, mostrar mensaje
             if (import.meta.env.DEV) {
@@ -2430,9 +2406,7 @@ function Radio() {
               className="whitespace-nowrap text-xs md:text-sm font-medium"
               style={{ willChange: "transform" }}
             >
-              {isConnecting
-                ? `${t("radio.connecting")} - Radio Vixis`
-                : currentSong
+              {currentSong
                 ? `${currentSong.title} - ${currentSong.artist}`
                 : t("radio.loading")}
             </div>
