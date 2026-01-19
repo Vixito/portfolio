@@ -363,10 +363,10 @@ function Admin() {
   // Permitir scroll del body incluso cuando el modal está abierto
   // El modal tiene su propio scroll interno
 
-  // Cargar tasa de cambio cuando se monta el componente o cuando se abre el modal de productos
+  // Cargar tasa de cambio cuando se monta el componente o cuando se abre el modal de productos o invoices
   useEffect(() => {
     const loadExchangeRate = async () => {
-      if (activeTab === "products" && showCRUDModal) {
+      if ((activeTab === "products" || activeTab === "invoices") && showCRUDModal) {
         try {
           setLoadingExchangeRate(true);
           const rate = await getExchangeRate("USD", "COP");
@@ -2284,7 +2284,7 @@ function Admin() {
             className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-3 md:mb-4"
             style={{
               WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "#2093c4",
+              WebkitTextFillColor: "#28e3da",
               textShadow: "0 0 40px rgba(32, 147, 196, 0.5)",
             }}
           >
@@ -6484,7 +6484,11 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                         />
                         {exchangeRate && crudFormData.amount && (
                           <p className="text-xs text-gray-400 mt-1">
-                            ≈ ${((crudFormData.amount as number) / exchangeRate).toFixed(2)} USD
+                            ≈ ${new Intl.NumberFormat("en-US", {
+                              style: "currency",
+                              currency: "USD",
+                              minimumFractionDigits: 2,
+                            }).format((crudFormData.amount as number) / exchangeRate)}
                           </p>
                         )}
                       </div>
@@ -6528,7 +6532,11 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                         />
                         {exchangeRate && crudFormData.amount && (
                           <p className="text-xs text-gray-400 mt-1">
-                            ≈ ${((crudFormData.amount as number) * exchangeRate).toFixed(2)} COP
+                            ≈ {new Intl.NumberFormat("es-CO", {
+                              style: "currency",
+                              currency: "COP",
+                              minimumFractionDigits: 0,
+                            }).format((crudFormData.amount as number) * exchangeRate)}
                           </p>
                         )}
                       </div>
@@ -6751,7 +6759,11 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                         />
                                         {exchangeRate && feature.price && (
                                           <p className="text-xs text-gray-400 mt-1">
-                                            ≈ ${((feature.price as number) / exchangeRate).toFixed(2)} USD
+                                            ≈ {new Intl.NumberFormat("en-US", {
+                                              style: "currency",
+                                              currency: "USD",
+                                              minimumFractionDigits: 2,
+                                            }).format((feature.price as number) / exchangeRate)}
                                           </p>
                                         )}
                                       </div>
@@ -6803,7 +6815,11 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                         />
                                         {exchangeRate && feature.price && (
                                           <p className="text-xs text-gray-400 mt-1">
-                                            ≈ ${((feature.price as number) * exchangeRate).toFixed(2)} COP
+                                            ≈ {new Intl.NumberFormat("es-CO", {
+                                              style: "currency",
+                                              currency: "COP",
+                                              minimumFractionDigits: 0,
+                                            }).format((feature.price as number) * exchangeRate)}
                                           </p>
                                         )}
                                       </div>
