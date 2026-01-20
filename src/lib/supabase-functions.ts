@@ -1390,10 +1390,23 @@ export async function updateInvoice(
     throw new Error("No se puede editar una factura que ya está pagada o completada");
   }
 
+  // Limpiar updates para eliminar cualquier campo que no exista en la tabla invoices
+  const cleanUpdates: any = {};
+  const allowedFields = [
+    "user_name", "user_email", "request_type", "amount", "currency", 
+    "delivery_time", "custom_fields", "pay_now_link", "status", "product_id"
+  ];
+  
+  for (const key of allowedFields) {
+    if (key in updates) {
+      cleanUpdates[key] = updates[key as keyof typeof updates];
+    }
+  }
+  
   // Seleccionar solo las columnas de invoices, sin relaciones
   const { data, error } = await adminSupabase
     .from("invoices")
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
     .eq("id", id)
     .select("id, invoice_number, product_id, user_name, user_email, request_type, amount, currency, delivery_time, custom_fields, pay_now_link, status, created_at, updated_at")
     .single();
