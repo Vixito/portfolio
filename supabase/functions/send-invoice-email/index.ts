@@ -107,40 +107,56 @@ serve(async (req) => {
       border: 0;
       margin: 2px 0;
     }
+    .studio-row {
+      margin: 4px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      width: 100%;
+    }
     .studio { 
-      margin: 4px 0; 
       font-size: 0.9em; 
       font-weight: 800;
       display: flex;
       align-items: flex-end;
-      gap: 12px;
+      gap: 16px;
     }
     .studio-logo {
       height: 20px;
       width: auto;
       border-radius: 4px;
       flex-shrink: 0;
+      display: block;
+    }
+    .product-name {
+      font-size: 0.9em;
+      font-weight: 800;
+      text-align: right;
+      align-self: flex-end;
     }
     .user-info { 
       margin: 4px 0; 
       display: flex; 
       justify-content: space-between; 
       align-items: center;
+      width: 100%;
     }
     .user-info .request-type {
       font-weight: 800;
       text-align: right;
+      flex-shrink: 0;
     }
     .calories-info {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
       margin: 4px 0;
+      width: 100%;
     }
     .left-container { 
       display: flex; 
       flex-direction: column; 
       align-items: flex-start;
+      width: 100%;
     }
     .amount-to-pay {
       font-size: 0.85rem;
@@ -180,13 +196,12 @@ serve(async (req) => {
     }
     .delivery-time span:first-child {
       font-weight: 800;
-      flex: 1;
+      text-align: left;
     }
     .delivery-time span:last-child {
       text-align: right;
       font-weight: 400;
       flex-shrink: 0;
-      min-width: 80px;
     }
     .feature-item {
       display: flex;
@@ -195,13 +210,12 @@ serve(async (req) => {
       width: 100%;
     }
     .feature-item .bold {
-      flex: 1;
+      text-align: left;
     }
     .feature-price {
       text-align: right;
       font-weight: 400;
       flex-shrink: 0;
-      min-width: 80px;
     }
     .payment-button-container {
       display: flex;
@@ -233,10 +247,13 @@ serve(async (req) => {
     <header>
       <h1 class="bold">Invoice #${invoice.invoice_number}</h1>
       <div class="divider"></div>
-      <p class="studio">
-        <img src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp" alt="Vixis Studio" class="studio-logo">
-        Vixis Studio
-      </p>
+      <div class="studio-row">
+        <p class="studio">
+          <img src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp" alt="Vixis Studio" class="studio-logo">
+          Vixis Studio
+        </p>
+        ${invoice.products && (invoice.products as any).title ? `<span class="product-name">${(invoice.products as any).title}</span>` : ''}
+      </div>
       <p class="user-info">
         <span class="bold">${invoice.user_name}</span>
         <span class="request-type">${invoice.request_type}</span>
