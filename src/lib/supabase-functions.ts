@@ -1257,6 +1257,7 @@ export async function createInvoice(invoice: {
   currency: "USD" | "COP";
   delivery_time: string;
   custom_fields?: Record<string, any>;
+  pay_now_link?: string;
   status?: "pending" | "paid" | "completed" | "cancelled";
 }) {
   // Usar service_role_key para bypass RLS (solo para Admin)
@@ -1367,6 +1368,7 @@ export async function updateInvoice(
     currency: "USD" | "COP";
     delivery_time: string;
     custom_fields: Record<string, any>;
+    pay_now_link: string;
     status: "pending" | "paid" | "completed" | "cancelled";
   }>
 ) {

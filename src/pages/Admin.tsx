@@ -313,7 +313,7 @@ function Admin() {
               <tr>
                 <td colspan="2" style="text-align: center; padding: 10px 0;">
                   <a
-                    href="https://vixis.dev/how-to-pay-me"
+                    href="${fullInvoice.pay_now_link || "https://vixis.dev/how-to-pay-me"}"
                     target="_blank"
                     rel="noopener noreferrer"
                     style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6 !important; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"
@@ -1752,6 +1752,10 @@ function Admin() {
             // Eliminar campos que no existen en la tabla invoices
             delete updateInvoiceData.amount_usd;
             delete updateInvoiceData.amount_cop;
+            // Asegurar que pay_now_link tenga un valor por defecto si está vacío
+            if (!updateInvoiceData.pay_now_link) {
+              updateInvoiceData.pay_now_link = "https://vixis.dev/how-to-pay-me";
+            }
             // Parsear custom_fields si es string
             if (typeof updateInvoiceData.custom_fields === "string") {
               try {
@@ -2215,6 +2219,10 @@ function Admin() {
             // Eliminar campos que no existen en la tabla invoices
             delete createInvoiceData.amount_usd;
             delete createInvoiceData.amount_cop;
+            // Asegurar que pay_now_link tenga un valor por defecto
+            if (!createInvoiceData.pay_now_link) {
+              createInvoiceData.pay_now_link = "https://vixis.dev/how-to-pay-me";
+            }
             // Parsear custom_fields si es string
             if (typeof createInvoiceData.custom_fields === "string") {
               try {
@@ -7033,6 +7041,31 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
                         Add features with their prices (optional)
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Pay Now Button Link
+                      </label>
+                      <input
+                        type="url"
+                        value={crudFormData.pay_now_link ?? "https://vixis.dev/how-to-pay-me"}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            pay_now_link: e.target.value || "https://vixis.dev/how-to-pay-me",
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        placeholder="https://vixis.dev/how-to-pay-me"
+                        disabled={
+                          editingItem &&
+                          (editingItem.status === "paid" ||
+                            editingItem.status === "completed")
+                        }
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        URL for the "Pay Now" button in the invoice email (default: https://vixis.dev/how-to-pay-me)
                       </p>
                     </div>
                   </>

@@ -215,7 +215,7 @@ serve(async (req) => {
       <tr>
         <td colspan="2" style="text-align: center; padding: 10px 0;">
           <a
-            href="https://vixis.dev/how-to-pay-me"
+            href="${invoice.pay_now_link || "https://vixis.dev/how-to-pay-me"}"
             target="_blank"
             rel="noopener noreferrer"
             style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6 !important; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"
