@@ -190,7 +190,19 @@ serve(async (req) => {
         invoice.custom_fields.features.length > 0
           ? invoice.custom_fields.features
               .map(
-                (feature: any) => `
+                (feature: any) => {
+                  let priceDisplay = "";
+                  if (feature.type === "percentage" && feature.percentage !== undefined && feature.percentage !== null) {
+                    // Mostrar porcentaje: "+30%" si es positivo, "-30%" si es negativo
+                    const percentage = feature.percentage;
+                    priceDisplay = percentage >= 0 ? `+${percentage}%` : `${percentage}%`;
+                  } else if (feature.price !== undefined && feature.price !== null) {
+                    // Mostrar precio fijo
+                    priceDisplay = formatPrice(feature.price || 0, feature.currency || invoice.currency || "USD");
+                  } else {
+                    priceDisplay = formatPrice(0, feature.currency || invoice.currency || "USD");
+                  }
+                  return `
       <tr>
         <td colspan="2" class="divider"></td>
       </tr>
@@ -199,10 +211,11 @@ serve(async (req) => {
           <span style="font-size: 0.85rem; font-weight: 800;">${feature.name || "Feature"}</span>
         </td>
         <td style="text-align: right; padding: 4px 0;">
-          <span style="font-size: 0.85rem;">${formatPrice(feature.price || 0, feature.currency || invoice.currency || "USD")}</span>
+          <span style="font-size: 0.85rem;">${priceDisplay}</span>
         </td>
       </tr>
-      `
+      `;
+                }
               )
               .join("")
           : ""
