@@ -119,7 +119,7 @@ serve(async (req) => {
       font-weight: 800;
       display: flex;
       align-items: flex-end;
-      gap: 16px;
+      gap: 20px;
     }
     .studio-logo {
       height: 20px;
@@ -130,7 +130,7 @@ serve(async (req) => {
     }
     .product-name {
       font-size: 0.9em;
-      font-weight: 800;
+      font-weight: 400;
       text-align: right;
       align-self: flex-end;
     }
@@ -140,6 +140,10 @@ serve(async (req) => {
       justify-content: space-between; 
       align-items: center;
       width: 100%;
+    }
+    .user-info .bold {
+      font-weight: 400;
+      text-align: left;
     }
     .user-info .request-type {
       font-weight: 800;
@@ -194,6 +198,15 @@ serve(async (req) => {
       padding-bottom: 2px;
       width: 100%;
     }
+    .delivery-time {
+      margin: 4px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #888989;
+      padding-bottom: 2px;
+      width: 100%;
+    }
     .delivery-time span:first-child {
       font-weight: 800;
       text-align: left;
@@ -202,6 +215,8 @@ serve(async (req) => {
       text-align: right;
       font-weight: 400;
       flex-shrink: 0;
+      min-width: 60px;
+      padding-left: 10px;
     }
     .feature-item {
       display: flex;
@@ -211,18 +226,19 @@ serve(async (req) => {
     }
     .feature-item .bold {
       text-align: left;
+      flex: 1;
     }
     .feature-price {
       text-align: right;
       font-weight: 400;
       flex-shrink: 0;
+      min-width: 60px;
+      padding-left: 10px;
     }
     .payment-button-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
       width: 100%;
       margin: 10px 0;
+      text-align: center;
     }
     .payment-button {
       display: inline-block;
@@ -233,6 +249,7 @@ serve(async (req) => {
       text-decoration: none !important;
       border-radius: 4px;
       font-weight: 700;
+      margin: 0 auto;
     }
     .note {
       font-size: 0.6rem;
@@ -255,7 +272,7 @@ serve(async (req) => {
         ${invoice.products && (invoice.products as any).title ? `<span class="product-name">${(invoice.products as any).title}</span>` : ''}
       </div>
       <p class="user-info">
-        <span class="bold">${invoice.user_name}</span>
+        <span>${invoice.user_name}</span>
         <span class="request-type">${invoice.request_type}</span>
       </p>
     </header>
