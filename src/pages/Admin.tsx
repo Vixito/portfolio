@@ -71,6 +71,121 @@ import { supabase } from "../lib/supabase";
 import Invoice from "../components/features/Invoice";
 import RichTextEditor from "../components/ui/RichTextEditor";
 
+// Componente para selector de productos con tabs por idioma
+function ProductSelectorWithTabs({
+  products,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  products: any[];
+  value: string;
+  onChange: (productId: string) => void;
+  disabled?: boolean;
+}) {
+  // Tab izquierdo = Español, Tab derecho = Inglés
+  const [activeTab, setActiveTab] = useState<"es" | "en">("es");
+  const [isOpen, setIsOpen] = useState(false);
+
+  const extractTranslations = (translations: any, fallback: string = ""): { es: string; en: string } => {
+    if (!translations || typeof translations !== "object") {
+      return { es: fallback, en: fallback };
+    }
+    return {
+      es: translations.es || translations.ES || fallback,
+      en: translations.en || translations.EN || fallback,
+    };
+  };
+
+  const selectedProduct = products.find((p) => p.id === value);
+  const getSelectedTitle = () => {
+    if (!selectedProduct) return "Seleccionar producto";
+    const titleTrans = extractTranslations(
+      selectedProduct.title_translations,
+      selectedProduct.title || ""
+    );
+    // Mostrar el título según el tab activo
+    return activeTab === "es" ? titleTrans.es : titleTrans.en;
+  };
+  const selectedTitle = getSelectedTitle();
+
+  return (
+    <div className="relative">
+      <div
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white cursor-pointer flex items-center justify-between ${
+          disabled ? "opacity-50 cursor-not-allowed" : "hover:border-gray-600"
+        }`}
+      >
+        <span>{selectedTitle}</span>
+        <span className="text-gray-400">{isOpen ? "▲" : "▼"}</span>
+      </div>
+      {isOpen && !disabled && (
+        <div className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl" style={{ zIndex: 9999 }}>
+          {/* Tabs */}
+          <div className="flex border-b border-gray-700">
+            <button
+              onClick={() => setActiveTab("es")}
+              className={`flex-1 px-4 py-2 font-bold text-sm transition-colors ${
+                activeTab === "es"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              Español
+            </button>
+            <button
+              onClick={() => setActiveTab("en")}
+              className={`flex-1 px-4 py-2 font-bold text-sm transition-colors ${
+                activeTab === "en"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              English
+            </button>
+          </div>
+          {/* Product List */}
+          <div className="max-h-60 overflow-y-auto">
+            {products.map((product: any) => {
+              const titleTrans = extractTranslations(
+                product.title_translations,
+                product.title || ""
+              );
+              const displayTitle =
+                activeTab === "es" ? titleTrans.es : titleTrans.en;
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => {
+                    onChange(product.id);
+                    setIsOpen(false);
+                  }}
+                  className={`px-4 py-2 cursor-pointer hover:bg-gray-700 transition-colors ${
+                    value === product.id ? "bg-gray-700" : ""
+                  }`}
+                >
+                  <div className="text-white text-sm">
+                    {product.id} - {displayTitle || "No title"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {/* Overlay para cerrar al hacer click fuera */}
+      {isOpen && !disabled && (
+        <div
+          className="fixed inset-0"
+          style={{ zIndex: 9998 }}
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
 function Admin() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -6477,31 +6592,23 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                     )}
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Product * (Select product ID)
+                        Product * (Select product)
                       </label>
-                      <select
+                      <ProductSelectorWithTabs
+                        products={products}
                         value={crudFormData.product_id || ""}
-                        onChange={(e) =>
+                        onChange={(productId) =>
                           setCrudFormData({
                             ...crudFormData,
-                            product_id: e.target.value,
+                            product_id: productId,
                           })
                         }
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        required
                         disabled={
                           editingItem &&
                           (editingItem.status === "paid" ||
                             editingItem.status === "completed")
                         }
-                      >
-                        <option value="">Select a product</option>
-                        {products.map((product: any) => (
-                          <option key={product.id} value={product.id}>
-                            {product.id} - {product.title || "No title"}
-                          </option>
-                        ))}
-                      </select>
+                      />
                       {crudFormData.product_id && (
                         <p className="text-xs text-gray-500 mt-1">
                           Selected Product ID: {crudFormData.product_id}

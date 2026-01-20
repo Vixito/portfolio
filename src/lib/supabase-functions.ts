@@ -1394,7 +1394,7 @@ export async function updateInvoice(
     .from("invoices")
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .select()
+    .select("*")
     .single();
 
   if (error) {
