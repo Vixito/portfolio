@@ -291,7 +291,23 @@ function Admin() {
         }).format(amount);
       };
 
-      const productTitle = fullInvoice.product?.title || (fullInvoice.products && (fullInvoice.products as any).title) || '';
+      // Obtener título del producto según el idioma guardado
+      const getProductTitle = (product: any, productLanguage?: string) => {
+        if (!product) return '';
+        const language = productLanguage || "es";
+        if (product.title_translations && typeof product.title_translations === 'object') {
+          const translations = product.title_translations as { es?: string; en?: string };
+          return translations[language as keyof typeof translations] || product.title || '';
+        }
+        return product.title || '';
+      };
+      
+      const productLanguage = fullInvoice.custom_fields?.product_language as string | undefined;
+      const productTitle = fullInvoice.product 
+        ? getProductTitle(fullInvoice.product, productLanguage)
+        : (fullInvoice.products 
+          ? getProductTitle(fullInvoice.products as any, productLanguage)
+          : '');
       const featuresHTML = fullInvoice.custom_fields?.features && Array.isArray(fullInvoice.custom_fields.features) && fullInvoice.custom_fields.features.length > 0
         ? fullInvoice.custom_fields.features.map((feature: any) => {
             let priceDisplay = "";
@@ -313,7 +329,7 @@ function Admin() {
             <td style="padding: 4px 0;">
               <span style="font-size: 0.85rem; font-weight: 800;">${feature.name || "Feature"}</span>
             </td>
-            <td style="text-align: right; padding: 4px 0;">
+            <td style="text-align: right; padding: 4px 0; word-wrap: break-word; overflow-wrap: break-word;">
               <span style="font-size: 0.85rem;">${priceDisplay}</span>
             </td>
           </tr>
@@ -343,20 +359,33 @@ function Admin() {
             .invoice-label {
               border: 2px solid black;
               width: 270px;
+              max-width: 100%;
               margin: 20px auto;
               padding: 0 7px;
               background: white;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
             }
             table {
               width: 100%;
               border-collapse: collapse;
               margin: 0;
               padding: 0;
+              table-layout: fixed;
             }
             td {
               padding: 0;
               margin: 0;
               vertical-align: bottom;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
+              max-width: 0;
+            }
+            @media print {
+              .invoice-label {
+                width: 270px !important;
+                max-width: 270px !important;
+              }
             }
             .divider { border-bottom: 1px solid #888989; margin: 2px 0; }
             .divider-large {
@@ -374,6 +403,14 @@ function Admin() {
             @media print {
               body { padding: 0; }
               .no-print { display: none; }
+              .invoice-label {
+                width: 270px !important;
+                max-width: 270px !important;
+                page-break-inside: avoid;
+              }
+              td {
+                max-width: 0 !important;
+              }
             }
           </style>
         </head>
@@ -405,7 +442,7 @@ function Admin() {
                     </tr>
                   </table>
                 </td>
-                <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom;">${productTitle}</td>
+                <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom; word-wrap: break-word; overflow-wrap: break-word;">${productTitle}</td>
               </tr>
               <tr>
                 <td colspan="2" class="divider"></td>
@@ -429,11 +466,11 @@ function Admin() {
                 </td>
               </tr>
               <tr>
-                <td style="padding: 4px 0;">
+                <td style="padding: 4px 0; width: 40%;">
                   <span style="font-size: 1.5em; font-weight: 800;">Total</span>
                 </td>
-                <td style="text-align: right; padding: 4px 0;">
-                  <span style="font-size: 2.4em; font-weight: 700;">${formatPrice(fullInvoice.amount, fullInvoice.currency)}</span>
+                <td style="text-align: right; padding: 4px 0; width: 60%;">
+                  <span style="font-size: clamp(1.2em, 2.4em, 2.4em); font-weight: 700; word-break: break-word; overflow-wrap: break-word; line-height: 1.1; display: inline-block; max-width: 100%;">${formatPrice(fullInvoice.amount, fullInvoice.currency)}</span>
                 </td>
               </tr>
               <tr>
@@ -445,7 +482,7 @@ function Admin() {
                 <td style="padding: 4px 0; border-bottom: 1px solid #888989;">
                   <span style="font-size: 0.85rem; font-weight: 800;">Approximate delivery time</span>
                 </td>
-                <td style="text-align: right; padding: 4px 0; border-bottom: 1px solid #888989;">
+                <td style="text-align: right; padding: 4px 0; border-bottom: 1px solid #888989; word-wrap: break-word; overflow-wrap: break-word;">
                   <span style="font-size: 0.85rem;">${fullInvoice.delivery_time}</span>
                 </td>
               </tr>
