@@ -59,7 +59,7 @@ export default function HowToPayMe() {
         </ol>
       </div>
 
-      <div className="text-center">
+      <div className="text-center mb-8">
         <div className="relative pb-[56.25%] h-0 overflow-hidden max-w-full bg-black dark:bg-gray-800 rounded-lg">
           <iframe
             src="https://www.loom.com/embed/YOUR_VIDEO_ID"
