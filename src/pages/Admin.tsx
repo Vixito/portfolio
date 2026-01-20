@@ -1937,10 +1937,7 @@ function Admin() {
             delete updateInvoiceData.amount_cop;
             delete updateInvoiceData.products; // Eliminar cualquier referencia a products
             delete updateInvoiceData.product; // Eliminar cualquier referencia a product
-            // Asegurar que pay_now_link tenga un valor por defecto si está vacío
-            if (!updateInvoiceData.pay_now_link) {
-              updateInvoiceData.pay_now_link = "https://vixis.dev/how-to-pay-me";
-            }
+            // pay_now_link será vacío por defecto, se usará automáticamente /pay/:id en el email
             // Guardar product_language en custom_fields si existe
             if (updateInvoiceData.product_language) {
               if (typeof updateInvoiceData.custom_fields === "string") {
@@ -2443,10 +2440,7 @@ function Admin() {
             // Eliminar campos que no existen en la tabla invoices
             delete createInvoiceData.amount_usd;
             delete createInvoiceData.amount_cop;
-            // Asegurar que pay_now_link tenga un valor por defecto
-            if (!createInvoiceData.pay_now_link) {
-              createInvoiceData.pay_now_link = "https://vixis.dev/how-to-pay-me";
-            }
+            // pay_now_link será vacío por defecto, se usará automáticamente /pay/:id en el email
             // Guardar product_language en custom_fields si existe
             if (createInvoiceData.product_language) {
               if (typeof createInvoiceData.custom_fields === "string") {

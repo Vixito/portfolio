@@ -21,7 +21,6 @@ import {
   Status,
   Store,
   Radio,
-  HowToPayMe,
   PayInvoice,
   NotFound,
 } from "./pages";
@@ -208,14 +207,7 @@ function App() {
             </Layout>
           }
         ></Route>
-        <Route
-          path="/how-to-pay-me"
-          element={
-            <Layout>
-              <HowToPayMe />
-            </Layout>
-          }
-        ></Route>
+        {/* Ruta /how-to-pay-me desactivada */}
         <Route
           path="*"
           element={
