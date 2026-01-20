@@ -98,20 +98,27 @@ serve(async (req) => {
     .invoice-label {
       border: 2px solid black;
       width: 270px;
+      max-width: 100%;
       margin: 20px auto;
       padding: 0 7px;
       background: white;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     table {
       width: 100%;
       border-collapse: collapse;
       margin: 0;
       padding: 0;
+      table-layout: fixed;
     }
     td {
       padding: 0;
       margin: 0;
       vertical-align: bottom;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 0;
     }
     .bold { font-weight: 800; }
     .divider { border-bottom: 1px solid #888989; margin: 2px 0; }
@@ -131,7 +138,7 @@ serve(async (req) => {
 </head>
 <body>
   <div class="invoice-label">
-    <table style="width: 100%; border-collapse: collapse;">
+    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
       <tr>
         <td colspan="2" style="text-align: center; padding: 4px 0;">
           <h1 style="margin: 4px 0; letter-spacing: 0.15px; font-weight: 800; font-size: 1.2em; text-align: center;">Invoice #${invoice.invoice_number}</h1>
@@ -157,7 +164,7 @@ serve(async (req) => {
             </tr>
           </table>
         </td>
-        <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom;">${productTitle}</td>
+        <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom; word-wrap: break-word; overflow-wrap: break-word;">${productTitle}</td>
       </tr>
       <tr>
         <td colspan="2" class="divider"></td>
@@ -176,16 +183,16 @@ serve(async (req) => {
         </td>
       </tr>
       <tr>
-        <td colspan="2" style="padding: 4px 0;">
+        <td colspan="2" style="padding: 4px 0; word-wrap: break-word; overflow-wrap: break-word;">
           <div style="font-size: 0.85rem; font-weight: 800;">Amount to pay</div>
         </td>
       </tr>
       <tr>
-        <td style="padding: 4px 0;">
+        <td style="padding: 4px 0; width: 40%;">
           <span style="font-size: 1.5em; font-weight: 800;">Total</span>
         </td>
-        <td style="text-align: right; padding: 4px 0;">
-          <span style="font-size: 2.4em; font-weight: 700;">${formatPrice(invoice.amount, invoice.currency)}</span>
+        <td style="text-align: right; padding: 4px 0; width: 60%;">
+          <span style="font-size: clamp(1.2em, 2.4em, 2.4em); font-weight: 700; word-break: break-word; overflow-wrap: break-word; line-height: 1.1; display: inline-block; max-width: 100%;">${formatPrice(invoice.amount, invoice.currency)}</span>
         </td>
       </tr>
       <tr>
@@ -197,7 +204,7 @@ serve(async (req) => {
         <td style="padding: 4px 0; border-bottom: 1px solid #888989;">
           <span style="font-size: 0.85rem; font-weight: 800;">Approximate delivery time</span>
         </td>
-        <td style="text-align: right; padding: 4px 0; border-bottom: 1px solid #888989;">
+        <td style="text-align: right; padding: 4px 0; border-bottom: 1px solid #888989; word-wrap: break-word; overflow-wrap: break-word;">
           <span style="font-size: 0.85rem;">${invoice.delivery_time}</span>
         </td>
       </tr>
@@ -227,7 +234,7 @@ serve(async (req) => {
         <td style="padding: 4px 0;">
           <span style="font-size: 0.85rem; font-weight: 800;">${feature.name || "Feature"}</span>
         </td>
-        <td style="text-align: right; padding: 4px 0;">
+        <td style="text-align: right; padding: 4px 0; word-wrap: break-word; overflow-wrap: break-word;">
           <span style="font-size: 0.85rem;">${priceDisplay}</span>
         </td>
       </tr>
