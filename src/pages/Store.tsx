@@ -410,8 +410,56 @@ function Store() {
     );
   }
 
+  const [showInfoPopover, setShowInfoPopover] = useState(false);
+
   return (
-    <div className="min-h-screen py-20 px-4">
+    <div className="min-h-screen py-20 px-4 relative">
+      {/* Info Icon with Popover - Esquina superior derecha */}
+      <div className="fixed top-4 right-4 z-50">
+        <div className="relative">
+          <button
+            onClick={() => setShowInfoPopover(!showInfoPopover)}
+            className="w-8 h-8 rounded-full bg-cyan text-white flex items-center justify-center font-bold text-lg hover:bg-cyan/80 transition-colors shadow-lg"
+            aria-label={t("store.paymentInfo.title")}
+            title={t("store.paymentInfo.title")}
+          >
+            ℹ
+          </button>
+          {showInfoPopover && (
+            <div className="absolute top-10 right-0 bg-white border-2 border-purple rounded-lg p-4 w-64 shadow-xl z-50">
+              <strong className="text-purple block mb-2">{t("store.paymentInfo.popoverTitle")}</strong>
+              <p className="text-sm text-gray-700 mb-3">
+                {t("store.paymentInfo.popoverDescription")}
+              </p>
+              <a
+                href="/how-to-pay-me"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan underline block text-sm font-semibold hover:text-purple transition-colors"
+                onClick={() => setShowInfoPopover(false)}
+              >
+                {t("store.paymentInfo.viewGuide")}
+              </a>
+              {/* Cerrar popover al hacer click fuera */}
+              <button
+                onClick={() => setShowInfoPopover(false)}
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-lg leading-none"
+                aria-label={t("common.close")}
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Overlay para cerrar popover al hacer click fuera */}
+      {showInfoPopover && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowInfoPopover(false)}
+        />
+      )}
+
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
           {t("store.title")}

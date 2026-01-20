@@ -110,62 +110,10 @@ serve(async (req) => {
       border: 0;
       margin: 2px 0;
     }
-    .info-icon-container {
-      position: relative;
-      display: inline-block;
-      float: right;
-      margin-top: -30px;
-      margin-right: 0;
-    }
-    .info-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background-color: #2093c4;
-      color: white;
-      text-align: center;
-      line-height: 20px;
-      font-weight: bold;
-      font-size: 14px;
-      cursor: pointer;
-      border: 1px solid #2093c4;
-    }
-    .info-popover {
-      display: none;
-      position: absolute;
-      top: 25px;
-      right: 0;
-      background-color: white;
-      border: 2px solid #331d83;
-      padding: 10px;
-      border-radius: 4px;
-      width: 200px;
-      font-size: 0.85rem;
-      z-index: 1000;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-    .info-icon:hover + .info-popover,
-    .info-popover:hover {
-      display: block;
-    }
-    .info-popover a {
-      color: #2093c4;
-      text-decoration: underline;
-      display: block;
-      margin-top: 8px;
-    }
   </style>
 </head>
 <body>
-  <div class="invoice-label" style="position: relative;">
-    <div class="info-icon-container">
-      <div class="info-icon" title="Payment Information">ℹ</div>
-      <div class="info-popover">
-        <strong>Payment Instructions</strong>
-        <p style="margin: 8px 0 0 0; font-size: 0.8rem;">Click below for detailed payment instructions and video tutorial.</p>
-        <a href="https://vixis.dev/how-to-pay-me" target="_blank" rel="noopener noreferrer">View Payment Guide →</a>
-      </div>
-    </div>
+  <div class="invoice-label">
     <table style="width: 100%; border-collapse: collapse;">
       <tr>
         <td colspan="2" style="text-align: center; padding: 4px 0;">

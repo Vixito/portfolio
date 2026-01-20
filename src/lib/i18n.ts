@@ -96,6 +96,12 @@ export const translations = {
         music: "Música",
         languages: "Idiomas",
       },
+      paymentInfo: {
+        title: "Información de pago",
+        popoverTitle: "Instrucciones de pago",
+        popoverDescription: "Haz clic abajo para ver instrucciones detalladas de pago y video tutorial.",
+        viewGuide: "Ver guía de pago →",
+      },
     },
     // Projects
     projects: {
@@ -583,6 +589,16 @@ export const translations = {
       title: "Último Post",
       readMore: "Leer más",
     },
+    // How to Pay Me
+    howToPay: {
+      title: "¿Cómo pagarme?",
+      description: "Sigue estos simples pasos para completar tu pago:",
+      payButton: "Pagar ahora",
+      importantNote: "Notas Importantes:",
+      note1: "Asegúrate de incluir el ID del producto y el número de factura en la nota de pago.",
+      note2: "Tu pago será procesado dentro de 24-48 horas después de la confirmación.",
+      note3: "Si tienes alguna pregunta, por favor contáctame a través de mis redes sociales.",
+    },
   },
   en: {
     // Navigation
@@ -677,6 +693,12 @@ export const translations = {
         investment: "Investment",
         music: "Music",
         languages: "Languages",
+      },
+      paymentInfo: {
+        title: "Payment Information",
+        popoverTitle: "Payment Instructions",
+        popoverDescription: "Click below for detailed payment instructions and video tutorial.",
+        viewGuide: "View Payment Guide →",
       },
     },
     // Projects
@@ -1162,6 +1184,16 @@ export const translations = {
     latestPostCard: {
       title: "Latest Post",
       readMore: "Read more",
+    },
+    // How to Pay Me
+    howToPay: {
+      title: "How to Pay Me?",
+      description: "Follow these simple steps to complete your payment:",
+      payButton: "Pay now",
+      importantNote: "Important Notes:",
+      note1: "Make sure to include the product ID and invoice number in the payment note.",
+      note2: "Your payment will be processed within 24-48 hours after confirmation.",
+      note3: "If you have any questions, please contact me through my social media.",
     },
   },
 } as const;
