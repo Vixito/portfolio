@@ -142,7 +142,7 @@ serve(async (req) => {
       width: 100%;
     }
     .user-info .bold {
-      font-weight: 400;
+      font-weight: 800;
       text-align: left;
     }
     .user-info .request-type {
@@ -167,12 +167,14 @@ serve(async (req) => {
       font-weight: 800;
       margin: 0 0 4px 0;
       line-height: 1.2;
+      text-align: left;
     }
     .amount-label {
       margin: 0;
       font-size: 1.5em;
       font-weight: 800;
       line-height: 1.2;
+      text-align: left;
     }
     .amount-row {
       display: flex;
@@ -189,15 +191,6 @@ serve(async (req) => {
       line-height: 1;
     }
     .daily-value { font-size: 0.85rem; }
-    .delivery-time {
-      margin: 4px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #888989;
-      padding-bottom: 2px;
-      width: 100%;
-    }
     .delivery-time {
       margin: 4px 0;
       display: flex;
@@ -272,7 +265,7 @@ serve(async (req) => {
         ${invoice.products && (invoice.products as any).title ? `<span class="product-name">${(invoice.products as any).title}</span>` : ''}
       </div>
       <p class="user-info">
-        <span>${invoice.user_name}</span>
+        <span class="bold">${invoice.user_name}</span>
         <span class="request-type">${invoice.request_type}</span>
       </p>
     </header>
