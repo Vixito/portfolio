@@ -3,6 +3,7 @@ import Admin from "./Admin";
 import Blog from "./Blog";
 import Clients from "./Clients";
 import Home from "./Home";
+import HowToPayMe from "./HowToPayMe";
 import NotFound from "./NotFound";
 import Projects from "./Projects";
 import Radio from "./Radio";
@@ -20,6 +21,7 @@ export {
   Blog,
   Clients,
   Home,
+  HowToPayMe,
   NotFound,
   Projects,
   Radio,

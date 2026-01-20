@@ -1213,7 +1213,7 @@ export async function getInvoices() {
       *,
       products (id, title)
     `)
-    .order("invoice_number", { ascending: false });
+    .order("created_at", { ascending: false }); // Ordenar por fecha de creación en lugar de invoice_number para evitar problemas con formato string
 
   if (error) {
     throw new Error(`Error al obtener facturas: ${error.message}`);
@@ -1274,22 +1274,63 @@ export async function createInvoice(invoice: {
   // Crear cliente con service_role_key (bypass RLS)
   const adminSupabase = createSupabaseClient(supabaseUrl, supabaseServiceKey);
   
-  // Obtener el siguiente número de factura
-  const { data: lastInvoice, error: lastInvoiceError } = await adminSupabase
-    .from("invoices")
-    .select("invoice_number")
-    .order("invoice_number", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (lastInvoiceError && lastInvoiceError.code !== "PGRST116") {
-    // PGRST116 es "no rows returned", que es válido si no hay facturas
-    throw new Error(`Error al obtener último número de factura: ${lastInvoiceError.message}`);
-  }
-
-  const nextInvoiceNumber = lastInvoice?.invoice_number
-    ? lastInvoice.invoice_number + 1
-    : 1;
+  // Función para generar número de factura en formato INV-YYYY-NNNN
+  const generateInvoiceNumber = async (): Promise<string> => {
+    const currentYear = new Date().getFullYear();
+    const yearPrefix = `INV-${currentYear}-`;
+    
+    // Obtener todas las facturas del año actual que sigan el formato INV-YYYY-NNNN
+    const { data: yearInvoices, error: yearInvoicesError } = await adminSupabase
+      .from("invoices")
+      .select("invoice_number")
+      .like("invoice_number", `${yearPrefix}%`)
+      .order("invoice_number", { ascending: false });
+    
+    if (yearInvoicesError && yearInvoicesError.code !== "PGRST116") {
+      throw new Error(`Error al obtener facturas del año: ${yearInvoicesError.message}`);
+    }
+    
+    // Si no hay facturas del año actual, empezar desde 0001
+    if (!yearInvoices || yearInvoices.length === 0) {
+      return `${yearPrefix}0001`;
+    }
+    
+    // Extraer el número secuencial más alto del año actual
+    // Maneja tanto facturas con formato INV-YYYY-NNNN como números simples (para compatibilidad)
+    const lastNumber = yearInvoices
+      .map((inv: any) => {
+        const invNum = typeof inv.invoice_number === 'string' 
+          ? inv.invoice_number 
+          : String(inv.invoice_number);
+        
+        // Si ya tiene el formato INV-YYYY-NNNN
+        if (invNum.startsWith(yearPrefix)) {
+          const numPart = invNum.replace(yearPrefix, '');
+          const parsed = parseInt(numPart, 10);
+          return isNaN(parsed) ? 0 : parsed;
+        }
+        
+        // Si es un número simple y corresponde al año actual (para facturas antiguas)
+        // Solo considerar si es un número puro y muy bajo (probablemente factura antigua)
+        if (/^\d+$/.test(invNum)) {
+          const num = parseInt(invNum, 10);
+          // Si el número es menor a 1000, probablemente es una factura antigua
+          // No lo contamos para el nuevo formato
+          return 0;
+        }
+        
+        return 0;
+      })
+      .reduce((max: number, num: number) => Math.max(max, num), 0);
+    
+    // Generar el siguiente número con padding de 4 dígitos
+    const nextNumber = lastNumber + 1;
+    const paddedNumber = String(nextNumber).padStart(4, '0');
+    
+    return `${yearPrefix}${paddedNumber}`;
+  };
+  
+  const nextInvoiceNumber = await generateInvoiceNumber();
 
   const { data, error } = await adminSupabase
     .from("invoices")

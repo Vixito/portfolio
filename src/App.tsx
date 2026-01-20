@@ -21,6 +21,7 @@ import {
   Status,
   Store,
   Radio,
+  HowToPayMe,
   NotFound,
 } from "./pages";
 import Layout from "./components/layout/Layout";
@@ -203,6 +204,14 @@ function App() {
           element={
             <Layout>
               <Radio />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/how-to-pay-me"
+          element={
+            <Layout>
+              <HowToPayMe />
             </Layout>
           }
         ></Route>

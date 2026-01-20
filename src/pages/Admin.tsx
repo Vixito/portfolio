@@ -150,27 +150,81 @@ function Admin() {
         return;
       }
       
-      // Obtener HTML del componente Invoice (simplificado)
-      // Por ahora, mostrar mensaje y usar print del navegador
+      // Generar HTML con el mismo diseño que el email (tablas HTML)
+      const formatPrice = (amount: number, currency: string) => {
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: currency === "USD" ? "USD" : "COP",
+          minimumFractionDigits: currency === "USD" ? 2 : 0,
+        }).format(amount);
+      };
+
+      const productTitle = fullInvoice.product?.title || (fullInvoice.products && (fullInvoice.products as any).title) || '';
+      const featuresHTML = fullInvoice.custom_fields?.features && Array.isArray(fullInvoice.custom_fields.features) && fullInvoice.custom_fields.features.length > 0
+        ? fullInvoice.custom_fields.features.map((feature: any) => `
+          <tr>
+            <td colspan="2" style="border-bottom: 1px solid #888989; margin: 2px 0;"></td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 0;">
+              <span style="font-size: 0.85rem; font-weight: 800;">${feature.name || "Feature"}</span>
+            </td>
+            <td style="text-align: right; padding: 4px 0;">
+              <span style="font-size: 0.85rem;">${formatPrice(feature.price || 0, feature.currency || fullInvoice.currency || "USD")}</span>
+            </td>
+          </tr>
+        `).join("")
+        : "";
+
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
           <title>Invoice #${fullInvoice.invoice_number}</title>
           <meta charset="UTF-8">
+          <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700,800" rel="stylesheet">
           <style>
-            body { 
-              font-family: Arial, sans-serif; 
+            * { box-sizing: border-box; }
+            body {
+              font-family: 'Open Sans', sans-serif;
+              background-color: #f5f5f5;
               padding: 20px;
+              margin: 0;
               display: flex;
               justify-content: center;
               align-items: center;
               min-height: 100vh;
             }
-            .invoice-container {
+            .invoice-label {
               border: 2px solid black;
-              padding: 20px;
-              max-width: 600px;
+              width: 270px;
+              margin: 20px auto;
+              padding: 0 7px;
+              background: white;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 0;
+              padding: 0;
+            }
+            td {
+              padding: 0;
+              margin: 0;
+              vertical-align: bottom;
+            }
+            .divider { border-bottom: 1px solid #888989; margin: 2px 0; }
+            .divider-large {
+              height: 10px;
+              background-color: black;
+              border: 0;
+              margin: 2px 0;
+            }
+            .divider-medium {
+              height: 5px;
+              background-color: black;
+              border: 0;
+              margin: 2px 0;
             }
             @media print {
               body { padding: 0; }
@@ -179,13 +233,108 @@ function Admin() {
           </style>
         </head>
         <body>
-          <div class="invoice-container">
-            <h1>Invoice #${fullInvoice.invoice_number}</h1>
-            <p><strong>User:</strong> ${fullInvoice.user_name}</p>
-            <p><strong>Request Type:</strong> ${fullInvoice.request_type}</p>
-            <p><strong>Amount:</strong> ${fullInvoice.currency} ${fullInvoice.amount}</p>
-            <p><strong>Delivery Time:</strong> ${fullInvoice.delivery_time}</p>
-            <div class="no-print" style="margin-top: 20px;">
+          <div class="invoice-label">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td colspan="2" style="text-align: center; padding: 4px 0;">
+                  <h1 style="margin: 4px 0; letter-spacing: 0.15px; font-weight: 800; font-size: 1.2em; text-align: center;">Invoice #${fullInvoice.invoice_number}</h1>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2" class="divider"></td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; vertical-align: bottom;">
+                  <table style="border-collapse: collapse;">
+                    <tr>
+                      <td style="padding-right: 20px; vertical-align: bottom;">
+                        <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                          <img
+                            src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
+                            alt="Vixis Studio"
+                            style="height: 20px; border-radius: 4px; display: block;"
+                          >
+                        </a>
+                      </td>
+                      <td style="font-size: 0.9em; font-weight: 800; vertical-align: bottom;">Vixis Studio</td>
+                    </tr>
+                  </table>
+                </td>
+                <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom;">${productTitle}</td>
+              </tr>
+              <tr>
+                <td colspan="2" class="divider"></td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0;">
+                  <span style="font-weight: 800;">${fullInvoice.user_name}</span>
+                </td>
+                <td style="text-align: right; padding: 4px 0;">
+                  <span style="font-weight: 800;">${fullInvoice.request_type}</span>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2">
+                  <div class="divider-large"></div>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2" style="padding: 4px 0;">
+                  <div style="font-size: 0.85rem; font-weight: 800;">Amount to pay</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0;">
+                  <span style="font-size: 1.5em; font-weight: 800;">Total</span>
+                </td>
+                <td style="text-align: right; padding: 4px 0;">
+                  <span style="font-size: 2.4em; font-weight: 700;">${formatPrice(fullInvoice.amount, fullInvoice.currency)}</span>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2">
+                  <div class="divider-medium"></div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; border-bottom: 1px solid #888989;">
+                  <span style="font-size: 0.85rem; font-weight: 800;">Approximate delivery time</span>
+                </td>
+                <td style="text-align: right; padding: 4px 0; border-bottom: 1px solid #888989;">
+                  <span style="font-size: 0.85rem;">${fullInvoice.delivery_time}</span>
+                </td>
+              </tr>
+              ${featuresHTML}
+              <tr>
+                <td colspan="2">
+                  <div class="divider-large"></div>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2" style="text-align: center; padding: 10px 0;">
+                  <a
+                    href="https://vixis.dev/how-to-pay-me"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6 !important; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"
+                  >
+                    Pay Now
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2">
+                  <div class="divider-medium"></div>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2" style="font-size: 0.6rem; padding: 5px 0 5px 8px; text-indent: -8px;">
+                  * In the payment note you must put:<br>
+                  Product #${(fullInvoice.product_id || "").substring(0, 8)} - Invoice #${fullInvoice.invoice_number} - Vixis
+                </td>
+              </tr>
+            </table>
+            <div class="no-print" style="margin-top: 20px; text-align: center;">
               <button onclick="window.print()" style="padding: 10px 20px; background: #2093c4; color: white; border: none; border-radius: 4px; cursor: pointer;">
                 Imprimir / Guardar como PDF
               </button>

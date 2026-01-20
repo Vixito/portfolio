@@ -3,7 +3,7 @@ import React from "react";
 interface InvoiceProps {
   invoice: {
     id: string;
-    invoice_number: number;
+    invoice_number: string | number;
     product_id: string;
     user_name: string;
     request_type: string;
