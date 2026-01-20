@@ -56,6 +56,8 @@ function Store() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchName, setSearchName] = useState<string>("");
   const [priceFilter, setPriceFilter] = useState<string>("all");
+  const [showInfoPopover, setShowInfoPopover] = useState(false);
+  const [popoverOpenedByClick, setPopoverOpenedByClick] = useState(false);
   const itemsPerPage = 12;
 
   // Categorías disponibles (deben coincidir con las opciones en Admin)
@@ -410,53 +412,73 @@ function Store() {
     );
   }
 
-  const [showInfoPopover, setShowInfoPopover] = useState(false);
-
   return (
     <div className="min-h-screen py-20 px-4 relative">
       {/* Info Icon with Popover - Esquina superior derecha */}
       <div className="fixed top-4 right-4 z-50">
-        <div className="relative">
+        <div 
+          className="relative"
+          onMouseLeave={() => {
+            // Solo cerrar con mouse leave si NO se abrió con click
+            if (!popoverOpenedByClick) {
+              setShowInfoPopover(false);
+            }
+          }}
+        >
           <button
-            onClick={() => setShowInfoPopover(!showInfoPopover)}
-            className="w-8 h-8 rounded-full bg-cyan text-white flex items-center justify-center font-bold text-lg hover:bg-cyan/80 transition-colors shadow-lg"
+            onClick={() => {
+              const newState = !showInfoPopover;
+              setShowInfoPopover(newState);
+              setPopoverOpenedByClick(newState);
+            }}
+            onMouseEnter={() => {
+              if (!popoverOpenedByClick) {
+                setShowInfoPopover(true);
+              }
+            }}
+            className="w-10 h-10 rounded-full bg-white dark:bg-white border-2 border-purple dark:border-purple flex items-center justify-center font-bold text-lg text-purple dark:text-cyan hover:bg-purple/10 dark:hover:bg-cyan/10 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-110"
             aria-label={t("store.paymentInfo.title")}
             title={t("store.paymentInfo.title")}
           >
             ℹ
           </button>
+          {/* Puente invisible para facilitar el movimiento del mouse desde el ícono al popover */}
           {showInfoPopover && (
-            <div className="absolute top-10 right-0 bg-white border-2 border-purple rounded-lg p-4 w-64 shadow-xl z-50">
-              <strong className="text-purple block mb-2">{t("store.paymentInfo.popoverTitle")}</strong>
-              <p className="text-sm text-gray-700 mb-3">
-                {t("store.paymentInfo.popoverDescription")}
-              </p>
-              <a
-                href="/how-to-pay-me"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-cyan underline block text-sm font-semibold hover:text-purple transition-colors"
-                onClick={() => setShowInfoPopover(false)}
-              >
-                {t("store.paymentInfo.viewGuide")}
-              </a>
-              {/* Cerrar popover al hacer click fuera */}
-              <button
-                onClick={() => setShowInfoPopover(false)}
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-lg leading-none"
-                aria-label={t("common.close")}
-              >
-                ×
-              </button>
-            </div>
+            <div 
+              className="absolute top-10 right-0 w-64 h-3 pointer-events-auto z-40"
+            />
           )}
+          <div 
+            className={`absolute top-12 right-0 bg-white dark:bg-gray-900 border-2 border-purple dark:border-cyan rounded-lg p-4 w-64 shadow-xl z-50 transition-all duration-200 ${
+              showInfoPopover 
+                ? "opacity-100 translate-y-0 pointer-events-auto" 
+                : "opacity-0 -translate-y-2 pointer-events-none"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <strong className="text-purple dark:text-white block mb-2 font-semibold text-base">{t("store.paymentInfo.popoverTitle")}</strong>
+            <p className="text-sm text-gray-700 dark:text-gray-200 mb-3 leading-relaxed">
+              {t("store.paymentInfo.popoverDescription")}
+            </p>
+            <a
+              href="/how-to-pay-me"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-purple dark:text-pink-500 underline block text-sm font-semibold hover:text-purple/80 dark:hover:text-cyan-300 transition-colors"
+            >
+              {t("store.paymentInfo.viewGuide")}
+            </a>
+          </div>
         </div>
       </div>
       {/* Overlay para cerrar popover al hacer click fuera */}
       {showInfoPopover && (
         <div
           className="fixed inset-0 z-40"
-          onClick={() => setShowInfoPopover(false)}
+          onClick={() => {
+            setShowInfoPopover(false);
+            setPopoverOpenedByClick(false);
+          }}
         />
       )}
 
