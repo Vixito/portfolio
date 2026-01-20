@@ -1,7 +1,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { HmacSha256 } from "https://deno.land/std@0.168.0/hash/sha256.ts";
-import { encode as hexEncode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
+
+// Función helper para calcular HMAC-SHA256
+async function calculateHmacSha256(
+  secret: string,
+  message: string
+): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(message)
+  );
+
+  // Convertir ArrayBuffer a hex string
+  const hashArray = Array.from(new Uint8Array(signature));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,9 +64,10 @@ serve(async (req) => {
 
     // Reconstruir la firma esperada
     const signatureString = dlocalLogin + xDate + bodyText;
-    const hmac = new HmacSha256(dlocalSecretKey);
-    hmac.update(signatureString);
-    const expectedSignature = hexEncode(hmac.digest());
+    const expectedSignature = await calculateHmacSha256(
+      dlocalSecretKey,
+      signatureString
+    );
     const expectedAuth = `V2-HMAC-SHA256, Signature: ${expectedSignature}`;
 
     // Verificar la firma
