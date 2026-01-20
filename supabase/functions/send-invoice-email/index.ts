@@ -85,16 +85,19 @@ serve(async (req) => {
       padding: 0 7px;
       background: white;
     }
-    header h1 {
-      text-align: center;
-      margin: 4px 0;
-      letter-spacing: 0.15px;
-      font-weight: 800;
-      font-size: 1.2em;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+      padding: 0;
     }
-    p { margin: 0; display: flex; justify-content: space-between; }
-    .divider { border-bottom: 1px solid #888989; margin: 2px 0; }
+    td {
+      padding: 0;
+      margin: 0;
+      vertical-align: bottom;
+    }
     .bold { font-weight: 800; }
+    .divider { border-bottom: 1px solid #888989; margin: 2px 0; }
     .divider-large {
       height: 10px;
       background-color: black;
@@ -107,136 +110,78 @@ serve(async (req) => {
       border: 0;
       margin: 2px 0;
     }
-    .studio-row {
-      margin: 4px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      width: 100%;
-    }
-    .studio {
-      font-size: 0.9em;
-      font-weight: 800;
-      display: flex;
-      align-items: flex-end;
-      gap: 20px;
-    }
-    .studio-logo {
-      height: 20px;
-      border-radius: 4px;
-      display: block;
-    }
-    .product-name {
-      font-size: 0.9em;
-      font-weight: 400;
-      text-align: right;
-    }
-    .user-info {
-      margin: 4px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-    }
-    .request-type {
-      font-weight: 800;
-    }
-    .calories-info {
-      display: flex;
-      flex-direction: column;
-      margin: 4px 0;
-      width: 100%;
-    }
-    .amount-to-pay {
-      font-size: 0.85rem;
-      font-weight: 800;
-    }
-    .amount-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      margin-top: 4px;
-    }
-    .amount-label {
-      font-size: 1.5em;
-      font-weight: 800;
-    }
-    .amount-value {
-      font-size: 2.4em;
-      font-weight: 700;
-    }
-    .daily-value { font-size: 0.85rem; }
-    .delivery-time {
-      margin: 4px 0;
-      display: flex;
-      justify-content: space-between;
-      border-bottom: 1px solid #888989;
-    }
-    .feature-item {
-      display: flex;
-      justify-content: space-between;
-    }
-    .feature-price {
-      min-width: 60px;
-      text-align: right;
-    }
-    .payment-button-container {
-      margin: 10px 0;
-      text-align: center;
-    }
-    .payment-button {
-      padding: 10px 20px;
-      background-color: #0d0d0d;
-      color: #03fff6;
-      text-decoration: none;
-      border-radius: 4px;
-      font-weight: 700;
-      display: inline-block;
-    }
-    .note {
-      font-size: 0.6rem;
-      margin: 5px 0;
-      padding: 0 8px;
-      text-indent: -8px;
-    }
   </style>
 </head>
 <body>
   <div class="invoice-label">
-    <header>
-      <h1 class="bold">Invoice #${invoice.invoice_number}</h1>
-      <div class="divider"></div>
-      <div class="studio-row">
-        <p class="studio">
-          <img
-            src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
-            alt="Vixis Studio"
-            class="studio-logo"
-          >
-          Vixis Studio
-        </p>
-        <span class="product-name">${invoice.products && (invoice.products as any).title ? (invoice.products as any).title : ''}</span>
-      </div>
-      <p class="user-info">
-        <span class="bold">${invoice.user_name}</span>
-        <span class="request-type">${invoice.request_type}</span>
-      </p>
-    </header>
-    <div class="divider-large"></div>
-    <div class="calories-info">
-      <p class="amount-to-pay">Amount to pay</p>
-      <div class="amount-row">
-        <span class="amount-label">Total</span>
-        <span class="amount-value">${formatPrice(invoice.amount, invoice.currency)}</span>
-      </div>
-    </div>
-    <div class="divider-medium"></div>
-    <div class="daily-value">
-      <p class="delivery-time" style="margin: 4px 0; display: flex; justify-content: space-between; border-bottom: 1px solid #888989;">
-        <span class="bold" style="font-weight: 800;">Approximate delivery time</span>
-        <span style="text-align: right; min-width: 60px;">${invoice.delivery_time}</span>
-      </p>
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td colspan="2" style="text-align: center; padding: 4px 0;">
+          <h1 style="margin: 4px 0; letter-spacing: 0.15px; font-weight: 800; font-size: 1.2em; text-align: center;">Invoice #${invoice.invoice_number}</h1>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" class="divider"></td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0; vertical-align: bottom;">
+          <table style="border-collapse: collapse;">
+            <tr>
+              <td style="padding-right: 20px; vertical-align: bottom;">
+                <img
+                  src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
+                  alt="Vixis Studio"
+                  style="height: 20px; border-radius: 4px; display: block;"
+                >
+              </td>
+              <td style="font-size: 0.9em; font-weight: 800; vertical-align: bottom;">Vixis Studio</td>
+            </tr>
+          </table>
+        </td>
+        <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom;">${invoice.products && (invoice.products as any).title ? (invoice.products as any).title : ''}</td>
+      </tr>
+      <tr>
+        <td colspan="2" class="divider"></td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0;">
+          <span style="font-weight: 800;">${invoice.user_name}</span>
+        </td>
+        <td style="text-align: right; padding: 4px 0;">
+          <span style="font-weight: 800;">${invoice.request_type}</span>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2">
+          <div class="divider-large"></div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding: 4px 0;">
+          <div style="font-size: 0.85rem; font-weight: 800;">Amount to pay</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0;">
+          <span style="font-size: 1.5em; font-weight: 800;">Total</span>
+        </td>
+        <td style="text-align: right; padding: 4px 0;">
+          <span style="font-size: 2.4em; font-weight: 700;">${formatPrice(invoice.amount, invoice.currency)}</span>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2">
+          <div class="divider-medium"></div>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0; border-bottom: 1px solid #888989;">
+          <span style="font-size: 0.85rem; font-weight: 800;">Approximate delivery time</span>
+        </td>
+        <td style="text-align: right; padding: 4px 0; border-bottom: 1px solid #888989;">
+          <span style="font-size: 0.85rem;">${invoice.delivery_time}</span>
+        </td>
+      </tr>
       ${
         invoice.custom_fields?.features &&
         Array.isArray(invoice.custom_fields.features) &&
@@ -244,33 +189,50 @@ serve(async (req) => {
           ? invoice.custom_fields.features
               .map(
                 (feature: any) => `
-      <div class="divider"></div>
-      <div class="feature-item" style="display: flex; justify-content: space-between;">
-        <span class="bold" style="font-weight: 800;">${feature.name || "Feature"}</span>
-        <span class="feature-price" style="min-width: 60px; text-align: right;">${formatPrice(feature.price || 0, feature.currency || invoice.currency || "USD")}</span>
-      </div>
+      <tr>
+        <td colspan="2" class="divider"></td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0;">
+          <span style="font-size: 0.85rem; font-weight: 800;">${feature.name || "Feature"}</span>
+        </td>
+        <td style="text-align: right; padding: 4px 0;">
+          <span style="font-size: 0.85rem;">${formatPrice(feature.price || 0, feature.currency || invoice.currency || "USD")}</span>
+        </td>
+      </tr>
       `
               )
               .join("")
           : ""
       }
-      <div class="divider-large"></div>
-      <div class="payment-button-container" style="margin: 10px 0; text-align: center;">
-        <a
-          href="#"
-          class="payment-button"
-          style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"
-          onclick="event.preventDefault(); window.open('https://airtm.me/Vixis','_blank'); window.open('https://app.airtm.com/ivt/vixis','_blank');"
-        >
-          Pay Now
-        </a>
-      </div>
-      <div class="divider-medium"></div>
-      <p class="note">
-        * In the payment note you must put:<br>
-        Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis
-      </p>
-    </div>
+      <tr>
+        <td colspan="2">
+          <div class="divider-large"></div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align: center; padding: 10px 0;">
+          <a
+            href="#"
+            style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6 !important; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"
+            onclick="event.preventDefault(); window.open('https://airtm.me/Vixis','_blank'); window.open('https://app.airtm.com/ivt/vixis','_blank');"
+          >
+            Pay Now
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2">
+          <div class="divider-medium"></div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="font-size: 0.6rem; padding: 5px 0 5px 8px; text-indent: -8px;">
+          * In the payment note you must put:<br>
+          Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis
+        </td>
+      </tr>
+    </table>
   </div>
 </body>
 </html>
