@@ -37,7 +37,7 @@ serve(async (req) => {
       .from("invoices")
       .select(`
         *,
-        products (id, public_id, title, description, full_description)
+        products (id, title, description, full_description)
       `)
       .eq("id", invoice_id)
       .single();
@@ -119,7 +119,15 @@ serve(async (req) => {
       height: 20px;
       width: auto;
     }
-    .user-info { margin: 4px 0; display: flex; justify-content: space-between; }
+    .user-info { 
+      margin: 4px 0; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    }
+    .user-info .request-type {
+      font-weight: 800;
+    }
     .calories-info {
       display: flex;
       justify-content: space-between;
@@ -128,35 +136,47 @@ serve(async (req) => {
     .left-container { 
       display: flex; 
       flex-direction: column; 
-      justify-content: flex-end;
+      align-items: flex-start;
     }
     .small-text { font-size: 0.85rem; margin: 0; font-weight: 400; }
     .amount-label {
-      margin: -5px -2px 0 -2px;
+      margin: 0;
       font-size: 1.5em;
       font-weight: 400;
+      line-height: 1.2;
     }
     .amount-to-pay {
       font-size: 0.85rem;
       font-weight: 800;
-      margin: 2px 0;
+      margin: 4px 0 0 0;
+      line-height: 1.2;
     }
     .amount-value {
-      margin: -7px -2px;
+      margin: 0;
       font-size: 2.4em;
       font-weight: 700;
       text-align: right;
+      line-height: 1;
     }
     .daily-value { font-size: 0.85rem; }
     .delivery-time {
       margin: 4px 0;
       display: flex;
       justify-content: space-between;
+      align-items: center;
       border-bottom: 1px solid #888989;
       padding-bottom: 2px;
     }
+    .delivery-time span:first-child {
+      font-weight: 800;
+    }
     .delivery-time span:last-child {
       text-align: right;
+      font-weight: 400;
+    }
+    .feature-price {
+      text-align: right;
+      font-weight: 400;
     }
     .payment-button-container {
       display: flex;
@@ -175,9 +195,6 @@ serve(async (req) => {
       border-radius: 4px;
       font-weight: 700;
     }
-    .feature-price {
-      text-align: right;
-    }
     .note {
       font-size: 0.6rem;
       margin: 5px 0;
@@ -191,17 +208,20 @@ serve(async (req) => {
     <header>
       <h1 class="bold">Invoice #${invoice.invoice_number}</h1>
       <div class="divider"></div>
-      <p class="studio">Vixis Studio</p>
+      <p class="studio">
+        <img src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp" alt="Vixis Studio" class="studio-logo">
+        Vixis Studio
+      </p>
       <p class="user-info">
         <span class="bold">${invoice.user_name}</span>
-        <span>${invoice.request_type}</span>
+        <span class="request-type">${invoice.request_type}</span>
       </p>
     </header>
     <div class="divider-large"></div>
     <div class="calories-info">
       <div class="left-container">
-        <h2 class="bold small-text">Amount to pay</h2>
         <p class="amount-label">Total</p>
+        <p class="amount-to-pay">Amount to pay</p>
       </div>
       <span class="amount-value">${formatPrice(invoice.amount, invoice.currency)}</span>
     </div>
@@ -242,7 +262,7 @@ serve(async (req) => {
       <p class="note">
         * In the payment note you must put:
         <br>
-        Product #${(invoice.products as any)?.public_id || invoice.product_id} - Invoice #${invoice.invoice_number} - Vixis
+        Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis
       </p>
     </div>
   </div>

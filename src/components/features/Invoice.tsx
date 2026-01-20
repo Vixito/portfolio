@@ -93,7 +93,7 @@ export default function Invoice({ invoice }: InvoiceProps) {
         </div>
         <div style={invoiceStyles.dividerMedium}></div>
         <p style={invoiceStyles.note}>
-          * In the payment note you must put: Product #{(invoice.product as any)?.public_id || invoice.product_id} - Invoice #{invoice.invoice_number} - Vixis
+          * In the payment note you must put: Product #{(invoice.product_id || "").substring(0, 8)} - Invoice #{invoice.invoice_number} - Vixis
         </p>
       </div>
     </div>

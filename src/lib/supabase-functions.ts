@@ -1211,7 +1211,7 @@ export async function getInvoices() {
     .from("invoices")
     .select(`
       *,
-      products (id, public_id, title)
+      products (id, title)
     `)
     .order("invoice_number", { ascending: false });
 
@@ -1236,7 +1236,7 @@ export async function getInvoice(id: string) {
     .from("invoices")
     .select(`
       *,
-      products (id, public_id, title, description, full_description)
+      products (id, title, description, full_description)
     `)
     .eq("id", id)
     .single();
