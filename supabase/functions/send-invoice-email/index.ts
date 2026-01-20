@@ -112,13 +112,14 @@ serve(async (req) => {
       font-size: 0.9em; 
       font-weight: 800;
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 12px;
     }
     .studio-logo {
       height: 20px;
       width: auto;
       border-radius: 4px;
+      flex-shrink: 0;
     }
     .user-info { 
       margin: 4px 0; 
@@ -175,36 +176,47 @@ serve(async (req) => {
       align-items: center;
       border-bottom: 1px solid #888989;
       padding-bottom: 2px;
+      width: 100%;
     }
     .delivery-time span:first-child {
       font-weight: 800;
+      flex: 1;
     }
     .delivery-time span:last-child {
       text-align: right;
       font-weight: 400;
       flex-shrink: 0;
-      margin-left: 10px;
+      min-width: 80px;
+    }
+    .feature-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .feature-item .bold {
+      flex: 1;
     }
     .feature-price {
       text-align: right;
       font-weight: 400;
       flex-shrink: 0;
-      margin-left: 10px;
+      min-width: 80px;
     }
     .payment-button-container {
       display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin: 10px 0;
+      justify-content: center;
       align-items: center;
+      width: 100%;
+      margin: 10px 0;
     }
     .payment-button {
-      display: block;
+      display: inline-block;
       padding: 10px 20px;
-      background-color: #0d0d0d;
-      color: #03fff6;
+      background-color: #0d0d0d !important;
+      color: #03fff6 !important;
       text-align: center;
-      text-decoration: none;
+      text-decoration: none !important;
       border-radius: 4px;
       font-weight: 700;
     }
@@ -254,10 +266,10 @@ serve(async (req) => {
               .map(
                 (feature: any) => `
         <div class="divider"></div>
-        <p>
+        <div class="feature-item">
           <span class="bold">${feature.name || "Feature"}</span>
           <span class="feature-price">${formatPrice(feature.price || 0, feature.currency || "USD")}</span>
-        </p>
+        </div>
       `
               )
               .join("")
