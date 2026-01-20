@@ -1894,7 +1894,30 @@ function Admin() {
                 updateInvoiceData.custom_fields = {};
               }
             }
-            await updateInvoice(editingItem.id, updateInvoiceData);
+            const updatedInvoice = await updateInvoice(editingItem.id, updateInvoiceData);
+            // Enviar email con la factura actualizada
+            try {
+              const emailResponse = await supabase.functions.invoke("send-invoice-email", {
+                body: { invoice_id: updatedInvoice.id, is_update: true },
+              });
+              if (emailResponse.error) {
+                console.error("Error al enviar email:", emailResponse.error);
+                const errorMsg = emailResponse.error.message || emailResponse.error;
+                alert(`Factura actualizada (ID: ${updatedInvoice.invoice_number}) pero error al enviar email: ${errorMsg}\n\nVerifica que RESEND_API_KEY esté configurado en Supabase Edge Functions secrets (no en Doppler).`);
+              } else {
+                const result = emailResponse.data;
+                if (result?.error) {
+                  const errorMsg = result.message || result.error;
+                  alert(`Factura actualizada (ID: ${updatedInvoice.invoice_number}) pero error al enviar email: ${errorMsg}\n\nVerifica que RESEND_API_KEY esté configurado en Supabase Edge Functions secrets (no en Doppler).`);
+                } else {
+                  alert(`Factura #${updatedInvoice.invoice_number} actualizada y email enviado exitosamente a ${updateInvoiceData.user_email || updatedInvoice.user_email}`);
+                }
+              }
+            } catch (emailError: any) {
+              console.error("Error al enviar email:", emailError);
+              const errorMsg = emailError?.message;
+              alert(`Factura actualizada (ID: ${updatedInvoice.invoice_number}) pero error al enviar email: ${errorMsg || "Error desconocido"}\n\nVerifica que RESEND_API_KEY esté configurado en Supabase Edge Functions secrets (no en Doppler).`);
+            }
             break;
         }
       } else {

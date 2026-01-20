@@ -20,7 +20,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parsear request body
-    const { invoice_id } = await req.json();
+    const { invoice_id, is_update } = await req.json();
 
     if (!invoice_id) {
       return new Response(
@@ -283,7 +283,9 @@ serve(async (req) => {
             custom_fields: invoice.custom_fields,
             from_email: "noreply@vixis.dev",
             from_name: "Vixis Studio",
-            subject: `Invoice #${invoice.invoice_number} - Vixis Studio`,
+            subject: is_update 
+              ? `Invoice #${invoice.invoice_number} Updated - Vixis Studio`
+              : `Invoice #${invoice.invoice_number} - Vixis Studio`,
           }),
         });
 
@@ -306,7 +308,9 @@ serve(async (req) => {
               body: JSON.stringify({
                 from: "noreply@vixis.dev",
                 to: invoice.user_email,
-                subject: `Invoice #${invoice.invoice_number} - Vixis Studio`,
+                subject: is_update 
+              ? `Invoice #${invoice.invoice_number} Updated - Vixis Studio`
+              : `Invoice #${invoice.invoice_number} - Vixis Studio`,
                 html: invoiceHTML,
               }),
             });
@@ -333,7 +337,9 @@ serve(async (req) => {
           body: JSON.stringify({
             from: "noreply@vixis.dev",
             to: invoice.user_email,
-            subject: `Invoice #${invoice.invoice_number} - Vixis Studio`,
+            subject: is_update 
+              ? `Invoice #${invoice.invoice_number} Updated - Vixis Studio`
+              : `Invoice #${invoice.invoice_number} - Vixis Studio`,
             html: invoiceHTML,
           }),
         });
