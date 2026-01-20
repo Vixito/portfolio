@@ -113,11 +113,12 @@ serve(async (req) => {
       font-weight: 800;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
     }
     .studio-logo {
       height: 20px;
       width: auto;
+      border-radius: 4px;
     }
     .user-info { 
       margin: 4px 0; 
@@ -127,29 +128,37 @@ serve(async (req) => {
     }
     .user-info .request-type {
       font-weight: 800;
+      text-align: right;
     }
     .calories-info {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
+      align-items: center;
+      margin: 4px 0;
     }
     .left-container { 
       display: flex; 
       flex-direction: column; 
       align-items: flex-start;
     }
-    .small-text { font-size: 0.85rem; margin: 0; font-weight: 400; }
-    .amount-label {
-      margin: 0;
-      font-size: 1.5em;
-      font-weight: 400;
-      line-height: 1.2;
-    }
     .amount-to-pay {
       font-size: 0.85rem;
       font-weight: 800;
-      margin: 4px 0 0 0;
+      margin: 0 0 4px 0;
       line-height: 1.2;
+    }
+    .amount-label {
+      margin: 0;
+      font-size: 1.5em;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .amount-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-top: 4px;
     }
     .amount-value {
       margin: 0;
@@ -173,10 +182,14 @@ serve(async (req) => {
     .delivery-time span:last-child {
       text-align: right;
       font-weight: 400;
+      flex-shrink: 0;
+      margin-left: 10px;
     }
     .feature-price {
       text-align: right;
       font-weight: 400;
+      flex-shrink: 0;
+      margin-left: 10px;
     }
     .payment-button-container {
       display: flex;
@@ -220,10 +233,12 @@ serve(async (req) => {
     <div class="divider-large"></div>
     <div class="calories-info">
       <div class="left-container">
-        <p class="amount-label">Total</p>
         <p class="amount-to-pay">Amount to pay</p>
+        <div class="amount-row">
+          <span class="amount-label">Total</span>
+          <span class="amount-value">${formatPrice(invoice.amount, invoice.currency)}</span>
+        </div>
       </div>
-      <span class="amount-value">${formatPrice(invoice.amount, invoice.currency)}</span>
     </div>
     <div class="divider-medium"></div>
     <div class="daily-value">
@@ -253,7 +268,7 @@ serve(async (req) => {
         <a 
           href="#" 
           class="payment-button" 
-          onclick="event.preventDefault(); window.open('https://app.airtm.com/ivt/vixis', '_blank'); window.open('https://airtm.me/Vixis', '_blank'); return false;"
+          onclick="event.preventDefault(); window.open('https://airtm.me/Vixis', '_blank'); window.open('https://app.airtm.com/ivt/vixis', '_blank'); return false;"
         >
           Pay Now
         </a>
