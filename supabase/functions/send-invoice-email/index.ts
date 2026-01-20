@@ -72,7 +72,7 @@ serve(async (req) => {
   <style>
     * { box-sizing: border-box; }
     html { font-size: 16px; }
-    body { 
+    body {
       font-family: 'Open Sans', sans-serif;
       background-color: #f5f5f5;
       padding: 20px;
@@ -87,7 +87,7 @@ serve(async (req) => {
     }
     header h1 {
       text-align: center;
-      margin: -4px 0;
+      margin: 4px 0;
       letter-spacing: 0.15px;
       font-weight: 800;
       font-size: 1.2em;
@@ -114,8 +114,8 @@ serve(async (req) => {
       align-items: flex-end;
       width: 100%;
     }
-    .studio { 
-      font-size: 0.9em; 
+    .studio {
+      font-size: 0.9em;
       font-weight: 800;
       display: flex;
       align-items: flex-end;
@@ -123,32 +123,23 @@ serve(async (req) => {
     }
     .studio-logo {
       height: 20px;
-      width: auto;
       border-radius: 4px;
-      flex-shrink: 0;
       display: block;
     }
     .product-name {
       font-size: 0.9em;
       font-weight: 400;
       text-align: right;
-      align-self: flex-end;
     }
-    .user-info { 
-      margin: 4px 0; 
-      display: flex; 
-      justify-content: space-between; 
+    .user-info {
+      margin: 4px 0;
+      display: flex;
+      justify-content: space-between;
       align-items: center;
       width: 100%;
     }
-    .user-info .bold {
+    .request-type {
       font-weight: 800;
-      text-align: left;
-    }
-    .user-info .request-type {
-      font-weight: 800;
-      text-align: right;
-      flex-shrink: 0;
     }
     .calories-info {
       display: flex;
@@ -156,25 +147,9 @@ serve(async (req) => {
       margin: 4px 0;
       width: 100%;
     }
-    .left-container { 
-      display: flex; 
-      flex-direction: column; 
-      align-items: flex-start;
-      width: 100%;
-    }
     .amount-to-pay {
       font-size: 0.85rem;
       font-weight: 800;
-      margin: 0 0 4px 0;
-      line-height: 1.2;
-      text-align: left;
-    }
-    .amount-label {
-      margin: 0;
-      font-size: 1.5em;
-      font-weight: 800;
-      line-height: 1.2;
-      text-align: left;
     }
     .amount-row {
       display: flex;
@@ -183,66 +158,41 @@ serve(async (req) => {
       width: 100%;
       margin-top: 4px;
     }
+    .amount-label {
+      font-size: 1.5em;
+      font-weight: 800;
+    }
     .amount-value {
-      margin: 0;
       font-size: 2.4em;
       font-weight: 700;
-      text-align: right;
-      line-height: 1;
     }
     .daily-value { font-size: 0.85rem; }
     .delivery-time {
       margin: 4px 0;
       display: flex;
       justify-content: space-between;
-      align-items: center;
       border-bottom: 1px solid #888989;
-      padding-bottom: 2px;
-      width: 100%;
-    }
-    .delivery-time span:first-child {
-      font-weight: 800;
-      text-align: left;
-    }
-    .delivery-time span:last-child {
-      text-align: right;
-      font-weight: 400;
-      flex-shrink: 0;
-      min-width: 60px;
-      padding-left: 10px;
     }
     .feature-item {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      width: 100%;
-    }
-    .feature-item .bold {
-      text-align: left;
-      flex: 1;
     }
     .feature-price {
-      text-align: right;
-      font-weight: 400;
-      flex-shrink: 0;
       min-width: 60px;
-      padding-left: 10px;
+      text-align: right;
     }
     .payment-button-container {
-      width: 100%;
       margin: 10px 0;
       text-align: center;
     }
     .payment-button {
-      display: inline-block;
       padding: 10px 20px;
-      background-color: #0d0d0d !important;
-      color: #03fff6 !important;
-      text-align: center;
-      text-decoration: none !important;
+      background-color: #0d0d0d;
+      color: #03fff6;
+      text-decoration: none;
       border-radius: 4px;
       font-weight: 700;
-      margin: 0 auto;
+      display: inline-block;
     }
     .note {
       font-size: 0.6rem;
@@ -259,10 +209,14 @@ serve(async (req) => {
       <div class="divider"></div>
       <div class="studio-row">
         <p class="studio">
-          <img src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp" alt="Vixis Studio" class="studio-logo">
+          <img
+            src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
+            alt="Vixis Studio"
+            class="studio-logo"
+          >
           Vixis Studio
         </p>
-        ${invoice.products && (invoice.products as any).title ? `<span class="product-name">${(invoice.products as any).title}</span>` : ''}
+        <span class="product-name">${invoice.products && (invoice.products as any).title ? (invoice.products as any).title : ''}</span>
       </div>
       <p class="user-info">
         <span class="bold">${invoice.user_name}</span>
@@ -271,19 +225,17 @@ serve(async (req) => {
     </header>
     <div class="divider-large"></div>
     <div class="calories-info">
-      <div class="left-container">
-        <p class="amount-to-pay">Amount to pay</p>
-        <div class="amount-row">
-          <span class="amount-label">Total</span>
-          <span class="amount-value">${formatPrice(invoice.amount, invoice.currency)}</span>
-        </div>
+      <p class="amount-to-pay">Amount to pay</p>
+      <div class="amount-row">
+        <span class="amount-label">Total</span>
+        <span class="amount-value">${formatPrice(invoice.amount, invoice.currency)}</span>
       </div>
     </div>
     <div class="divider-medium"></div>
     <div class="daily-value">
-      <p class="delivery-time">
-        <span class="bold">Approximate delivery time</span>
-        <span>${invoice.delivery_time}</span>
+      <p class="delivery-time" style="margin: 4px 0; display: flex; justify-content: space-between; border-bottom: 1px solid #888989;">
+        <span class="bold" style="font-weight: 800;">Approximate delivery time</span>
+        <span style="text-align: right; min-width: 60px;">${invoice.delivery_time}</span>
       </p>
       ${
         invoice.custom_fields?.features &&
@@ -292,30 +244,30 @@ serve(async (req) => {
           ? invoice.custom_fields.features
               .map(
                 (feature: any) => `
-        <div class="divider"></div>
-        <div class="feature-item">
-          <span class="bold">${feature.name || "Feature"}</span>
-          <span class="feature-price">${formatPrice(feature.price || 0, feature.currency || "USD")}</span>
-        </div>
+      <div class="divider"></div>
+      <div class="feature-item" style="display: flex; justify-content: space-between;">
+        <span class="bold" style="font-weight: 800;">${feature.name || "Feature"}</span>
+        <span class="feature-price" style="min-width: 60px; text-align: right;">${formatPrice(feature.price || 0, feature.currency || invoice.currency || "USD")}</span>
+      </div>
       `
               )
               .join("")
           : ""
       }
       <div class="divider-large"></div>
-      <div class="payment-button-container">
-        <a 
-          href="#" 
-          class="payment-button" 
-          onclick="event.preventDefault(); window.open('https://airtm.me/Vixis', '_blank'); window.open('https://app.airtm.com/ivt/vixis', '_blank'); return false;"
+      <div class="payment-button-container" style="margin: 10px 0; text-align: center;">
+        <a
+          href="#"
+          class="payment-button"
+          style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"
+          onclick="event.preventDefault(); window.open('https://airtm.me/Vixis','_blank'); window.open('https://app.airtm.com/ivt/vixis','_blank');"
         >
           Pay Now
         </a>
       </div>
       <div class="divider-medium"></div>
       <p class="note">
-        * In the payment note you must put:
-        <br>
+        * In the payment note you must put:<br>
         Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis
       </p>
     </div>
