@@ -1472,6 +1472,41 @@ export async function markInvoiceAsPaid(id: string, transactionId: string) {
 }
 
 /**
+ * Crea un pago en dLocal para una factura
+ */
+export async function createDlocalPayment(params: {
+  invoice_id: string;
+  invoice_number: string;
+  amount: number;
+  currency: "USD" | "COP";
+  country: string; // Código de país ISO (ej: "CO", "US", "BR")
+  payer_email?: string;
+  payer_name?: string;
+  payer_document?: string;
+  product_id: string;
+}) {
+  const { data, error } = await supabase.functions.invoke("create-dlocal-payment", {
+    body: {
+      invoice_id: params.invoice_id,
+      invoice_number: params.invoice_number,
+      amount: params.amount,
+      currency: params.currency,
+      country: params.country,
+      payer_email: params.payer_email,
+      payer_name: params.payer_name,
+      payer_document: params.payer_document,
+      product_id: params.product_id,
+    },
+  });
+
+  if (error) {
+    throw new Error(`Error al crear pago en dLocal: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
  * Obtiene la playlist de la radio (para reproducción automática cuando no está en vivo)
  * Las URLs deben apuntar a Google Cloud Storage (storage.googleapis.com)
  */

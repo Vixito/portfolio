@@ -14,6 +14,7 @@ import Store from "./Store";
 import Studies from "./Studies";
 import Studio from "./Studio";
 import WorkExperience from "./Work-experience";
+import PayInvoice from "./PayInvoice";
 
 export {
   About,
@@ -32,4 +33,5 @@ export {
   Studies,
   Studio,
   WorkExperience,
+  PayInvoice,
 };

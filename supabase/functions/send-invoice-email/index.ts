@@ -20,7 +20,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parsear request body
-    const { invoice_id, is_update } = await req.json();
+    const { invoice_id, is_update, is_payment_confirmation } = await req.json();
 
     if (!invoice_id) {
       return new Response(
@@ -60,6 +60,134 @@ serve(async (req) => {
         minimumFractionDigits: currency === "USD" ? 2 : 0,
       }).format(amount);
     };
+
+    // Si es confirmación de pago, generar HTML diferente
+    if (is_payment_confirmation) {
+      const confirmationHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Confirmed - Invoice #${invoice.invoice_number}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <a href="https://vixis.dev/studio" target="_blank" style="text-decoration: none;">
+        <img src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp" alt="Vixis Studio" style="height: 40px; vertical-align: middle; margin-right: 10px;">
+        <span style="font-size: 24px; font-weight: bold; color: #331d83; vertical-align: middle;">Vixis Studio</span>
+      </a>
+    </div>
+    
+    <h1 style="color: #331d83; text-align: center; margin-bottom: 20px;">✅ Payment Confirmed</h1>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #333;">
+      Dear ${invoice.user_name || "Customer"},
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #333;">
+      We have successfully received your payment for <strong>Invoice #${invoice.invoice_number}</strong>.
+    </p>
+    
+    <div style="background-color: #f9f9f9; border-left: 4px solid #2093c4; padding: 15px; margin: 20px 0;">
+      <p style="margin: 0; font-size: 14px; color: #666;">
+        <strong>Invoice Number:</strong> ${invoice.invoice_number}<br>
+        <strong>Amount Paid:</strong> ${formatPrice(invoice.amount, invoice.currency)}<br>
+        <strong>Product:</strong> ${getProductTitle(invoice.products, invoice.custom_fields?.product_language)}<br>
+        <strong>Payment Date:</strong> ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+      </p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #333;">
+      We will begin working on your request and will keep you updated on the progress.
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #333;">
+      If you have any questions, please don't hesitate to contact us.
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #333; margin-top: 30px;">
+      Best regards,<br>
+      <strong>Vixis Studio</strong>
+    </p>
+    
+    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+      <a href="https://vixis.dev" style="color: #2093c4; text-decoration: none;">Visit our website</a>
+    </div>
+  </div>
+</body>
+</html>
+      `;
+
+      // Enviar email de confirmación
+      const resendApiKey = Deno.env.get("RESEND_API_KEY");
+      if (resendApiKey) {
+        try {
+          const resendResponse = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: "noreply@vixis.dev",
+              to: invoice.user_email,
+              subject: `Payment Confirmed - Invoice #${invoice.invoice_number} - Vixis Studio`,
+              html: confirmationHTML,
+            }),
+          });
+
+          if (resendResponse.ok) {
+            return new Response(
+              JSON.stringify({
+                success: true,
+                message: "Payment confirmation email sent successfully",
+              }),
+              {
+                status: 200,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              }
+            );
+          } else {
+            const errorText = await resendResponse.text();
+            console.error("Resend API error:", errorText);
+            return new Response(
+              JSON.stringify({
+                error: "Failed to send confirmation email",
+                details: errorText,
+              }),
+              {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              }
+            );
+          }
+        } catch (emailError) {
+          console.error("Error al enviar email de confirmación:", emailError);
+          return new Response(
+            JSON.stringify({
+              error: "Failed to send confirmation email",
+              message: emailError instanceof Error ? emailError.message : "Unknown error",
+            }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+      } else {
+        return new Response(
+          JSON.stringify({
+            error: "RESEND_API_KEY not configured",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
 
     // Función para extraer traducciones del producto
     const getProductTitle = (product: any, productLanguage?: string) => {
@@ -252,7 +380,7 @@ serve(async (req) => {
       <tr>
         <td colspan="2" style="text-align: center; padding: 10px 0;">
           <a
-            href="${invoice.pay_now_link || "https://vixis.dev/how-to-pay-me"}"
+            href="${invoice.pay_now_link || `https://vixis.dev/pay/${invoice.id}`}"
             target="_blank"
             rel="noopener noreferrer"
             style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6 !important; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"
@@ -266,12 +394,14 @@ serve(async (req) => {
           <div class="divider-medium"></div>
         </td>
       </tr>
+      ${is_payment_confirmation ? '' : `
       <tr>
         <td colspan="2" style="font-size: 0.6rem; padding: 5px 0 5px 8px; text-indent: -8px;">
-          * In the payment note you must put:<br>
+          * Order ID (automatically included):<br>
           Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis
         </td>
       </tr>
+      `}
     </table>
   </div>
 </body>
@@ -307,7 +437,9 @@ serve(async (req) => {
             custom_fields: invoice.custom_fields,
             from_email: "noreply@vixis.dev",
             from_name: "Vixis Studio",
-            subject: is_update 
+            subject: is_payment_confirmation
+              ? `Payment Confirmed - Invoice #${invoice.invoice_number} - Vixis Studio`
+              : is_update 
               ? `Invoice #${invoice.invoice_number} Updated - Vixis Studio`
               : `Invoice #${invoice.invoice_number} - Vixis Studio`,
           }),
@@ -332,7 +464,9 @@ serve(async (req) => {
               body: JSON.stringify({
                 from: "noreply@vixis.dev",
                 to: invoice.user_email,
-                subject: is_update 
+                subject: is_payment_confirmation
+              ? `Payment Confirmed - Invoice #${invoice.invoice_number} - Vixis Studio`
+              : is_update 
               ? `Invoice #${invoice.invoice_number} Updated - Vixis Studio`
               : `Invoice #${invoice.invoice_number} - Vixis Studio`,
                 html: invoiceHTML,
@@ -361,7 +495,9 @@ serve(async (req) => {
           body: JSON.stringify({
             from: "noreply@vixis.dev",
             to: invoice.user_email,
-            subject: is_update 
+            subject: is_payment_confirmation
+              ? `Payment Confirmed - Invoice #${invoice.invoice_number} - Vixis Studio`
+              : is_update 
               ? `Invoice #${invoice.invoice_number} Updated - Vixis Studio`
               : `Invoice #${invoice.invoice_number} - Vixis Studio`,
             html: invoiceHTML,

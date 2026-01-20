@@ -495,7 +495,7 @@ function Admin() {
               <tr>
                 <td colspan="2" style="text-align: center; padding: 10px 0;">
                   <a
-                    href="${fullInvoice.pay_now_link || "https://vixis.dev/how-to-pay-me"}"
+                    href="${fullInvoice.pay_now_link || `https://vixis.dev/pay/${fullInvoice.id}`}"
                     target="_blank"
                     rel="noopener noreferrer"
                     style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6 !important; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"
@@ -511,7 +511,7 @@ function Admin() {
               </tr>
               <tr>
                 <td colspan="2" style="font-size: 0.6rem; padding: 5px 0 5px 8px; text-indent: -8px;">
-                  * In the payment note you must put:<br>
+                  * Order ID (automatically included):<br>
                   Product #${(fullInvoice.product_id || "").substring(0, 8)} - Invoice #${fullInvoice.invoice_number} - Vixis
                 </td>
               </tr>
@@ -7288,15 +7288,15 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                       </label>
                       <input
                         type="url"
-                        value={crudFormData.pay_now_link ?? "https://vixis.dev/how-to-pay-me"}
+                        value={crudFormData.pay_now_link ?? ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            pay_now_link: e.target.value || "https://vixis.dev/how-to-pay-me",
+                            pay_now_link: e.target.value || undefined,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        placeholder="https://vixis.dev/how-to-pay-me"
+                        placeholder="Leave empty to use default: /pay/[INVOICE_ID]"
                         disabled={
                           editingItem &&
                           (editingItem.status === "paid" ||
@@ -7304,7 +7304,7 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                         }
                       />
                       <p className="text-xs text-gray-500 mt-2">
-                        URL for the "Pay Now" button in the invoice email (default: https://vixis.dev/how-to-pay-me)
+                        URL for the "Pay Now" button. If empty, will use <code className="text-cyan-400">https://vixis.dev/pay/[INVOICE_ID]</code> automatically.
                       </p>
                     </div>
                   </>

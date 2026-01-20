@@ -22,6 +22,7 @@ import {
   Store,
   Radio,
   HowToPayMe,
+  PayInvoice,
   NotFound,
 } from "./pages";
 import Layout from "./components/layout/Layout";
