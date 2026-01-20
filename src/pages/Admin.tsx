@@ -76,16 +76,27 @@ function ProductSelectorWithTabs({
   products,
   value,
   onChange,
+  onLanguageChange,
+  selectedLanguage,
   disabled = false,
 }: {
   products: any[];
   value: string;
   onChange: (productId: string) => void;
+  onLanguageChange?: (language: "es" | "en") => void;
+  selectedLanguage?: "es" | "en";
   disabled?: boolean;
 }) {
   // Tab izquierdo = Español, Tab derecho = Inglés
-  const [activeTab, setActiveTab] = useState<"es" | "en">("es");
+  const [activeTab, setActiveTab] = useState<"es" | "en">(selectedLanguage || "es");
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Sincronizar activeTab con selectedLanguage cuando cambia
+  useEffect(() => {
+    if (selectedLanguage) {
+      setActiveTab(selectedLanguage);
+    }
+  }, [selectedLanguage]);
 
   const extractTranslations = (translations: any, fallback: string = ""): { es: string; en: string } => {
     if (!translations || typeof translations !== "object") {
@@ -125,7 +136,10 @@ function ProductSelectorWithTabs({
           {/* Tabs */}
           <div className="flex border-b border-gray-700">
             <button
-              onClick={() => setActiveTab("es")}
+              onClick={() => {
+                setActiveTab("es");
+                onLanguageChange?.("es");
+              }}
               className={`flex-1 px-4 py-2 font-bold text-sm transition-colors ${
                 activeTab === "es"
                   ? "bg-blue-600 text-white"
@@ -135,7 +149,10 @@ function ProductSelectorWithTabs({
               Español
             </button>
             <button
-              onClick={() => setActiveTab("en")}
+              onClick={() => {
+                setActiveTab("en");
+                onLanguageChange?.("en");
+              }}
               className={`flex-1 px-4 py-2 font-bold text-sm transition-colors ${
                 activeTab === "en"
                   ? "bg-blue-600 text-white"
@@ -822,16 +839,12 @@ function Admin() {
       // Valores por defecto para facturas
       defaultFormData.currency = "USD";
       defaultFormData.status = "pending";
-      defaultFormData.custom_fields = {};
+      defaultFormData.custom_fields = { features: [] };
+      defaultFormData.product_language = "es"; // Idioma por defecto: español
       // Cargar productos si no están cargados
       if (products.length === 0) {
         getProducts().then(setProducts).catch(console.error);
       }
-    } else if (activeTab === "invoices") {
-      // Valores por defecto para facturas
-      defaultFormData.currency = "USD";
-      defaultFormData.status = "pending";
-      defaultFormData.custom_fields = { features: [] };
     }
     setCrudFormData(defaultFormData);
     setEventUrl("");
@@ -918,6 +931,11 @@ function Admin() {
 
     setEditingItem(currentItem);
     const formData = { ...currentItem };
+    
+    // Cargar product_language desde custom_fields si existe (para invoices)
+    if (activeTab === "invoices" && currentItem.custom_fields?.product_language) {
+      formData.product_language = currentItem.custom_fields.product_language;
+    }
 
     // Migrar campos antiguos de CV a nuevos campos por idioma (compatibilidad)
     if (activeTab === "home_content" && currentItem.content_type === "cv_download") {
@@ -1886,6 +1904,20 @@ function Admin() {
             if (!updateInvoiceData.pay_now_link) {
               updateInvoiceData.pay_now_link = "https://vixis.dev/how-to-pay-me";
             }
+            // Guardar product_language en custom_fields si existe
+            if (updateInvoiceData.product_language) {
+              if (typeof updateInvoiceData.custom_fields === "string") {
+                try {
+                  updateInvoiceData.custom_fields = JSON.parse(updateInvoiceData.custom_fields);
+                } catch {
+                  updateInvoiceData.custom_fields = {};
+                }
+              }
+              if (!updateInvoiceData.custom_fields) {
+                updateInvoiceData.custom_fields = {};
+              }
+              updateInvoiceData.custom_fields.product_language = updateInvoiceData.product_language;
+            }
             // Parsear custom_fields si es string
             if (typeof updateInvoiceData.custom_fields === "string") {
               try {
@@ -1894,6 +1926,8 @@ function Admin() {
                 updateInvoiceData.custom_fields = {};
               }
             }
+            // Eliminar product_language del objeto principal (ya está en custom_fields)
+            delete updateInvoiceData.product_language;
             const updatedInvoice = await updateInvoice(editingItem.id, updateInvoiceData);
             // Enviar email con la factura actualizada
             try {
@@ -2376,6 +2410,20 @@ function Admin() {
             if (!createInvoiceData.pay_now_link) {
               createInvoiceData.pay_now_link = "https://vixis.dev/how-to-pay-me";
             }
+            // Guardar product_language en custom_fields si existe
+            if (createInvoiceData.product_language) {
+              if (typeof createInvoiceData.custom_fields === "string") {
+                try {
+                  createInvoiceData.custom_fields = JSON.parse(createInvoiceData.custom_fields);
+                } catch {
+                  createInvoiceData.custom_fields = {};
+                }
+              }
+              if (!createInvoiceData.custom_fields) {
+                createInvoiceData.custom_fields = {};
+              }
+              createInvoiceData.custom_fields.product_language = createInvoiceData.product_language;
+            }
             // Parsear custom_fields si es string
             if (typeof createInvoiceData.custom_fields === "string") {
               try {
@@ -2384,6 +2432,8 @@ function Admin() {
                 createInvoiceData.custom_fields = {};
               }
             }
+            // Eliminar product_language del objeto principal (ya está en custom_fields)
+            delete createInvoiceData.product_language;
             // Crear factura y enviar email automáticamente
             const newInvoice = await createInvoice(createInvoiceData);
             // Enviar email con la factura
@@ -6641,6 +6691,13 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                             product_id: productId,
                           })
                         }
+                        onLanguageChange={(language) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            product_language: language,
+                          })
+                        }
+                        selectedLanguage={crudFormData.product_language as "es" | "en" | undefined}
                         disabled={
                           editingItem &&
                           (editingItem.status === "paid" ||

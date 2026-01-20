@@ -37,7 +37,7 @@ serve(async (req) => {
       .from("invoices")
       .select(`
         *,
-        products (id, title, description, full_description)
+        products (id, title, title_translations, description, full_description)
       `)
       .eq("id", invoice_id)
       .single();
@@ -60,6 +60,23 @@ serve(async (req) => {
         minimumFractionDigits: currency === "USD" ? 2 : 0,
       }).format(amount);
     };
+
+    // Función para extraer traducciones del producto
+    const getProductTitle = (product: any, productLanguage?: string) => {
+      if (!product) return '';
+      // Usar el idioma guardado en custom_fields.product_language, o español por defecto
+      const language = productLanguage || "es";
+      if (product.title_translations && typeof product.title_translations === 'object') {
+        const translations = product.title_translations as { es?: string; en?: string };
+        return translations[language as keyof typeof translations] || product.title || '';
+      }
+      return product.title || '';
+    };
+
+    const productLanguage = invoice.custom_fields?.product_language as string | undefined;
+    const productTitle = invoice.products 
+      ? getProductTitle(invoice.products as any, productLanguage)
+      : '';
 
     const invoiceHTML = `
 <!DOCTYPE html>
@@ -140,7 +157,7 @@ serve(async (req) => {
             </tr>
           </table>
         </td>
-        <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom;">${invoice.products && (invoice.products as any).title ? (invoice.products as any).title : ''}</td>
+        <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom;">${productTitle}</td>
       </tr>
       <tr>
         <td colspan="2" class="divider"></td>
