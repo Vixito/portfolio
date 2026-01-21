@@ -313,6 +313,10 @@ function Admin() {
       const invoiceWidth = calculateInvoiceWidth(totalPriceString);
       const priceFontSize = calculatePriceFontSize(totalPriceString.length);
 
+      // Detectar si se está usando el link por defecto (dLocal) o uno personalizado
+      const rawPayLink = (fullInvoice.pay_now_link || "").trim();
+      const isDefaultPayLink = !rawPayLink || rawPayLink === `https://vixis.dev/pay/${fullInvoice.id}`;
+
       // Obtener título del producto según el idioma guardado
       const getProductTitle = (product: any, productLanguage?: string) => {
         if (!product) return '';
@@ -530,8 +534,10 @@ function Admin() {
               </tr>
               <tr>
                 <td colspan="2" style="font-size: 0.6rem; padding: 5px 0 5px 8px; text-indent: -8px;">
-                  * Order ID (automatically included):<br>
-                  Product #${(fullInvoice.product_id || "").substring(0, 8)} - Invoice #${fullInvoice.invoice_number} - Vixis
+                  ${isDefaultPayLink 
+                    ? `* Order ID (automatically included):<br>Product #${(fullInvoice.product_id || "").substring(0, 8)} - Invoice #${fullInvoice.invoice_number} - Vixis`
+                    : `* In the payment note you must put:<br>Product #${(fullInvoice.product_id || "").substring(0, 8)} - Invoice #${fullInvoice.invoice_number} - Vixis`
+                  }
                 </td>
               </tr>
             </table>
