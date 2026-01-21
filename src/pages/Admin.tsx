@@ -314,6 +314,7 @@ function Admin() {
       const totalPriceString = formatPrice(fullInvoice.amount, fullInvoice.currency);
       const invoiceWidth = calculateInvoiceWidth(totalPriceString);
       const priceFontSize = calculatePriceFontSize(totalPriceString.length);
+      const priceFontSize = calculatePriceFontSize(totalPriceString.length);
 
       // Obtener título del producto según el idioma guardado
       const getProductTitle = (product: any, productLanguage?: string) => {
@@ -456,8 +457,8 @@ function Admin() {
                 <td style="padding: 4px 0; vertical-align: bottom;">
                   <table style="border-collapse: collapse;">
                     <tr>
-                      <td style="padding-right: 12px; vertical-align: bottom;">
-                        <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                      <td style="padding-right: 10px; vertical-align: bottom;">
+                        <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
                           <img
                             src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
                             alt="Vixis Studio"

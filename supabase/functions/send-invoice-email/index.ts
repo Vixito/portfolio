@@ -85,6 +85,13 @@ serve(async (req) => {
     const invoiceWidth = calculateInvoiceWidth(totalPriceString);
     const priceFontSize = calculatePriceFontSize(totalPriceString.length);
 
+    // Sanitizar enlace de pago (fallback a /pay/:id y evitar how-to-pay-me)
+    const rawPayLink = (invoice.pay_now_link || "").trim();
+    const payLink =
+      rawPayLink && !rawPayLink.includes("how-to-pay-me")
+        ? rawPayLink
+        : `https://vixis.dev/pay/${invoice.id}`;
+
     // Si es confirmación de pago, generar HTML diferente
     if (is_payment_confirmation) {
       const confirmationHTML = `
@@ -98,7 +105,7 @@ serve(async (req) => {
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px;">
     <div style="text-align: center; margin-bottom: 30px;">
-      <a href="https://vixis.dev/studio" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+      <a href="https://vixis.dev/studio" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 10px;">
         <img src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp" alt="Vixis Studio" style="height: 32px; width: auto; vertical-align: middle;">
         <span style="font-size: 22px; font-weight: 800; color: #331d83; margin: 0; padding: 0;">Vixis Studio</span>
       </a>
@@ -303,10 +310,10 @@ serve(async (req) => {
       </tr>
       <tr>
         <td style="padding: 4px 0; vertical-align: bottom;">
-          <table style="border-collapse: collapse;">
+          <table style="border-collapse: collapse; width: 100%;">
             <tr>
-              <td style="padding-right: 12px; vertical-align: bottom;">
-                <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+              <td style="vertical-align: bottom; padding-right: 10px;">
+                <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
                   <img
                     src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
                     alt="Vixis Studio"
@@ -319,7 +326,6 @@ serve(async (req) => {
             </tr>
           </table>
         </td>
-        <td></td>
       </tr>
       <tr>
         <td colspan="2" class="divider"></td>
@@ -407,7 +413,7 @@ serve(async (req) => {
       <tr>
         <td colspan="2" style="text-align: center; padding: 10px 0;">
           <a
-            href="${(invoice.pay_now_link || '').trim() || `https://vixis.dev/pay/${invoice.id}`}"
+            href="${payLink}"
             target="_blank"
             rel="noopener noreferrer"
             style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6 !important; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"
