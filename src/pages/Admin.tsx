@@ -454,26 +454,20 @@ function Admin() {
                 <td style="padding: 4px 0; vertical-align: bottom;">
                   <table style="border-collapse: collapse;">
                     <tr>
-                      <td colspan="2" style="padding: 4px 0; vertical-align: bottom;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                          <tr>
-                            <td style="vertical-align: bottom; padding-right: 10px;">
-                              <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-                                <img
-                                  src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
-                                  alt="Vixis Studio"
-                                  style="height: 20px; width: auto; border-radius: 4px; display: block;"
-                                >
-                                <span style="font-size: 0.95em; font-weight: 800; color: #000; margin: 0; padding: 0;">Vixis Studio</span>
-                              </a>
-                            </td>
-                            <td style="font-size: 0.9em; font-weight: 400; vertical-align: bottom; text-align: right;">${productTitle}</td>
-                          </tr>
-                        </table>
+                      <td style="padding-right: 20px; vertical-align: bottom;">
+                        <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                          <img
+                            src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
+                            alt="Vixis Studio"
+                            style="height: 20px; border-radius: 4px; display: block;"
+                          >
+                        </a>
                       </td>
+                      <td style="font-size: 0.9em; font-weight: 800; vertical-align: bottom;">Vixis Studio</td>
                     </tr>
                   </table>
                 </td>
+                <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom; word-wrap: break-word; overflow-wrap: break-word;">${productTitle}</td>
               </tr>
               <tr>
                 <td colspan="2" class="divider"></td>
