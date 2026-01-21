@@ -87,6 +87,9 @@ serve(async (req) => {
     const rawPayLink = (invoice.pay_now_link || "").trim();
     const payLink = rawPayLink ? rawPayLink : `https://vixis.dev/pay/${invoice.id}`;
 
+    // Detectar si se está usando el link por defecto (dLocal) o uno personalizado
+    const isDefaultPayLink = !rawPayLink || rawPayLink === `https://vixis.dev/pay/${invoice.id}`;
+
     // Si es confirmación de pago, generar HTML diferente
     if (is_payment_confirmation) {
       const confirmationHTML = `
@@ -412,8 +415,10 @@ serve(async (req) => {
       ${is_payment_confirmation ? '' : `
       <tr>
         <td colspan="2" style="font-size: 0.6rem; padding: 5px 0 5px 8px; text-indent: -8px;">
-          * Order ID (automatically included):<br>
-          Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis
+          ${isDefaultPayLink 
+            ? `* Order ID (automatically included):<br>Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis`
+            : `* In the payment note you must put:<br>Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis`
+          }
         </td>
       </tr>
       `}
