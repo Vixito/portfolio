@@ -85,10 +85,7 @@ serve(async (req) => {
 
     // Sanitizar enlace de pago (fallback a /pay/:id y evitar how-to-pay-me)
     const rawPayLink = (invoice.pay_now_link || "").trim();
-    const payLink =
-      rawPayLink && !rawPayLink.includes("how-to-pay-me")
-        ? rawPayLink
-        : `https://vixis.dev/pay/${invoice.id}`;
+    const payLink = rawPayLink ? rawPayLink : `https://vixis.dev/pay/${invoice.id}`;
 
     // Si es confirmación de pago, generar HTML diferente
     if (is_payment_confirmation) {
@@ -308,17 +305,21 @@ serve(async (req) => {
       </tr>
       <tr>
         <td style="padding: 4px 0; vertical-align: bottom;">
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-            <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-              <img
-                src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
-                alt="Vixis Studio"
-                style="height: 20px; width: auto; border-radius: 4px; display: block;"
-              >
-              <span style="font-size: 0.95em; font-weight: 800; color: #000; margin: 0; padding: 0;">Vixis Studio</span>
-            </a>
-            <span style="font-size: 0.9em; font-weight: 400; margin-left: auto; text-align: right;">${productTitle}</span>
-          </div>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="vertical-align: bottom; padding-right: 10px;">
+                <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                  <img
+                    src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
+                    alt="Vixis Studio"
+                    style="height: 20px; width: auto; border-radius: 4px; display: block;"
+                  >
+                  <span style="font-size: 0.95em; font-weight: 800; color: #000; margin: 0; padding: 0;">Vixis Studio</span>
+                </a>
+              </td>
+              <td style="font-size: 0.9em; font-weight: 400; vertical-align: bottom; text-align: right;">${productTitle}</td>
+            </tr>
+          </table>
         </td>
       </tr>
       <tr>

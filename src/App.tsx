@@ -22,6 +22,7 @@ import {
   Store,
   Radio,
   PayInvoice,
+  HowToPayMe,
   NotFound,
 } from "./pages";
 import Layout from "./components/layout/Layout";
@@ -207,7 +208,14 @@ function App() {
             </Layout>
           }
         ></Route>
-        {/* Ruta /how-to-pay-me desactivada */}
+        <Route
+          path="/how-to-pay-me"
+          element={
+            <Layout>
+              <HowToPayMe />
+            </Layout>
+          }
+        ></Route>
         <Route
           path="*"
           element={
