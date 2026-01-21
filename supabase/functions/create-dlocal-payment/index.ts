@@ -137,10 +137,13 @@ serve(async (req) => {
       signatureString
     );
 
-    // Endpoint de dLocal
+    // Endpoint de dLocal (Sandbox o Producción)
     const dlocalEndpoint = dlocalSandbox
       ? "https://sandbox.dlocal.com/payments"
       : "https://api.dlocal.com/payments";
+    
+    console.log(`dLocal Environment: ${dlocalSandbox ? "SANDBOX" : "PRODUCTION"}`);
+    console.log(`dLocal Endpoint: ${dlocalEndpoint}`);
 
     // Hacer la petición a dLocal
     const dlocalResponse = await fetch(dlocalEndpoint, {
