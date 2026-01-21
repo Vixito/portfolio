@@ -291,6 +291,22 @@ function Admin() {
         }).format(amount);
       };
 
+      // Calcular ancho dinámico del contenedor basado en el precio total
+      const calculateInvoiceWidth = (priceString: string): number => {
+        // Ancho base mínimo: 270px
+        const baseWidth = 270;
+        // Cada carácter aproximadamente ocupa 8-10px con font-size de 2.4em
+        // Agregamos padding y márgenes: ~50px adicionales
+        const charWidth = 10;
+        const priceLength = priceString.length;
+        const calculatedWidth = baseWidth + (priceLength * charWidth);
+        // Máximo 600px para no hacer la factura demasiado ancha
+        return Math.min(Math.max(calculatedWidth, baseWidth), 600);
+      };
+
+      const totalPriceString = formatPrice(fullInvoice.amount, fullInvoice.currency);
+      const invoiceWidth = calculateInvoiceWidth(totalPriceString);
+
       // Obtener título del producto según el idioma guardado
       const getProductTitle = (product: any, productLanguage?: string) => {
         if (!product) return '';
@@ -469,8 +485,8 @@ function Admin() {
                 <td style="padding: 4px 0; width: 40%;">
                   <span style="font-size: 1.5em; font-weight: 800;">Total</span>
                 </td>
-                <td style="text-align: right; padding: 4px 0; width: 60%;">
-                  <span style="font-size: clamp(1.2em, 2.4em, 2.4em); font-weight: 700; word-break: break-word; overflow-wrap: break-word; line-height: 1.1; display: inline-block; max-width: 100%;">${formatPrice(fullInvoice.amount, fullInvoice.currency)}</span>
+                <td style="text-align: right; padding: 4px 0; width: 60%; white-space: nowrap;">
+                  <span style="font-size: clamp(1.2em, 2.4em, 2.4em); font-weight: 700; line-height: 1.1; white-space: nowrap;">${formatPrice(fullInvoice.amount, fullInvoice.currency)}</span>
                 </td>
               </tr>
               <tr>

@@ -61,6 +61,22 @@ serve(async (req) => {
       }).format(amount);
     };
 
+    // Calcular ancho dinámico del contenedor basado en el precio total
+    const calculateInvoiceWidth = (priceString: string): number => {
+      // Ancho base mínimo: 270px
+      const baseWidth = 270;
+      // Cada carácter aproximadamente ocupa 8-10px con font-size de 2.4em
+      // Agregamos padding y márgenes: ~50px adicionales
+      const charWidth = 10;
+      const priceLength = priceString.length;
+      const calculatedWidth = baseWidth + (priceLength * charWidth);
+      // Máximo 600px para no hacer la factura demasiado ancha
+      return Math.min(Math.max(calculatedWidth, baseWidth), 600);
+    };
+
+    const totalPriceString = formatPrice(invoice.amount, invoice.currency);
+    const invoiceWidth = calculateInvoiceWidth(totalPriceString);
+
     // Si es confirmación de pago, generar HTML diferente
     if (is_payment_confirmation) {
       const confirmationHTML = `
@@ -225,7 +241,8 @@ serve(async (req) => {
     }
     .invoice-label {
       border: 2px solid black;
-      width: 270px;
+      width: ${invoiceWidth}px;
+      min-width: 270px;
       max-width: 100%;
       margin: 20px auto;
       padding: 0 7px;
@@ -319,8 +336,8 @@ serve(async (req) => {
         <td style="padding: 4px 0; width: 40%;">
           <span style="font-size: 1.5em; font-weight: 800;">Total</span>
         </td>
-        <td style="text-align: right; padding: 4px 0; width: 60%;">
-          <span style="font-size: clamp(1.2em, 2.4em, 2.4em); font-weight: 700; word-break: break-word; overflow-wrap: break-word; line-height: 1.1; display: inline-block; max-width: 100%;">${formatPrice(invoice.amount, invoice.currency)}</span>
+        <td style="text-align: right; padding: 4px 0; width: 60%; white-space: nowrap;">
+          <span style="font-size: clamp(1.2em, 2.4em, 2.4em); font-weight: 700; line-height: 1.1; white-space: nowrap;">${formatPrice(invoice.amount, invoice.currency)}</span>
         </td>
       </tr>
       <tr>
