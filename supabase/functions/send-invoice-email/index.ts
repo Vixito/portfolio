@@ -307,7 +307,7 @@ serve(async (req) => {
         <td style="padding: 4px 0; vertical-align: bottom;">
           <table style="border-collapse: collapse;">
             <tr>
-              <td style="padding-right: 20px; vertical-align: bottom;">
+              <td style="padding-right: 8px; vertical-align: bottom;">
                 <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
                   <img
                     src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
