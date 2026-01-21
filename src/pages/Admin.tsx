@@ -1962,7 +1962,11 @@ function Admin() {
             // Usar español como valor principal para title y excerpt (fallback a inglés si español está vacío)
             blogUpdateData.title = blogUpdateData.title_es || blogUpdateData.title_en || "";
             blogUpdateData.excerpt = blogUpdateData.excerpt_es || blogUpdateData.excerpt_en || "";
-            // Mantener los campos por idioma para futuras referencias si se agregan a la tabla
+            // Eliminar campos por idioma que no existen en la tabla
+            delete blogUpdateData.title_es;
+            delete blogUpdateData.title_en;
+            delete blogUpdateData.excerpt_es;
+            delete blogUpdateData.excerpt_en;
             await updateBlogPost(editingItem.id, blogUpdateData);
             break;
           case "home_content":
@@ -2474,7 +2478,11 @@ function Admin() {
             // Usar español como valor principal para title y excerpt (fallback a inglés si español está vacío)
             blogCreateData.title = blogCreateData.title_es || blogCreateData.title_en || "";
             blogCreateData.excerpt = blogCreateData.excerpt_es || blogCreateData.excerpt_en || "";
-            // Mantener los campos por idioma para futuras referencias si se agregan a la tabla
+            // Eliminar campos por idioma que no existen en la tabla
+            delete blogCreateData.title_es;
+            delete blogCreateData.title_en;
+            delete blogCreateData.excerpt_es;
+            delete blogCreateData.excerpt_en;
             await createBlogPost(blogCreateData);
             break;
           case "home_content":
