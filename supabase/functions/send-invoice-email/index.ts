@@ -130,17 +130,10 @@ serve(async (req) => {
     </p>
     
     <p style="font-size: 16px; line-height: 1.6; color: #333;">
-      If you have any questions, please don't hesitate to contact us.
+      If you have any questions, please don't hesitate to contact me.
     </p>
     
-    <p style="font-size: 16px; line-height: 1.6; color: #333; margin-top: 30px;">
-      Best regards,<br>
-      <strong>Vixis Studio</strong>
-    </p>
-    
-    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
-      <a href="https://vixis.dev" style="color: #2093c4; text-decoration: none;">Visit our website</a>
-    </div>
+    <table cellpadding="0" cellspacing="0" border="0" style="font-size: medium; font-family: Trebuchet MS;"><tbody><tr><td style="padding-bottom: 16px;"><img alt="Handwritten Signature" role="presentation" src="https://esg.hubwt.com/prod/8c700a4c-f44f-b640-90e2-85df81160bcc-1768158429697.png" style="display: block; height: 30px;" height="30" data-cy="handwritten-signature-blob"></td></tr><tr><td><table cellpadding="0" cellspacing="0" border="0" style="font-size: medium; font-family: Trebuchet MS;"><tbody><tr><td style="vertical-align: top;"><table cellpadding="0" cellspacing="0" border="0" style="font-size: medium; font-family: Trebuchet MS;"><tbody><tr><td style="text-align: center;"><img src="https://cdn.vixis.dev/Foto+de+Perfil+2.webp" role="presentation" style="max-width: 128px; display: block;" width="130"></td></tr><tr><td height="16" aria-label="Horizontal Spacer"></td></tr><tr><td style="text-align: center;"><img src="https://cdn.vixis.dev/Vixis%20Studio%20-%20Logo.png" role="presentation" style="max-width: 130px; display: block;" width="130"></td></tr></tbody></table></td><td width="46" aria-label="Vertical Spacer"><div style="width: 46px;"></div></td><td style="padding: 0px; vertical-align: middle;"><h2 style="margin: 0px; font-size: 18px; font-family: Trebuchet MS; color: rgb(0, 0, 0); font-weight: 600; line-height: 28px;"><span>Carlos Andrés</span><span>&nbsp;</span><span>Vicioso Lara</span></h2><p style="margin: 0px; color: rgb(0, 0, 0); font-size: 14px; line-height: 22px;"><span>Systems Engineer</span></p><div style="margin: 0px; font-weight: 500; color: rgb(0, 0, 0); font-size: 14px; line-height: 22px;"><span>Owner &amp; Backend Developer</span><span>&nbsp;| </span><span>Vixis Studio</span></div><table cellpadding="0" cellspacing="0" border="0" style="font-size: medium; font-family: Trebuchet MS; width: 100%;"><tbody><tr><td height="24" aria-label="Horizontal Spacer"></td></tr><tr><td style="width: 100%; height: 1px; border-bottom: 1px solid rgb(21, 82, 141); border-left: medium; display: block;" width="auto" aria-label="Divider"></td></tr><tr><td height="24" aria-label="Horizontal Spacer"></td></tr></tbody></table><table cellpadding="0" cellspacing="0" border="0" style="font-size: medium; font-family: Trebuchet MS; line-height: 1;"><tbody><tr style="vertical-align: middle; height: 28px;"><td width="26" style="vertical-align: middle;"><table cellpadding="0" cellspacing="0" border="0" style="font-size: medium; font-family: Trebuchet MS; width: 26px;"><tbody><tr><td style="vertical-align: bottom;"><span style="display: inline-block; background-color: rgb(21, 82, 141);"><img src="https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/phone-icon-dark-2x.png" alt="mobilePhone" width="18" style="display: block; background-image: linear-gradient(rgb(21, 82, 141), rgb(21, 82, 141));"></span></td></tr></tbody></table></td><td style="padding: 0px; color: rgb(0, 0, 0);"><a href="tel:+1 (657) 346-5912" style="text-decoration: none; color: rgb(0, 0, 0); font-size: 14px;"><span>+1 (657) 346-5912</span></a></td></tr><tr style="vertical-align: middle; height: 28px;"><td width="26" style="vertical-align: middle;"><table cellpadding="0" cellspacing="0" border="0" style="font-size: medium; font-family: Trebuchet MS; width: 26px;"><tbody><tr><td style="vertical-align: bottom;"><span style="display: inline-block; background-color: rgb(21, 82, 141);"><img src="https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/email-icon-dark-2x.png" alt="emailAddress" width="18" style="display: block; background-image: linear-gradient(rgb(21, 82, 141), rgb(21, 82, 141));"></span></td></tr></tbody></table></td><td style="padding: 0px; color: rgb(0, 0, 0);"><a href="mailto:carlosvicioso@vixis.dev" style="text-decoration: none; color: rgb(0, 0, 0); font-size: 14px;"><span>carlosvicioso@vixis.dev</span></a></td></tr><tr style="vertical-align: middle; height: 28px;"><td width="26" style="vertical-align: middle;"><table cellpadding="0" cellspacing="0" border="0" style="font-size: medium; font-family: Trebuchet MS; width: 26px;"><tbody><tr><td style="vertical-align: bottom;"><span style="display: inline-block; background-color: rgb(21, 82, 141);"><img src="https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/link-icon-dark-2x.png" alt="website" width="18" style="display: block; background-image: linear-gradient(rgb(21, 82, 141), rgb(21, 82, 141));"></span></td></tr></tbody></table></td><td style="padding: 0px; color: rgb(0, 0, 0);"><a href="//vixis.dev" style="text-decoration: none; color: rgb(0, 0, 0); font-size: 14px;"><span>vixis.dev</span></a></td></tr></tbody></table><table cellpadding="0" cellspacing="0" border="0" style="font-size: medium; font-family: Trebuchet MS;"><tbody><tr><td height="24" aria-label="Horizontal Spacer"></td></tr></tbody></table><table cellpadding="0" cellspacing="0" border="0" style="font-size: medium; font-family: Trebuchet MS;"><tbody><tr><td colspan="3" style="max-width: 300px; font-size: 12px; padding-top: 1rem; text-align: center;"><div class="legal-content"><p style="font-size: inherit; margin: 0px;"></p></div></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table>
   </div>
 </body>
 </html>
@@ -305,18 +298,18 @@ serve(async (req) => {
       </tr>
       <tr>
         <td style="padding: 4px 0; vertical-align: bottom;">
-          <table style="border-collapse: collapse;">
+          <table style="border-collapse: collapse; width: auto; display: inline-table;">
             <tr>
-              <td style="padding-right: 8px; vertical-align: bottom;">
+              <td style="width: 28px; vertical-align: bottom; padding: 0">
                 <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
                   <img
                     src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
                     alt="Vixis Studio"
-                    style="height: 20px; border-radius: 4px; display: block;"
+                    style="height: 20px; border-radius: 4px; display: block; margin-right: 8px"
                   >
                 </a>
               </td>
-              <td style="font-size: 0.9em; font-weight: 800; vertical-align: bottom;">Vixis Studio</td>
+              <td style="font-size: 0.9em; font-weight: 800; vertical-align: bottom; padding: 0; white-space: nowrap; padding-left: 28px">Vixis Studio</td>
             </tr>
           </table>
         </td>
@@ -348,7 +341,7 @@ serve(async (req) => {
           <span style="font-size: 1.5em; font-weight: 800;">Total</span>
         </td>
         <td style="text-align: right; padding: 4px 0; width: 60%; white-space: nowrap;">
-          <span style="font-size: ${priceFontSize}; font-weight: 700; line-height: 1.1; white-space: nowrap; display: inline-block;">${formatPrice(invoice.amount, invoice.currency)}</span>
+          <span style="font-size: ${priceFontSize}; font-weight: 700; line-height: 1.1; white-space: wrap; display: inline-block;">${formatPrice(invoice.amount, invoice.currency)}</span>
         </td>
       </tr>
       <tr>
