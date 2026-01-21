@@ -314,7 +314,6 @@ function Admin() {
       const totalPriceString = formatPrice(fullInvoice.amount, fullInvoice.currency);
       const invoiceWidth = calculateInvoiceWidth(totalPriceString);
       const priceFontSize = calculatePriceFontSize(totalPriceString.length);
-      const priceFontSize = calculatePriceFontSize(totalPriceString.length);
 
       // Obtener título del producto según el idioma guardado
       const getProductTitle = (product: any, productLanguage?: string) => {
