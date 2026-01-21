@@ -293,14 +293,12 @@ function Admin() {
 
       // Calcular ancho dinámico del contenedor basado en el precio total
       const calculateInvoiceWidth = (priceString: string): number => {
-        // Ancho base mínimo más cómodo para valores grandes
-        const baseWidth = 320;
-        // Cada carácter ocupa ~10px con font-size grande
-        const charWidth = 10;
+        const baseWidth = 270;
         const priceLength = priceString.length;
-        const calculatedWidth = baseWidth + (priceLength * charWidth) + 40; // +padding/márgenes
-        // Limitar entre 320px y 720px
-        return Math.min(Math.max(calculatedWidth, baseWidth), 720);
+        if (priceLength <= 10) return baseWidth;
+        const charWidth = 10;
+        const calculatedWidth = baseWidth + (priceLength * charWidth) + 30;
+        return Math.min(Math.max(calculatedWidth, baseWidth), 600);
       };
 
       // Calcular font-size dinámico para el precio total
@@ -383,10 +381,10 @@ function Admin() {
             .invoice-label {
               border: 2px solid black;
               width: ${invoiceWidth}px;
-              min-width: 320px;
+              min-width: 270px;
               max-width: min(90vw, ${invoiceWidth}px);
               margin: 20px auto;
-              padding: 0 10px;
+              padding: 0 7px;
               background: white;
               word-wrap: break-word;
               overflow-wrap: break-word;
@@ -456,21 +454,22 @@ function Admin() {
                 <td style="padding: 4px 0; vertical-align: bottom;">
                   <table style="border-collapse: collapse;">
                     <tr>
-                      <td style="padding-right: 10px; vertical-align: bottom;">
-                        <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-                          <img
-                            src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
-                            alt="Vixis Studio"
-                            style="height: 20px; width: auto; border-radius: 4px; display: block;"
-                          >
-                          <span style="font-size: 0.95em; font-weight: 800; color: #000; margin: 0; padding: 0;">Vixis Studio</span>
-                        </a>
+                      <td colspan="2" style="padding: 4px 0; vertical-align: bottom;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                          <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                            <img
+                              src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
+                              alt="Vixis Studio"
+                              style="height: 20px; width: auto; border-radius: 4px; display: block;"
+                            >
+                            <span style="font-size: 0.95em; font-weight: 800; color: #000; margin: 0; padding: 0;">Vixis Studio</span>
+                          </a>
+                          <span style="font-size: 0.9em; font-weight: 400; margin-left: auto; text-align: right;">${productTitle}</span>
+                        </div>
                       </td>
-                      <td style="font-size: 0.9em; font-weight: 400; vertical-align: bottom; text-align: right;">${productTitle}</td>
                     </tr>
                   </table>
                 </td>
-                <td></td>
               </tr>
               <tr>
                 <td colspan="2" class="divider"></td>
