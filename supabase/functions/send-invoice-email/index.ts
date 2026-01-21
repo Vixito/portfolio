@@ -297,21 +297,15 @@ serve(async (req) => {
         <td colspan="2" class="divider"></td>
       </tr>
       <tr>
-        <td style="padding: 4px 0; vertical-align: bottom;">
-          <table style="border-collapse: collapse; width: auto; display: inline-table;">
-            <tr>
-              <td style="width: 28px; vertical-align: bottom; padding: 0">
-                <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
-                  <img
-                    src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
-                    alt="Vixis Studio"
-                    style="height: 20px; border-radius: 4px; display: block; margin-right: 8px"
-                  >
-                </a>
-              </td>
-              <td style="font-size: 0.9em; font-weight: 800; vertical-align: bottom; padding: 0; white-space: nowrap; padding-left: 28px">Vixis Studio</td>
-            </tr>
-          </table>
+        <td style="padding: 4px 0; vertical-align: middle;">
+            <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-block; vertical-align: bottom;">
+              <img
+                src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
+                alt="Vixis Studio"
+                style="height: 20px; border-radius: 4px; display: inline-block; vertical-align: bottom;"
+              >
+            </a>
+            <span style="font-size: 0.9em; font-weight: 800; margin-left: 6px; display: inline-block; vertical-align: middle;">Vixis Studio</span>
         </td>
         <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom; word-wrap: break-word; overflow-wrap: break-word;">${productTitle}</td>
       </tr>
@@ -341,7 +335,7 @@ serve(async (req) => {
           <span style="font-size: 1.5em; font-weight: 800;">Total</span>
         </td>
         <td style="text-align: right; padding: 4px 0; width: 60%; white-space: nowrap;">
-          <span style="font-size: ${priceFontSize}; font-weight: 700; line-height: 1.1; white-space: wrap; display: inline-block;">${formatPrice(invoice.amount, invoice.currency)}</span>
+          <span style="font-size: ${priceFontSize}; font-weight: 700; line-height: 1.1; white-space: wrap;">${formatPrice(invoice.amount, invoice.currency)}</span>
         </td>
       </tr>
       <tr>
