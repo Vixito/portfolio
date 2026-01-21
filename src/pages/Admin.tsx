@@ -293,19 +293,27 @@ function Admin() {
 
       // Calcular ancho dinámico del contenedor basado en el precio total
       const calculateInvoiceWidth = (priceString: string): number => {
-        // Ancho base mínimo: 270px
-        const baseWidth = 270;
-        // Cada carácter aproximadamente ocupa 8-10px con font-size de 2.4em
-        // Agregamos padding y márgenes: ~50px adicionales
+        // Ancho base mínimo más cómodo para valores grandes
+        const baseWidth = 320;
+        // Cada carácter ocupa ~10px con font-size grande
         const charWidth = 10;
         const priceLength = priceString.length;
-        const calculatedWidth = baseWidth + (priceLength * charWidth);
-        // Máximo 600px para no hacer la factura demasiado ancha
-        return Math.min(Math.max(calculatedWidth, baseWidth), 600);
+        const calculatedWidth = baseWidth + (priceLength * charWidth) + 40; // +padding/márgenes
+        // Limitar entre 320px y 720px
+        return Math.min(Math.max(calculatedWidth, baseWidth), 720);
+      };
+
+      // Calcular font-size dinámico para el precio total
+      const calculatePriceFontSize = (priceLength: number): string => {
+        if (priceLength > 18) return "1.6em";
+        if (priceLength > 14) return "1.9em";
+        if (priceLength > 10) return "2.2em";
+        return "2.4em";
       };
 
       const totalPriceString = formatPrice(fullInvoice.amount, fullInvoice.currency);
       const invoiceWidth = calculateInvoiceWidth(totalPriceString);
+      const priceFontSize = calculatePriceFontSize(totalPriceString.length);
 
       // Obtener título del producto según el idioma guardado
       const getProductTitle = (product: any, productLanguage?: string) => {
@@ -374,13 +382,15 @@ function Admin() {
             }
             .invoice-label {
               border: 2px solid black;
-              width: 270px;
-              max-width: 100%;
+              width: ${invoiceWidth}px;
+              min-width: 320px;
+              max-width: min(90vw, ${invoiceWidth}px);
               margin: 20px auto;
-              padding: 0 7px;
+              padding: 0 10px;
               background: white;
               word-wrap: break-word;
               overflow-wrap: break-word;
+              overflow: hidden;
             }
             table {
               width: 100%;
@@ -399,8 +409,9 @@ function Admin() {
             }
             @media print {
               .invoice-label {
-                width: 270px !important;
-                max-width: 270px !important;
+                width: ${invoiceWidth}px !important;
+                max-width: ${invoiceWidth}px !important;
+                min-width: 320px !important;
               }
             }
             .divider { border-bottom: 1px solid #888989; margin: 2px 0; }
@@ -445,20 +456,21 @@ function Admin() {
                 <td style="padding: 4px 0; vertical-align: bottom;">
                   <table style="border-collapse: collapse;">
                     <tr>
-                      <td style="padding-right: 20px; vertical-align: bottom;">
-                        <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                      <td style="padding-right: 12px; vertical-align: bottom;">
+                        <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
                           <img
                             src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
                             alt="Vixis Studio"
-                            style="height: 20px; border-radius: 4px; display: block;"
+                            style="height: 20px; width: auto; border-radius: 4px; display: block;"
                           >
+                          <span style="font-size: 0.95em; font-weight: 800; color: #000; margin: 0; padding: 0;">Vixis Studio</span>
                         </a>
                       </td>
-                      <td style="font-size: 0.9em; font-weight: 800; vertical-align: bottom;">Vixis Studio</td>
+                      <td style="font-size: 0.9em; font-weight: 400; vertical-align: bottom; text-align: right;">${productTitle}</td>
                     </tr>
                   </table>
                 </td>
-                <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom; word-wrap: break-word; overflow-wrap: break-word;">${productTitle}</td>
+                <td></td>
               </tr>
               <tr>
                 <td colspan="2" class="divider"></td>
@@ -486,7 +498,7 @@ function Admin() {
                   <span style="font-size: 1.5em; font-weight: 800;">Total</span>
                 </td>
                 <td style="text-align: right; padding: 4px 0; width: 60%; white-space: nowrap;">
-                  <span style="font-size: clamp(1.2em, 2.4em, 2.4em); font-weight: 700; line-height: 1.1; white-space: nowrap;">${formatPrice(fullInvoice.amount, fullInvoice.currency)}</span>
+                  <span style="font-size: ${priceFontSize}; font-weight: 700; line-height: 1.1; white-space: nowrap; display: inline-block;">${formatPrice(fullInvoice.amount, fullInvoice.currency)}</span>
                 </td>
               </tr>
               <tr>
@@ -511,7 +523,7 @@ function Admin() {
               <tr>
                 <td colspan="2" style="text-align: center; padding: 10px 0;">
                   <a
-                    href="${fullInvoice.pay_now_link || `https://vixis.dev/pay/${fullInvoice.id}`}"
+                    href="${(fullInvoice.pay_now_link || '').trim() || `https://vixis.dev/pay/${fullInvoice.id}`}"
                     target="_blank"
                     rel="noopener noreferrer"
                     style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6 !important; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"

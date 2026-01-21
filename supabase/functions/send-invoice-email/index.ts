@@ -63,19 +63,27 @@ serve(async (req) => {
 
     // Calcular ancho dinámico del contenedor basado en el precio total
     const calculateInvoiceWidth = (priceString: string): number => {
-      // Ancho base mínimo: 270px
-      const baseWidth = 270;
-      // Cada carácter aproximadamente ocupa 8-10px con font-size de 2.4em
-      // Agregamos padding y márgenes: ~50px adicionales
+      // Ancho base mínimo más cómodo para valores grandes
+      const baseWidth = 320;
+      // Cada carácter ocupa ~10px con font-size grande
       const charWidth = 10;
       const priceLength = priceString.length;
-      const calculatedWidth = baseWidth + (priceLength * charWidth);
-      // Máximo 600px para no hacer la factura demasiado ancha
-      return Math.min(Math.max(calculatedWidth, baseWidth), 600);
+      const calculatedWidth = baseWidth + (priceLength * charWidth) + 40; // +padding/márgenes
+      // Limitar entre 320px y 720px (para que no desborde el viewport)
+      return Math.min(Math.max(calculatedWidth, baseWidth), 720);
+    };
+
+    // Calcular font-size dinámico para el precio total
+    const calculatePriceFontSize = (priceLength: number): string => {
+      if (priceLength > 18) return "1.6em";
+      if (priceLength > 14) return "1.9em";
+      if (priceLength > 10) return "2.2em";
+      return "2.4em";
     };
 
     const totalPriceString = formatPrice(invoice.amount, invoice.currency);
     const invoiceWidth = calculateInvoiceWidth(totalPriceString);
+    const priceFontSize = calculatePriceFontSize(totalPriceString.length);
 
     // Si es confirmación de pago, generar HTML diferente
     if (is_payment_confirmation) {
@@ -90,9 +98,9 @@ serve(async (req) => {
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px;">
     <div style="text-align: center; margin-bottom: 30px;">
-      <a href="https://vixis.dev/studio" target="_blank" style="text-decoration: none;">
-        <img src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp" alt="Vixis Studio" style="height: 40px; vertical-align: middle; margin-right: 10px;">
-        <span style="font-size: 24px; font-weight: bold; color: #331d83; vertical-align: middle;">Vixis Studio</span>
+      <a href="https://vixis.dev/studio" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+        <img src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp" alt="Vixis Studio" style="height: 32px; width: auto; vertical-align: middle;">
+        <span style="font-size: 22px; font-weight: 800; color: #331d83; margin: 0; padding: 0;">Vixis Studio</span>
       </a>
     </div>
     
@@ -242,13 +250,14 @@ serve(async (req) => {
     .invoice-label {
       border: 2px solid black;
       width: ${invoiceWidth}px;
-      min-width: 270px;
-      max-width: 100%;
+      min-width: 320px;
+      max-width: min(90vw, ${invoiceWidth}px);
       margin: 20px auto;
-      padding: 0 7px;
+      padding: 0 10px;
       background: white;
       word-wrap: break-word;
       overflow-wrap: break-word;
+      overflow: hidden;
     }
     table {
       width: 100%;
@@ -296,20 +305,21 @@ serve(async (req) => {
         <td style="padding: 4px 0; vertical-align: bottom;">
           <table style="border-collapse: collapse;">
             <tr>
-              <td style="padding-right: 20px; vertical-align: bottom;">
-                <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+              <td style="padding-right: 12px; vertical-align: bottom;">
+                <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
                   <img
                     src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
                     alt="Vixis Studio"
-                    style="height: 20px; border-radius: 4px; display: block;"
+                    style="height: 20px; width: auto; border-radius: 4px; display: block;"
                   >
+                  <span style="font-size: 0.95em; font-weight: 800; color: #000; margin: 0; padding: 0;">Vixis Studio</span>
                 </a>
               </td>
-              <td style="font-size: 0.9em; font-weight: 800; vertical-align: bottom;">Vixis Studio</td>
+              <td style="font-size: 0.9em; font-weight: 400; vertical-align: bottom; text-align: right;">${productTitle}</td>
             </tr>
           </table>
         </td>
-        <td style="text-align: right; font-size: 0.9em; font-weight: 400; padding: 4px 0; vertical-align: bottom; word-wrap: break-word; overflow-wrap: break-word;">${productTitle}</td>
+        <td></td>
       </tr>
       <tr>
         <td colspan="2" class="divider"></td>
@@ -337,7 +347,7 @@ serve(async (req) => {
           <span style="font-size: 1.5em; font-weight: 800;">Total</span>
         </td>
         <td style="text-align: right; padding: 4px 0; width: 60%; white-space: nowrap;">
-          <span style="font-size: clamp(1.2em, 2.4em, 2.4em); font-weight: 700; line-height: 1.1; white-space: nowrap;">${formatPrice(invoice.amount, invoice.currency)}</span>
+          <span style="font-size: ${priceFontSize}; font-weight: 700; line-height: 1.1; white-space: nowrap; display: inline-block;">${formatPrice(invoice.amount, invoice.currency)}</span>
         </td>
       </tr>
       <tr>
@@ -397,7 +407,7 @@ serve(async (req) => {
       <tr>
         <td colspan="2" style="text-align: center; padding: 10px 0;">
           <a
-            href="${invoice.pay_now_link || `https://vixis.dev/pay/${invoice.id}`}"
+            href="${(invoice.pay_now_link || '').trim() || `https://vixis.dev/pay/${invoice.id}`}"
             target="_blank"
             rel="noopener noreferrer"
             style="padding: 10px 20px; background-color: #0d0d0d; color: #03fff6 !important; text-decoration: none; border-radius: 4px; font-weight: 700; display: inline-block;"
