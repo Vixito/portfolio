@@ -12,6 +12,8 @@ interface BlogPost {
   platform: string; // "Medium", "Dev.to", etc.
   date: string;
   author?: string;
+  title_translations?: { es?: string; en?: string };
+  excerpt_translations?: { es?: string; en?: string };
 }
 
 function Blog() {
@@ -29,18 +31,29 @@ function Blog() {
 
         if (result && result.posts) {
           // Mapear posts de la BD al formato esperado
-          const mappedPosts = result.posts.map((post: any) => ({
-            id: post.id,
-            title: post.title,
-            thumbnail:
-              post.thumbnail_url ||
-              "https://via.placeholder.com/400x300?text=No+Image",
-            excerpt: post.excerpt,
-            url: post.url,
-            platform: post.platform,
-            date: post.published_at,
-            author: post.author,
-          }));
+          const mappedPosts = result.posts.map((post: any) => {
+            // Obtener título y excerpt según el idioma actual
+            const titleTranslations = post.title_translations || {};
+            const excerptTranslations = post.excerpt_translations || {};
+            
+            const title = titleTranslations[language] || post.title || "";
+            const excerpt = excerptTranslations[language] || post.excerpt || "";
+
+            return {
+              id: post.id,
+              title,
+              thumbnail:
+                post.thumbnail_url ||
+                "https://via.placeholder.com/400x300?text=No+Image",
+              excerpt,
+              url: post.url,
+              platform: post.platform,
+              date: post.published_at,
+              author: post.author,
+              title_translations: titleTranslations,
+              excerpt_translations: excerptTranslations,
+            };
+          });
           setPosts(mappedPosts);
         } else {
           setPosts([]);
@@ -54,7 +67,7 @@ function Blog() {
     };
 
     loadPosts();
-  }, []);
+  }, [language]); // Recargar cuando cambie el idioma
 
   // Calcular páginas
   const totalPages = Math.ceil(posts.length / itemsPerPage);

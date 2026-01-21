@@ -1166,11 +1166,20 @@ function Admin() {
       formData.description_es = descTrans.es;
       formData.description_en = descTrans.en;
     } else if (activeTab === "blog_posts") {
-      // Cargar título y excerpt en ambos idiomas (por ahora, usar el mismo valor para ambos)
-      formData.title_es = currentItem.title || "";
-      formData.title_en = currentItem.title || "";
-      formData.excerpt_es = currentItem.excerpt || "";
-      formData.excerpt_en = currentItem.excerpt || "";
+      // Cargar traducciones de título y excerpt
+      const titleTrans = extractTranslations(
+        currentItem.title_translations,
+        currentItem.title || ""
+      );
+      formData.title_es = titleTrans.es;
+      formData.title_en = titleTrans.en;
+
+      const excerptTrans = extractTranslations(
+        currentItem.excerpt_translations,
+        currentItem.excerpt || ""
+      );
+      formData.excerpt_es = excerptTrans.es;
+      formData.excerpt_en = excerptTrans.en;
     } else if (activeTab === "work_experiences") {
       const positionTrans = extractTranslations(
         item.position_translations,
@@ -1959,6 +1968,15 @@ function Admin() {
             break;
           case "blog_posts":
             const blogUpdateData = { ...crudFormData };
+            // Crear traducciones JSONB
+            blogUpdateData.title_translations = buildTranslations(
+              blogUpdateData.title_es || "",
+              blogUpdateData.title_en || ""
+            );
+            blogUpdateData.excerpt_translations = buildTranslations(
+              blogUpdateData.excerpt_es || "",
+              blogUpdateData.excerpt_en || ""
+            );
             // Usar español como valor principal para title y excerpt (fallback a inglés si español está vacío)
             blogUpdateData.title = blogUpdateData.title_es || blogUpdateData.title_en || "";
             blogUpdateData.excerpt = blogUpdateData.excerpt_es || blogUpdateData.excerpt_en || "";
@@ -2475,6 +2493,15 @@ function Admin() {
             break;
           case "blog_posts":
             const blogCreateData = { ...crudFormData };
+            // Crear traducciones JSONB
+            blogCreateData.title_translations = buildTranslations(
+              blogCreateData.title_es || "",
+              blogCreateData.title_en || ""
+            );
+            blogCreateData.excerpt_translations = buildTranslations(
+              blogCreateData.excerpt_es || "",
+              blogCreateData.excerpt_en || ""
+            );
             // Usar español como valor principal para title y excerpt (fallback a inglés si español está vacío)
             blogCreateData.title = blogCreateData.title_es || blogCreateData.title_en || "";
             blogCreateData.excerpt = blogCreateData.excerpt_es || blogCreateData.excerpt_en || "";

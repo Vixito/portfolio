@@ -13,6 +13,8 @@ function LatestPostCard() {
     excerpt: string;
     url: string;
     author?: string;
+    title_translations?: { es?: string; en?: string };
+    excerpt_translations?: { es?: string; en?: string };
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,14 +58,23 @@ function LatestPostCard() {
             parsedTags.push(formatPlatformTag(post.platform));
           }
 
+          // Obtener título y excerpt según el idioma actual
+          const titleTranslations = post.title_translations || {};
+          const excerptTranslations = post.excerpt_translations || {};
+          
+          const title = titleTranslations[language] || post.title || "";
+          const excerpt = excerptTranslations[language] || post.excerpt || "";
+
           setLatestPost({
             id: post.id,
-            title: post.title,
+            title,
             date: date,
             tags: parsedTags,
-            excerpt: post.excerpt || "",
+            excerpt,
             url: post.url || "/blog",
             author: post.author,
+            title_translations: titleTranslations,
+            excerpt_translations: excerptTranslations,
           });
         }
       } catch (error) {
