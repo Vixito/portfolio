@@ -176,11 +176,8 @@ function SkillsNTechnologies() {
     );
   }
 
-  // Ordenar tecnologías por categoría y luego por nombre
+  // Ordenar tecnologías por orden alfabético
   const sortedTechnologies = [...filteredTechnologies].sort((a, b) => {
-    if (a.category !== b.category) {
-      return a.category.localeCompare(b.category);
-    }
     return a.name.localeCompare(b.name);
   });
 
