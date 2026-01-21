@@ -1165,6 +1165,12 @@ function Admin() {
       );
       formData.description_es = descTrans.es;
       formData.description_en = descTrans.en;
+    } else if (activeTab === "blog_posts") {
+      // Cargar título y excerpt en ambos idiomas (por ahora, usar el mismo valor para ambos)
+      formData.title_es = currentItem.title || "";
+      formData.title_en = currentItem.title || "";
+      formData.excerpt_es = currentItem.excerpt || "";
+      formData.excerpt_en = currentItem.excerpt || "";
     } else if (activeTab === "work_experiences") {
       const positionTrans = extractTranslations(
         item.position_translations,
@@ -1917,6 +1923,8 @@ function Admin() {
               techUpdateData.name_es || "",
               techUpdateData.name_en || ""
             );
+            // Usar name_es como valor principal para name (fallback a name_en si name_es está vacío)
+            techUpdateData.name = techUpdateData.name_es || techUpdateData.name_en || "";
             delete techUpdateData.name_es;
             delete techUpdateData.name_en;
             if (techUpdateData.start_year) {
@@ -1950,7 +1958,12 @@ function Admin() {
             await updateStudy(editingItem.id, updateStudyData);
             break;
           case "blog_posts":
-            await updateBlogPost(editingItem.id, crudFormData);
+            const blogUpdateData = { ...crudFormData };
+            // Usar español como valor principal para title y excerpt (fallback a inglés si español está vacío)
+            blogUpdateData.title = blogUpdateData.title_es || blogUpdateData.title_en || "";
+            blogUpdateData.excerpt = blogUpdateData.excerpt_es || blogUpdateData.excerpt_en || "";
+            // Mantener los campos por idioma para futuras referencias si se agregan a la tabla
+            await updateBlogPost(editingItem.id, blogUpdateData);
             break;
           case "home_content":
             await updateHomeContentItem(editingItem.id, crudFormData);
@@ -2418,6 +2431,8 @@ function Admin() {
               techCreateData.name_es || "",
               techCreateData.name_en || ""
             );
+            // Usar name_es como valor principal para name (fallback a name_en si name_es está vacío)
+            techCreateData.name = techCreateData.name_es || techCreateData.name_en || "";
             delete techCreateData.name_es;
             delete techCreateData.name_en;
             if (techCreateData.start_year) {
@@ -2455,7 +2470,12 @@ function Admin() {
             await createStudy(studyData);
             break;
           case "blog_posts":
-            await createBlogPost(crudFormData);
+            const blogCreateData = { ...crudFormData };
+            // Usar español como valor principal para title y excerpt (fallback a inglés si español está vacío)
+            blogCreateData.title = blogCreateData.title_es || blogCreateData.title_en || "";
+            blogCreateData.excerpt = blogCreateData.excerpt_es || blogCreateData.excerpt_en || "";
+            // Mantener los campos por idioma para futuras referencias si se agregan a la tabla
+            await createBlogPost(blogCreateData);
             break;
           case "home_content":
             await createHomeContentItem(crudFormData);
@@ -5921,15 +5941,15 @@ function Admin() {
                   <>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Título *
+                        Título (Español) *
                       </label>
                       <input
                         type="text"
-                        value={crudFormData.title || ""}
+                        value={crudFormData.title_es || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            title: e.target.value,
+                            title_es: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -5938,14 +5958,48 @@ function Admin() {
                     </div>
                     <div>
                       <label className="block text-gray-300 text-sm mb-2">
-                        Excerpt (Descripción breve) *
+                        Título (English) *
                       </label>
-                      <textarea
-                        value={crudFormData.excerpt || ""}
+                      <input
+                        type="text"
+                        value={crudFormData.title_en || ""}
                         onChange={(e) =>
                           setCrudFormData({
                             ...crudFormData,
-                            excerpt: e.target.value,
+                            title_en: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Excerpt (Español) *
+                      </label>
+                      <textarea
+                        value={crudFormData.excerpt_es || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            excerpt_es: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Excerpt (English) *
+                      </label>
+                      <textarea
+                        value={crudFormData.excerpt_en || ""}
+                        onChange={(e) =>
+                          setCrudFormData({
+                            ...crudFormData,
+                            excerpt_en: e.target.value,
                           })
                         }
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
@@ -5988,6 +6042,7 @@ function Admin() {
                       >
                         <option value="Dev.to">Dev.to</option>
                         <option value="Medium">Medium</option>
+                        <option value="Newzzz">Newzzz</option>
                         <option value="Otro">Otro</option>
                       </select>
                     </div>
