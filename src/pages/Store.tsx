@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Pagination from "../components/ui/Pagination";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
@@ -21,6 +22,7 @@ interface ProductPricing {
 
 interface StoreItem {
   id: string;
+  public_id?: string; // Identificador público seguro (8 caracteres)
   title: string;
   title_translations?: { es?: string; en?: string } | null;
   description: string | null;
@@ -48,6 +50,7 @@ interface StoreItem {
 
 function Store() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -88,6 +91,7 @@ function Store() {
         const mappedItems: StoreItem[] = (products || []).map(
           (product: any) => ({
             id: product.id,
+            public_id: product.public_id || product.id.substring(0, 8),
             title: product.title,
             title_translations: product.title_translations,
             description: product.description,
@@ -140,9 +144,35 @@ function Store() {
     loadProducts();
   }, []);
 
+  // Detectar producto en URL y abrirlo automáticamente
+  useEffect(() => {
+    const productParam = searchParams.get('product');
+    if (productParam && items.length > 0 && !selectedItem) {
+      const product = items.find(item => 
+        item.public_id === productParam || 
+        item.id === productParam
+      );
+      if (product) {
+        setSelectedItem(product);
+        setIsModalOpen(true);
+      }
+    }
+  }, [searchParams, items, selectedItem]);
+
   const handleItemClick = (item: StoreItem) => {
     setSelectedItem(item);
     setIsModalOpen(true);
+    // Actualizar URL con el public_id del producto
+    if (item.public_id) {
+      setSearchParams({ product: item.public_id });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedItem(null);
+    // Limpiar el parámetro de URL
+    setSearchParams({});
   };
 
   const handleAction = (item: StoreItem, linkUrl?: string) => {
@@ -654,7 +684,7 @@ function Store() {
         {selectedItem && (
           <Modal
             isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
+            onClose={handleCloseModal}
             title={getTranslatedText(
               selectedItem.title_translations || selectedItem.title
             )}
@@ -829,11 +859,11 @@ function Store() {
                                         "noopener,noreferrer"
                                       );
                                     }
-                                  }
-                                );
                               }
-                              setIsModalOpen(false);
-                            }}
+                            );
+                          }
+                          handleCloseModal();
+                        }}
                             className="w-full"
                           >
                             {link.label || getButtonText(selectedItem)}
@@ -849,7 +879,7 @@ function Store() {
                       variant="primary"
                       onClick={() => {
                         handleAction(selectedItem);
-                        setIsModalOpen(false);
+                        handleCloseModal();
                       }}
                       className="w-full"
                     >
@@ -861,7 +891,7 @@ function Store() {
                       variant="primary"
                       onClick={() => {
                         handleAction(selectedItem);
-                        setIsModalOpen(false);
+                        handleCloseModal();
                       }}
                       className={`w-full ${!formatPrice(selectedItem) ? "mt-auto" : ""}`}
                     >
