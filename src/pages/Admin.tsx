@@ -338,15 +338,38 @@ function Admin() {
         ? fullInvoice.custom_fields.features.map((feature: any) => {
             let priceDisplay = "";
             if (feature.type === "percentage" && feature.percentage !== undefined && feature.percentage !== null) {
-              // Mostrar porcentaje: "+30%" si es positivo, "-30%" si es negativo
               const percentage = feature.percentage;
               priceDisplay = percentage >= 0 ? `+${percentage}%` : `${percentage}%`;
             } else if (feature.price !== undefined && feature.price !== null) {
-              // Mostrar precio fijo
               priceDisplay = formatPrice(feature.price || 0, feature.currency || fullInvoice.currency || "USD");
             } else {
               priceDisplay = formatPrice(0, feature.currency || fullInvoice.currency || "USD");
             }
+            
+            // Renderizar subfeatures de este feature
+            const subfeaturesOfFeature = feature.subfeatures && Array.isArray(feature.subfeatures) && feature.subfeatures.length > 0
+              ? feature.subfeatures.map((subfeature: any) => {
+                  const subPriceDisplay = subfeature.price !== undefined && subfeature.price !== null
+                    ? formatPrice(subfeature.price || 0, subfeature.currency || fullInvoice.currency || "USD")
+                    : formatPrice(0, subfeature.currency || fullInvoice.currency || "USD");
+                  return `
+          <tr>
+            <td colspan="2" style="padding: 2px 0 2px 16px;">
+              <div style="font-size: 0.7rem; color: #AAAAAA;">• ${subfeature.name || "Subfeature"}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 2px 0 2px 24px;">
+              <span style="font-size: 0.65rem; color: #999;">└─</span>
+            </td>
+            <td style="text-align: right; padding: 2px 0;">
+              <span style="font-size: 0.7rem; color: #AAAAAA;">${subPriceDisplay}</span>
+            </td>
+          </tr>
+        `;
+                }).join("")
+              : "";
+            
             return `
           <tr>
             <td colspan="2" style="border-bottom: 1px solid #888989; margin: 2px 0;"></td>
@@ -359,29 +382,7 @@ function Admin() {
               <span style="font-size: 0.85rem;">${priceDisplay}</span>
             </td>
           </tr>
-        `;
-          }).join("")
-        : "";
-
-      const subfeaturesHTML = fullInvoice.custom_fields?.subfeatures && Array.isArray(fullInvoice.custom_fields.subfeatures) && fullInvoice.custom_fields.subfeatures.length > 0
-        ? fullInvoice.custom_fields.subfeatures.map((subfeature: any) => {
-            const priceDisplay = subfeature.price !== undefined && subfeature.price !== null
-              ? formatPrice(subfeature.price || 0, subfeature.currency || fullInvoice.currency || "USD")
-              : formatPrice(0, subfeature.currency || fullInvoice.currency || "USD");
-            return `
-          <tr>
-            <td colspan="2" style="padding: 2px 0 2px 16px;">
-              <div style="font-size: 0.7rem; color: #888989;">• ${subfeature.name || "Subfeature"}</div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 2px 0 2px 24px;">
-              <span style="font-size: 0.65rem; color: #999;">└─</span>
-            </td>
-            <td style="text-align: right; padding: 2px 0;">
-              <span style="font-size: 0.7rem; color: #888989;">${priceDisplay}</span>
-            </td>
-          </tr>
+          ${subfeaturesOfFeature}
         `;
           }).join("")
         : "";
@@ -533,7 +534,6 @@ function Admin() {
                 </td>
               </tr>
               ${featuresHTML}
-              ${subfeaturesHTML}
               <tr>
                 <td colspan="2">
                   <div class="divider-large"></div>
@@ -7099,13 +7099,15 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                       <label className="block text-gray-300 text-sm mb-2">
                         Features & Pricing
                       </label>
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {(crudFormData.custom_fields?.features || []).map(
-                          (feature: any, index: number) => (
+                          (feature: any, featureIndex: number) => (
                             <div
-                              key={index}
-                              className="flex gap-2 items-start p-3 bg-gray-800 rounded-lg border border-gray-700"
+                              key={featureIndex}
+                              className="p-4 bg-gray-800 rounded-lg border border-gray-700 space-y-3"
                             >
+                              {/* Feature principal */}
+                              <div className="flex gap-2 items-start">
                               <div className="flex-1 space-y-2">
                                 <input
                                   type="text"
@@ -7116,8 +7118,8 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                       ...(crudFormData.custom_fields?.features ||
                                         []),
                                     ];
-                                    features[index] = {
-                                      ...features[index],
+                                    features[featureIndex] = {
+                                      ...features[featureIndex],
                                       name: e.target.value,
                                     };
                                     setCrudFormData({
@@ -7145,13 +7147,13 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                         []),
                                     ];
                                     const newType = e.target.value;
-                                    features[index] = {
-                                      ...features[index],
+                                    features[featureIndex] = {
+                                      ...features[featureIndex],
                                       type: newType,
                                       // Limpiar campos según el tipo
-                                      price: newType === "price" ? (features[index].price || 0) : undefined,
-                                      percentage: newType === "percentage" ? (features[index].percentage || 0) : undefined,
-                                      currency: newType === "price" ? (features[index].currency || "USD") : undefined,
+                                      price: newType === "price" ? (features[featureIndex].price || 0) : undefined,
+                                      percentage: newType === "percentage" ? (features[featureIndex].percentage || 0) : undefined,
+                                      currency: newType === "price" ? (features[featureIndex].currency || "USD") : undefined,
                                     };
                                     setCrudFormData({
                                       ...crudFormData,
@@ -7185,8 +7187,8 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                           ...(crudFormData.custom_fields?.features ||
                                             []),
                                         ];
-                                        features[index] = {
-                                          ...features[index],
+                                        features[featureIndex] = {
+                                          ...features[featureIndex],
                                           percentage: parseFloat(e.target.value) || 0,
                                         };
                                         setCrudFormData({
@@ -7218,8 +7220,8 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                           ...(crudFormData.custom_fields?.features ||
                                             []),
                                         ];
-                                        features[index] = {
-                                          ...features[index],
+                                        features[featureIndex] = {
+                                          ...features[featureIndex],
                                           currency: e.target.value,
                                         };
                                         setCrudFormData({
@@ -7256,8 +7258,8 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                                 []),
                                             ];
                                             if (value === "" || value === null || value === undefined) {
-                                              features[index] = {
-                                                ...features[index],
+                                              features[featureIndex] = {
+                                                ...features[featureIndex],
                                                 price: null,
                                               };
                                             } else {
@@ -7266,8 +7268,8 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                                 const usdPrice = exchangeRate
                                                   ? copPrice / exchangeRate
                                                   : null;
-                                                features[index] = {
-                                                  ...features[index],
+                                                features[featureIndex] = {
+                                                  ...features[featureIndex],
                                                   price: copPrice,
                                                   price_usd: usdPrice,
                                                 };
@@ -7312,8 +7314,8 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                                 []),
                                             ];
                                             if (value === "" || value === null || value === undefined) {
-                                              features[index] = {
-                                                ...features[index],
+                                              features[featureIndex] = {
+                                                ...features[featureIndex],
                                                 price: null,
                                               };
                                             } else {
@@ -7322,8 +7324,8 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                                 const copPrice = exchangeRate
                                                   ? usdPrice * exchangeRate
                                                   : null;
-                                                features[index] = {
-                                                  ...features[index],
+                                                features[featureIndex] = {
+                                                  ...features[featureIndex],
                                                   price: usdPrice,
                                                   price_cop: copPrice,
                                                 };
@@ -7365,7 +7367,7 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                     ...(crudFormData.custom_fields?.features ||
                                       []),
                                   ];
-                                  features.splice(index, 1);
+                                  features.splice(featureIndex, 1);
                                   setCrudFormData({
                                     ...crudFormData,
                                     custom_fields: {
@@ -7384,6 +7386,256 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                 ×
                               </button>
                             </div>
+                            
+                            {/* Subfeatures de este feature */}
+                            <div className="ml-4 mt-3 space-y-2">
+                              <label className="block text-gray-400 text-xs font-semibold">
+                                Subfeatures (detalles adicionales)
+                              </label>
+                              {(feature.subfeatures || []).map(
+                                (subfeature: any, subfeatIndex: number) => (
+                                  <div
+                                    key={subfeatIndex}
+                                    className="flex gap-2 items-start p-2 bg-gray-700/50 rounded-lg border border-gray-600/50"
+                                  >
+                                    <div className="flex-1 space-y-2">
+                                      <input
+                                        type="text"
+                                        placeholder="Subfeature name"
+                                        value={subfeature.name || ""}
+                                        onChange={(e) => {
+                                          const features = [...(crudFormData.custom_fields?.features || [])];
+                                          const subfeatures = [...(features[featureIndex].subfeatures || [])];
+                                          subfeatures[subfeatIndex] = {
+                                            ...subfeatures[subfeatIndex],
+                                            name: e.target.value,
+                                          };
+                                          features[featureIndex] = {
+                                            ...features[featureIndex],
+                                            subfeatures,
+                                          };
+                                          setCrudFormData({
+                                            ...crudFormData,
+                                            custom_fields: {
+                                              ...crudFormData.custom_fields,
+                                              features,
+                                            },
+                                          });
+                                        }}
+                                        className="w-full bg-gray-600 border border-gray-500 rounded-lg p-2 text-white text-xs"
+                                        disabled={
+                                          editingItem &&
+                                          (editingItem.status === "paid" ||
+                                            editingItem.status === "completed")
+                                        }
+                                      />
+                                      <div className="flex gap-2">
+                                        <select
+                                          value={subfeature.currency || "USD"}
+                                          onChange={(e) => {
+                                            const features = [...(crudFormData.custom_fields?.features || [])];
+                                            const subfeatures = [...(features[featureIndex].subfeatures || [])];
+                                            subfeatures[subfeatIndex] = {
+                                              ...subfeatures[subfeatIndex],
+                                              currency: e.target.value,
+                                            };
+                                            features[featureIndex] = {
+                                              ...features[featureIndex],
+                                              subfeatures,
+                                            };
+                                            setCrudFormData({
+                                              ...crudFormData,
+                                              custom_fields: {
+                                                ...crudFormData.custom_fields,
+                                                features,
+                                              },
+                                            });
+                                          }}
+                                          className="bg-gray-600 border border-gray-500 rounded-lg p-2 text-white text-xs"
+                                          disabled={
+                                            editingItem &&
+                                            (editingItem.status === "paid" ||
+                                              editingItem.status === "completed")
+                                          }
+                                        >
+                                          <option value="USD">USD</option>
+                                          <option value="COP">COP</option>
+                                        </select>
+                                        
+                                        {subfeature.currency === "COP" ? (
+                                          <div className="flex-1">
+                                            <input
+                                              type="number"
+                                              step="0.01"
+                                              placeholder="Precio en COP"
+                                              value={subfeature.price !== undefined ? subfeature.price : ""}
+                                              onChange={(e) => {
+                                                const value = e.target.value;
+                                                const features = [...(crudFormData.custom_fields?.features || [])];
+                                                const subfeatures = [...(features[featureIndex].subfeatures || [])];
+                                                if (value === "" || value === null || value === undefined) {
+                                                  subfeatures[subfeatIndex] = {
+                                                    ...subfeatures[subfeatIndex],
+                                                    price: null,
+                                                  };
+                                                } else {
+                                                  const copPrice = parseFloat(value);
+                                                  if (!isNaN(copPrice)) {
+                                                    const usdPrice = exchangeRate ? copPrice / exchangeRate : null;
+                                                    subfeatures[subfeatIndex] = {
+                                                      ...subfeatures[subfeatIndex],
+                                                      price: copPrice,
+                                                      price_usd: usdPrice,
+                                                    };
+                                                  }
+                                                }
+                                                features[featureIndex] = {
+                                                  ...features[featureIndex],
+                                                  subfeatures,
+                                                };
+                                                setCrudFormData({
+                                                  ...crudFormData,
+                                                  custom_fields: {
+                                                    ...crudFormData.custom_fields,
+                                                    features,
+                                                  },
+                                                });
+                                              }}
+                                              className="w-full bg-gray-600 border border-gray-500 rounded-lg p-2 text-white text-xs"
+                                              disabled={
+                                                editingItem &&
+                                                (editingItem.status === "paid" ||
+                                                  editingItem.status === "completed")
+                                              }
+                                            />
+                                            {exchangeRate && subfeature.price && (
+                                              <p className="text-xs text-gray-400 mt-1">
+                                                ≈ {new Intl.NumberFormat("en-US", {
+                                                  style: "currency",
+                                                  currency: "USD",
+                                                  minimumFractionDigits: 2,
+                                                }).format((subfeature.price as number) / exchangeRate)}
+                                              </p>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <div className="flex-1">
+                                            <input
+                                              type="number"
+                                              step="0.01"
+                                              placeholder="Precio en USD"
+                                              value={subfeature.price !== undefined ? subfeature.price : ""}
+                                              onChange={(e) => {
+                                                const value = e.target.value;
+                                                const features = [...(crudFormData.custom_fields?.features || [])];
+                                                const subfeatures = [...(features[featureIndex].subfeatures || [])];
+                                                if (value === "" || value === null || value === undefined) {
+                                                  subfeatures[subfeatIndex] = {
+                                                    ...subfeatures[subfeatIndex],
+                                                    price: null,
+                                                  };
+                                                } else {
+                                                  const usdPrice = parseFloat(value);
+                                                  if (!isNaN(usdPrice)) {
+                                                    const copPrice = exchangeRate ? usdPrice * exchangeRate : null;
+                                                    subfeatures[subfeatIndex] = {
+                                                      ...subfeatures[subfeatIndex],
+                                                      price: usdPrice,
+                                                      price_cop: copPrice,
+                                                    };
+                                                  }
+                                                }
+                                                features[featureIndex] = {
+                                                  ...features[featureIndex],
+                                                  subfeatures,
+                                                };
+                                                setCrudFormData({
+                                                  ...crudFormData,
+                                                  custom_fields: {
+                                                    ...crudFormData.custom_fields,
+                                                    features,
+                                                  },
+                                                });
+                                              }}
+                                              className="w-full bg-gray-600 border border-gray-500 rounded-lg p-2 text-white text-xs"
+                                              disabled={
+                                                editingItem &&
+                                                (editingItem.status === "paid" ||
+                                                  editingItem.status === "completed")
+                                              }
+                                            />
+                                            {exchangeRate && subfeature.price && (
+                                              <p className="text-xs text-gray-400 mt-1">
+                                                ≈ {new Intl.NumberFormat("es-CO", {
+                                                  style: "currency",
+                                                  currency: "COP",
+                                                  minimumFractionDigits: 0,
+                                                }).format((subfeature.price as number) * exchangeRate)}
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const features = [...(crudFormData.custom_fields?.features || [])];
+                                        const subfeatures = [...(features[featureIndex].subfeatures || [])];
+                                        subfeatures.splice(subfeatIndex, 1);
+                                        features[featureIndex] = {
+                                          ...features[featureIndex],
+                                          subfeatures,
+                                        };
+                                        setCrudFormData({
+                                          ...crudFormData,
+                                          custom_fields: {
+                                            ...crudFormData.custom_fields,
+                                            features,
+                                          },
+                                        });
+                                      }}
+                                      className="px-2 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-lg text-xs transition-colors cursor-pointer"
+                                      disabled={
+                                        editingItem &&
+                                        (editingItem.status === "paid" ||
+                                          editingItem.status === "completed")
+                                      }
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                )
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const features = [...(crudFormData.custom_fields?.features || [])];
+                                  const subfeatures = [...(features[featureIndex].subfeatures || [])];
+                                  subfeatures.push({ name: "", price: 0, currency: "USD" });
+                                  features[featureIndex] = {
+                                    ...features[featureIndex],
+                                    subfeatures,
+                                  };
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    custom_fields: {
+                                      ...crudFormData.custom_fields,
+                                      features,
+                                    },
+                                  });
+                                }}
+                                className="w-full px-3 py-1.5 bg-blue-600/80 hover:bg-blue-700 text-white rounded-lg text-xs transition-colors cursor-pointer"
+                                disabled={
+                                  editingItem &&
+                                  (editingItem.status === "paid" ||
+                                    editingItem.status === "completed")
+                                }
+                              >
+                                + Add Subfeature
+                              </button>
+                            </div>
+                          </div>
                           )
                         )}
                         <button
@@ -7396,7 +7648,7 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                 features: [
                                   ...(crudFormData.custom_fields?.features ||
                                     []),
-                                  { name: "", type: "price", price: 0, currency: "USD" },
+                                  { name: "", type: "price", price: 0, currency: "USD", subfeatures: [] },
                                 ],
                               },
                             });
@@ -7413,254 +7665,6 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
                         Add features with their prices (optional)
-                      </p>
-                    </div>
-
-                    {/* Sección de Subfeatures */}
-                    <div>
-                      <label className="block text-gray-300 text-sm mb-2">
-                        Subfeatures (Detalles Adicionales)
-                      </label>
-                      <div className="space-y-2">
-                        {(crudFormData.custom_fields?.subfeatures || []).map(
-                          (subfeature: any, index: number) => (
-                            <div
-                              key={index}
-                              className="flex gap-2 items-start p-2 bg-gray-800/50 rounded-lg border border-gray-700/50"
-                            >
-                              <div className="flex-1 space-y-2">
-                                <input
-                                  type="text"
-                                  placeholder="Subfeature name"
-                                  value={subfeature.name || ""}
-                                  onChange={(e) => {
-                                    const subfeatures = [
-                                      ...(crudFormData.custom_fields?.subfeatures ||
-                                        []),
-                                    ];
-                                    subfeatures[index] = {
-                                      ...subfeatures[index],
-                                      name: e.target.value,
-                                    };
-                                    setCrudFormData({
-                                      ...crudFormData,
-                                      custom_fields: {
-                                        ...crudFormData.custom_fields,
-                                        subfeatures,
-                                      },
-                                    });
-                                  }}
-                                  className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
-                                  disabled={
-                                    editingItem &&
-                                    (editingItem.status === "paid" ||
-                                      editingItem.status === "completed")
-                                  }
-                                />
-                                <div className="flex gap-2">
-                                  {/* Selector de moneda para subfeature */}
-                                  <select
-                                    value={subfeature.currency || "USD"}
-                                    onChange={(e) => {
-                                      const currency = e.target.value;
-                                      const subfeatures = [
-                                        ...(crudFormData.custom_fields?.subfeatures ||
-                                          []),
-                                      ];
-                                      subfeatures[index] = {
-                                        ...subfeatures[index],
-                                        currency: currency,
-                                      };
-                                      setCrudFormData({
-                                        ...crudFormData,
-                                        custom_fields: {
-                                          ...crudFormData.custom_fields,
-                                          subfeatures,
-                                        },
-                                      });
-                                    }}
-                                    className="bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
-                                    disabled={
-                                      editingItem &&
-                                      (editingItem.status === "paid" ||
-                                        editingItem.status === "completed")
-                                    }
-                                  >
-                                    <option value="USD">USD</option>
-                                    <option value="COP">COP</option>
-                                  </select>
-
-                                  {/* Input de precio según moneda */}
-                                  {subfeature.currency === "COP" ? (
-                                    <div className="flex-1">
-                                      <input
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="Precio en COP"
-                                        value={subfeature.price !== undefined ? subfeature.price : ""}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          const subfeatures = [
-                                            ...(crudFormData.custom_fields?.subfeatures ||
-                                              []),
-                                          ];
-                                          if (value === "" || value === null || value === undefined) {
-                                            subfeatures[index] = {
-                                              ...subfeatures[index],
-                                              price: null,
-                                            };
-                                          } else {
-                                            const copPrice = parseFloat(value);
-                                            if (!isNaN(copPrice)) {
-                                              const usdPrice = exchangeRate
-                                                ? copPrice / exchangeRate
-                                                : null;
-                                              subfeatures[index] = {
-                                                ...subfeatures[index],
-                                                price: copPrice,
-                                                price_usd: usdPrice,
-                                              };
-                                            }
-                                          }
-                                          setCrudFormData({
-                                            ...crudFormData,
-                                            custom_fields: {
-                                              ...crudFormData.custom_fields,
-                                              subfeatures,
-                                            },
-                                          });
-                                        }}
-                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
-                                        disabled={
-                                          editingItem &&
-                                          (editingItem.status === "paid" ||
-                                            editingItem.status === "completed")
-                                        }
-                                      />
-                                      {exchangeRate && subfeature.price && (
-                                        <p className="text-xs text-gray-400 mt-1">
-                                          ≈ {new Intl.NumberFormat("en-US", {
-                                            style: "currency",
-                                            currency: "USD",
-                                            minimumFractionDigits: 2,
-                                          }).format((subfeature.price as number) / exchangeRate)}
-                                        </p>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className="flex-1">
-                                      <input
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="Precio en USD"
-                                        value={subfeature.price !== undefined ? subfeature.price : ""}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          const subfeatures = [
-                                            ...(crudFormData.custom_fields?.subfeatures ||
-                                              []),
-                                          ];
-                                          if (value === "" || value === null || value === undefined) {
-                                            subfeatures[index] = {
-                                              ...subfeatures[index],
-                                              price: null,
-                                            };
-                                          } else {
-                                            const usdPrice = parseFloat(value);
-                                            if (!isNaN(usdPrice)) {
-                                              const copPrice = exchangeRate
-                                                ? usdPrice * exchangeRate
-                                                : null;
-                                              subfeatures[index] = {
-                                                ...subfeatures[index],
-                                                price: usdPrice,
-                                                price_cop: copPrice,
-                                              };
-                                            }
-                                          }
-                                          setCrudFormData({
-                                            ...crudFormData,
-                                            custom_fields: {
-                                              ...crudFormData.custom_fields,
-                                              subfeatures,
-                                            },
-                                          });
-                                        }}
-                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white text-sm"
-                                        disabled={
-                                          editingItem &&
-                                          (editingItem.status === "paid" ||
-                                            editingItem.status === "completed")
-                                        }
-                                      />
-                                      {exchangeRate && subfeature.price && (
-                                        <p className="text-xs text-gray-400 mt-1">
-                                          ≈ {new Intl.NumberFormat("es-CO", {
-                                            style: "currency",
-                                            currency: "COP",
-                                            minimumFractionDigits: 0,
-                                          }).format((subfeature.price as number) * exchangeRate)}
-                                        </p>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const subfeatures = [
-                                    ...(crudFormData.custom_fields?.subfeatures ||
-                                      []),
-                                  ];
-                                  subfeatures.splice(index, 1);
-                                  setCrudFormData({
-                                    ...crudFormData,
-                                    custom_fields: {
-                                      ...crudFormData.custom_fields,
-                                      subfeatures,
-                                    },
-                                  });
-                                }}
-                                className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors cursor-pointer"
-                                disabled={
-                                  editingItem &&
-                                  (editingItem.status === "paid" ||
-                                    editingItem.status === "completed")
-                                }
-                              >
-                                ×
-                              </button>
-                            </div>
-                          )
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCrudFormData({
-                              ...crudFormData,
-                              custom_fields: {
-                                ...(crudFormData.custom_fields || {}),
-                                subfeatures: [
-                                  ...(crudFormData.custom_fields?.subfeatures ||
-                                    []),
-                                  { name: "", price: 0, currency: "USD" },
-                                ],
-                              },
-                            });
-                          }}
-                          className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors cursor-pointer"
-                          disabled={
-                            editingItem &&
-                            (editingItem.status === "paid" ||
-                              editingItem.status === "completed")
-                          }
-                        >
-                          + Add Subfeature
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Add additional details or small features (shown smaller in invoice)
                       </p>
                     </div>
 

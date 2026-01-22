@@ -363,15 +363,38 @@ serve(async (req) => {
                 (feature: any) => {
                   let priceDisplay = "";
                   if (feature.type === "percentage" && feature.percentage !== undefined && feature.percentage !== null) {
-                    // Mostrar porcentaje: "+30%" si es positivo, "-30%" si es negativo
                     const percentage = feature.percentage;
                     priceDisplay = percentage >= 0 ? `+${percentage}%` : `${percentage}%`;
                   } else if (feature.price !== undefined && feature.price !== null) {
-                    // Mostrar precio fijo
                     priceDisplay = formatPrice(feature.price || 0, feature.currency || invoice.currency || "USD");
                   } else {
                     priceDisplay = formatPrice(0, feature.currency || invoice.currency || "USD");
                   }
+                  
+                  // Renderizar subfeatures de este feature
+                  const subfeaturesHTML = feature.subfeatures && Array.isArray(feature.subfeatures) && feature.subfeatures.length > 0
+                    ? feature.subfeatures.map((subfeature: any) => {
+                        const subPriceDisplay = subfeature.price !== undefined && subfeature.price !== null
+                          ? formatPrice(subfeature.price || 0, subfeature.currency || invoice.currency || "USD")
+                          : formatPrice(0, subfeature.currency || invoice.currency || "USD");
+                        return `
+      <tr>
+        <td colspan="2" style="padding: 2px 0 2px 16px;">
+          <div style="font-size: 0.7rem; color: #AAAAAA;">• ${subfeature.name || "Subfeature"}</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 2px 0 2px 24px;">
+          <span style="font-size: 0.65rem; color: #999;">└─</span>
+        </td>
+        <td style="text-align: right; padding: 2px 0;">
+          <span style="font-size: 0.7rem; color: #AAAAAA;">${subPriceDisplay}</span>
+        </td>
+      </tr>
+      `;
+                      }).join("")
+                    : "";
+                  
                   return `
       <tr>
         <td colspan="2" class="divider"></td>
@@ -384,36 +407,7 @@ serve(async (req) => {
           <span style="font-size: 0.85rem;">${priceDisplay}</span>
         </td>
       </tr>
-      `;
-                }
-              )
-              .join("")
-          : ""
-      }
-      ${
-        invoice.custom_fields?.subfeatures &&
-        Array.isArray(invoice.custom_fields.subfeatures) &&
-        invoice.custom_fields.subfeatures.length > 0
-          ? invoice.custom_fields.subfeatures
-              .map(
-                (subfeature: any) => {
-                  const priceDisplay = subfeature.price !== undefined && subfeature.price !== null
-                    ? formatPrice(subfeature.price || 0, subfeature.currency || invoice.currency || "USD")
-                    : formatPrice(0, subfeature.currency || invoice.currency || "USD");
-                  return `
-      <tr>
-        <td colspan="2" style="padding: 2px 0 2px 16px;">
-          <div style="font-size: 0.7rem; color: #888989;">• ${subfeature.name || "Subfeature"}</div>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 2px 0 2px 24px;">
-          <span style="font-size: 0.65rem; color: #999;">└─</span>
-        </td>
-        <td style="text-align: right; padding: 2px 0;">
-          <span style="font-size: 0.7rem; color: #888989;">${priceDisplay}</span>
-        </td>
-      </tr>
+      ${subfeaturesHTML}
       `;
                 }
               )
