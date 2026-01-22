@@ -349,21 +349,22 @@ function Admin() {
             // Renderizar subfeatures de este feature
             const subfeaturesOfFeature = feature.subfeatures && Array.isArray(feature.subfeatures) && feature.subfeatures.length > 0
               ? feature.subfeatures.map((subfeature: any) => {
-                  const subPriceDisplay = subfeature.price !== undefined && subfeature.price !== null
-                    ? formatPrice(subfeature.price || 0, subfeature.currency || fullInvoice.currency || "USD")
-                    : formatPrice(0, subfeature.currency || fullInvoice.currency || "USD");
+                  let subPriceDisplay = "";
+                  if (subfeature.type === "percentage" && subfeature.percentage !== undefined && subfeature.percentage !== null) {
+                    const percentage = subfeature.percentage;
+                    subPriceDisplay = percentage >= 0 ? `+${percentage}%` : `${percentage}%`;
+                  } else if (subfeature.price !== undefined && subfeature.price !== null) {
+                    subPriceDisplay = formatPrice(subfeature.price || 0, subfeature.currency || fullInvoice.currency || "USD");
+                  } else {
+                    subPriceDisplay = formatPrice(0, subfeature.currency || fullInvoice.currency || "USD");
+                  }
                   return `
           <tr>
-            <td colspan="2" style="padding: 2px 0 2px 16px;">
-              <div style="font-size: 0.7rem; color: #AAAAAA;">• ${subfeature.name || "Subfeature"}</div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 2px 0 2px 24px;">
-              <span style="font-size: 0.65rem; color: #999;">└─</span>
+            <td style="padding: 2px 0 2px 16px;">
+              <span style="font-size: 0.7rem; font-weight: 600;">${subfeature.name || "Subfeature"}</span>
             </td>
             <td style="text-align: right; padding: 2px 0;">
-              <span style="font-size: 0.7rem; color: #AAAAAA;">${subPriceDisplay}</span>
+              <span style="font-size: 0.7rem;">${subPriceDisplay}</span>
             </td>
           </tr>
         `;
@@ -3486,6 +3487,15 @@ function Admin() {
                       }
                     >
                       {item.is_active ? "✓" : "○"}
+                      </button>
+                    )}
+                    {activeTab === "invoices" && (
+                      <button
+                        onClick={() => downloadInvoicePDF(item)}
+                        className="flex-1 sm:flex-none px-2 md:px-3 py-1 text-xs md:text-sm bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-white rounded transition-colors cursor-pointer"
+                        title="Download Invoice PDF"
+                      >
+                        📥 PDF
                       </button>
                     )}
                     <button
@@ -7431,6 +7441,75 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                       />
                                       <div className="flex gap-2">
                                         <select
+                                          value={subfeature.type || "price"}
+                                          onChange={(e) => {
+                                            const features = [...(crudFormData.custom_fields?.features || [])];
+                                            const subfeatures = [...(features[featureIndex].subfeatures || [])];
+                                            const newType = e.target.value;
+                                            subfeatures[subfeatIndex] = {
+                                              ...subfeatures[subfeatIndex],
+                                              type: newType,
+                                              price: newType === "price" ? (subfeatures[subfeatIndex].price || 0) : undefined,
+                                              percentage: newType === "percentage" ? (subfeatures[subfeatIndex].percentage || 0) : undefined,
+                                              currency: newType === "price" ? (subfeatures[subfeatIndex].currency || "USD") : undefined,
+                                            };
+                                            features[featureIndex] = {
+                                              ...features[featureIndex],
+                                              subfeatures,
+                                            };
+                                            setCrudFormData({
+                                              ...crudFormData,
+                                              custom_fields: {
+                                                ...crudFormData.custom_fields,
+                                                features,
+                                              },
+                                            });
+                                          }}
+                                          className="bg-gray-600 border border-gray-500 rounded-lg p-2 text-white text-xs"
+                                          disabled={
+                                            editingItem &&
+                                            (editingItem.status === "paid" ||
+                                              editingItem.status === "completed")
+                                          }
+                                        >
+                                          <option value="price">Precio</option>
+                                          <option value="percentage">Porcentaje</option>
+                                        </select>
+                                        {subfeature.type === "percentage" ? (
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="Porcentaje"
+                                            value={subfeature.percentage !== undefined ? subfeature.percentage : ""}
+                                            onChange={(e) => {
+                                              const features = [...(crudFormData.custom_fields?.features || [])];
+                                              const subfeatures = [...(features[featureIndex].subfeatures || [])];
+                                              subfeatures[subfeatIndex] = {
+                                                ...subfeatures[subfeatIndex],
+                                                percentage: parseFloat(e.target.value) || 0,
+                                              };
+                                              features[featureIndex] = {
+                                                ...features[featureIndex],
+                                                subfeatures,
+                                              };
+                                              setCrudFormData({
+                                                ...crudFormData,
+                                                custom_fields: {
+                                                  ...crudFormData.custom_fields,
+                                                  features,
+                                                },
+                                              });
+                                            }}
+                                            className="flex-1 bg-gray-600 border border-gray-500 rounded-lg p-2 text-white text-xs"
+                                            disabled={
+                                              editingItem &&
+                                              (editingItem.status === "paid" ||
+                                                editingItem.status === "completed")
+                                            }
+                                          />
+                                        ) : (
+                                          <>
+                                        <select
                                           value={subfeature.currency || "USD"}
                                           onChange={(e) => {
                                             const features = [...(crudFormData.custom_fields?.features || [])];
@@ -7575,6 +7654,8 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                             )}
                                           </div>
                                         )}
+                                        </>
+                                        )}
                                       </div>
                                     </div>
                                     <button
@@ -7612,7 +7693,7 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                                 onClick={() => {
                                   const features = [...(crudFormData.custom_fields?.features || [])];
                                   const subfeatures = [...(features[featureIndex].subfeatures || [])];
-                                  subfeatures.push({ name: "", price: 0, currency: "USD" });
+                                  subfeatures.push({ name: "", type: "price", price: 0, currency: "USD" });
                                   features[featureIndex] = {
                                     ...features[featureIndex],
                                     subfeatures,
@@ -7707,14 +7788,6 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
                   >
                     {t("common.cancel")}
                   </button>
-                  {activeTab === "invoices" && editingItem && (
-                    <button
-                      onClick={() => downloadInvoicePDF(editingItem)}
-                      className="flex-1 sm:flex-none px-4 py-2 text-sm md:text-base bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors cursor-pointer"
-                    >
-                      📥 Download Invoice
-                    </button>
-                  )}
                   <button
                     onClick={handleSave}
                     className="flex-1 sm:flex-none px-4 py-2 text-sm md:text-base text-white rounded-lg transition-colors cursor-pointer"

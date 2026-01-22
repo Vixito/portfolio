@@ -374,21 +374,22 @@ serve(async (req) => {
                   // Renderizar subfeatures de este feature
                   const subfeaturesHTML = feature.subfeatures && Array.isArray(feature.subfeatures) && feature.subfeatures.length > 0
                     ? feature.subfeatures.map((subfeature: any) => {
-                        const subPriceDisplay = subfeature.price !== undefined && subfeature.price !== null
-                          ? formatPrice(subfeature.price || 0, subfeature.currency || invoice.currency || "USD")
-                          : formatPrice(0, subfeature.currency || invoice.currency || "USD");
+                        let subPriceDisplay = "";
+                        if (subfeature.type === "percentage" && subfeature.percentage !== undefined && subfeature.percentage !== null) {
+                          const percentage = subfeature.percentage;
+                          subPriceDisplay = percentage >= 0 ? `+${percentage}%` : `${percentage}%`;
+                        } else if (subfeature.price !== undefined && subfeature.price !== null) {
+                          subPriceDisplay = formatPrice(subfeature.price || 0, subfeature.currency || invoice.currency || "USD");
+                        } else {
+                          subPriceDisplay = formatPrice(0, subfeature.currency || invoice.currency || "USD");
+                        }
                         return `
       <tr>
-        <td colspan="2" style="padding: 2px 0 2px 16px;">
-          <div style="font-size: 0.7rem; color: #AAAAAA;">• ${subfeature.name || "Subfeature"}</div>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 2px 0 2px 24px;">
-          <span style="font-size: 0.65rem; color: #999;">└─</span>
+        <td style="padding: 2px 0 2px 16px;">
+          <span style="font-size: 0.7rem; font-weight: 600;">${subfeature.name || "Subfeature"}</span>
         </td>
         <td style="text-align: right; padding: 2px 0;">
-          <span style="font-size: 0.7rem; color: #AAAAAA;">${subPriceDisplay}</span>
+          <span style="font-size: 0.7rem;">${subPriceDisplay}</span>
         </td>
       </tr>
       `;

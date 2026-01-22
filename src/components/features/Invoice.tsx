@@ -76,18 +76,27 @@ export default function Invoice({ invoice }: InvoiceProps) {
                     Array.isArray(feature.subfeatures) &&
                     feature.subfeatures.length > 0 && (
                       <>
-                        {feature.subfeatures.map((subfeature: any, subIndex: number) => (
-                          <p key={subIndex} style={{...invoiceStyles.deliveryTime, paddingLeft: '16px', fontSize: '0.7rem', color: '#AAAAAA', borderBottom: 'none'}}>
-                            <span style={{fontWeight: 600}}>• {subfeature.name || `Subfeature ${subIndex + 1}`}</span>
-                            <span style={{fontSize: '0.7rem', color: '#AAAAAA'}}>
-                              {new Intl.NumberFormat("en-US", {
-                                style: "currency",
-                                currency: subfeature.currency === "USD" ? "USD" : "COP",
-                                minimumFractionDigits: subfeature.currency === "USD" ? 2 : 0,
-                              }).format(subfeature.price || 0)}
-                            </span>
-                          </p>
-                        ))}
+                        {feature.subfeatures.map((subfeature: any, subIndex: number) => {
+                          let subPriceDisplay = "";
+                          if (subfeature.type === "percentage" && subfeature.percentage !== undefined && subfeature.percentage !== null) {
+                            const percentage = subfeature.percentage;
+                            subPriceDisplay = percentage >= 0 ? `+${percentage}%` : `${percentage}%`;
+                          } else {
+                            subPriceDisplay = new Intl.NumberFormat("en-US", {
+                              style: "currency",
+                              currency: subfeature.currency === "USD" ? "USD" : "COP",
+                              minimumFractionDigits: subfeature.currency === "USD" ? 2 : 0,
+                            }).format(subfeature.price || 0);
+                          }
+                          return (
+                            <p key={subIndex} style={{...invoiceStyles.deliveryTime, paddingLeft: '16px', fontSize: '0.7rem', borderBottom: 'none'}}>
+                              <span style={{fontWeight: 600}}>{subfeature.name || `Subfeature ${subIndex + 1}`}</span>
+                              <span style={{fontSize: '0.7rem'}}>
+                                {subPriceDisplay}
+                              </span>
+                            </p>
+                          );
+                        })}
                       </>
                     )}
                 </div>
