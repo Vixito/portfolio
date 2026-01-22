@@ -9,6 +9,7 @@ function Studio() {
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState<number | null>(0); // Misión abierta por defecto
   const sliderRef = useRef<HTMLDivElement>(null);
+  const socialSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -38,6 +39,58 @@ function Studio() {
       );
     }
   }, []);
+
+  // Datos de redes sociales
+  const socialNetworks = [
+    {
+      id: 1,
+      platform: "Instagram",
+      logo: "https://cdn.simpleicons.org/instagram/white",
+      description: t("studio.instagramDesc") || "Contenido visual y proyectos creativos",
+      url: "https://instagram.com/vixis_studio",
+      color: "#E4405F",
+    },
+    {
+      id: 2,
+      platform: "TikTok",
+      logo: "https://cdn.simpleicons.org/tiktok/white",
+      description: t("studio.tiktokDesc") || "Videos cortos sobre desarrollo y tech",
+      url: "https://tiktok.com/@vixis_studio",
+      color: "#000000",
+    },
+    {
+      id: 3,
+      platform: "WhatsApp",
+      logo: "https://cdn.simpleicons.org/whatsapp/white",
+      description: t("studio.whatsappDesc") || "Contacto directo y soporte",
+      url: "https://wa.me/16573465912",
+      color: "#25D366",
+    },
+    {
+      id: 4,
+      platform: "Facebook",
+      logo: "https://cdn.simpleicons.org/facebook/white",
+      description: t("studio.facebookDesc") || "Comunidad y actualizaciones",
+      url: "https://facebook.com/profile.php?id=61586798636429",
+      color: "#1877F2",
+    },
+    {
+      id: 5,
+      platform: "Telegram",
+      logo: "https://cdn.simpleicons.org/telegram/white",
+      description: t("studio.telegramDesc") || "Comunidad y actualizaciones",
+      url: "https://t.me/vixis_studio",
+      color: "#0088cc",
+    },
+    {
+      id: 6,
+      platform: "Threads",
+      logo: "https://cdn.simpleicons.org/threads/white",
+      description: t("studio.xDesc") || "Comunidad y actualizaciones",
+      url: "https://threads.com/vixis_studio",
+      color: "#000000",
+    },
+  ];
 
   // Datos del slider (puedes personalizarlos)
   const slides = [
@@ -90,6 +143,27 @@ function Studio() {
       });
     }
   }, [activeSlide]);
+
+  // Animación reveal para redes sociales
+  useEffect(() => {
+    if (!socialSectionRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("revealed");
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    const cards = socialSectionRef.current.querySelectorAll(".social-card");
+    cards.forEach((card) => observer.observe(card));
+
+    return () => observer.disconnect();
+  }, []);
 
   const logoUrl = "https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp";
 
@@ -207,6 +281,48 @@ function Studio() {
             >
               ›
             </button>
+          </div>
+
+          {/* Sección de Redes Sociales */}
+          <div ref={socialSectionRef} className="w-full max-w-7xl mx-auto px-4 py-16 mt-12">
+            <h2 
+              className="text-4xl md:text-5xl font-bold text-center mb-4" 
+              style={{ color: "#9fff6b" }}
+            >
+              {t("studio.socialNetworks") || "Redes Sociales"}
+            </h2>
+            <p className="text-center text-gray-400 mb-12 text-lg">
+              {t("studio.socialNetworksSubtitle") || "Conecta conmigo en tus plataformas favoritas"}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {socialNetworks.map((network, index) => (
+                <a
+                  key={network.id}
+                  href={network.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="social-card"
+                  style={{
+                    background: `linear-gradient(135deg, ${network.color}15 0%, ${network.color}05 100%)`,
+                    border: `1px solid ${network.color}30`,
+                    transitionDelay: `${index * 0.1}s`,
+                  }}
+                >
+                  <div className="flex flex-col items-center justify-center p-6 h-full">
+                    <div className="social-icon-wrapper mb-4">
+                      <img
+                        src={network.logo}
+                        alt={network.platform}
+                        className="w-16 h-16 object-contain"
+                      />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">{network.platform}</h3>
+                    <p className="text-sm text-gray-400 text-center">{network.description}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -546,6 +662,47 @@ function Studio() {
             transform: none;
             position: static;
           }
+        }
+
+        /* Estilos para redes sociales */
+        .social-card {
+          border-radius: 16px;
+          transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+          min-height: 220px;
+          opacity: 0;
+          transform: translateY(50px) scale(0.9);
+        }
+
+        .social-card.revealed {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+
+        .social-card:hover {
+          transform: translateY(-12px) scale(1.05);
+          box-shadow: 0 20px 60px rgba(159, 255, 107, 0.3);
+          border-color: #9fff6b !important;
+        }
+
+        .social-icon-wrapper {
+          width: 80px;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: rgba(159, 255, 107, 0.1);
+          transition: all 0.3s ease;
+        }
+
+        .social-card:hover .social-icon-wrapper {
+          background: rgba(159, 255, 107, 0.2);
+          transform: rotate(360deg) scale(1.1);
+        }
+
+        .social-card:hover img {
+          filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(159, 255, 107, 0.8));
         }
       `}</style>
     </div>

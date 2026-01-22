@@ -316,6 +316,14 @@ export const translations = {
       comingSoon: "Próximamente...",
       activeStatus: "Status: Activo",
       highPriority: "Prioridad: Alta",
+      socialNetworks: "Redes Sociales",
+      socialNetworksSubtitle: "Conecta conmigo en tus plataformas favoritas",
+      instagramDesc: "Contenido visual y proyectos creativos",
+      tiktokDesc: "Videos cortos sobre desarrollo y tech",
+      whatsappDesc: "Contacto directo y soporte",
+      facebookDesc: "Comunidad y actualizaciones",
+      telegramDesc: "Canal oficial y anuncios",
+      xDesc: "Actualizaciones rápidas y conversaciones",
     },
     // Status
     status: {
@@ -915,6 +923,14 @@ export const translations = {
       comingSoon: "Coming soon...",
       activeStatus: "Status: Active",
       highPriority: "Priority: High",
+      socialNetworks: "Social Networks",
+      socialNetworksSubtitle: "Connect with me on your favorite platforms",
+      instagramDesc: "Visual content and creative projects",
+      tiktokDesc: "Short videos about development and tech",
+      whatsappDesc: "Direct contact and support",
+      facebookDesc: "Community and updates",
+      telegramDesc: "Official channel and announcements",
+      xDesc: "Quick updates and conversations",
     },
     // Status
     status: {

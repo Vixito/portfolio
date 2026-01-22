@@ -75,6 +75,26 @@ export default function Invoice({ invoice }: InvoiceProps) {
               ))}
             </>
           )}
+        {invoice.custom_fields?.subfeatures &&
+          Array.isArray(invoice.custom_fields.subfeatures) &&
+          invoice.custom_fields.subfeatures.length > 0 && (
+            <>
+              {invoice.custom_fields.subfeatures.map((subfeature: any, index: number) => (
+                <div key={index}>
+                  <p style={{...invoiceStyles.deliveryTime, paddingLeft: '16px', fontSize: '0.7rem', color: '#888'}}>
+                    <span style={invoiceStyles.bold}>• {subfeature.name || `Subfeature ${index + 1}`}</span>
+                    <span style={{fontSize: '0.7rem', color: '#888'}}>
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: subfeature.currency === "USD" ? "USD" : "COP",
+                        minimumFractionDigits: subfeature.currency === "USD" ? 2 : 0,
+                      }).format(subfeature.price || 0)}
+                    </span>
+                  </p>
+                </div>
+              ))}
+            </>
+          )}
         <div style={invoiceStyles.dividerLarge}></div>
         <div style={invoiceStyles.paymentButtonContainer}>
           <a

@@ -390,6 +390,36 @@ serve(async (req) => {
               .join("")
           : ""
       }
+      ${
+        invoice.custom_fields?.subfeatures &&
+        Array.isArray(invoice.custom_fields.subfeatures) &&
+        invoice.custom_fields.subfeatures.length > 0
+          ? invoice.custom_fields.subfeatures
+              .map(
+                (subfeature: any) => {
+                  const priceDisplay = subfeature.price !== undefined && subfeature.price !== null
+                    ? formatPrice(subfeature.price || 0, subfeature.currency || invoice.currency || "USD")
+                    : formatPrice(0, subfeature.currency || invoice.currency || "USD");
+                  return `
+      <tr>
+        <td colspan="2" style="padding: 2px 0 2px 16px;">
+          <div style="font-size: 0.7rem; color: #888989;">• ${subfeature.name || "Subfeature"}</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 2px 0 2px 24px;">
+          <span style="font-size: 0.65rem; color: #999;">└─</span>
+        </td>
+        <td style="text-align: right; padding: 2px 0;">
+          <span style="font-size: 0.7rem; color: #888989;">${priceDisplay}</span>
+        </td>
+      </tr>
+      `;
+                }
+              )
+              .join("")
+          : ""
+      }
       <tr>
         <td colspan="2">
           <div class="divider-large"></div>
