@@ -593,21 +593,19 @@ function Store() {
                 </div>
 
                 {/* Contenido */}
-                <div className="p-4 flex flex-col h-full">
-                  <div className="flex-1">
-                    <h3
-                      className="text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-purple transition-colors"
-                      onClick={() => handleItemClick(item)}
-                    >
-                      {getTranslatedText(item.title_translations || item.title)}
-                    </h3>
-                    <div className="text-gray-600 text-sm mb-4 prose prose-sm max-w-none" style={{ whiteSpace: 'pre-wrap' }}>
-                      {getTranslatedText(
-                        item.description_translations || item.description
-                      ) || t("common.noContent")}
-                    </div>
+                <div className="p-4 flex flex-col flex-1">
+                  <h3
+                    className="text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-purple transition-colors min-h-[3.5rem]"
+                    onClick={() => handleItemClick(item)}
+                  >
+                    {getTranslatedText(item.title_translations || item.title)}
+                  </h3>
+                  <div className="text-gray-600 text-sm mt-1 flex-1 prose prose-sm max-w-none" style={{ whiteSpace: 'pre-wrap' }}>
+                    {getTranslatedText(
+                      item.description_translations || item.description
+                    ) || t("common.noContent")}
                   </div>
-                  <div className={`flex items-center mt-auto ${formatPrice(item) ? "justify-between" : "justify-end"}`}>
+                  <div className={`flex items-center pt-5 ${formatPrice(item) ? "justify-between" : "justify-end"}`}>
                     {formatPrice(item) && (
                       <div className="flex-1">{formatPrice(item)}</div>
                     )}

@@ -44,7 +44,7 @@ function Modal({ isOpen, onClose, children, title }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto">
       {/* Overlay */}
       <div
         ref={overlayRef}
@@ -55,7 +55,7 @@ function Modal({ isOpen, onClose, children, title }: ModalProps) {
       {/* Modal */}
       <div
         ref={modalRef}
-        className="relative bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto mb-10"
+        className="relative bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto my-4"
       >
         {/* Header */}
         {title && (
