@@ -59,6 +59,7 @@ function Store() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchName, setSearchName] = useState<string>("");
   const [priceFilter, setPriceFilter] = useState<string>("all");
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const itemsPerPage = 12;
 
   // Categorías disponibles (deben coincidir con las opciones en Admin)
@@ -600,7 +601,7 @@ function Store() {
                     >
                       {getTranslatedText(item.title_translations || item.title)}
                     </h3>
-                    <div className="text-gray-600 text-sm mb-4 prose prose-sm max-w-none">
+                    <div className="text-gray-600 text-sm mb-4 prose prose-sm max-w-none" style={{ whiteSpace: 'pre-wrap' }}>
                       {getTranslatedText(
                         item.description_translations || item.description
                       ) || t("common.noContent")}
@@ -705,21 +706,72 @@ function Store() {
                   />
                 </div>
                 {selectedItem.images && selectedItem.images.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2 mb-4">
-                    {selectedItem.images.map((image, index) => (
-                      <div
-                        key={index}
-                        className="w-full h-20 bg-gray-200 rounded overflow-hidden"
-                      >
-                        <img
-                          src={image}
-                          alt={`${getTranslatedText(
-                            selectedItem.title as any
-                          )} ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
+                  <div className="space-y-3 mb-4">
+                    {selectedItem.images.map((image, index) => {
+                      const isVideo = image.match(/\.(mp4|webm|ogg|mov)$/i) || image.includes('youtube.com') || image.includes('youtu.be') || image.includes('vimeo.com');
+                      
+                      if (isVideo) {
+                        // Detectar si es un link de YouTube o Vimeo
+                        const isYouTube = image.includes('youtube.com') || image.includes('youtu.be');
+                        const isVimeo = image.includes('vimeo.com');
+                        
+                        if (isYouTube || isVimeo) {
+                          // Extraer video ID y convertir a embed
+                          let embedUrl = image;
+                          if (isYouTube) {
+                            const videoId = image.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
+                            if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                          } else if (isVimeo) {
+                            const videoId = image.match(/vimeo\.com\/(\d+)/)?.[1];
+                            if (videoId) embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                          }
+                          
+                          return (
+                            <div key={index} className="w-full aspect-video bg-gray-200 rounded overflow-hidden">
+                              <iframe
+                                src={embedUrl}
+                                className="w-full h-full"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                title={`Video ${index + 1}`}
+                              />
+                            </div>
+                          );
+                        } else {
+                          // Video directo (mp4, webm, etc.)
+                          return (
+                            <div key={index} className="w-full aspect-video bg-gray-200 rounded overflow-hidden">
+                              <video
+                                controls
+                                className="w-full h-full object-contain"
+                                preload="metadata"
+                              >
+                                <source src={image} type={`video/${image.split('.').pop()}`} />
+                                Tu navegador no soporta el tag de video.
+                              </video>
+                            </div>
+                          );
+                        }
+                      } else {
+                        // Imagen normal
+                        return (
+                          <div
+                            key={index}
+                            className="w-full aspect-video bg-gray-200 rounded overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => setLightboxImage(image)}
+                          >
+                            <img
+                              src={image}
+                              alt={`${getTranslatedText(
+                                selectedItem.title as any
+                              )} ${index + 1}`}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        );
+                      }
+                    })}
                   </div>
                 )}
                 {/* Spacer invisible para alinear con el botón */}
@@ -902,6 +954,28 @@ function Store() {
               </div>
             </div>
           </Modal>
+        )}
+
+        {/* Lightbox para ver imágenes en tamaño completo */}
+        {lightboxImage && (
+          <div
+            className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 animate-fadeIn"
+            onClick={() => setLightboxImage(null)}
+          >
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition-colors z-10"
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+            <img
+              src={lightboxImage}
+              alt="Vista completa"
+              className="max-w-full max-h-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
         )}
       </div>
     </div>
