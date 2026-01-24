@@ -5,6 +5,29 @@
 // Cloud Run requiere que escuchemos en el puerto proporcionado por la variable de entorno PORT
 const port = parseInt(Deno.env.get("PORT") || "8080", 10);
 
+// Headers de seguridad recomendados por Mozilla HTTP Observatory
+const securityHeaders: Record<string, string> = {
+  // Previene MIME sniffing
+  "X-Content-Type-Options": "nosniff",
+  // Previene clickjacking (frame embedding)
+  "X-Frame-Options": "DENY",
+  // CSP frame-ancestors (más moderno que X-Frame-Options)
+  "Content-Security-Policy": "frame-ancestors 'none'",
+  // Cross-Origin Resource Policy
+  "Cross-Origin-Resource-Policy": "same-origin",
+  // Referrer Policy - no enviar referrer a otros sitios
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  // Permissions Policy - deshabilitar APIs innecesarias
+  "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+  // HSTS - forzar HTTPS (1 año)
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+};
+
+// Helper para agregar headers de seguridad a una respuesta
+function addSecurityHeaders(headers: Record<string, string>): Record<string, string> {
+  return { ...securityHeaders, ...headers };
+}
+
 Deno.serve({ port }, async (req: Request) => {
   const url = new URL(req.url);
   const pathname = url.pathname;
@@ -24,7 +47,10 @@ Deno.serve({ port }, async (req: Request) => {
         const file = await Deno.readFile(distPath);
         const contentType = getContentType(ext);
         return new Response(file, {
-          headers: { "Content-Type": contentType },
+          headers: addSecurityHeaders({ 
+            "Content-Type": contentType,
+            "Cache-Control": "public, max-age=31536000, immutable",
+          }),
         });
       } catch {
         // Si no existe en dist, intentar desde la raíz
@@ -33,7 +59,10 @@ Deno.serve({ port }, async (req: Request) => {
           const file = await Deno.readFile(rootPath);
           const contentType = getContentType(ext);
           return new Response(file, {
-            headers: { "Content-Type": contentType },
+            headers: addSecurityHeaders({ 
+              "Content-Type": contentType,
+              "Cache-Control": "public, max-age=31536000, immutable",
+            }),
           });
         } catch {
           // Si el archivo no existe, continuar para servir index.html
@@ -68,10 +97,10 @@ Deno.serve({ port }, async (req: Request) => {
   // Esto permite que React Router maneje TODAS las rutas (válidas e inválidas)
   if (indexHtml) {
     return new Response(indexHtml, {
-      headers: {
+      headers: addSecurityHeaders({
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-cache, no-store, must-revalidate",
-      },
+      }),
     });
   }
 
@@ -95,10 +124,10 @@ Deno.serve({ port }, async (req: Request) => {
 </html>`;
 
   return new Response(fallbackHtml, {
-    headers: {
-      "Content-Type": "text/html",
+    headers: addSecurityHeaders({
+      "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-cache, no-store, must-revalidate",
-    },
+    }),
   });
 });
 
