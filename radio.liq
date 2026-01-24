@@ -23,10 +23,12 @@ playlist_file = "/tmp/radio-playlist.m3u"
 # Liquidsoap puede leer desde archivos M3U y URLs HTTP
 # El archivo se actualiza externamente por update-playlist.sh
 # La playlist decodifica automáticamente MP3, OGG, etc.
-# En Liquidsoap 2.1.3, el parámetro 'mode' no existe - quitarlo
+# Playlist con loop automático
+# En Liquidsoap 2.x, la playlist hace loop por defecto
 playlist_source = playlist(
   reload_mode="watch",
-  reload=60,  # Recargar cada 60 segundos (debe ser int, no float)
+  reload=60,  # Recargar cada 60 segundos
+  loop=true,  # Asegurar que repita indefinidamente
   playlist_file
 )
 
