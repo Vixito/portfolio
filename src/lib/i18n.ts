@@ -50,15 +50,54 @@ export const translations = {
       subtitle: "Ingeniero de Sistemas, Colombia.",
       specialization: "Especializado en el desarrollo backend.",
     },
+    // Timeline
+    timeline: {
+      checkpoint1: {
+        year: "2015",
+        title: "SQL a los 13 años",
+        description: "Descargué XAMPP, exploré PhpMyAdmin y descubrí mi primer lenguaje de máquina ejecutando código SQL.",
+      },
+      checkpoint2: {
+        year: "2017",
+        title: "Lenguaje HTML + Entrenamiento de Lógica",
+        description: "Aprendí HTML en el colegio, y en internet aprendí sus formatos, también entrené lógica de programación a base de jugar videojuegos.",
+      },
+      checkpoint3: {
+        year: "2019",
+        title: "Análisis y desarrollo de software",
+        description: "Diagramas de flujos, pseudocódigo, CSS, Java, JavaScript, Python, PHP, Laravel, arquitectura y más.",
+      },
+      checkpoint4: {
+        year: "2020",
+        title: "Comienzo en PHP",
+        description: "A pesar de la pandemia. Aprendí PHP y Laravel en el mismo instituto del año pasado.",
+      },
+      checkpoint5: {
+        year: "2022",
+        title: "Explorando más de la carrera con la Universidad",
+        description: "Logré avanzar entrenando con tecnologías de ciberseguridad, cloud, IA, y más.",
+      },
+      checkpoint6: {
+        year: "2024-2025",
+        title: "Automatización & AI + Titulación",
+        description: "Especialización en inteligencia artificial y automatización + Diplomado en Ciberseguridad + Título de Ingeniería de Sistemas",
+      },
+      checkpoint7: {
+        year: "2026",
+        title: "Vixis Studio",
+        description: "Marca empresarial establecida. Servicios de desarrollo, automatización y más.",
+      },
+      close: "Cerrar",
+    },
     // About
     about: {
       title: "Sobre Mí",
       description1:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "Soy ingeniero de sistemas apasionado por la tecnología y la música, mejor conocido como Vixis. Me especializo en el desarrollo backend, en la automatización de procesos e inteligencia artificial.",
       description2:
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+        "Mi objetivo no es solo crear soluciones seguras, eficientes y escalables, sino también brindar valor a la comunidad y lograr proyectos para mis abonadores. Ayudo a marcas personales, emprendedores y equipos remotos a ahorrar tiempo, reducir errores y escalar operaciones mediante flujos automatizados o programados con distintas herramientas o tecnologías.",
       description3:
-        "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.",
+        "Me gusta mucho el desarrollo frontend y videojuegos, la ciberseguridad, y la automatización; pero también me encanta el desarrollo en el lado del servidor y para aplicaciones móviles.",
       followSocials: "Sígueme en las redes sociales",
     },
     // Store
@@ -658,15 +697,54 @@ export const translations = {
       subtitle: "Systems Engineer, Colombia.",
       specialization: "Specialized in backend development.",
     },
+    // Timeline
+    timeline: {
+      checkpoint1: {
+        year: "2015",
+        title: "SQL at 13 years old",
+        description: "I downloaded XAMPP, explored PhpMyAdmin, and discovered my first machine language by running SQL code.",
+      },
+      checkpoint2: {
+        year: "2017",
+        title: "HTML + Logic Training",
+        description: "I learned HTML in school, and I learned its formats on the internet. I also trained my programming logic by playing video games.",
+      },
+      checkpoint3: {
+        year: "2019",
+        title: "Software Analysis and Development",
+        description: "Flowcharts, pseudocode, CSS, Java, JavaScript, Python, PHP, Laravel, architecture, and more.",
+      },
+      checkpoint4: {
+        year: "2020",
+        title: "Getting Started with PHP",
+        description: "Despite the pandemic, I learned PHP and Laravel at the same institute as last year.",
+      },
+      checkpoint5: {
+        year: "2022",
+        title: "Exploring more of the career with the University",
+        description: "I managed to advance by training with cybersecurity, cloud, AI, and more technologies.",
+      },
+      checkpoint6: {
+        year: "2024-2025",
+        title: "Automation & AI + Degree",
+        description: "Specialization in artificial intelligence and automation + Diploma in Cybersecurity + Degree in Systems Engineering",
+      },
+      checkpoint7: {
+        year: "2026",
+        title: "Vixis Studio",
+        description: "Established business brand. Development, automation, and more services.",
+      },
+      close: "Close",
+    },
     // About
     about: {
       title: "About Me",
       description1:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "I am systems engineer passionate about technology and music, better known as Vixis. I specialize in backend development, process automation, and artificial intelligence.",
       description2:
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+        "My goal is not only to create secure, efficient, and scalable solutions, but also to add value to the community and achieve projects for my payers. I help personal brands, entrepreneurs, and remote teams save time, reduce errors, and scale operations through automated or programmed flows with different tools or technologies.",
       description3:
-        "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.",
+        "I really enjoy frontend development and video games, cybersecurity, and automation; but I also love server-side development and mobile app development.",
       followSocials: "Follow me on social media",
     },
     // Store

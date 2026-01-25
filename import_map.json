@@ -1,5 +1,7 @@
 {
   "imports": {
+    "clsx": "npm:clsx@2.1.1",
+    "tailwind-merge": "npm:tailwind-merge@2.5.5",
     "react": "npm:react@18.3.1",
     "react/jsx-runtime": "npm:react@18.3.1/jsx-runtime",
     "react-dom": "npm:react-dom@18.3.1",

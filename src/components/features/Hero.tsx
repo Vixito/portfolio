@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import StatusBadge from "./StatusBadge";
-import AnimationVixis from "./AnimationVixis";
+import SnakeTimeline from "./SnakeTimeline";
 import HomeSection from "./HomeSection";
 import { useTranslation } from "../../lib/i18n";
 
@@ -68,9 +68,9 @@ function Hero() {
             </div>
           </div>
 
-          {/* Lado derecho: Animación pixel art */}
+          {/* Lado derecho: Timeline serpiente */}
           <div className="hidden md:flex items-center justify-center bg-transparent">
-            {/* <AnimationVixis /> */}
+            <SnakeTimeline />
           </div>
         </div>
       </div>

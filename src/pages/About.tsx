@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import Button from "../components/ui/Button";
 import { useTranslation } from "../lib/i18n";
+import { SafeHTML } from "../utils/parseHTML";
 
 function About() {
   const { t } = useTranslation();
@@ -16,9 +17,9 @@ function About() {
               {t("about.title")}
             </h1>
             <div className="space-y-3 md:space-y-4 text-sm md:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
-              <p>{t("about.description1")}</p>
-              <p>{t("about.description2")}</p>
-              <p>{t("about.description3")}</p>
+              <p><SafeHTML html={t("about.description1")} /></p>
+              <p><SafeHTML html={t("about.description2")} /></p>
+              <p><SafeHTML html={t("about.description3")} /></p>
             </div>
             <div className="pt-2 md:pt-4">
               <Link to="/socials" className="cursor-pointer">
