@@ -1720,7 +1720,6 @@ function Admin() {
             break;
           case "projects":
             const updateProjectData: any = { ...crudFormData };
-            updateProjectData.title = updateProjectData.title_es || updateProjectData.title_en || "";
             updateProjectData.title_translations = buildTranslations(
               updateProjectData.title_es || "",
               updateProjectData.title_en || ""
@@ -1731,7 +1730,6 @@ function Admin() {
             break;
           case "clients":
             const updateClientData: any = { ...crudFormData };
-            updateClientData.name = updateClientData.name_es || updateClientData.name_en || "";
             updateClientData.name_translations = buildTranslations(
               updateClientData.name_es || "",
               updateClientData.name_en || ""
@@ -1768,9 +1766,6 @@ function Admin() {
             break;
           case "testimonials":
             const updateTestimonialData: any = { ...crudFormData };
-            updateTestimonialData.testimonial_author = updateTestimonialData.testimonial_author_es || updateTestimonialData.testimonial_author_en || "";
-            updateTestimonialData.testimonial_content = updateTestimonialData.testimonial_content_es || updateTestimonialData.testimonial_content_en || "";
-            updateTestimonialData.testimonial_role = updateTestimonialData.testimonial_role_es || updateTestimonialData.testimonial_role_en || "";
             updateTestimonialData.testimonial_content_translations =
               buildTranslations(
                 updateTestimonialData.testimonial_content_es || "",
@@ -1796,7 +1791,6 @@ function Admin() {
             break;
           case "socials":
             const updateSocialData: any = { ...crudFormData };
-            updateSocialData.title = updateSocialData.title_es || updateSocialData.title_en || "";
             updateSocialData.title_translations = buildTranslations(
               updateSocialData.title_es || "",
               updateSocialData.title_en || ""
@@ -1843,10 +1837,6 @@ function Admin() {
           case "work_experiences":
             // Parsear JSON arrays si vienen como strings
             const workExpData = { ...crudFormData };
-            workExpData.position = workExpData.position_es || workExpData.position_en || "";
-            workExpData.company = workExpData.company_es || workExpData.company_en || "";
-            workExpData.location = workExpData.location_es || workExpData.location_en || "";
-            workExpData.description = workExpData.description_es || workExpData.description_en || "";
             // Convertir traducciones
             workExpData.position_translations = buildTranslations(
               workExpData.position_es || "",
@@ -1981,8 +1971,6 @@ function Admin() {
             break;
           case "studies":
             const updateStudyData: any = { ...crudFormData };
-            updateStudyData.title = updateStudyData.title_es || updateStudyData.title_en || "";
-            updateStudyData.institution = updateStudyData.institution_es || updateStudyData.institution_en || "";
             updateStudyData.title_translations = buildTranslations(
               updateStudyData.title_es || "",
               updateStudyData.title_en || ""
@@ -2284,7 +2272,6 @@ function Admin() {
             break;
           case "projects":
             const createProjectData: any = { ...crudFormData };
-            createProjectData.title = createProjectData.title_es || createProjectData.title_en || "";
             createProjectData.title_translations = buildTranslations(
               createProjectData.title_es || "",
               createProjectData.title_en || ""
@@ -2295,7 +2282,6 @@ function Admin() {
             break;
           case "clients":
             const createClientData: any = { ...crudFormData };
-            createClientData.name = createClientData.name_es || createClientData.name_en || "";
             createClientData.name_translations = buildTranslations(
               createClientData.name_es || "",
               createClientData.name_en || ""
@@ -2332,9 +2318,6 @@ function Admin() {
             break;
           case "testimonials":
             const createTestimonialData: any = { ...crudFormData };
-            createTestimonialData.testimonial_author = createTestimonialData.testimonial_author_es || createTestimonialData.testimonial_author_en || "";
-            createTestimonialData.testimonial_content = createTestimonialData.testimonial_content_es || createTestimonialData.testimonial_content_en || "";
-            createTestimonialData.testimonial_role = createTestimonialData.testimonial_role_es || createTestimonialData.testimonial_role_en || "";
             createTestimonialData.testimonial_content_translations =
               buildTranslations(
                 createTestimonialData.testimonial_content_es || "",
@@ -2360,7 +2343,6 @@ function Admin() {
             break;
           case "socials":
             const createSocialData: any = { ...crudFormData };
-            createSocialData.title = createSocialData.title_es || createSocialData.title_en || "";
             createSocialData.title_translations = buildTranslations(
               createSocialData.title_es || "",
               createSocialData.title_en || ""
@@ -2410,10 +2392,6 @@ function Admin() {
           case "work_experiences":
             // Parsear JSON arrays si vienen como strings
             const newWorkExpData = { ...crudFormData };
-            newWorkExpData.position = newWorkExpData.position_es || newWorkExpData.position_en || "";
-            newWorkExpData.company = newWorkExpData.company_es || newWorkExpData.company_en || "";
-            newWorkExpData.location = newWorkExpData.location_es || newWorkExpData.location_en || "";
-            newWorkExpData.description = newWorkExpData.description_es || newWorkExpData.description_en || "";
             // Convertir traducciones
             newWorkExpData.position_translations = buildTranslations(
               newWorkExpData.position_es || "",
@@ -2518,8 +2496,6 @@ function Admin() {
               ...crudFormData,
               status: crudFormData.status || "completed",
             };
-            studyData.title = studyData.title_es || studyData.title_en || "";
-            studyData.institution = studyData.institution_es || studyData.institution_en || "";
             studyData.title_translations = buildTranslations(
               studyData.title_es || "",
               studyData.title_en || ""

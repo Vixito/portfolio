@@ -472,9 +472,16 @@ export async function createProject(project: {
   thumbnail?: string;
   is_special?: boolean;
 }) {
+  const finalProject = {
+    ...project,
+    title: project.title || "",
+    url: project.url || "",
+    month: project.month || "",
+    year: project.year || new Date().getFullYear()
+  };
   const { data, error } = await supabase
     .from("projects")
-    .insert(project)
+    .insert(finalProject)
     .select()
     .single();
   if (error) throw new Error(`Error al crear proyecto: ${error.message}`);
@@ -495,9 +502,12 @@ export async function updateProject(
     is_active?: boolean;
   }>
 ) {
+  const finalUpdates = { ...updates };
+  if (updates.title === null) finalUpdates.title = "";
+  
   const { data, error } = await supabase
     .from("projects")
-    .update(updates)
+    .update(finalUpdates)
     .eq("id", id)
     .select()
     .single();
@@ -541,9 +551,16 @@ export async function createClient(client: {
   testimonial_role_translations?: { es?: string; en?: string } | null;
   testimonial_url?: string;
 }) {
+  const finalClient = {
+    ...client,
+    name: client.name || "",
+    description: client.description || "",
+    logo: client.logo || "",
+    url: client.url || ""
+  };
   const { data, error } = await supabase
     .from("clients")
-    .insert(client)
+    .insert(finalClient)
     .select()
     .single();
   if (error) throw new Error(`Error al crear abonador: ${error.message}`);
@@ -569,9 +586,13 @@ export async function updateClient(
     is_active?: boolean;
   }>
 ) {
+  const finalUpdates = { ...updates };
+  if (updates.name === null) finalUpdates.name = "";
+  if (updates.description === null) finalUpdates.description = "";
+  
   const { data, error } = await supabase
     .from("clients")
-    .update(updates)
+    .update(finalUpdates)
     .eq("id", id)
     .select()
     .single();
@@ -688,9 +709,16 @@ export async function createSocial(social: {
   image?: string;
   category?: string;
 }) {
+  const finalSocial = {
+    ...social,
+    title: social.title || "",
+    description: social.description || "",
+    logo: social.logo || "",
+    url: social.url || ""
+  };
   const { data, error } = await supabase
     .from("socials")
-    .insert(social)
+    .insert(finalSocial)
     .select()
     .single();
   if (error) throw new Error(`Error al crear red social: ${error.message}`);
@@ -711,9 +739,13 @@ export async function updateSocial(
     is_active?: boolean;
   }>
 ) {
+  const finalUpdates = { ...updates };
+  if (updates.title === null) finalUpdates.title = "";
+  if (updates.description === null) finalUpdates.description = "";
+  
   const { data, error } = await supabase
     .from("socials")
-    .update(updates)
+    .update(finalUpdates)
     .eq("id", id)
     .select()
     .single();
@@ -752,9 +784,14 @@ export async function createEvent(event: {
   passline_url: string;
   thumbnail_url?: string;
 }) {
+  const finalEvent = {
+    ...event,
+    title: event.title || "",
+    description: event.description || ""
+  };
   const { data, error } = await supabase
     .from("events")
-    .insert(event)
+    .insert(finalEvent)
     .select()
     .single();
   if (error) throw new Error(`Error al crear evento: ${error.message}`);
@@ -827,13 +864,16 @@ export async function createWorkExperience(experience: {
   type: "full-time" | "part-time" | "contract" | "freelance";
   status: "current" | "past";
 }) {
+  const finalExperience = {
+    ...experience,
+    position: experience.position || "",
+    company: experience.company || "",
+    location: experience.location || "",
+    description: experience.description || ""
+  };
   const { data, error } = await supabase
     .from("work_experiences")
-    .insert({
-      ...experience,
-      responsibilities: experience.responsibilities,
-      technologies: experience.technologies,
-    })
+    .insert(finalExperience)
     .select()
     .single();
   if (error)
@@ -863,9 +903,15 @@ export async function updateWorkExperience(
     is_active?: boolean;
   }>
 ) {
+  const finalUpdates = { ...updates };
+  if (updates.position === null) finalUpdates.position = "";
+  if (updates.company === null) finalUpdates.company = "";
+  if (updates.location === null) finalUpdates.location = ""; // Added safety check
+  if (updates.description === null) finalUpdates.description = "";
+  
   const { data, error } = await supabase
     .from("work_experiences")
-    .update(updates)
+    .update(finalUpdates)
     .eq("id", id)
     .select()
     .single();
@@ -994,9 +1040,15 @@ export async function createStudy(study: {
   certificate_url?: string;
   status: "completed" | "in-progress";
 }) {
+  const finalStudy = {
+    ...study,
+    title: study.title || "",
+    institution: study.institution || "",
+    description: study.description || ""
+  };
   const { data, error } = await supabase
     .from("studies")
-    .insert(study)
+    .insert(finalStudy)
     .select()
     .single();
   if (error) throw new Error(`Error al crear estudio: ${error.message}`);
@@ -1021,9 +1073,14 @@ export async function updateStudy(
     is_active?: boolean;
   }>
 ) {
+  const finalUpdates = { ...updates };
+  if (updates.title === null) finalUpdates.title = "";
+  if (updates.institution === null) finalUpdates.institution = "";
+  if (updates.description === null) finalUpdates.description = "";
+  
   const { data, error } = await supabase
     .from("studies")
-    .update(updates)
+    .update(finalUpdates)
     .eq("id", id)
     .select()
     .single();
