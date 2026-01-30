@@ -2524,8 +2524,6 @@ function Admin() {
               studyData.title_es || "",
               studyData.title_en || ""
             );
-              studyData.title_en || ""
-            );
             studyData.institution_translations = buildTranslations(
               studyData.institution_es || "",
               studyData.institution_en || ""
