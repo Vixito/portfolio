@@ -3350,59 +3350,100 @@ function Admin() {
                 : activeTab === "invoices"
                 ? invoices
                 : studies
-              ).map((item: any) => (
-                <div
-                  key={item.id}
-                  className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 p-3 md:p-4 rounded-lg border transition-colors ${
-                    activeTab !== "invoices" && item.is_active === false
-                      ? "bg-gray-900/40 border-gray-600/30 hover:border-gray-600/50 opacity-75"
-                      : "bg-black/20 border-white/10 hover:border-white/20"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className={`font-semibold text-sm md:text-base truncate ${
-                        activeTab !== "invoices" && item.is_active === false
-                          ? "text-gray-400"
-                          : "text-white"
-                      }`}>
-                        {activeTab === "testimonials"
-                          ? item.name || item.title || t("admin.noClient")
-                          : activeTab === "invoices"
-                          ? `Invoice #${item.invoice_number} - ${item.user_name}`
-                          : item.title || item.name}
-                      </h3>
-                      {activeTab !== "invoices" && item.is_active === false && (
-                        <span className="px-2 py-0.5 text-xs bg-gray-700/50 text-gray-400 rounded border border-gray-600/50">
-                          Inactivo
-                        </span>
-                      )}
+              ).map((item: any) => {
+                const studyTitleTrans =
+                  activeTab === "studies"
+                    ? extractTranslations(item.title_translations, item.title || "")
+                    : null;
+                const studyInstitutionTrans =
+                  activeTab === "studies"
+                    ? extractTranslations(
+                        item.institution_translations,
+                        item.institution || ""
+                      )
+                    : null;
+                const studyDescTrans =
+                  activeTab === "studies"
+                    ? extractTranslations(
+                        item.description_translations,
+                        item.description || ""
+                      )
+                    : null;
+
+                const studyTitle = studyTitleTrans
+                  ? studyTitleTrans.es || studyTitleTrans.en || item.title || ""
+                  : "";
+
+                const studySubtitle = studyDescTrans
+                  ? studyDescTrans.es ||
+                    studyDescTrans.en ||
+                    studyInstitutionTrans?.es ||
+                    studyInstitutionTrans?.en ||
+                    studyTitle ||
+                    t("admin.noDescription")
+                  : "";
+
+                const displayTitle =
+                  activeTab === "testimonials"
+                    ? item.name || item.title || t("admin.noClient")
+                    : activeTab === "invoices"
+                    ? `Invoice #${item.invoice_number} - ${item.user_name}`
+                    : activeTab === "studies"
+                    ? studyTitle || t("admin.noDescription")
+                    : item.title || item.name;
+
+                const displayDescription =
+                  activeTab === "events"
+                    ? item.date
+                      ? new Date(item.date).toLocaleDateString("es-ES", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })
+                      : item.passline_url || t("admin.noDate")
+                    : activeTab === "testimonials"
+                    ? item.testimonial_content
+                      ? item.testimonial_content.length > 50
+                        ? item.testimonial_content.substring(0, 50) + "..."
+                        : item.testimonial_content
+                      : t("admin.noTestimonial")
+                    : activeTab === "home_content"
+                    ? item.content_type || t("admin.noDescription")
+                    : activeTab === "invoices"
+                    ? `${item.request_type} - ${item.currency} ${item.amount} - ${item.status}`
+                    : activeTab === "studies"
+                    ? studySubtitle || t("admin.noDescription")
+                    : item.description || item.url || t("admin.noDescription");
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 p-3 md:p-4 rounded-lg border transition-colors ${
+                      activeTab !== "invoices" && item.is_active === false
+                        ? "bg-gray-900/40 border-gray-600/30 hover:border-gray-600/50 opacity-75"
+                        : "bg-black/20 border-white/10 hover:border-white/20"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className={`font-semibold text-sm md:text-base truncate ${
+                          activeTab !== "invoices" && item.is_active === false
+                            ? "text-gray-400"
+                            : "text-white"
+                        }`}>
+                          {displayTitle}
+                        </h3>
+                        {activeTab !== "invoices" && item.is_active === false && (
+                          <span className="px-2 py-0.5 text-xs bg-gray-700/50 text-gray-400 rounded border border-gray-600/50">
+                            Inactivo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-400 text-xs md:text-sm line-clamp-2">
+                        {displayDescription}
+                      </p>
                     </div>
-                    <p className="text-gray-400 text-xs md:text-sm line-clamp-2">
-                      {activeTab === "events"
-                        ? item.date
-                          ? new Date(item.date).toLocaleDateString("es-ES", {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            })
-                          : item.passline_url || t("admin.noDate")
-                        : activeTab === "testimonials"
-                        ? item.testimonial_content
-                          ? item.testimonial_content.length > 50
-                            ? item.testimonial_content.substring(0, 50) + "..."
-                            : item.testimonial_content
-                          : t("admin.noTestimonial")
-                        : activeTab === "home_content"
-                        ? item.content_type || t("admin.noDescription")
-                        : activeTab === "invoices"
-                        ? `${item.request_type} - ${item.currency} ${item.amount} - ${item.status}`
-                        : item.description ||
-                          item.url ||
-                          t("admin.noDescription")}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 w-full sm:w-auto items-center">
+                    <div className="flex gap-2 w-full sm:w-auto items-center">
                     {/* Toggle is_active (ocultar para invoices) */}
                     {activeTab !== "invoices" && (
                       <button
