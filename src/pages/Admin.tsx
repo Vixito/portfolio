@@ -3553,7 +3553,8 @@ function Admin() {
                     </button>
                   </div>
                 </div>
-              ))}
+              )
+            })
               {((activeTab === "products"
                 ? products
                 : activeTab === "projects"
