@@ -88,22 +88,24 @@ function Studies() {
 
   // Filtrar estudios según todos los filtros
   const filteredStudies = studies.filter((study) => {
-    // Filtro por título
-    if (
-      filters.title &&
-      !study.title.toLowerCase().includes(filters.title.toLowerCase())
-    ) {
-      return false;
+    // Filtro por título (buscar en traducciones)
+    if (filters.title) {
+      const translatedTitle = getTranslatedText(
+        study.title_translations || study.title
+      ).toLowerCase();
+      if (!translatedTitle.includes(filters.title.toLowerCase())) {
+        return false;
+      }
     }
 
-    // Filtro por institución
-    if (
-      filters.institution &&
-      !study.institution
-        .toLowerCase()
-        .includes(filters.institution.toLowerCase())
-    ) {
-      return false;
+    // Filtro por institución (buscar en traducciones)
+    if (filters.institution) {
+      const translatedInstitution = getTranslatedText(
+        study.institution_translations || study.institution
+      ).toLowerCase();
+      if (!translatedInstitution.includes(filters.institution.toLowerCase())) {
+        return false;
+      }
     }
 
     // Filtro por tipo

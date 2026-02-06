@@ -3383,6 +3383,36 @@ function Admin() {
                     t("admin.noDescription")
                   : "";
 
+                // Work experiences translations
+                const workExpPositionTrans =
+                  activeTab === "work_experiences"
+                    ? extractTranslations(item.position_translations, item.position || "")
+                    : null;
+                const workExpCompanyTrans =
+                  activeTab === "work_experiences"
+                    ? extractTranslations(item.company_translations, item.company || "")
+                    : null;
+                const workExpDescTrans =
+                  activeTab === "work_experiences"
+                    ? extractTranslations(
+                        item.description_translations,
+                        item.description || ""
+                      )
+                    : null;
+
+                const workExpTitle = workExpPositionTrans
+                  ? workExpPositionTrans.es || workExpPositionTrans.en || item.position || ""
+                  : "";
+
+                const workExpSubtitle = workExpCompanyTrans
+                  ? workExpCompanyTrans.es ||
+                    workExpCompanyTrans.en ||
+                    workExpDescTrans?.es ||
+                    workExpDescTrans?.en ||
+                    workExpTitle ||
+                    t("admin.noDescription")
+                  : "";
+
                 const displayTitle =
                   activeTab === "testimonials"
                     ? item.name || item.title || t("admin.noClient")
@@ -3390,6 +3420,8 @@ function Admin() {
                     ? `Invoice #${item.invoice_number} - ${item.user_name}`
                     : activeTab === "studies"
                     ? studyTitle || t("admin.noDescription")
+                    : activeTab === "work_experiences"
+                    ? workExpTitle || t("admin.noDescription")
                     : item.title || item.name;
 
                 const displayDescription =
@@ -3413,6 +3445,8 @@ function Admin() {
                     ? `${item.request_type} - ${item.currency} ${item.amount} - ${item.status}`
                     : activeTab === "studies"
                     ? studySubtitle || t("admin.noDescription")
+                    : activeTab === "work_experiences"
+                    ? workExpSubtitle || t("admin.noDescription")
                     : item.description || item.url || t("admin.noDescription");
 
                 return (
