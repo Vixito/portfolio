@@ -231,6 +231,7 @@ export const translations = {
       institution: "Institución",
       period: "Período",
       description: "Descripción",
+      present: "Presente",
     },
     // Skills & Technologies
     skills: {
@@ -878,6 +879,7 @@ export const translations = {
       institution: "Institution",
       period: "Period",
       description: "Description",
+      present: "Present",
     },
     // Skills & Technologies
     skills: {
