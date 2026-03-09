@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://vixis.dev/sitemap.xml

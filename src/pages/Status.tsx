@@ -11,6 +11,7 @@ import Textarea from "../components/ui/Textarea";
 import { createRequest, sendScheduleRequest } from "../lib/supabase-functions";
 import { useTranslation } from "../lib/i18n";
 import BasicToast from "../components/ui/BasicToast";
+import { useSEO } from "../hooks/useSEO";
 
 // Esquema de validación con Zod - se actualizará dinámicamente con traducciones
 const createRequestSchema = (t: (key: string) => string) =>
@@ -38,7 +39,7 @@ const createRequestSchema = (t: (key: string) => string) =>
       .min(
         10,
         t("status.messagePlaceholder") ||
-          "El mensaje debe tener al menos 10 caracteres"
+        "El mensaje debe tener al menos 10 caracteres"
       ),
     currency: z.enum(["COP", "USD"], {
       error: t("status.selectCurrency"),
@@ -48,6 +49,10 @@ const createRequestSchema = (t: (key: string) => string) =>
 
 function Status() {
   const { t, language } = useTranslation();
+  useSEO({
+    title: t("status.title"),
+    description: t("status.formDescription"),
+  });
   const { status } = useStatusStore();
   const [currentTime, setCurrentTime] = useState<string>("");
   const [selectedCurrency, setSelectedCurrency] = useState<"COP" | "USD">(
@@ -595,9 +600,8 @@ function Status() {
                           : t("status.selectRange")}
                       </span>
                       <svg
-                        className={`w-5 h-5 transition-transform ${
-                          showInvestmentDropdown ? "rotate-180" : ""
-                        }`}
+                        className={`w-5 h-5 transition-transform ${showInvestmentDropdown ? "rotate-180" : ""
+                          }`}
                         style={{ color: "#2093c4" }}
                         fill="none"
                         stroke="currentColor"
@@ -626,11 +630,10 @@ function Status() {
                               setValue("currency", "COP");
                               setValue("investmentRange", "");
                             }}
-                            className={`flex-1 px-4 py-2 text-sm font-semibold transition-colors ${
-                              selectedCurrency === "COP"
+                            className={`flex-1 px-4 py-2 text-sm font-semibold transition-colors ${selectedCurrency === "COP"
                                 ? "text-white"
                                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            }`}
+                              }`}
                             style={
                               selectedCurrency === "COP"
                                 ? { backgroundColor: "#2093c4" }
@@ -647,11 +650,10 @@ function Status() {
                               setValue("currency", "USD");
                               setValue("investmentRange", "");
                             }}
-                            className={`flex-1 px-4 py-2 text-sm font-semibold transition-colors ${
-                              selectedCurrency === "USD"
+                            className={`flex-1 px-4 py-2 text-sm font-semibold transition-colors ${selectedCurrency === "USD"
                                 ? "text-white"
                                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            }`}
+                              }`}
                             style={
                               selectedCurrency === "USD"
                                 ? { backgroundColor: "#2093c4" }
@@ -714,16 +716,15 @@ function Status() {
                           ? watch("requestType") === "job"
                             ? t("status.jobOffer")
                             : watch("requestType") === "collaboration"
-                            ? t("status.collaboration")
-                            : watch("requestType") === "consultation"
-                            ? t("status.project")
-                            : t("status.other")
+                              ? t("status.collaboration")
+                              : watch("requestType") === "consultation"
+                                ? t("status.project")
+                                : t("status.other")
                           : t("status.typePlaceholder")}
                       </span>
                       <svg
-                        className={`w-5 h-5 transition-transform ${
-                          showRequestTypeDropdown ? "rotate-180" : ""
-                        }`}
+                        className={`w-5 h-5 transition-transform ${showRequestTypeDropdown ? "rotate-180" : ""
+                          }`}
                         style={{ color: "#2093c4" }}
                         fill="none"
                         stroke="currentColor"

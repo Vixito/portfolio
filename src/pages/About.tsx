@@ -2,9 +2,14 @@ import { Link } from "react-router-dom";
 import Button from "../components/ui/Button";
 import { useTranslation } from "../lib/i18n";
 import { SafeHTML } from "../utils/parseHTML";
+import { useSEO } from "../hooks/useSEO";
 
 function About() {
   const { t } = useTranslation();
+  useSEO({
+    title: t("about.title"),
+    description: t("about.description1"),
+  });
   const aboutImageUrl = "https://cdn.vixis.dev/Foto+de+Perfil+2.webp";
 
   return (

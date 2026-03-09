@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useTranslation } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 
 function Studio() {
   const { t } = useTranslation();
+  useSEO({
+    title: t("studio.title"),
+    description: t("studio.description"),
+  });
   const containerRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -285,8 +290,8 @@ function Studio() {
 
           {/* Sección de Redes Sociales */}
           <div ref={socialSectionRef} className="w-full max-w-7xl mx-auto px-4 py-16 mt-12">
-            <h2 
-              className="text-4xl md:text-5xl font-bold text-center mb-4" 
+            <h2
+              className="text-4xl md:text-5xl font-bold text-center mb-4"
               style={{ color: "#9fff6b" }}
             >
               {t("studio.socialNetworks") || "Redes Sociales"}

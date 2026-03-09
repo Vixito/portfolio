@@ -4,6 +4,7 @@ import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
 import { getProjects } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 
 interface Project {
   id: string;
@@ -19,6 +20,10 @@ interface Project {
 
 function Projects() {
   const { t } = useTranslation();
+  useSEO({
+    title: t("projects.title"),
+    description: t("contactSection.description"),
+  });
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);

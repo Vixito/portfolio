@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { getSocials } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 
 interface SocialLink {
   id: string;
@@ -20,6 +21,10 @@ interface SocialLink {
 
 function Socials() {
   const { t } = useTranslation();
+  useSEO({
+    title: t("socials.title"),
+    description: t("socials.noSocialsDescription"),
+  });
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -120,7 +125,7 @@ function Socials() {
                     <p className="text-sm text-gray-600 leading-relaxed">
                       {getTranslatedText(
                         (social as any).description_translations ||
-                          social.description
+                        social.description
                       )}
                     </p>
                   </div>

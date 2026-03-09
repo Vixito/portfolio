@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Pagination from "../components/ui/Pagination";
 import { fetchBlogPosts } from "../lib/supabase-functions";
 import { useTranslation } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 
 interface BlogPost {
   id: string;
@@ -17,11 +18,15 @@ interface BlogPost {
 }
 
 function Blog() {
+  const { t, language } = useTranslation();
+  useSEO({
+    title: t("blog.title"),
+    description: t("contactSection.description"),
+  });
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
-  const { t, language } = useTranslation();
 
   useEffect(() => {
     const loadPosts = async () => {
@@ -35,7 +40,7 @@ function Blog() {
             // Obtener título y excerpt según el idioma actual
             const titleTranslations = post.title_translations || {};
             const excerptTranslations = post.excerpt_translations || {};
-            
+
             const title = titleTranslations[language] || post.title || "";
             const excerpt = excerptTranslations[language] || post.excerpt || "";
 

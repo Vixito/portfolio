@@ -27,13 +27,8 @@ function Layout({ children }: { children: React.ReactNode }) {
       {!isStudioPage && (
         <div className="absolute inset-0 grid-background z-0"></div>
       )}
-      {/* Adsterra Socialbar en los lados */}
-      {showSocialbar && (
-        <>
-          <AdsterraSocialbar position="left" />
-          <AdsterraSocialbar position="right" />
-        </>
-      )}
+      {/* Monetag Loader (Social Bar, Popunder, etc.) */}
+      {showSocialbar && <AdsterraSocialbar />}
       <div className="relative z-10">
         <PageTransition>{children}</PageTransition>
       </div>

@@ -6,72 +6,32 @@ interface AdSpaceProps {
 }
 
 /**
- * Componente para espacios publicitarios monetarios con Google AdSense
+ * Componente para espacios publicitarios con Monetag
  */
 function AdSpace({ className = "", style }: AdSpaceProps) {
   const adRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Cargar script de AdSense si no está cargado
-    if (!document.querySelector('script[src*="adsbygoogle"]')) {
+    // Verificar si el script ya está cargado
+    if (!document.querySelector('script[src*="monetag.com"]')) {
       const script = document.createElement("script");
       script.async = true;
-      script.src =
-        "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8441115988276309";
-      script.crossOrigin = "anonymous";
+      script.dataset.cfasync = "false";
+      script.src = "//thubanoa.com/1?z=8939228"; // ID de zona de ejemplo o real
       document.head.appendChild(script);
-    }
-
-    // Inicializar AdSense cuando el script esté listo
-    const initAdSense = () => {
-      if (window.adsbygoogle && adRef.current) {
-        try {
-          (window.adsbygoogle = window.adsbygoogle || []).push({});
-        } catch (e) {
-          console.error("Error inicializando AdSense:", e);
-        }
-      }
-    };
-
-    // Esperar a que el script esté cargado
-    if (window.adsbygoogle) {
-      initAdSense();
-    } else {
-      const checkInterval = setInterval(() => {
-        if (window.adsbygoogle) {
-          initAdSense();
-          clearInterval(checkInterval);
-        }
-      }, 100);
-
-      // Limpiar después de 5 segundos si no se carga
-      setTimeout(() => clearInterval(checkInterval), 5000);
     }
   }, []);
 
   return (
     <div
       ref={adRef}
-      className={`bg-gray-100 border border-gray-300 rounded-lg flex items-center justify-center ${className}`}
-      style={{ minHeight: "250px", ...style }}
+      className={`bg-transparent rounded-lg flex items-center justify-center overflow-hidden ${className}`}
+      style={{ minHeight: "250px", width: "100%", ...style }}
     >
-      <ins
-        className="adsbygoogle"
-        style={{ display: "block", width: "100%", height: "100%" }}
-        data-ad-client="ca-pub-8441115988276309"
-        data-ad-slot=""
-        data-ad-format="auto"
-        data-full-width-responsive="true"
-      ></ins>
+      {/* El contenido del anuncio se inyectará aquí o será manejado por el script global */}
+      <div id="monetag-ad-container"></div>
     </div>
   );
-}
-
-// Extender Window interface para TypeScript
-declare global {
-  interface Window {
-    adsbygoogle?: any[];
-  }
 }
 
 export default AdSpace;

@@ -2,20 +2,21 @@ import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { getTechnologies } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 
 interface Technology {
   id: string;
   name: string;
   name_translations?: any;
   category:
-    | "language"
-    | "framework"
-    | "database"
-    | "tool"
-    | "cloud"
-    | "instrument"
-    | "music"
-    | "other";
+  | "language"
+  | "framework"
+  | "database"
+  | "tool"
+  | "cloud"
+  | "instrument"
+  | "music"
+  | "other";
   level: "beginner" | "intermediate" | "advanced" | "expert";
   icon?: string; // URL desde S3/CloudFront o nombre de icono (legacy)
   badge_url?: string; // URL del badge (shields.io u otro servicio)
@@ -24,6 +25,10 @@ interface Technology {
 
 function SkillsNTechnologies() {
   const { t } = useTranslation();
+  useSEO({
+    title: t("skills.title"),
+    description: t("contactSection.description"),
+  });
   const [technologies, setTechnologies] = useState<Technology[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -392,9 +397,8 @@ function SkillsNTechnologies() {
                       ) : null}
                       {/* Fallback: mostrar texto si no hay badge o si el badge falla */}
                       <span
-                        className={`font-semibold text-gray-900 ${
-                          tech.badge_url ? "hidden" : ""
-                        }`}
+                        className={`font-semibold text-gray-900 ${tech.badge_url ? "hidden" : ""
+                          }`}
                         style={{ display: tech.badge_url ? "none" : "inline" }}
                       >
                         {getTranslatedText(tech.name_translations || tech.name)}
@@ -427,15 +431,14 @@ function SkillsNTechnologies() {
                   <td className="px-6 py-4">
                     <div className="w-full max-w-xs bg-gray-200 rounded-full h-2">
                       <div
-                        className={`h-2 rounded-full transition-all ${
-                          tech.level === "expert"
+                        className={`h-2 rounded-full transition-all ${tech.level === "expert"
                             ? "bg-green-500"
                             : tech.level === "advanced"
-                            ? "bg-purple"
-                            : tech.level === "intermediate"
-                            ? "bg-blue"
-                            : "bg-gray-400"
-                        }`}
+                              ? "bg-purple"
+                              : tech.level === "intermediate"
+                                ? "bg-blue"
+                                : "bg-gray-400"
+                          }`}
                         style={{ width: getProgressWidth(tech.level) }}
                       />
                     </div>
