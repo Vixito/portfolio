@@ -1,17 +1,19 @@
 import { useEffect } from "react";
 
 /**
- * Componente para integrar Monetag Multi-Tag 
- * Se encarga de cargar el script global que maneja Social Bar, Popunder, etc.
+ * Componente para cargar el script global de Monetag (Multi-Tag)
+ * El script principal está en index.html, este componente 
+ * actúa como salvaguarda en caso de que necesite cargarse dinámicamente.
  */
 function AdsterraSocialbar() {
   useEffect(() => {
-    // Evitar duplicados
-    if (!document.querySelector('script[src*="monetag.com"]')) {
+    // Verificar si el script ya existe para evitar duplicados
+    if (!document.querySelector('script[src*="quge5.com"]')) {
       const script = document.createElement("script");
       script.async = true;
       script.dataset.cfasync = "false";
-      script.src = "//thubanoa.com/1?z=8939228"; // ID de zona global de Monetag
+      script.src = "https://quge5.com/88/tag.min.js";
+      script.dataset.zone = "217851";
       document.head.appendChild(script);
     }
   }, []);
