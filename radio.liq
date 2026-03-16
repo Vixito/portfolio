@@ -16,26 +16,21 @@ gcs_bucket = getenv("GCS_BUCKET_NAME", default="radio-vixis-music")
 playlist_file = "/tmp/radio-playlist.m3u"
 
 # Usamos playlist con loop=false para que se agote después de tocar todo.
-# IMPORTANTE: reload_mode="watch" puede causar que on_end se dispare prematuramente si detecta cambios.
-# Lo desactivamos para esta lógica de 'reinicio total'.
 radio_playlist = playlist(
   loop=false,
   playlist_file
 )
 
-# Creamos una secuencia que termina en shutdown. 
-# Esto asegura que primero se toque toda la playlist (radio_playlist) 
-# y, cuando esta se agote, se ejecute la función de cierre.
-def restart_handler()
+# Definimos el cierre del servicio
+def restart_service()
   log("La playlist ha finalizado completamente. Reiniciando servicio...")
   shutdown()
-  # Retornamos una fuente vacía para cumplir el tipo de retorno de sequence
-  blank()
 end
 
-# source.fallback con track_sensitive=true asegura que termine la canción actual
-# antes de pasar al siguiente elemento (el shutdown).
-radio = source.fallback(track_sensitive=true, [radio_playlist, source.dynamic(restart_handler)])
+# Usamos 'append' para encadenar la playlist con una función de shutdown.
+# Esto asegura que se reproduzca TODA la lista antes de ejecutar el cierre.
+# Usamos la sintaxis estándar de Liquidsoap 2.1
+radio = append(radio_playlist, fun () -> restart_service(); blank())
 
 # Hacer el source seguro
 safe_source = mksafe(radio)
@@ -55,4 +50,4 @@ output.icecast(
   safe_source
 )
 
-log(level=3, "Radio Vixis streaming iniciado (Modo: Reinicio tras fin de playlist)")
+log(level=3, "Radio Vixis streaming iniciado (Modo: Reinicio tras fin de playlist completo)")
