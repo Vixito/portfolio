@@ -23,21 +23,23 @@ playlist_file = "/tmp/radio-playlist.m3u"
 # Liquidsoap puede leer desde archivos M3U y URLs HTTP
 # El archivo se actualiza externamente por update-playlist.sh
 # La playlist decodifica automáticamente MP3, OGG, etc.
-# Playlist que se detiene al final para forzar el reinicio del servicio
+# Cargar playlist sin loop para permitir el reinicio del servicio
+# Agregamos un pequeño buffer para evitar que se cierre antes de conectar
 playlist_source = playlist(
-  loop=false,  # Dejar que termine para que el servicio se reinicie solo
+  loop=false,
   playlist_file
 )
 
-# Cuando la playlist se agote (se termina), cerrar Liquidsoap.
-# Como el servicio de systemd tiene 'Restart=always', se reiniciará automáticamente.
-# Al reiniciarse, el script 'start-liquidsoap.sh' volverá a:
-# 1. Cargar secretos frescos de Doppler.
-# 2. Ejecutar 'update-playlist.sh' para buscar nuevas canciones en GCS.
-playlist_source.on_end(shutdown)
+# Función de cierre seguro
+def restart_service()
+  log("Playlist agotada. Cerrando Liquidsoap para forzar reinicio de systemd...")
+  shutdown()
+end
 
-# Hacer el source seguro (maneja errores gracefully)
-# mksafe asegura que el stream continúe incluso si hay errores con un track
+# Registrar el evento al terminar la playlist
+playlist_source.on_end(restart_service)
+
+# Hacer el source seguro (fallbacks si falla un track)
 safe_source = mksafe(playlist_source)
 
 # Stream a Icecast con OGG Vorbis
