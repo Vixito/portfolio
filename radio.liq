@@ -7,46 +7,40 @@
 icecast_host = getenv("ICECAST_HOST", default="localhost")
 icecast_port = int_of_string(getenv("ICECAST_PORT", default="8000"))
 icecast_mount = getenv("ICECAST_MOUNT", default="/vixis")
-# Intentar ambas variables de entorno (Doppler exporta ICECAST_PASSWORD, pero también puede ser ICECAST_SOURCE_PASSWORD)
 icecast_password_source = getenv("ICECAST_SOURCE_PASSWORD", default="")
 icecast_password_env = getenv("ICECAST_PASSWORD", default="")
-# Usar la primera que esté disponible
 icecast_password = if icecast_password_source != "" then icecast_password_source else icecast_password_env end
 
 # Configuración de Google Cloud Storage
 gcs_bucket = getenv("GCS_BUCKET_NAME", default="radio-vixis-music")
-
-# Archivo de playlist que se actualiza dinámicamente
 playlist_file = "/tmp/radio-playlist.m3u"
 
-# Crear playlist desde archivo M3U
-# Liquidsoap puede leer desde archivos M3U y URLs HTTP
-# El archivo se actualiza externamente por update-playlist.sh
-# La playlist decodifica automáticamente MP3, OGG, etc.
-# Cargar playlist sin loop para permitir el reinicio del servicio
-# Agregamos un pequeño buffer para evitar que se cierre antes de conectar
-playlist_source = playlist(
+# Usamos playlist con loop=false para que se agote después de tocar todo.
+# IMPORTANTE: reload_mode="watch" puede causar que on_end se dispare prematuramente si detecta cambios.
+# Lo desactivamos para esta lógica de 'reinicio total'.
+radio_playlist = playlist(
   loop=false,
   playlist_file
 )
 
-# Función de cierre seguro (ignoramos los argumentos con _)
-def restart_service(_, _)
-  log("Playlist agotada. Cerrando Liquidsoap para forzar reinicio de systemd...")
+# Creamos una secuencia que termina en shutdown. 
+# Esto asegura que primero se toque toda la playlist (radio_playlist) 
+# y, cuando esta se agote, se ejecute la función de cierre.
+def restart_handler()
+  log("La playlist ha finalizado completamente. Reiniciando servicio...")
   shutdown()
+  # Retornamos una fuente vacía para cumplir el tipo de retorno de sequence
+  blank()
 end
 
-# Registrar el evento con el orden correcto: on_end(source, handler)
-playlist_source = on_end(playlist_source, restart_service)
+# source.fallback con track_sensitive=true asegura que termine la canción actual
+# antes de pasar al siguiente elemento (el shutdown).
+radio = source.fallback(track_sensitive=true, [radio_playlist, source.dynamic(restart_handler)])
 
-# Hacer el source seguro (fallbacks si falla un track)
-safe_source = mksafe(playlist_source)
+# Hacer el source seguro
+safe_source = mksafe(radio)
 
-# Stream a Icecast con OGG Vorbis
-# output.icecast codifica directamente a OGG Vorbis usando %vorbis.abr
-# %vorbis.abr permite especificar bitrate específico (average bitrate)
-# No necesitamos decode/encode explícitos - Liquidsoap lo hace automáticamente
-# IMPORTANTE: user y password son requeridos para autenticación con Icecast
+# Stream a Icecast
 output.icecast(
   %vorbis.abr(samplerate=44100, channels=2, bitrate=128, max_bitrate=192, min_bitrate=64),
   host=icecast_host,
@@ -61,14 +55,4 @@ output.icecast(
   safe_source
 )
 
-# Log de inicio
-log(level=3, "Radio Vixis streaming iniciado")
-log(level=3, "Host: #{icecast_host}:#{icecast_port}")
-log(level=3, "Mount: #{icecast_mount}")
-log(level=3, "GCS Bucket: #{gcs_bucket}")
-# Verificar que la contraseña esté configurada (sin mostrarla)
-if icecast_password == "" then
-  log(level=1, "WARNING: ICECAST_SOURCE_PASSWORD no está configurada!")
-else
-  log(level=3, "Contraseña configurada (no mostrada por seguridad)")
-end
+log(level=3, "Radio Vixis streaming iniciado (Modo: Reinicio tras fin de playlist)")
