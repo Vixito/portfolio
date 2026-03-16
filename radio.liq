@@ -36,8 +36,8 @@ def restart_service()
   shutdown()
 end
 
-# Registrar el evento usando la sintaxis antigua/compatible
-playlist_source = on_end(restart_service, playlist_source)
+# Registrar el evento con el orden correcto: on_end(source, handler)
+playlist_source = on_end(playlist_source, restart_service)
 
 # Hacer el source seguro (fallbacks si falla un track)
 safe_source = mksafe(playlist_source)
