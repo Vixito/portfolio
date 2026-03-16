@@ -30,8 +30,8 @@ playlist_source = playlist(
   playlist_file
 )
 
-# Función de cierre seguro (acepta source y metadata)
-def restart_service(s, m)
+# Función de cierre seguro (ignoramos los argumentos con _)
+def restart_service(_, _)
   log("Playlist agotada. Cerrando Liquidsoap para forzar reinicio de systemd...")
   shutdown()
 end
