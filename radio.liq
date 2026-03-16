@@ -28,14 +28,16 @@ def restart_service()
 end
 
 # Usamos 'append' para encadenar la playlist con una función de shutdown.
-# Esto asegura que se reproduzca TODA la lista antes de ejecutar el cierre.
-# Usamos la sintaxis estándar de Liquidsoap 2.1
-radio = append(radio_playlist, fun () -> restart_service(); blank())
+# Usamos una sintaxis compatible con Liquidsoap 2.1.3
+radio = append(radio_playlist, fun () -> begin
+  restart_service()
+  blank()
+end)
 
 # Hacer el source seguro
 safe_source = mksafe(radio)
 
-# Stream a Icecast
+# Stream a Icecast con OGG Vorbis
 output.icecast(
   %vorbis.abr(samplerate=44100, channels=2, bitrate=128, max_bitrate=192, min_bitrate=64),
   host=icecast_host,
@@ -50,4 +52,4 @@ output.icecast(
   safe_source
 )
 
-log(level=3, "Radio Vixis streaming iniciado (Modo: Reinicio tras fin de playlist completo)")
+log(level=3, "Radio Vixis streaming iniciado (Modo: SECUENCIAL)")
