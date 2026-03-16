@@ -23,14 +23,18 @@ playlist_file = "/tmp/radio-playlist.m3u"
 # Liquidsoap puede leer desde archivos M3U y URLs HTTP
 # El archivo se actualiza externamente por update-playlist.sh
 # La playlist decodifica automáticamente MP3, OGG, etc.
-# Playlist con loop automático
-# En Liquidsoap 2.x, la playlist hace loop por defecto
+# Playlist que se detiene al final para forzar el reinicio del servicio
 playlist_source = playlist(
-  reload_mode="watch",
-  reload=60,  # Recargar cada 60 segundos
-  loop=true,  # Asegurar que repita indefinidamente
+  loop=false,  # Dejar que termine para que el servicio se reinicie solo
   playlist_file
 )
+
+# Cuando la playlist se agote (se termina), cerrar Liquidsoap.
+# Como el servicio de systemd tiene 'Restart=always', se reiniciará automáticamente.
+# Al reiniciarse, el script 'start-liquidsoap.sh' volverá a:
+# 1. Cargar secretos frescos de Doppler.
+# 2. Ejecutar 'update-playlist.sh' para buscar nuevas canciones en GCS.
+playlist_source.on_end(shutdown)
 
 # Hacer el source seguro (maneja errores gracefully)
 # mksafe asegura que el stream continúe incluso si hay errores con un track
