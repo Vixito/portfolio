@@ -31,9 +31,16 @@ fi
 echo "🔍 DEBUG: RADIO_JINGLE_INTERVAL=${RADIO_JINGLE_INTERVAL:-NO_CONFIGURADA}" >&2
 
 # Actualizar playlist antes de iniciar Liquidsoap
-# Pasar las variables explícitamente al script hijo para asegurar que las reciba
-# Redirigir stderr a stdout para que los mensajes aparezcan en los logs de systemd
 RADIO_JINGLE_URL="$RADIO_JINGLE_URL" RADIO_JINGLE_INTERVAL="$RADIO_JINGLE_INTERVAL" /home/radio/liquidsoap/update-playlist.sh 2>&1
+
+# Lanzar un actualizador en segundo plano para refrescar la lista cada 2 horas
+# Esto permite que Liquidsoap pille las nuevas canciones sin detener la transmisión
+(
+  while true; do
+    sleep 7200
+    RADIO_JINGLE_URL="$RADIO_JINGLE_URL" RADIO_JINGLE_INTERVAL="$RADIO_JINGLE_INTERVAL" /home/radio/liquidsoap/update-playlist.sh 2>&1
+  done
+) &
 
 # Ejecutar Liquidsoap con todas las variables de entorno cargadas
 exec /usr/bin/liquidsoap /home/radio/liquidsoap/radio.liq
