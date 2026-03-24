@@ -9,7 +9,9 @@ PLAYLIST_FILE="/tmp/radio-playlist.m3u"
 TEMP_PLAYLIST="/tmp/radio-playlist-temp.m3u"
 
 # Configuración del jingle desde variables de entorno (cargadas desde Doppler)
+# Limpiamos espacios u otros caracteres problemáticos en la URL del Jingle
 JINGLE_URL="${RADIO_JINGLE_URL:-}"
+JINGLE_URL=$(echo "$JINGLE_URL" | sed 's/ /%20/g' | tr -d '\r')
 JINGLE_INTERVAL="${RADIO_JINGLE_INTERVAL:-5}"
 
 # Debug: mostrar configuración (solo si está configurada)
@@ -19,6 +21,7 @@ else
   echo "⚠️ DEBUG: JINGLE_URL NO está configurada (variable RADIO_JINGLE_URL)" >&2
 fi
 echo "🔍 DEBUG: JINGLE_INTERVAL=${JINGLE_INTERVAL}" >&2
+
 
 # Convertir intervalo a número (default: 5)
 if ! [[ "$JINGLE_INTERVAL" =~ ^[0-9]+$ ]] || [ "$JINGLE_INTERVAL" -lt 1 ]; then
@@ -39,6 +42,8 @@ file_count=0
 gsutil -m ls -r "gs://${GCS_BUCKET_NAME}/**/*.mp3" 2>/dev/null | while IFS= read -r gs_url; do
   # Verificar que la línea no esté vacía
   if [ -n "$gs_url" ]; then
+    # Limpiar cualquier caracter de retorno de carro
+    gs_url=$(echo "$gs_url" | tr -d '\r')
     file_count=$((file_count + 1))
     echo "📁 Procesando archivo $file_count: $gs_url"
     
@@ -61,6 +66,7 @@ if [ ! -s "$TEMP_PLAYLIST" ] || [ "$(grep -c "^#EXTINF" "$TEMP_PLAYLIST")" -eq 0
   echo "⚠️ No se encontraron archivos con -r, intentando sin recursivo..."
   gsutil -m ls "gs://${GCS_BUCKET_NAME}/*.mp3" 2>/dev/null | while IFS= read -r gs_url; do
     if [ -n "$gs_url" ]; then
+      gs_url=$(echo "$gs_url" | tr -d '\r')
       file_count=$((file_count + 1))
       http_url=$(echo "$gs_url" | sed "s|gs://${GCS_BUCKET_NAME}/|https://storage.googleapis.com/${GCS_BUCKET_NAME}/|" | sed 's/ /%20/g')
       filename=$(basename "$gs_url" .mp3 | sed 's/%20/ /g')

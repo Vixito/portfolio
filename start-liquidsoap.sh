@@ -42,5 +42,9 @@ RADIO_JINGLE_URL="$RADIO_JINGLE_URL" RADIO_JINGLE_INTERVAL="$RADIO_JINGLE_INTERV
   done
 ) &
 
+# Desactivar proxies HTTP si existen en el entorno,
+# ya que pueden causar errores 523 "Origin is unreachable" en Liquidsoap
+unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
+
 # Ejecutar Liquidsoap con todas las variables de entorno cargadas
 exec /usr/bin/liquidsoap /home/radio/liquidsoap/radio.liq
