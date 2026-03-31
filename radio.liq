@@ -10,7 +10,21 @@ icecast_port = int_of_string(getenv("ICECAST_PORT", default="8000"))
 icecast_mount = getenv("ICECAST_MOUNT", default="/vixis")
 icecast_password = getenv("ICECAST_SOURCE_PASSWORD", default=getenv("ICECAST_PASSWORD", default=""))
 
+# Configuración de red para evitar errores 523 (Cloudflare) y timeouts
+# Usamos un User-Agent realista por si Cloudflare bloquea a Liquidsoap
+settings.request.http.user_agent.set("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+settings.request.timeout.set(45.0)
+
+# Obligar a que si hay fallos recurrentes, Liquidsoap no sature el log
+settings.playlist.max_unready.set(3.0)
+
 playlist_file = "/tmp/radio-playlist.m3u"
+
+# Función para loguear cada track antes de intentar descargarlo
+def log_track(metadata)
+  filename = metadata["filename"]
+  log("Intentando reproducir: #{filename}")
+end
 
 # Reproducción infinita (bucle)
 # reload_mode="watch" hace que Liquidsoap recargue los MP3 si update-playlist.sh modifica el archivo
@@ -21,7 +35,11 @@ radio = playlist(
   playlist_file
 )
 
-# mksafe evita crasheos o desconexiones de Icecast en caso de fallos momentáneos de la lista.
+# Registramos el log de track para ver en journalctl qué intenta bajar
+radio.on_track(log_track)
+
+# Añadimos un pequeño buffer de seguridad: si la playlist falla, 
+# mksafe pondrá 1 segundo de silencio antes de saltar al siguiente intento.
 radio = mksafe(radio)
 
 output.icecast(
