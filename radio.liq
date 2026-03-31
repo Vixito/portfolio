@@ -13,12 +13,12 @@ icecast_password = getenv("ICECAST_SOURCE_PASSWORD", default=getenv("ICECAST_PAS
 # Configuración de red para evitar errores 523 (Cloudflare) y timeouts
 
 # Si el servidor tiene alguna configuración de proxy que bloquee a Liquidsoap,
-# forzamos a que Liquidsoap use CURL (que ya verificamos que funciona) para bajar audios.
-protocol.add("https", fun (arg, ~timeout, ~header) -> begin
-  headers = list.map(fun(h) -> "-H '#{fst(h)}: #{snd(h)}'", header)
-  headers = string.concat(separator=" ", headers)
-  process.read.lines("curl -L -s -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' #{headers} '#{arg}'")
+# forzamos a que Liquidsoap use CURL para bajar audios (namespace request.protocol en 2.4.x).
+request.protocol.add("https", fun (~rlog, ~maxtime, arg) -> begin
+  # rlog sirve para depuración, maxtime es el tiempo límite (opcional)
+  process.read.lines("curl -L -s -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' '#{arg}'")
 end)
+
 
 playlist_file = "/tmp/radio-playlist.m3u"
 
