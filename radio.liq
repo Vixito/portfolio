@@ -11,15 +11,9 @@ icecast_mount = getenv("ICECAST_MOUNT", default="/vixis")
 icecast_password = getenv("ICECAST_SOURCE_PASSWORD", default=getenv("ICECAST_PASSWORD", default=""))
 
 # Configuración de red para evitar errores 523 (Cloudflare) y timeouts
-# Si settings.request.http falla, la forma correcta suele ser directa.
-# También aumentamos el timeout.
-settings.request.timeout.set(45.0)
 
-# Intentamos fijar el User-Agent global para protocolos HTTP
-settings.http.user_agent.set("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-
-# Si Cloudflare bloquea a Liquidsoap pero no a CURL, forzamos a que Liquidsoap
-# use CURL para descargar los archivos de Google Storage y Jingles.
+# Si el servidor tiene alguna configuración de proxy que bloquee a Liquidsoap,
+# forzamos a que Liquidsoap use CURL (que ya verificamos que funciona) para bajar audios.
 protocol.add("https", fun (arg, ~timeout, ~header) -> begin
   headers = list.map(fun(h) -> "-H '#{fst(h)}: #{snd(h)}'", header)
   headers = string.concat(separator=" ", headers)
@@ -35,13 +29,15 @@ def log_track(metadata)
 end
 
 # Reproducción infinita (bucle)
-# reload_mode="watch" hace que Liquidsoap recargue los MP3 si update-playlist.sh modifica el archivo
+# Ponemos el timeout de 45 seg directamente aquí para evitar errores de settings.
 radio = playlist(
   loop=true,
   reload_mode="watch",
   mode="normal",
+  timeout=45.0,
   playlist_file
 )
+
 
 # Registramos el log de track para ver en journalctl qué intenta bajar
 radio.on_track(log_track)
