@@ -11,12 +11,20 @@ icecast_mount = getenv("ICECAST_MOUNT", default="/vixis")
 icecast_password = getenv("ICECAST_SOURCE_PASSWORD", default=getenv("ICECAST_PASSWORD", default=""))
 
 # Configuración de red para evitar errores 523 (Cloudflare) y timeouts
-# Usamos un User-Agent realista por si Cloudflare bloquea a Liquidsoap
-settings.request.http.user_agent.set("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+# Si settings.request.http falla, la forma correcta suele ser directa.
+# También aumentamos el timeout.
 settings.request.timeout.set(45.0)
 
-# Obligar a que si hay fallos recurrentes, Liquidsoap no sature el log
-settings.playlist.max_unready.set(3.0)
+# Intentamos fijar el User-Agent global para protocolos HTTP
+settings.http.user_agent.set("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+# Si Cloudflare bloquea a Liquidsoap pero no a CURL, forzamos a que Liquidsoap
+# use CURL para descargar los archivos de Google Storage y Jingles.
+protocol.add("https", fun (arg, ~timeout, ~header) -> begin
+  headers = list.map(fun(h) -> "-H '#{fst(h)}: #{snd(h)}'", header)
+  headers = string.concat(separator=" ", headers)
+  process.read.lines("curl -L -s -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' #{headers} '#{arg}'")
+end)
 
 playlist_file = "/tmp/radio-playlist.m3u"
 
