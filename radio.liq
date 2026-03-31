@@ -1,51 +1,28 @@
 #!/usr/bin/env liquidsoap
 
-# Script de Liquidsoap para streaming continuo
-# - Lee la playlist en modo bucle.
-# - Recarga la playlist si el archivo se modifica externamente (gracias a 'watch').
-# - Al terminarse, simplemente vuelve al inicio, manteniendo a los oyentes dentro.
+# Script para Radio Vixis (Liquidsoap 2.1.3)
+# Sin ajustes de configuración globales para evitar incompatibilidades de versión.
 
+# 1. Configuración de Icecast (Cargada desde Doppler)
 icecast_host = getenv("ICECAST_HOST", default="localhost")
 icecast_port = int_of_string(getenv("ICECAST_PORT", default="8000"))
 icecast_mount = getenv("ICECAST_MOUNT", default="/vixis")
 icecast_password = getenv("ICECAST_SOURCE_PASSWORD", default=getenv("ICECAST_PASSWORD", default=""))
 
-# Configuración de red para evitar errores 523 (Cloudflare) y timeouts
-
-# Si el servidor tiene alguna configuración de proxy que bloquee a Liquidsoap,
-# forzamos a que Liquidsoap use CURL para bajar audios (namespace request.protocol en 2.4.x).
-request.protocol.add("https", fun (~rlog, ~maxtime, arg) -> begin
-  # rlog sirve para depuración, maxtime es el tiempo límite (opcional)
-  process.read.lines("curl -L -s -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' '#{arg}'")
-end)
-
-
 playlist_file = "/tmp/radio-playlist.m3u"
 
-# Función para loguear cada track antes de intentar descargarlo
-def log_track(metadata)
-  filename = metadata["filename"]
-  log("Intentando reproducir: #{filename}")
-end
-
-# Reproducción infinita (bucle)
-# Ponemos el timeout de 45 seg directamente aquí para evitar errores de settings.
+# 2. Fuente de audio: Playlist dinámica desde M3U
 radio = playlist(
   loop=true,
   reload_mode="watch",
   mode="normal",
-  timeout=45.0,
   playlist_file
 )
 
-
-# Registramos el log de track para ver en journalctl qué intenta bajar
-radio.on_track(log_track)
-
-# Añadimos un pequeño buffer de seguridad: si la playlist falla, 
-# mksafe pondrá 1 segundo de silencio antes de saltar al siguiente intento.
+# 3. Asegurar la fuente (Mantenemos el stream vivo ante cualquier error)
 radio = mksafe(radio)
 
+# 4. Salida de audio -> Icecast (Ogg Vorbis)
 output.icecast(
   %vorbis.abr(samplerate=44100, channels=2, bitrate=128, max_bitrate=192, min_bitrate=64),
   host=icecast_host,
@@ -60,4 +37,4 @@ output.icecast(
   radio
 )
 
-log(level=3, "Radio Vixis iniciada en modo continuo (bucle infinito).")
+log("Radio Vixis 24/7 iniciada con éxito.")
