@@ -35,11 +35,16 @@ echo "#EXTM3U" > "$TEMP_PLAYLIST"
 # Listar archivos MP3 desde GCS y agregar a playlist temporal
 # Usar -m para procesamiento en paralelo y asegurar que el while loop funcione correctamente
 # IMPORTANTE: Usar -r para listar recursivamente y encontrar todos los MP3s
-echo "🔍 Buscando archivos MP3 en gs://${GCS_BUCKET_NAME}/*.mp3..."
 file_count=0
+echo "🔍 Buscando archivos MP3 en gs://${GCS_BUCKET_NAME}..."
 
-# Listar todos los MP3s (recursivo si hay subdirectorios)
-gsutil -m ls -r "gs://${GCS_BUCKET_NAME}/**/*.mp3" 2>/dev/null | while IFS= read -r gs_url; do
+# Diagnóstico: ¿Podemos ver el bucket?
+echo "🔍 DEBUG: Probando conexión básica al bucket..." >&2
+gsutil ls "gs://${GCS_BUCKET_NAME}/" | head -n 5 >&2 || echo "❌ ERROR: No se puede acceder al bucket gs://${GCS_BUCKET_NAME}" >&2
+
+# Listar todos los MP3s (recursivo) - Buscamos tanto .mp3 como .MP3
+# Listar todos los MP3s - Probamos un patrón más simple primero
+gsutil ls "gs://${GCS_BUCKET_NAME}/*.mp3" "gs://${GCS_BUCKET_NAME}/*.MP3" 2>/dev/null | while IFS= read -r gs_url; do
   # Verificar que la línea no esté vacía
   if [ -n "$gs_url" ]; then
     # Limpiar cualquier caracter de retorno de carro
@@ -63,8 +68,8 @@ done
 
 # Si no se encontraron archivos con el patrón recursivo, intentar sin recursivo
 if [ ! -s "$TEMP_PLAYLIST" ] || [ "$(grep -c "^#EXTINF" "$TEMP_PLAYLIST")" -eq 0 ]; then
-  echo "⚠️ No se encontraron archivos con -r, intentando sin recursivo..."
-  gsutil -m ls "gs://${GCS_BUCKET_NAME}/*.mp3" 2>/dev/null | while IFS= read -r gs_url; do
+  echo "⚠️ Intentando búsqueda recursiva (**) por si los archivos están en subcarpetas..."
+  gsutil ls "gs://${GCS_BUCKET_NAME}/**.mp3" "gs://${GCS_BUCKET_NAME}/**.MP3" 2>/dev/null | while IFS= read -r gs_url; do
     if [ -n "$gs_url" ]; then
       gs_url=$(echo "$gs_url" | tr -d '\r')
       file_count=$((file_count + 1))
@@ -77,8 +82,9 @@ if [ ! -s "$TEMP_PLAYLIST" ] || [ "$(grep -c "^#EXTINF" "$TEMP_PLAYLIST")" -eq 0
   done
 fi
 
-# Contar canciones en la playlist temporal
-song_count=$(grep -c "^#EXTINF" "$TEMP_PLAYLIST" 2>/dev/null || echo "0")
+# Contar canciones en la playlist temporal - Corregido para evitar "0\n0"
+song_count=$(grep -c "^#EXTINF" "$TEMP_PLAYLIST" || echo "0")
+song_count=$(echo "$song_count" | tail -n 1)
 
 # Si hay jingle configurado y hay canciones, insertar jingles cada N canciones
 if [ -n "$JINGLE_URL" ] && [ "$song_count" -gt 0 ]; then
