@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { gsap } from "gsap";
 import Pagination from "../components/ui/Pagination";
-import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import { getProductsWithPricing } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
@@ -60,6 +60,8 @@ function Store() {
   const [searchName, setSearchName] = useState<string>("");
   const [priceFilter, setPriceFilter] = useState<string>("all");
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const productPanelRef = useRef<HTMLDivElement>(null);
+  const productOverlayRef = useRef<HTMLDivElement>(null);
   const itemsPerPage = 12;
 
   // Categorías disponibles (deben coincidir con las opciones en Admin)
@@ -170,11 +172,58 @@ function Store() {
   };
 
   const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedItem(null);
-    // Limpiar el parámetro de URL
-    setSearchParams({});
+    // Animación de salida
+    if (productPanelRef.current && productOverlayRef.current) {
+      gsap.to(productOverlayRef.current, { opacity: 0, duration: 0.25 });
+      gsap.to(productPanelRef.current, {
+        y: "100%",
+        opacity: 0,
+        duration: 0.3,
+        ease: "power2.in",
+        onComplete: () => {
+          setIsModalOpen(false);
+          setSelectedItem(null);
+          setSearchParams({});
+        },
+      });
+    } else {
+      setIsModalOpen(false);
+      setSelectedItem(null);
+      setSearchParams({});
+    }
   };
+
+  // Animación de entrada del panel y bloqueo de scroll
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    // Bloquear scroll del body
+    document.body.style.overflow = "hidden";
+
+    if (productPanelRef.current && productOverlayRef.current) {
+      gsap.fromTo(
+        productOverlayRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.3 }
+      );
+      gsap.fromTo(
+        productPanelRef.current,
+        { y: "100%", opacity: 0 },
+        { y: "0%", opacity: 1, duration: 0.4, ease: "power3.out" }
+      );
+    }
+
+    // Cerrar con ESC
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleCloseModal();
+    };
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isModalOpen]);
 
   const handleAction = (item: StoreItem, linkUrl?: string) => {
     const buttonType = item.button_type || "buy";
@@ -679,279 +728,313 @@ function Store() {
           </div>
         )}
 
-        {/* Modal tipo Amazon */}
-        {selectedItem && (
-          <Modal
-            isOpen={isModalOpen}
-            onClose={handleCloseModal}
-            title={getTranslatedText(
-              selectedItem.title_translations || selectedItem.title
-            )}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Imágenes */}
-              <div className="flex flex-col h-full">
-                <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden mb-4">
-                  <img
-                    src={
-                      selectedItem.thumbnail_url ||
-                      "https://tu-cdn.cloudfront.net/default-store-thumbnail.png"
-                    }
-                    alt={getTranslatedText(
-                      selectedItem.title_translations || selectedItem.title
-                    )}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                {selectedItem.images && selectedItem.images.length > 0 && (
-                  <div className="space-y-3 mb-4">
-                    {selectedItem.images.map((image, index) => {
-                      const isVideo = image.match(/\.(mp4|webm|ogg|mov)$/i) || image.includes('youtube.com') || image.includes('youtu.be') || image.includes('vimeo.com');
-                      
-                      if (isVideo) {
-                        // Detectar si es un link de YouTube o Vimeo
-                        const isYouTube = image.includes('youtube.com') || image.includes('youtu.be');
-                        const isVimeo = image.includes('vimeo.com');
-                        
-                        if (isYouTube || isVimeo) {
-                          // Extraer video ID y convertir a embed
-                          let embedUrl = image;
-                          if (isYouTube) {
-                            const videoId = image.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
-                            if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
-                          } else if (isVimeo) {
-                            const videoId = image.match(/vimeo\.com\/(\d+)/)?.[1];
-                            if (videoId) embedUrl = `https://player.vimeo.com/video/${videoId}`;
-                          }
-                          
-                          return (
-                            <div key={index} className="w-full aspect-video bg-gray-200 rounded overflow-hidden">
-                              <iframe
-                                src={embedUrl}
-                                className="w-full h-full"
-                                frameBorder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                                title={`Video ${index + 1}`}
-                              />
-                            </div>
-                          );
-                        } else {
-                          // Video directo (mp4, webm, etc.)
-                          return (
-                            <div key={index} className="w-full aspect-video bg-gray-200 rounded overflow-hidden">
-                              <video
-                                controls
-                                className="w-full h-full object-contain"
-                                preload="metadata"
-                              >
-                                <source src={image} type={`video/${image.split('.').pop()}`} />
-                                Tu navegador no soporta el tag de video.
-                              </video>
-                            </div>
-                          );
-                        }
-                      } else {
-                        // Imagen normal
-                        return (
-                          <div
-                            key={index}
-                            className="w-full aspect-video bg-gray-200 rounded overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => setLightboxImage(image)}
-                          >
-                            <img
-                              src={image}
-                              alt={`${getTranslatedText(
-                                selectedItem.title as any
-                              )} ${index + 1}`}
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                        );
-                      }
-                    })}
-                  </div>
-                )}
-                {/* Spacer invisible para alinear con el botón */}
-                <div className="flex-1"></div>
+        {/* Panel de producto a pantalla completa (excepto nav inferior) */}
+        {selectedItem && isModalOpen && (
+          <>
+            {/* Overlay */}
+            <div
+              ref={productOverlayRef}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+              style={{ bottom: "40px" }}
+              onClick={handleCloseModal}
+            />
+
+            {/* Panel de producto */}
+            <div
+              ref={productPanelRef}
+              className="fixed inset-0 z-40 bg-white dark:bg-gray-900 flex flex-col"
+              style={{ bottom: "40px" }}
+            >
+              {/* Header con título y botón cerrar */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white truncate pr-4">
+                  {getTranslatedText(
+                    selectedItem.title_translations || selectedItem.title
+                  )}
+                </h2>
+                <button
+                  onClick={handleCloseModal}
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0 cursor-pointer"
+                  aria-label="Cerrar"
+                >
+                  <svg
+                    className="w-6 h-6 text-gray-600 dark:text-gray-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
               </div>
 
-              {/* Información */}
-              <div className="flex flex-col h-full">
-                <div className="mb-4 flex-1">
-                  {formatPrice(selectedItem) && (
-                    <div className="mb-2">{formatPrice(selectedItem)}</div>
-                  )}
-                  <div 
-                    className="text-gray-600 prose prose-sm max-w-none product-description"
-                    dangerouslySetInnerHTML={{
-                      __html: getTranslatedText(
-                        selectedItem.full_description_translations ||
-                          selectedItem.full_description
-                      ) ||
-                        getTranslatedText(
-                          selectedItem.description_translations ||
-                            selectedItem.description
-                        ) ||
-                        t("common.noContent")
-                    }}
-                  />
-                  <style>{`
-                    .product-description ul,
-                    .product-description ol,
-                    .product-description .ql-list,
-                    .product-description [class*="ql-list"] {
-                      margin: 1rem 0 !important;
-                      padding-left: 2rem !important;
-                      list-style-position: outside !important;
-                      display: block !important;
-                    }
-                    .product-description ul,
-                    .product-description .ql-list-bullet {
-                      list-style-type: disc !important;
-                    }
-                    .product-description ol,
-                    .product-description .ql-list-ordered {
-                      list-style-type: decimal !important;
-                    }
-                    .product-description li,
-                    .product-description .ql-list-item {
-                      margin: 0.5rem 0 !important;
-                      line-height: 1.6 !important;
-                      display: list-item !important;
-                    }
-                    .product-description ul ul,
-                    .product-description ol ol,
-                    .product-description ul ol,
-                    .product-description ol ul {
-                      margin-top: 0.5rem !important;
-                      margin-bottom: 0.5rem !important;
-                    }
-                    .product-description ul ul {
-                      list-style-type: circle !important;
-                    }
-                    .product-description ul ul ul {
-                      list-style-type: square !important;
-                    }
-                    .product-description ol ol {
-                      list-style-type: lower-alpha !important;
-                    }
-                    .product-description ol ol ol {
-                      list-style-type: lower-roman !important;
-                    }
-                    .product-description p {
-                      margin: 1rem 0;
-                    }
-                    .product-description h1,
-                    .product-description h2,
-                    .product-description h3,
-                    .product-description h4,
-                    .product-description h5,
-                    .product-description h6 {
-                      margin-top: 1.5rem;
-                      margin-bottom: 1rem;
-                      font-weight: 600;
-                    }
-                    .product-description strong {
-                      font-weight: 600;
-                    }
-                    .product-description em {
-                      font-style: italic;
-                    }
-                    .product-description a {
-                      color: #2093c4;
-                      text-decoration: underline;
-                    }
-                    .product-description a:hover {
-                      color: #331d83;
-                    }
-                    .product-description img {
-                      max-width: 100%;
-                      height: auto;
-                      margin: 1rem 0;
-                    }
-                  `}</style>
-                </div>
-
-                <div className="space-y-3 mt-auto">
-                  {selectedItem.button_type === "buy" &&
-                  selectedItem.buy_button_type === "external_link" &&
-                  Array.isArray(selectedItem.buy_button_url) &&
-                  selectedItem.buy_button_url.length > 0 ? (
-                    // Múltiples botones para links externos
-                    selectedItem.buy_button_url.map(
-                      (link: any, index: number) => {
-                        const hasSimultaneous =
-                          link.simultaneous_urls &&
-                          Array.isArray(link.simultaneous_urls) &&
-                          link.simultaneous_urls.length > 0;
-                        return (
-                          <Button
-                            key={index}
-                            variant={index === 0 ? "primary" : "outlineDark"}
-                            onClick={() => {
-                              // Abrir URL principal
-                              if (link.url) {
-                                window.open(
-                                  link.url,
-                                  "_blank",
-                                  "noopener,noreferrer"
-                                );
+              {/* Contenido scrolleable */}
+              <div className="flex-1 overflow-y-auto px-6 py-6">
+                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Imágenes */}
+                  <div className="flex flex-col">
+                    <div className="w-full h-72 md:h-96 bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden mb-4">
+                      <img
+                        src={
+                          selectedItem.thumbnail_url ||
+                          "https://tu-cdn.cloudfront.net/default-store-thumbnail.png"
+                        }
+                        alt={getTranslatedText(
+                          selectedItem.title_translations || selectedItem.title
+                        )}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {selectedItem.images && selectedItem.images.length > 0 && (
+                      <div className="space-y-3 mb-4">
+                        {selectedItem.images.map((image, index) => {
+                          const isVideo = image.match(/\.(mp4|webm|ogg|mov)$/i) || image.includes('youtube.com') || image.includes('youtu.be') || image.includes('vimeo.com');
+                          
+                          if (isVideo) {
+                            const isYouTube = image.includes('youtube.com') || image.includes('youtu.be');
+                            const isVimeo = image.includes('vimeo.com');
+                            
+                            if (isYouTube || isVimeo) {
+                              let embedUrl = image;
+                              if (isYouTube) {
+                                const videoId = image.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
+                                if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                              } else if (isVimeo) {
+                                const videoId = image.match(/vimeo\.com\/(\d+)/)?.[1];
+                                if (videoId) embedUrl = `https://player.vimeo.com/video/${videoId}`;
                               }
-                              // Abrir simultaneous_urls si existen
-                              if (hasSimultaneous) {
-                                link.simultaneous_urls.forEach(
-                                  (url: string) => {
-                                    if (url && url.trim()) {
-                                      window.open(
-                                        url,
-                                        "_blank",
-                                        "noopener,noreferrer"
-                                      );
-                                    }
-                              }
+                              
+                              return (
+                                <div key={index} className="w-full aspect-video bg-gray-200 dark:bg-gray-800 rounded overflow-hidden">
+                                  <iframe
+                                    src={embedUrl}
+                                    className="w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                    title={`Video ${index + 1}`}
+                                  />
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <div key={index} className="w-full aspect-video bg-gray-200 dark:bg-gray-800 rounded overflow-hidden">
+                                  <video
+                                    controls
+                                    className="w-full h-full object-contain"
+                                    preload="metadata"
+                                  >
+                                    <source src={image} type={`video/${image.split('.').pop()}`} />
+                                    Tu navegador no soporta el tag de video.
+                                  </video>
+                                </div>
+                              );
+                            }
+                          } else {
+                            return (
+                              <div
+                                key={index}
+                                className="w-full aspect-video bg-gray-200 dark:bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => setLightboxImage(image)}
+                              >
+                                <img
+                                  src={image}
+                                  alt={`${getTranslatedText(
+                                    selectedItem.title as any
+                                  )} ${index + 1}`}
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
                             );
                           }
-                          handleCloseModal();
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Información */}
+                  <div className="flex flex-col">
+                    <div className="mb-6 flex-1">
+                      {formatPrice(selectedItem) && (
+                        <div className="mb-4">{formatPrice(selectedItem)}</div>
+                      )}
+                      <div 
+                        className="text-gray-600 dark:text-gray-300 prose prose-sm max-w-none product-description"
+                        dangerouslySetInnerHTML={{
+                          __html: getTranslatedText(
+                            selectedItem.full_description_translations ||
+                              selectedItem.full_description
+                          ) ||
+                            getTranslatedText(
+                              selectedItem.description_translations ||
+                                selectedItem.description
+                            ) ||
+                            t("common.noContent")
                         }}
-                            className="w-full"
-                          >
-                            {link.label || getButtonText(selectedItem)}
-                          </Button>
-                        );
-                      }
-                    )
-                  ) : selectedItem.button_type === "buy" &&
-                    selectedItem.buy_button_type === "external_link" &&
-                    typeof selectedItem.buy_button_url === "string" ? (
-                    // Un solo link (legacy)
-                    <Button
-                      variant="primary"
-                      onClick={() => {
-                        handleAction(selectedItem);
-                        handleCloseModal();
-                      }}
-                      className="w-full"
-                    >
-                      {getButtonText(selectedItem)}
-                    </Button>
-                  ) : (
-                    // Otros tipos de botones (incluyendo "request" sin precio)
-                    <Button
-                      variant="primary"
-                      onClick={() => {
-                        handleAction(selectedItem);
-                        handleCloseModal();
-                      }}
-                      className={`w-full ${!formatPrice(selectedItem) ? "mt-auto" : ""}`}
-                    >
-                      {getButtonText(selectedItem)}
-                    </Button>
-                  )}
+                      />
+                      <style>{`
+                        .product-description ul,
+                        .product-description ol,
+                        .product-description .ql-list,
+                        .product-description [class*="ql-list"] {
+                          margin: 1rem 0 !important;
+                          padding-left: 2rem !important;
+                          list-style-position: outside !important;
+                          display: block !important;
+                        }
+                        .product-description ul,
+                        .product-description .ql-list-bullet {
+                          list-style-type: disc !important;
+                        }
+                        .product-description ol,
+                        .product-description .ql-list-ordered {
+                          list-style-type: decimal !important;
+                        }
+                        .product-description li,
+                        .product-description .ql-list-item {
+                          margin: 0.5rem 0 !important;
+                          line-height: 1.6 !important;
+                          display: list-item !important;
+                        }
+                        .product-description ul ul,
+                        .product-description ol ol,
+                        .product-description ul ol,
+                        .product-description ol ul {
+                          margin-top: 0.5rem !important;
+                          margin-bottom: 0.5rem !important;
+                        }
+                        .product-description ul ul {
+                          list-style-type: circle !important;
+                        }
+                        .product-description ul ul ul {
+                          list-style-type: square !important;
+                        }
+                        .product-description ol ol {
+                          list-style-type: lower-alpha !important;
+                        }
+                        .product-description ol ol ol {
+                          list-style-type: lower-roman !important;
+                        }
+                        .product-description p {
+                          margin: 1rem 0;
+                        }
+                        .product-description h1,
+                        .product-description h2,
+                        .product-description h3,
+                        .product-description h4,
+                        .product-description h5,
+                        .product-description h6 {
+                          margin-top: 1.5rem;
+                          margin-bottom: 1rem;
+                          font-weight: 600;
+                        }
+                        .product-description strong {
+                          font-weight: 600;
+                        }
+                        .product-description em {
+                          font-style: italic;
+                        }
+                        .product-description a {
+                          color: #2093c4;
+                          text-decoration: underline;
+                        }
+                        .product-description a:hover {
+                          color: #331d83;
+                        }
+                        .product-description img {
+                          max-width: 100%;
+                          height: auto;
+                          margin: 1rem 0;
+                        }
+                      `}</style>
+                    </div>
+
+                    <div className="space-y-3 mt-auto pb-4">
+                      {selectedItem.button_type === "buy" &&
+                      selectedItem.buy_button_type === "external_link" &&
+                      Array.isArray(selectedItem.buy_button_url) &&
+                      selectedItem.buy_button_url.length > 0 ? (
+                        // Múltiples botones para links externos
+                        selectedItem.buy_button_url.map(
+                          (link: any, index: number) => {
+                            const hasSimultaneous =
+                              link.simultaneous_urls &&
+                              Array.isArray(link.simultaneous_urls) &&
+                              link.simultaneous_urls.length > 0;
+                            return (
+                              <Button
+                                key={index}
+                                variant={index === 0 ? "primary" : "outlineDark"}
+                                onClick={() => {
+                                  // Abrir URL principal
+                                  if (link.url) {
+                                    window.open(
+                                      link.url,
+                                      "_blank",
+                                      "noopener,noreferrer"
+                                    );
+                                  }
+                                  // Abrir simultaneous_urls si existen
+                                  if (hasSimultaneous) {
+                                    link.simultaneous_urls.forEach(
+                                      (url: string) => {
+                                        if (url && url.trim()) {
+                                          window.open(
+                                            url,
+                                            "_blank",
+                                            "noopener,noreferrer"
+                                          );
+                                        }
+                                  }
+                                );
+                              }
+                              handleCloseModal();
+                            }}
+                                className="w-full"
+                              >
+                                {link.label || getButtonText(selectedItem)}
+                              </Button>
+                            );
+                          }
+                        )
+                      ) : selectedItem.button_type === "buy" &&
+                        selectedItem.buy_button_type === "external_link" &&
+                        typeof selectedItem.buy_button_url === "string" ? (
+                        // Un solo link (legacy)
+                        <Button
+                          variant="primary"
+                          onClick={() => {
+                            handleAction(selectedItem);
+                            handleCloseModal();
+                          }}
+                          className="w-full"
+                        >
+                          {getButtonText(selectedItem)}
+                        </Button>
+                      ) : (
+                        // Otros tipos de botones (incluyendo "request" sin precio)
+                        <Button
+                          variant="primary"
+                          onClick={() => {
+                            handleAction(selectedItem);
+                            handleCloseModal();
+                          }}
+                          className={`w-full ${!formatPrice(selectedItem) ? "mt-auto" : ""}`}
+                        >
+                          {getButtonText(selectedItem)}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </Modal>
+          </>
         )}
 
         {/* Lightbox para ver imágenes en tamaño completo */}
