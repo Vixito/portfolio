@@ -83,12 +83,12 @@ function Store() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { productId } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem] = useState<StoreItem | null>(null);
+  const [isModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchName, setSearchName] = useState<string>("");
   const [priceFilter, setPriceFilter] = useState<string>("all");
@@ -433,7 +433,7 @@ function Store() {
     // Si el precio es 0, mostrar "Gratis"/"Free"
     if (currentPrice === 0) {
       return (
-        <span className="text-2xl font-bold text-purple-500 dark:text-purple-300">
+        <span className="text-2xl font-bold text-purple-800 dark:text-purple-100">
           {t("store.free")}
         </span>
       );
@@ -445,7 +445,7 @@ function Store() {
         return null;
       }
       return (
-        <span className="text-2xl font-bold text-purple-500 dark:text-purple-300">
+        <span className="text-2xl font-bold text-purple-800 dark:text-purple-100">
           {new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: "USD",
@@ -488,7 +488,7 @@ function Store() {
     const price = pricing.current_price_usd;
 
     return (
-      <span className="text-2xl font-bold text-purple-500 dark:text-purple-300">
+      <span className="text-2xl font-bold text-purple-800 dark:text-purple-100">
         {new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "USD",
@@ -601,7 +601,7 @@ function Store() {
 
             <div className="flex flex-col">
               {formatPrice(routeSelectedItem) && (
-                <div className="mb-4 text-purple-700 dark:text-purple-200">
+                <div className="mb-4 text-purple-800 dark:text-purple-100">
                   {formatPrice(routeSelectedItem)}
                 </div>
               )}
@@ -857,7 +857,7 @@ function Store() {
                   </div>
                   <div className={`flex items-center pt-5 ${formatPrice(item) ? "justify-between" : "justify-end"}`}>
                     {formatPrice(item) && (
-                      <div className="flex-1 text-purple-500 dark:text-purple-300">{formatPrice(item)}</div>
+                      <div className="flex-1 text-purple-800 dark:text-purple-100">{formatPrice(item)}</div>
                     )}
                     {item.button_type === "buy" &&
                     item.buy_button_type === "external_link" &&
@@ -1093,11 +1093,15 @@ function Store() {
                           display: block !important;
                         }
                         .product-description ul,
-                        .product-description .ql-list-bullet {
+                        .product-description .ql-list-bullet,
+                        .product-description ol > li[data-list="bullet"],
+                        .product-description li[data-list="bullet"] {
                           list-style-type: disc !important;
                         }
                         .product-description ol,
-                        .product-description .ql-list-ordered {
+                        .product-description .ql-list-ordered,
+                        .product-description ol > li[data-list="ordered"],
+                        .product-description li[data-list="ordered"] {
                           list-style-type: decimal !important;
                         }
                         .product-description li,
