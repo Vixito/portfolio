@@ -92,6 +92,7 @@ function Store() {
   const [priceFilter, setPriceFilter] = useState<string>("all");
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const productPanelRef = useRef<HTMLDivElement>(null);
+  const productScrollRef = useRef<HTMLDivElement>(null);
   const productOverlayRef = useRef<HTMLDivElement>(null);
   const itemsPerPage = 12;
 
@@ -230,8 +231,13 @@ function Store() {
   useEffect(() => {
     if (!isModalOpen) return;
 
-    // Bloquear scroll del body
-    document.body.style.overflow = "hidden";
+    // Bloquear scroll del body sin cambiar la posición del documento detrás del modal
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
 
     if (productPanelRef.current && productOverlayRef.current) {
       gsap.fromTo(
@@ -246,6 +252,15 @@ function Store() {
       );
     }
 
+    requestAnimationFrame(() => {
+      if (productScrollRef.current) {
+        productScrollRef.current.scrollTop = 0;
+      }
+      if (productPanelRef.current) {
+        productPanelRef.current.scrollTop = 0;
+      }
+    });
+
     // Cerrar con ESC
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleCloseModal();
@@ -253,8 +268,16 @@ function Store() {
     document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.body.style.overflow = "";
+      const top = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
       document.removeEventListener("keydown", handleEscape);
+
+      const restoredScrollY = top ? Math.abs(Number.parseInt(top, 10)) : scrollY;
+      window.scrollTo(0, restoredScrollY);
     };
   }, [isModalOpen]);
 
@@ -279,16 +302,14 @@ function Store() {
           if (firstLink.url) {
             window.open(firstLink.url, "_blank", "noopener,noreferrer");
             // Si tiene simultaneous_urls, abrirlos también
-            if (
-              firstLink.simultaneous_urls &&
-              Array.isArray(firstLink.simultaneous_urls)
-            ) {
-              firstLink.simultaneous_urls.forEach((url: string) => {
-                if (url && url.trim()) {
-                  window.open(url, "_blank", "noopener,noreferrer");
-                }
-              });
-            }
+            const simultaneousUrls = Array.isArray(firstLink.simultaneous_urls)
+              ? firstLink.simultaneous_urls
+              : [];
+            simultaneousUrls.forEach((url: string) => {
+              if (url && url.trim()) {
+                window.open(url, "_blank", "noopener,noreferrer");
+              }
+            });
           }
         } else if (typeof item.buy_button_url === "string") {
           // Legacy: string único
@@ -424,7 +445,7 @@ function Store() {
     // Si el precio es 0, mostrar "Gratis"/"Free"
     if (currentPrice === 0) {
       return (
-        <span className="text-2xl font-bold text-purple">
+        <span className="text-2xl font-bold text-purple-500 dark:text-purple-300">
           {t("store.free")}
         </span>
       );
@@ -436,7 +457,7 @@ function Store() {
         return null;
       }
       return (
-        <span className="text-2xl font-bold text-purple">
+        <span className="text-2xl font-bold text-purple-500 dark:text-purple-300">
           {new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: "USD",
@@ -466,7 +487,7 @@ function Store() {
               -{pricing.sale_percentage}%
             </span>
           </div>
-          <span className="text-2xl font-bold text-red-600">
+          <span className="text-2xl font-bold text-red-600 dark:text-red-300">
             {new Intl.NumberFormat("en-US", {
               style: "currency",
               currency: "USD",
@@ -479,7 +500,7 @@ function Store() {
     const price = pricing.current_price_usd;
 
     return (
-      <span className="text-2xl font-bold text-purple">
+      <span className="text-2xl font-bold text-purple-500 dark:text-purple-300">
         {new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "USD",
@@ -689,7 +710,7 @@ function Store() {
                   </div>
                   <div className={`flex items-center pt-5 ${formatPrice(item) ? "justify-between" : "justify-end"}`}>
                     {formatPrice(item) && (
-                      <div className="flex-1">{formatPrice(item)}</div>
+                      <div className="flex-1 text-purple-500 dark:text-purple-300">{formatPrice(item)}</div>
                     )}
                     {item.button_type === "buy" &&
                     item.buy_button_type === "external_link" &&
@@ -774,7 +795,7 @@ function Store() {
             {/* Panel de producto */}
             <div
               ref={productPanelRef}
-              className="fixed inset-0 z-40 bg-white dark:bg-gray-900 flex flex-col overflow-y-auto overscroll-contain"
+              className="fixed inset-0 z-40 bg-white dark:bg-gray-900 flex flex-col overflow-hidden"
               style={{ bottom: "40px" }}
             >
               {/* Header con título y botón cerrar */}
@@ -808,7 +829,10 @@ function Store() {
               </div>
 
               {/* Contenido scrolleable */}
-              <div className="flex-1 px-6 py-6">
+              <div
+                ref={productScrollRef}
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-6"
+              >
                 <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Imágenes */}
                   <div className="flex flex-col">
@@ -895,7 +919,7 @@ function Store() {
                   <div className="flex flex-col">
                     <div className="mb-6 flex-1">
                       {formatPrice(selectedItem) && (
-                        <div className="mb-4">{formatPrice(selectedItem)}</div>
+                        <div className="mb-4 text-purple-500 dark:text-purple-300">{formatPrice(selectedItem)}</div>
                       )}
                       <div 
                         className="text-gray-600 dark:text-gray-300 prose prose-sm max-w-none product-description"
@@ -995,7 +1019,7 @@ function Store() {
                       selectedItem.buy_button_url.length > 0 ? (
                         // Múltiples botones para links externos
                         selectedItem.buy_button_url.map(
-                            (link: StoreBuyLink, index: number) => {
+                          (link: StoreBuyLink, index: number) => {
                             return (
                               <Button
                                 key={index}
@@ -1010,8 +1034,9 @@ function Store() {
                                     );
                                   }
                                   // Abrir simultaneous_urls si existen
-                                  const simultaneousUrls =
-                                    link.simultaneous_urls ?? [];
+                                  const simultaneousUrls = Array.isArray(link.simultaneous_urls)
+                                    ? link.simultaneous_urls
+                                    : [];
                                   if (simultaneousUrls.length > 0) {
                                     simultaneousUrls.forEach((url: string) => {
                                       if (url && url.trim()) {
@@ -1025,7 +1050,7 @@ function Store() {
                                   }
                                   handleCloseModal();
                                 }}
-                                className="w-full"
+                                className="w-full dark:text-white dark:border-white"
                               >
                                 {link.label || getButtonText(selectedItem)}
                               </Button>
