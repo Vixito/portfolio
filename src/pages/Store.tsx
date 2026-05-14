@@ -5,7 +5,6 @@ import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
 import { getProductsWithPricing } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
-import { escapeHtml } from "../lib/security";
 
 interface ProductPricing {
   id: string;
@@ -20,6 +19,38 @@ interface ProductPricing {
   sale_ends_at: string | null;
 }
 
+interface StoreBuyLink {
+  label: string;
+  url: string;
+  simultaneous_urls?: string[];
+}
+
+interface StoreProductRow {
+  id: string;
+  public_id?: string | null;
+  title: string;
+  title_translations?: { es?: string; en?: string } | null;
+  description: string | null;
+  description_translations?: { es?: string; en?: string } | null;
+  full_description: string | null;
+  full_description_translations?: { es?: string; en?: string } | null;
+  base_price_usd: number | null;
+  base_price_cop: number | null;
+  thumbnail_url: string | null;
+  images: string[] | null;
+  sector: string | null;
+  button_type?: "buy" | "request" | null;
+  buy_button_type?: "external_link" | "custom_checkout" | null;
+  buy_button_url?: string | StoreBuyLink[] | null;
+  request_button_type?: "external_link" | "custom_form" | null;
+  request_button_url?: string | null;
+  action_type?: "link" | "submit" | "schedule" | null;
+  action_url?: string | null;
+  pricing_link?: string | null;
+  button_text?: string | null;
+  product_pricing?: ProductPricing[] | ProductPricing | null;
+}
+
 interface StoreItem {
   id: string;
   public_id?: string; // Identificador público seguro (8 caracteres)
@@ -29,7 +60,7 @@ interface StoreItem {
   description_translations?: { es?: string; en?: string } | null;
   full_description: string | null;
   full_description_translations?: { es?: string; en?: string } | null;
-  base_price_usd: number;
+  base_price_usd: number | null;
   base_price_cop: number | null;
   thumbnail_url: string | null;
   images: string[] | null;
@@ -37,11 +68,11 @@ interface StoreItem {
   // Nueva estructura de botones
   button_type?: "buy" | "request";
   buy_button_type?: "external_link" | "custom_checkout";
-  buy_button_url?: string | Array<{ label: string; url: string }> | null; // Puede ser string (legacy), array de links, o null
+  buy_button_url?: string | StoreBuyLink[] | null; // Puede ser string (legacy), array de links, o null
   request_button_type?: "external_link" | "custom_form";
   request_button_url?: string | null;
   // Campos antiguos (mantener por compatibilidad durante migración)
-  action_type?: "link" | "submit" | "schedule";
+  action_type?: "link" | "submit" | "schedule" | null;
   action_url?: string | null;
   pricing_link?: string | null;
   button_text?: string | null;
@@ -91,8 +122,8 @@ function Store() {
         const products = await getProductsWithPricing();
 
         // Mapear productos de Supabase a StoreItem, preservando campos de traducción
-        const mappedItems: StoreItem[] = (products || []).map(
-          (product: any) => ({
+        const mappedItems: StoreItem[] = ((products || []) as StoreProductRow[]).map(
+          (product: StoreProductRow): StoreItem => ({
             id: product.id,
             public_id: product.public_id || product.id.substring(0, 8),
             title: product.title,
@@ -102,10 +133,12 @@ function Store() {
             full_description: product.full_description,
             full_description_translations:
               product.full_description_translations,
-            base_price_usd: product.base_price_usd !== null && product.base_price_usd !== undefined 
-              ? Number(product.base_price_usd) 
-              : null,
-            base_price_cop: product.base_price_cop !== null && product.base_price_cop !== undefined
+            base_price_usd:
+              product.base_price_usd !== null && product.base_price_usd !== undefined
+                ? Number(product.base_price_usd)
+                : null,
+            base_price_cop:
+              product.base_price_cop !== null && product.base_price_cop !== undefined
               ? Number(product.base_price_cop)
               : null,
             thumbnail_url: product.thumbnail_url,
@@ -151,7 +184,7 @@ function Store() {
   useEffect(() => {
     const productParam = searchParams.get('product');
     if (productParam && items.length > 0 && !selectedItem) {
-      const product = items.find(item => 
+      const product = items.find((item: StoreItem) => 
         item.public_id === productParam || 
         item.id === productParam
       );
@@ -319,7 +352,7 @@ function Store() {
   }, [selectedCategory, searchName, priceFilter]);
 
   // Filtrar productos por categoría/sector, nombre y precio
-  const filteredItems = items.filter((item) => {
+  const filteredItems = items.filter((item: StoreItem) => {
     // Filtro por categoría
     if (selectedCategory !== "all" && item.sector !== selectedCategory) {
       return false;
@@ -617,7 +650,7 @@ function Store() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {currentItems.map((item) => (
+            {currentItems.map((item: StoreItem) => (
               <div
                 key={item.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow border border-gray-200 flex flex-col"
@@ -663,8 +696,7 @@ function Store() {
                     Array.isArray(item.buy_button_url) &&
                     (item.buy_button_url.length > 1 ||
                       item.buy_button_url.some(
-                        (link: any) =>
-                          link.simultaneous_urls &&
+                        (link: StoreBuyLink) =>
                           Array.isArray(link.simultaneous_urls) &&
                           link.simultaneous_urls.length > 0
                       )) ? (
@@ -780,7 +812,7 @@ function Store() {
                 <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Imágenes */}
                   <div className="flex flex-col">
-                    <div className="w-full h-72 md:h-96 bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden mb-4">
+                    <div className="w-full aspect-[4/3] bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden mb-4">
                       <img
                         src={
                           selectedItem.thumbnail_url ||
@@ -789,12 +821,12 @@ function Store() {
                         alt={getTranslatedText(
                           selectedItem.title_translations || selectedItem.title
                         )}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                     {selectedItem.images && selectedItem.images.length > 0 && (
                       <div className="space-y-3 mb-4">
-                        {selectedItem.images.map((image, index) => {
+                        {selectedItem.images.map((image: string, index: number) => {
                           const isVideo = image.match(/\.(mp4|webm|ogg|mov)$/i) || image.includes('youtube.com') || image.includes('youtu.be') || image.includes('vimeo.com');
                           
                           if (isVideo) {
@@ -963,11 +995,7 @@ function Store() {
                       selectedItem.buy_button_url.length > 0 ? (
                         // Múltiples botones para links externos
                         selectedItem.buy_button_url.map(
-                          (link: any, index: number) => {
-                            const hasSimultaneous =
-                              link.simultaneous_urls &&
-                              Array.isArray(link.simultaneous_urls) &&
-                              link.simultaneous_urls.length > 0;
+                            (link: StoreBuyLink, index: number) => {
                             return (
                               <Button
                                 key={index}
@@ -982,21 +1010,21 @@ function Store() {
                                     );
                                   }
                                   // Abrir simultaneous_urls si existen
-                                  if (hasSimultaneous) {
-                                    link.simultaneous_urls.forEach(
-                                      (url: string) => {
-                                        if (url && url.trim()) {
-                                          window.open(
-                                            url,
-                                            "_blank",
-                                            "noopener,noreferrer"
-                                          );
-                                        }
+                                  const simultaneousUrls =
+                                    link.simultaneous_urls ?? [];
+                                  if (simultaneousUrls.length > 0) {
+                                    simultaneousUrls.forEach((url: string) => {
+                                      if (url && url.trim()) {
+                                        window.open(
+                                          url,
+                                          "_blank",
+                                          "noopener,noreferrer"
+                                        );
+                                      }
+                                    });
                                   }
-                                );
-                              }
-                              handleCloseModal();
-                            }}
+                                  handleCloseModal();
+                                }}
                                 className="w-full"
                               >
                                 {link.label || getButtonText(selectedItem)}

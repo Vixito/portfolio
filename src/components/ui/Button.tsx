@@ -1,7 +1,9 @@
+type ButtonVariant = "primary" | "secondary" | "outline" | "outlineDark";
+
 interface ButtonProps {
   children: React.ReactNode;
-  variant?: "primary" | "secondary" | "outline";
-  onClick?: () => void;
+  variant?: ButtonVariant;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
   disabled?: boolean;
   type?: "button" | "submit" | "reset";
   className?: string;
