@@ -524,6 +524,86 @@ function Store() {
     }
   };
 
+  const productDescriptionStyles = `
+    .product-description ul,
+    .product-description ol,
+    .product-description .ql-list,
+    .product-description [class*="ql-list"] {
+      margin: 1rem 0 !important;
+      padding-left: 2rem !important;
+      list-style-position: outside !important;
+      display: block !important;
+    }
+    .product-description ul,
+    .product-description .ql-list-bullet,
+    .product-description ol > li[data-list="bullet"],
+    .product-description li[data-list="bullet"] {
+      list-style-type: disc !important;
+    }
+    .product-description ol,
+    .product-description .ql-list-ordered,
+    .product-description ol > li[data-list="ordered"],
+    .product-description li[data-list="ordered"] {
+      list-style-type: decimal !important;
+    }
+    .product-description li,
+    .product-description .ql-list-item {
+      margin: 0.5rem 0 !important;
+      line-height: 1.6 !important;
+      display: list-item !important;
+    }
+    .product-description ul ul,
+    .product-description ol ol,
+    .product-description ul ol,
+    .product-description ol ul {
+      margin-top: 0.5rem !important;
+      margin-bottom: 0.5rem !important;
+    }
+    .product-description ul ul {
+      list-style-type: circle !important;
+    }
+    .product-description ul ul ul {
+      list-style-type: square !important;
+    }
+    .product-description ol ol {
+      list-style-type: lower-alpha !important;
+    }
+    .product-description ol ol ol {
+      list-style-type: lower-roman !important;
+    }
+    .product-description p {
+      margin: 1rem 0;
+    }
+    .product-description h1,
+    .product-description h2,
+    .product-description h3,
+    .product-description h4,
+    .product-description h5,
+    .product-description h6 {
+      margin-top: 1.5rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    .product-description strong {
+      font-weight: 600;
+    }
+    .product-description em {
+      font-style: italic;
+    }
+    .product-description a {
+      color: #2093c4;
+      text-decoration: underline;
+    }
+    .product-description a:hover {
+      color: #331d83;
+    }
+    .product-description img {
+      max-width: 100%;
+      height: auto;
+      margin: 1rem 0;
+    }
+  `;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -621,6 +701,7 @@ function Store() {
                     t("common.noContent"),
                 }}
               />
+              <style>{productDescriptionStyles}</style>
 
               <div className="space-y-3 mt-8 pb-4">
                 {routeSelectedItem.button_type === "buy" &&
@@ -1082,85 +1163,7 @@ function Store() {
                             t("common.noContent")
                         }}
                       />
-                      <style>{`
-                        .product-description ul,
-                        .product-description ol,
-                        .product-description .ql-list,
-                        .product-description [class*="ql-list"] {
-                          margin: 1rem 0 !important;
-                          padding-left: 2rem !important;
-                          list-style-position: outside !important;
-                          display: block !important;
-                        }
-                        .product-description ul,
-                        .product-description .ql-list-bullet,
-                        .product-description ol > li[data-list="bullet"],
-                        .product-description li[data-list="bullet"] {
-                          list-style-type: disc !important;
-                        }
-                        .product-description ol,
-                        .product-description .ql-list-ordered,
-                        .product-description ol > li[data-list="ordered"],
-                        .product-description li[data-list="ordered"] {
-                          list-style-type: decimal !important;
-                        }
-                        .product-description li,
-                        .product-description .ql-list-item {
-                          margin: 0.5rem 0 !important;
-                          line-height: 1.6 !important;
-                          display: list-item !important;
-                        }
-                        .product-description ul ul,
-                        .product-description ol ol,
-                        .product-description ul ol,
-                        .product-description ol ul {
-                          margin-top: 0.5rem !important;
-                          margin-bottom: 0.5rem !important;
-                        }
-                        .product-description ul ul {
-                          list-style-type: circle !important;
-                        }
-                        .product-description ul ul ul {
-                          list-style-type: square !important;
-                        }
-                        .product-description ol ol {
-                          list-style-type: lower-alpha !important;
-                        }
-                        .product-description ol ol ol {
-                          list-style-type: lower-roman !important;
-                        }
-                        .product-description p {
-                          margin: 1rem 0;
-                        }
-                        .product-description h1,
-                        .product-description h2,
-                        .product-description h3,
-                        .product-description h4,
-                        .product-description h5,
-                        .product-description h6 {
-                          margin-top: 1.5rem;
-                          margin-bottom: 1rem;
-                          font-weight: 600;
-                        }
-                        .product-description strong {
-                          font-weight: 600;
-                        }
-                        .product-description em {
-                          font-style: italic;
-                        }
-                        .product-description a {
-                          color: #2093c4;
-                          text-decoration: underline;
-                        }
-                        .product-description a:hover {
-                          color: #331d83;
-                        }
-                        .product-description img {
-                          max-width: 100%;
-                          height: auto;
-                          margin: 1rem 0;
-                        }
-                      `}</style>
+                      <style>{productDescriptionStyles}</style>
                     </div>
 
                     <div className="space-y-3 mt-auto pb-4">
