@@ -160,6 +160,14 @@ function App() {
           }
         ></Route>
         <Route
+          path="/store/:productId"
+          element={
+            <Layout>
+              <Store />
+            </Layout>
+          }
+        ></Route>
+        <Route
           path="/radio"
           element={
             <Layout>

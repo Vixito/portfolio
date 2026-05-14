@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { gsap } from "gsap";
 import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
@@ -81,6 +81,8 @@ interface StoreItem {
 
 function Store() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { productId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,6 +97,11 @@ function Store() {
   const productScrollRef = useRef<HTMLDivElement>(null);
   const productOverlayRef = useRef<HTMLDivElement>(null);
   const itemsPerPage = 12;
+  const routeSelectedItem = productId
+    ? items.find(
+        (item: StoreItem) => item.public_id === productId || item.id === productId
+      ) || null
+    : null;
 
   // Categorías disponibles (deben coincidir con las opciones en Admin)
   // Ordenadas alfabéticamente, excepto "all" que va primero
@@ -184,48 +191,29 @@ function Store() {
   // Detectar producto en URL y abrirlo automáticamente
   useEffect(() => {
     const productParam = searchParams.get('product');
-    if (productParam && items.length > 0 && !selectedItem) {
-      const product = items.find((item: StoreItem) => 
-        item.public_id === productParam || 
-        item.id === productParam
-      );
-      if (product) {
-        setSelectedItem(product);
-        setIsModalOpen(true);
-      }
+    if (productParam) {
+      navigate(`/store/${productParam}`, { replace: true });
     }
-  }, [searchParams, items, selectedItem]);
+  }, [searchParams, navigate]);
 
   const handleItemClick = (item: StoreItem) => {
-    setSelectedItem(item);
-    setIsModalOpen(true);
-    // Actualizar URL con el public_id del producto
-    if (item.public_id) {
-      setSearchParams({ product: item.public_id });
-    }
+    navigate(`/store/${item.public_id || item.id}`);
   };
 
   const handleCloseModal = () => {
-    // Animación de salida
-    if (productPanelRef.current && productOverlayRef.current) {
-      gsap.to(productOverlayRef.current, { opacity: 0, duration: 0.25 });
-      gsap.to(productPanelRef.current, {
-        y: "100%",
-        opacity: 0,
-        duration: 0.3,
-        ease: "power2.in",
-        onComplete: () => {
-          setIsModalOpen(false);
-          setSelectedItem(null);
-          setSearchParams({});
-        },
-      });
-    } else {
-      setIsModalOpen(false);
-      setSelectedItem(null);
-      setSearchParams({});
-    }
+    navigate("/store");
   };
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && routeSelectedItem) {
+        handleCloseModal();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [routeSelectedItem]);
 
   // Animación de entrada del panel y bloqueo de scroll
   useEffect(() => {
@@ -540,6 +528,165 @@ function Store() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-600">{t("common.loading")}</div>
+      </div>
+    );
+  }
+
+  if (routeSelectedItem) {
+    return (
+      <div className="min-h-screen py-20 px-4 relative">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between gap-4 mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white truncate">
+              {getTranslatedText(
+                routeSelectedItem.title_translations || routeSelectedItem.title
+              )}
+            </h1>
+            <button
+              onClick={handleCloseModal}
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0 cursor-pointer"
+              aria-label="Cerrar"
+            >
+              <svg
+                className="w-6 h-6 text-gray-600 dark:text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div className="flex flex-col">
+              <div className="w-full aspect-[4/3] bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden mb-4">
+                <img
+                  src={
+                    routeSelectedItem.thumbnail_url ||
+                    "https://tu-cdn.cloudfront.net/default-store-thumbnail.png"
+                  }
+                  alt={getTranslatedText(
+                    routeSelectedItem.title_translations || routeSelectedItem.title
+                  )}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              {routeSelectedItem.images && routeSelectedItem.images.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {routeSelectedItem.images.map((image: string, index: number) => (
+                    <div
+                      key={index}
+                      className="w-full aspect-video bg-gray-200 dark:bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setLightboxImage(image)}
+                    >
+                      <img
+                        src={image}
+                        alt={`${getTranslatedText(
+                          routeSelectedItem.title_translations || routeSelectedItem.title
+                        )} ${index + 1}`}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col">
+              {formatPrice(routeSelectedItem) && (
+                <div className="mb-4 text-purple-700 dark:text-purple-200">
+                  {formatPrice(routeSelectedItem)}
+                </div>
+              )}
+
+              <div
+                className="text-gray-600 dark:text-gray-300 prose prose-sm max-w-none product-description"
+                dangerouslySetInnerHTML={{
+                  __html:
+                    getTranslatedText(
+                      routeSelectedItem.full_description_translations ||
+                        routeSelectedItem.full_description
+                    ) ||
+                    getTranslatedText(
+                      routeSelectedItem.description_translations ||
+                        routeSelectedItem.description
+                    ) ||
+                    t("common.noContent"),
+                }}
+              />
+
+              <div className="space-y-3 mt-8 pb-4">
+                {routeSelectedItem.button_type === "buy" &&
+                routeSelectedItem.buy_button_type === "external_link" &&
+                Array.isArray(routeSelectedItem.buy_button_url) &&
+                routeSelectedItem.buy_button_url.length > 0 ? (
+                  routeSelectedItem.buy_button_url.map(
+                    (link: StoreBuyLink, index: number) => (
+                      <Button
+                        key={index}
+                        variant={index === 0 ? "primary" : "outlineDark"}
+                        onClick={() => {
+                          if (link.url) {
+                            window.open(link.url, "_blank", "noopener,noreferrer");
+                          }
+                          const simultaneousUrls = Array.isArray(
+                            link.simultaneous_urls
+                          )
+                            ? link.simultaneous_urls
+                            : [];
+                          simultaneousUrls.forEach((url: string) => {
+                            if (url && url.trim()) {
+                              window.open(url, "_blank", "noopener,noreferrer");
+                            }
+                          });
+                        }}
+                        className="w-full dark:text-white dark:border-white"
+                      >
+                        {link.label || getButtonText(routeSelectedItem)}
+                      </Button>
+                    )
+                  )
+                ) : (
+                  <Button
+                    variant="primary"
+                    onClick={() => handleAction(routeSelectedItem)}
+                    className="w-full dark:text-white"
+                  >
+                    {getButtonText(routeSelectedItem)}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {lightboxImage && (
+          <div
+            className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 animate-fadeIn"
+            onClick={() => setLightboxImage(null)}
+          >
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition-colors z-10"
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+            <img
+              src={lightboxImage}
+              alt="Vista completa"
+              className="max-w-full max-h-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
       </div>
     );
   }
