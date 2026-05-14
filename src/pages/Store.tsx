@@ -742,39 +742,41 @@ function Store() {
             {/* Panel de producto */}
             <div
               ref={productPanelRef}
-              className="fixed inset-0 z-40 bg-white dark:bg-gray-900 flex flex-col"
+              className="fixed inset-0 z-40 bg-white dark:bg-gray-900 flex flex-col overflow-y-auto overscroll-contain"
               style={{ bottom: "40px" }}
             >
               {/* Header con título y botón cerrar */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white truncate pr-4">
-                  {getTranslatedText(
-                    selectedItem.title_translations || selectedItem.title
-                  )}
-                </h2>
-                <button
-                  onClick={handleCloseModal}
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0 cursor-pointer"
-                  aria-label="Cerrar"
-                >
-                  <svg
-                    className="w-6 h-6 text-gray-600 dark:text-gray-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              <div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shrink-0">
+                <div className="max-w-6xl mx-auto flex items-start justify-between gap-4 px-6 py-4">
+                  <h2 className="flex-1 min-w-0 text-2xl font-bold text-gray-900 dark:text-white text-left leading-tight">
+                    {getTranslatedText(
+                      selectedItem.title_translations || selectedItem.title
+                    )}
+                  </h2>
+                  <button
+                    onClick={handleCloseModal}
+                    className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0 cursor-pointer"
+                    aria-label="Cerrar"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      className="w-6 h-6 text-gray-600 dark:text-gray-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {/* Contenido scrolleable */}
-              <div className="flex-1 overflow-y-auto px-6 py-6">
+              <div className="flex-1 px-6 py-6">
                 <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Imágenes */}
                   <div className="flex flex-col">
