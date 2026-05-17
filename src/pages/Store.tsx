@@ -412,7 +412,7 @@ function Store() {
   );
 
   // Formatear precio (simplificado, sin detección de país por IP)
-  const formatPrice = (item: StoreItem) => {
+  const formatPrice = (item: StoreItem, colorClass: string = "text-purple-800") => {
     const pricing = item.product_pricing?.[0];
     // Si base_price_usd es null o undefined, considerar como sin precio
     const basePrice = item.base_price_usd !== null && item.base_price_usd !== undefined ? item.base_price_usd : null;
@@ -433,7 +433,7 @@ function Store() {
     // Si el precio es 0, mostrar "Gratis"/"Free"
     if (currentPrice === 0) {
       return (
-        <span className="text-2xl font-bold text-purple-800 dark:text-purple-100">
+        <span className={`text-2xl font-bold ${colorClass}`}>
           {t("store.free")}
         </span>
       );
@@ -445,7 +445,7 @@ function Store() {
         return null;
       }
       return (
-        <span className="text-2xl font-bold text-purple-800 dark:text-purple-100">
+        <span className={`text-2xl font-bold ${colorClass}`}>
           {new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: "USD",
@@ -488,7 +488,7 @@ function Store() {
     const price = pricing.current_price_usd;
 
     return (
-      <span className="text-2xl font-bold text-purple-800 dark:text-purple-100">
+      <span className={`text-2xl font-bold ${colorClass}`}>
         {new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "USD",
@@ -601,13 +601,13 @@ function Store() {
 
             <div className="flex flex-col">
               {formatPrice(routeSelectedItem) && (
-                <div className="mb-4 text-purple-800 dark:text-purple-100">
-                  {formatPrice(routeSelectedItem)}
+                <div className="mb-4 font-bold text-xl">
+                  {formatPrice(routeSelectedItem, "text-purple-800 dark:text-purple-300")}
                 </div>
               )}
 
               <div
-                className="text-gray-600 dark:text-gray-300 prose prose-sm max-w-none product-description"
+                className="text-gray-600 dark:text-gray-300 prose prose-sm max-w-none product-description ql-editor"
                 dangerouslySetInnerHTML={{
                   __html:
                     getTranslatedText(
@@ -631,7 +631,7 @@ function Store() {
                     (link: StoreBuyLink, index: number) => (
                       <Button
                         key={index}
-                        variant={index === 0 ? "primary" : "outlineDark"}
+                        variant={index === 0 ? "productStore" : "outlineDark"}
                         onClick={() => {
                           if (link.url) {
                             window.open(link.url, "_blank", "noopener,noreferrer");
@@ -647,7 +647,7 @@ function Store() {
                             }
                           });
                         }}
-                        className="w-full dark:text-white dark:border-white"
+                        className={`w-full ${index > 0 ? "dark:text-white dark:border-white" : ""}`}
                       >
                         {link.label || getButtonText(routeSelectedItem)}
                       </Button>
@@ -655,9 +655,9 @@ function Store() {
                   )
                 ) : (
                   <Button
-                    variant="primary"
+                    variant="productStore"
                     onClick={() => handleAction(routeSelectedItem)}
-                    className="w-full dark:text-white"
+                    className="w-full"
                   >
                     {getButtonText(routeSelectedItem)}
                   </Button>
@@ -857,7 +857,7 @@ function Store() {
                   </div>
                   <div className={`flex items-center pt-5 ${formatPrice(item) ? "justify-between" : "justify-end"}`}>
                     {formatPrice(item) && (
-                      <div className="flex-1 text-purple-800 dark:text-purple-100">{formatPrice(item)}</div>
+                      <div className="flex-1 font-bold text-lg">{formatPrice(item)}</div>
                     )}
                     {item.button_type === "buy" &&
                     item.buy_button_type === "external_link" &&
@@ -1066,10 +1066,10 @@ function Store() {
                   <div className="flex flex-col">
                     <div className="mb-6 flex-1">
                       {formatPrice(selectedItem) && (
-                        <div className="mb-4 text-purple-500 dark:text-purple-300">{formatPrice(selectedItem)}</div>
+                        <div className="mb-4 font-bold text-xl">{formatPrice(selectedItem, "text-purple-800 dark:text-purple-300")}</div>
                       )}
                       <div 
-                        className="text-gray-600 dark:text-gray-300 prose prose-sm max-w-none product-description"
+                        className="text-gray-600 dark:text-gray-300 prose prose-sm max-w-none product-description ql-editor"
                         dangerouslySetInnerHTML={{
                           __html: getTranslatedText(
                             selectedItem.full_description_translations ||
@@ -1082,85 +1082,6 @@ function Store() {
                             t("common.noContent")
                         }}
                       />
-                      <style>{`
-                        .product-description ul,
-                        .product-description ol,
-                        .product-description .ql-list,
-                        .product-description [class*="ql-list"] {
-                          margin: 1rem 0 !important;
-                          padding-left: 2rem !important;
-                          list-style-position: outside !important;
-                          display: block !important;
-                        }
-                        .product-description ul,
-                        .product-description .ql-list-bullet,
-                        .product-description ol > li[data-list="bullet"],
-                        .product-description li[data-list="bullet"] {
-                          list-style-type: disc !important;
-                        }
-                        .product-description ol,
-                        .product-description .ql-list-ordered,
-                        .product-description ol > li[data-list="ordered"],
-                        .product-description li[data-list="ordered"] {
-                          list-style-type: decimal !important;
-                        }
-                        .product-description li,
-                        .product-description .ql-list-item {
-                          margin: 0.5rem 0 !important;
-                          line-height: 1.6 !important;
-                          display: list-item !important;
-                        }
-                        .product-description ul ul,
-                        .product-description ol ol,
-                        .product-description ul ol,
-                        .product-description ol ul {
-                          margin-top: 0.5rem !important;
-                          margin-bottom: 0.5rem !important;
-                        }
-                        .product-description ul ul {
-                          list-style-type: circle !important;
-                        }
-                        .product-description ul ul ul {
-                          list-style-type: square !important;
-                        }
-                        .product-description ol ol {
-                          list-style-type: lower-alpha !important;
-                        }
-                        .product-description ol ol ol {
-                          list-style-type: lower-roman !important;
-                        }
-                        .product-description p {
-                          margin: 1rem 0;
-                        }
-                        .product-description h1,
-                        .product-description h2,
-                        .product-description h3,
-                        .product-description h4,
-                        .product-description h5,
-                        .product-description h6 {
-                          margin-top: 1.5rem;
-                          margin-bottom: 1rem;
-                          font-weight: 600;
-                        }
-                        .product-description strong {
-                          font-weight: 600;
-                        }
-                        .product-description em {
-                          font-style: italic;
-                        }
-                        .product-description a {
-                          color: #2093c4;
-                          text-decoration: underline;
-                        }
-                        .product-description a:hover {
-                          color: #331d83;
-                        }
-                        .product-description img {
-                          max-width: 100%;
-                          height: auto;
-                          margin: 1rem 0;
-                        }
-                      `}</style>
                     </div>
 
                     <div className="space-y-3 mt-auto pb-4">
@@ -1174,7 +1095,7 @@ function Store() {
                             return (
                               <Button
                                 key={index}
-                                variant={index === 0 ? "primary" : "outlineDark"}
+                                variant={index === 0 ? "productStore" : "outlineDark"}
                                 onClick={() => {
                                   // Abrir URL principal
                                   if (link.url) {
@@ -1201,7 +1122,7 @@ function Store() {
                                   }
                                   handleCloseModal();
                                 }}
-                                className="w-full dark:text-white dark:border-white"
+                                className={`w-full ${index > 0 ? "dark:text-white dark:border-white" : ""}`}
                               >
                                 {link.label || getButtonText(selectedItem)}
                               </Button>
@@ -1213,7 +1134,7 @@ function Store() {
                         typeof selectedItem.buy_button_url === "string" ? (
                         // Un solo link (legacy)
                         <Button
-                          variant="primary"
+                          variant="productStore"
                           onClick={() => {
                             handleAction(selectedItem);
                             handleCloseModal();
@@ -1225,7 +1146,7 @@ function Store() {
                       ) : (
                         // Otros tipos de botones (incluyendo "request" sin precio)
                         <Button
-                          variant="primary"
+                          variant="productStore"
                           onClick={() => {
                             handleAction(selectedItem);
                             handleCloseModal();

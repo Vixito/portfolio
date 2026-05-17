@@ -22,13 +22,15 @@ function Button({
 
   const variantStyles = {
     primary:
-      "border-2 border-purple-800 bg-purple-800 text-white dark:border-purple-400 dark:bg-purple-500 dark:text-white hover:bg-purple-900 dark:hover:bg-purple-400 focus:ring-purple-600",
+      "border-2 border-purple-800 text-purple-800 hover:bg-purple-800 hover:text-white focus:ring-purple-600",
     secondary:
       "border-2 border-sky-600 bg-sky-600 text-white dark:border-sky-400 dark:bg-sky-500 dark:text-white hover:bg-sky-700 dark:hover:bg-sky-400 focus:ring-sky-400 dark:focus:ring-sky-300",
     outline:
       "border-2 border-black dark:border-white text-black dark:text-white hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black focus:ring-black dark:focus:ring-gray-300",
     outlineDark:
-      "border-2 border-black bg-gray-100 text-black dark:border-white dark:bg-gray-800 dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black focus:ring-black",
+      "border-2 border-black text-black hover:bg-black hover:text-white focus:ring-black",
+    productStore:
+      "border-2 border-purple-800 bg-purple-600 text-white dark:border-purple-500 dark:bg-purple-800 dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 focus:ring-purple-600",
   };
 
   const disabledStyles = "opacity-50 cursor-not-allowed";

@@ -131,3 +131,100 @@ select option {
 select option:hover {
   background-color: rgba(32, 147, 196, 0.1);
 }
+
+/* --- Quill and List Styles for Product Descriptions --- */
+.product-description.ql-editor,
+.product-description {
+  /* Restablecer paddings de Quill que interfieren */
+  padding: 0 !important;
+}
+
+.product-description.ql-editor ul,
+.product-description.ql-editor ol,
+.product-description ul,
+.product-description ol {
+  margin: 1rem 0 1rem 1.5rem !important;
+  padding-left: 0 !important;
+  display: block !important;
+}
+
+/* Bullets standard y Quill */
+.product-description.ql-editor ul,
+.product-description ul,
+.product-description .ql-list-bullet,
+.product-description li[data-list="bullet"],
+.product-description ol li[data-list="bullet"] {
+  list-style-type: disc !important;
+  list-style-position: inside !important;
+}
+
+/* Numerados standard y Quill */
+.product-description.ql-editor ol,
+.product-description ol,
+.product-description .ql-list-ordered,
+.product-description li[data-list="ordered"],
+.product-description ol li[data-list="ordered"] {
+  list-style-type: decimal !important;
+  list-style-position: inside !important;
+}
+
+.product-description.ql-editor li,
+.product-description li,
+.product-description .ql-list-item {
+  margin: 0.5rem 0 !important;
+  line-height: 1.6 !important;
+  display: list-item !important;
+  list-style-position: inside !important;
+}
+
+/* Sub-listas */
+.product-description ul ul,
+.product-description ol ol,
+.product-description ul ol,
+.product-description ol ul {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  margin-left: 1.5rem !important;
+}
+
+.product-description ul ul {
+  list-style-type: circle !important;
+}
+
+.product-description ul ul ul {
+  list-style-type: square !important;
+}
+
+.product-description p {
+  margin: 0.85rem 0 !important;
+}
+
+.product-description h1,
+.product-description h2,
+.product-description h3,
+.product-description h4,
+.product-description h5,
+.product-description h6 {
+  margin-top: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
+  font-weight: 600 !important;
+  color: inherit !important;
+}
+
+.product-description strong {
+  font-weight: 700 !important;
+}
+
+.product-description em {
+  font-style: italic !important;
+}
+
+.product-description a {
+  color: #2093c4 !important;
+  text-decoration: underline !important;
+}
+
+.product-description a:hover {
+  color: #331d83 !important;
+}
+

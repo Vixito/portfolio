@@ -24,6 +24,7 @@ import {
   PayInvoice,
   HowToPayMe,
   NotFound,
+  DevButtons,
 } from "./pages";
 import Layout from "./components/layout/Layout";
 import { useEffect } from "react";
@@ -180,6 +181,14 @@ function App() {
           element={
             <Layout>
               <HowToPayMe />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/buttons"
+          element={
+            <Layout>
+              <DevButtons />
             </Layout>
           }
         ></Route>

@@ -16,6 +16,53 @@ function Studio() {
   const sliderRef = useRef<HTMLDivElement>(null);
   const socialSectionRef = useRef<HTMLDivElement>(null);
 
+  const [displayedSlogan, setDisplayedSlogan] = useState("");
+  const typingRef = useRef<HTMLParagraphElement>(null);
+  const sloganText = t("studio.description");
+
+  useEffect(() => {
+    if (!typingRef.current) return;
+    
+    let index = 0;
+    let intervalId: any = null;
+    
+    const startTyping = () => {
+      clearInterval(intervalId);
+      setDisplayedSlogan("");
+      index = 0;
+      
+      intervalId = setInterval(() => {
+        if (index < sloganText.length) {
+          setDisplayedSlogan(sloganText.slice(0, index + 1));
+          index++;
+        } else {
+          clearInterval(intervalId);
+        }
+      }, 20);
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            startTyping();
+          } else {
+            setDisplayedSlogan("");
+            clearInterval(intervalId);
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(typingRef.current);
+
+    return () => {
+      observer.disconnect();
+      clearInterval(intervalId);
+    };
+  }, [sloganText]);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -191,41 +238,49 @@ function Studio() {
       {/* Contenido */}
       <div className="max-w-6xl mx-auto px-4 relative z-10">
         <div ref={contentRef} className="space-y-12 pt-12">
-          {/* Header con Logo, Título y Descripción */}
-          <div className="text-center space-y-6">
-            {/* Logo */}
-            <div ref={logoRef} className="flex justify-center">
-              <img
-                src={logoUrl}
-                alt="Vixis Studio Logo"
-                className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 shadow-lg"
-                style={{ borderColor: "#19BFB7" }}
-                onError={(e) => {
-                  e.currentTarget.src =
-                    "https://cdn.vixis.dev/Vixis+Studio+-+Logo.webp";
-                }}
-              />
+          {/* Header con Logo, Título y Descripción (Alineados a la izquierda, sin card) */}
+          <div className="flex justify-start">
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-6 max-w-4xl">
+              {/* Logo */}
+              <div ref={logoRef} className="shrink-0">
+                <img
+                  src={logoUrl}
+                  alt="Vixis Studio Logo"
+                  className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border-2 shadow-lg"
+                  style={{ borderColor: "#19BFB7" }}
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      "https://cdn.vixis.dev/Vixis+Studio+-+Logo.webp";
+                  }}
+                />
+              </div>
+              {/* Título y Slogan */}
+              <div className="text-center md:text-left space-y-4">
+                <h1
+                  className="text-4xl md:text-5xl font-extrabold tracking-tight"
+                  style={{
+                    color: "#19BFB7",
+                    textShadow:
+                      "0 0 20px rgba(25, 191, 183, 0.4)",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {t("studio.title")}
+                </h1>
+                {/* Descripción con animación de typing */}
+                <p 
+                  ref={typingRef}
+                  className="text-base italic md:text-lg text-gray-300 max-w-2xl leading-relaxed min-h-[3rem]"
+                >
+                  {displayedSlogan}
+                  <span className="animate-blink font-bold text-[#19BFB7]">|</span>
+                </p>
+              </div>
             </div>
-            {/* Título */}
-            <h1
-              className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight"
-              style={{
-                color: "#19BFB7",
-                textShadow:
-                  "0 0 20px rgba(25, 191, 183, 0.5), 0 0 40px rgba(25, 191, 183, 0.3)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              {t("studio.title")}
-            </h1>
-            {/* Descripción */}
-            <p className="text-lg italic md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-              {t("studio.description")}
-            </p>
           </div>
 
           {/* Slider Acordeón */}
-          <div className="slider-container rounded-lg" ref={sliderRef}>
+          <div className="slider-container rounded-2xl" ref={sliderRef}>
             <div className="now-showing">Now in Colombia</div>
 
             <div className="accordion-slider">
@@ -339,8 +394,19 @@ function Studio() {
           height: 70vh;
           position: relative;
           overflow: hidden;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
           margin: 0 auto;
+          background: rgba(24, 24, 27, 0.4);
+          border: 1px solid rgba(39, 39, 42, 0.8);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-radius: 1rem;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          transition: all 0.3s ease-in-out;
+        }
+        
+        .slider-container:hover {
+          border-color: rgba(25, 191, 183, 0.3);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 25px rgba(25, 191, 183, 0.08);
         }
         
         .now-showing {
@@ -466,6 +532,7 @@ function Studio() {
         .slide.active .car-name {
           opacity: 1;
           transform: translateY(0) translateX(60px);
+          max-width: calc(100% - 80px);
           transition-delay: 0.3s;
         }
         
@@ -482,6 +549,7 @@ function Studio() {
         .slide.active .car-subtitle {
           opacity: 1;
           transform: translateY(0) translateX(60px);
+          max-width: calc(100% - 80px);
           transition-delay: 0.4s;
         }
         
@@ -501,6 +569,8 @@ function Studio() {
         .spec-row {
           display: flex;
           justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 4px;
           margin-bottom: 6px;
           font-size: 14px;
           opacity: 0;
@@ -667,6 +737,18 @@ function Studio() {
             transform: none;
             position: static;
           }
+          
+          .slide.active .car-name,
+          .slide.active .car-subtitle {
+            transform: translateY(0) translateX(0) !important;
+            max-width: 100% !important;
+          }
+          
+          .spec-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+          }
         }
 
         /* Estilos para redes sociales */
@@ -708,6 +790,15 @@ function Studio() {
 
         .social-card:hover img {
           filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(159, 255, 107, 0.8));
+        }
+
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+
+        .animate-blink {
+          animation: blink 0.8s infinite;
         }
       `}</style>
     </div>
