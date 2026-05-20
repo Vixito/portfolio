@@ -49,6 +49,9 @@ interface StoreProductRow {
   pricing_link?: string | null;
   button_text?: string | null;
   product_pricing?: ProductPricing[] | ProductPricing | null;
+  price_range_enabled?: boolean | null;
+  max_price_usd?: number | null;
+  max_price_cop?: number | null;
 }
 
 interface StoreItem {
@@ -77,6 +80,9 @@ interface StoreItem {
   pricing_link?: string | null;
   button_text?: string | null;
   product_pricing?: ProductPricing[]; // Pricing del producto
+  price_range_enabled?: boolean | null;
+  max_price_usd?: number | null;
+  max_price_cop?: number | null;
 }
 
 function Store() {
@@ -173,6 +179,15 @@ function Store() {
               : product.product_pricing
               ? [product.product_pricing]
               : [],
+            price_range_enabled: product.price_range_enabled || false,
+            max_price_usd:
+              product.max_price_usd !== null && product.max_price_usd !== undefined
+                ? Number(product.max_price_usd)
+                : null,
+            max_price_cop:
+              product.max_price_cop !== null && product.max_price_cop !== undefined
+                ? Number(product.max_price_cop)
+                : null,
           })
         );
 
@@ -428,6 +443,27 @@ function Store() {
     // Si el precio es null o undefined, retornar null (no mostrar precio)
     if (currentPrice === null || currentPrice === undefined) {
       return null;
+    }
+    
+    // Si es un rango de precios
+    if (item.price_range_enabled && item.max_price_usd !== null && item.max_price_usd !== undefined) {
+      const minPrice = currentPrice;
+      const maxPrice = item.max_price_usd;
+      
+      const formatVal = (val: number) => {
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+          minimumFractionDigits: val % 1 === 0 ? 0 : 2,
+          maximumFractionDigits: val % 1 === 0 ? 0 : 2,
+        }).format(val);
+      };
+      
+      return (
+        <span className={`text-2xl font-bold ${colorClass}`}>
+          {`${formatVal(minPrice)}-${formatVal(maxPrice)}`}
+        </span>
+      );
     }
     
     // Si el precio es 0, mostrar "Gratis"/"Free"

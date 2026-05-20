@@ -83,6 +83,9 @@ serve(async (req) => {
       full_description_translations: product.full_description_translations,
       base_price_usd: product.base_price_usd,
       base_price_cop: product.base_price_cop,
+      price_range_enabled: product.price_range_enabled,
+      max_price_usd: product.max_price_usd,
+      max_price_cop: product.max_price_cop,
       sector: product.sector,
       thumbnail_url: product.thumbnail_url,
       // Pricing actual

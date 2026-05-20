@@ -922,6 +922,9 @@ function Admin() {
       defaultFormData.buy_button_type = "external_link";
       defaultFormData.price_currency = "USD";
       defaultFormData.is_active = true;
+      defaultFormData.price_range_enabled = false;
+      defaultFormData.max_price_usd = null;
+      defaultFormData.max_price_cop = null;
     } else if (activeTab === "invoices") {
       // Valores por defecto para facturas
       defaultFormData.currency = "USD";
@@ -1068,6 +1071,9 @@ function Admin() {
       formData.price_currency = currentItem.price_currency || "USD";
       formData.base_price_usd = currentItem.base_price_usd || null;
       formData.base_price_cop = currentItem.base_price_cop || null;
+      formData.price_range_enabled = currentItem.price_range_enabled || false;
+      formData.max_price_usd = currentItem.max_price_usd || null;
+      formData.max_price_cop = currentItem.max_price_cop || null;
       formData.is_active = currentItem.is_active !== undefined ? currentItem.is_active : true;
       
       // Cargar imágenes
@@ -1630,6 +1636,25 @@ function Admin() {
                 updateProductData.base_price_usd * rate;
             }
 
+            // Convertir precios máximos para rangos
+            if (!updateProductData.price_range_enabled) {
+              updateProductData.max_price_usd = null;
+              updateProductData.max_price_cop = null;
+            } else {
+              if (updateProductData.max_price_usd === null || updateProductData.max_price_usd === undefined) {
+                updateProductData.max_price_usd = null;
+                updateProductData.max_price_cop = null;
+              } else if (priceCurrency === "COP" && updateProductData.max_price_cop !== null && updateProductData.max_price_cop !== undefined) {
+                updateProductData.max_price_usd = updateProductData.max_price_cop / rate;
+              } else if (
+                priceCurrency === "USD" &&
+                updateProductData.max_price_usd !== null &&
+                updateProductData.max_price_usd !== undefined
+              ) {
+                updateProductData.max_price_cop = updateProductData.max_price_usd * rate;
+              }
+            }
+
             // Separar datos de oferta del producto
             const saleData = {
               is_on_sale: updateProductData.is_on_sale || false,
@@ -2182,6 +2207,25 @@ function Admin() {
               // Si se ingresó en USD, calcular COP
               productData.base_price_cop =
                 productData.base_price_usd * exchangeRate;
+            }
+
+            // Convertir precios máximos para rangos
+            if (!productData.price_range_enabled) {
+              productData.max_price_usd = null;
+              productData.max_price_cop = null;
+            } else {
+              if (productData.max_price_usd === null || productData.max_price_usd === undefined) {
+                productData.max_price_usd = null;
+                productData.max_price_cop = null;
+              } else if (createPriceCurrency === "COP" && productData.max_price_cop !== null && productData.max_price_cop !== undefined) {
+                productData.max_price_usd = productData.max_price_cop / exchangeRate;
+              } else if (
+                createPriceCurrency === "USD" &&
+                productData.max_price_usd !== null &&
+                productData.max_price_usd !== undefined
+              ) {
+                productData.max_price_cop = productData.max_price_usd * exchangeRate;
+              }
             }
 
             // Separar datos de oferta del producto
@@ -4105,120 +4149,334 @@ function Admin() {
                       </select>
                     </div>
 
-                    {/* Campo de precio según moneda seleccionada */}
-                    {crudFormData.price_currency === "COP" ? (
-                      <div>
-                        <label className="block text-gray-300 text-sm mb-2">
-                          Precio en COP
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={crudFormData.base_price_cop !== undefined && crudFormData.base_price_cop !== null ? crudFormData.base_price_cop : ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === "" || value === null || value === undefined) {
-                              // Si está vacío, establecer como null (sin precio)
-                              setCrudFormData({
-                                ...crudFormData,
-                                base_price_cop: null,
-                                base_price_usd: null,
-                              });
-                            } else {
-                              const copPrice = parseFloat(value);
-                              if (isNaN(copPrice)) {
-                                setCrudFormData({
-                                  ...crudFormData,
-                                  base_price_cop: null,
-                                  base_price_usd: null,
-                                });
-                              } else {
-                                const usdPrice = exchangeRate
-                                  ? copPrice / exchangeRate
-                                  : null;
-                                setCrudFormData({
-                                  ...crudFormData,
-                                  base_price_cop: copPrice,
-                                  base_price_usd: usdPrice,
-                                });
-                              }
-                            }
-                          }}
-                          onBlur={(e) => {
-                            // Si el campo queda vacío después de perder el foco, establecer como null
-                            if (e.target.value === "") {
-                              setCrudFormData({
-                                ...crudFormData,
-                                base_price_cop: null,
-                                base_price_usd: null,
-                              });
-                            }
-                          }}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        />
-                        {exchangeRate && crudFormData.base_price_cop && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            ≈ ${crudFormData.base_price_usd?.toFixed(2)} USD
-                          </p>
+                    {/* Checkbox de rango de precios */}
+                    <div className="flex items-center mb-4 mt-2">
+                      <input
+                        type="checkbox"
+                        id="price_range_enabled"
+                        checked={crudFormData.price_range_enabled || false}
+                        onChange={(e) => {
+                          setCrudFormData({
+                            ...crudFormData,
+                            price_range_enabled: e.target.checked,
+                            max_price_usd: e.target.checked ? crudFormData.max_price_usd : null,
+                            max_price_cop: e.target.checked ? crudFormData.max_price_cop : null,
+                          });
+                        }}
+                        className="h-4 w-4 rounded border-gray-700 bg-gray-800 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900"
+                      />
+                      <label htmlFor="price_range_enabled" className="ml-2 text-sm text-gray-300 cursor-pointer">
+                        Establecer rango de precios
+                      </label>
+                    </div>
+
+                    {/* Campo de precio según moneda y rango de precios */}
+                    {crudFormData.price_range_enabled ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Precio Mínimo */}
+                        {crudFormData.price_currency === "COP" ? (
+                          <div>
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Precio Mínimo en COP
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={crudFormData.base_price_cop !== undefined && crudFormData.base_price_cop !== null ? crudFormData.base_price_cop : ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === "" || value === null || value === undefined) {
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    base_price_cop: null,
+                                    base_price_usd: null,
+                                  });
+                                } else {
+                                  const copPrice = parseFloat(value);
+                                  if (isNaN(copPrice)) {
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      base_price_cop: null,
+                                      base_price_usd: null,
+                                    });
+                                  } else {
+                                    const usdPrice = exchangeRate
+                                      ? copPrice / exchangeRate
+                                      : null;
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      base_price_cop: copPrice,
+                                      base_price_usd: usdPrice,
+                                    });
+                                  }
+                                }
+                              }}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            />
+                            {exchangeRate && crudFormData.base_price_cop && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                ≈ ${crudFormData.base_price_usd?.toFixed(2)} USD
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Precio Mínimo en USD
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={crudFormData.base_price_usd !== undefined && crudFormData.base_price_usd !== null ? crudFormData.base_price_usd : ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === "" || value === null || value === undefined) {
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    base_price_usd: null,
+                                    base_price_cop: null,
+                                  });
+                                } else {
+                                  const usdPrice = parseFloat(value);
+                                  if (isNaN(usdPrice)) {
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      base_price_usd: null,
+                                      base_price_cop: null,
+                                    });
+                                  } else {
+                                    const copPrice = exchangeRate
+                                      ? usdPrice * exchangeRate
+                                      : null;
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      base_price_usd: usdPrice,
+                                      base_price_cop: copPrice,
+                                    });
+                                  }
+                                }
+                              }}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            />
+                            {exchangeRate && crudFormData.base_price_usd && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                ≈ ${crudFormData.base_price_cop?.toFixed(2)} COP
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Precio Máximo */}
+                        {crudFormData.price_currency === "COP" ? (
+                          <div>
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Precio Máximo en COP
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={crudFormData.max_price_cop !== undefined && crudFormData.max_price_cop !== null ? crudFormData.max_price_cop : ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === "" || value === null || value === undefined) {
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    max_price_cop: null,
+                                    max_price_usd: null,
+                                  });
+                                } else {
+                                  const copPrice = parseFloat(value);
+                                  if (isNaN(copPrice)) {
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      max_price_cop: null,
+                                      max_price_usd: null,
+                                    });
+                                  } else {
+                                    const usdPrice = exchangeRate
+                                      ? copPrice / exchangeRate
+                                      : null;
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      max_price_cop: copPrice,
+                                      max_price_usd: usdPrice,
+                                    });
+                                  }
+                                }
+                              }}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            />
+                            {exchangeRate && crudFormData.max_price_cop && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                ≈ ${crudFormData.max_price_usd?.toFixed(2)} USD
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            <label className="block text-gray-300 text-sm mb-2">
+                              Precio Máximo en USD
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={crudFormData.max_price_usd !== undefined && crudFormData.max_price_usd !== null ? crudFormData.max_price_usd : ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === "" || value === null || value === undefined) {
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    max_price_usd: null,
+                                    max_price_cop: null,
+                                  });
+                                } else {
+                                  const usdPrice = parseFloat(value);
+                                  if (isNaN(usdPrice)) {
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      max_price_usd: null,
+                                      max_price_cop: null,
+                                    });
+                                  } else {
+                                    const copPrice = exchangeRate
+                                      ? usdPrice * exchangeRate
+                                      : null;
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      max_price_usd: usdPrice,
+                                      max_price_cop: copPrice,
+                                    });
+                                  }
+                                }
+                              }}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                            />
+                            {exchangeRate && crudFormData.max_price_usd && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                ≈ ${crudFormData.max_price_cop?.toFixed(2)} COP
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     ) : (
-                      <div>
-                        <label className="block text-gray-300 text-sm mb-2">
-                          Precio en USD
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={crudFormData.base_price_usd !== undefined && crudFormData.base_price_usd !== null ? crudFormData.base_price_usd : ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === "" || value === null || value === undefined) {
-                              // Si está vacío, establecer como null (sin precio)
-                              setCrudFormData({
-                                ...crudFormData,
-                                base_price_usd: null,
-                                base_price_cop: null,
-                              });
-                            } else {
-                              const usdPrice = parseFloat(value);
-                              if (isNaN(usdPrice)) {
+                      /* Single Price inputs */
+                      crudFormData.price_currency === "COP" ? (
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Precio en COP
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={crudFormData.base_price_cop !== undefined && crudFormData.base_price_cop !== null ? crudFormData.base_price_cop : ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "" || value === null || value === undefined) {
+                                // Si está vacío, establecer como null (sin precio)
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  base_price_cop: null,
+                                  base_price_usd: null,
+                                });
+                              } else {
+                                const copPrice = parseFloat(value);
+                                if (isNaN(copPrice)) {
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    base_price_cop: null,
+                                    base_price_usd: null,
+                                  });
+                                } else {
+                                  const usdPrice = exchangeRate
+                                    ? copPrice / exchangeRate
+                                    : null;
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    base_price_cop: copPrice,
+                                    base_price_usd: usdPrice,
+                                  });
+                                }
+                              }
+                            }}
+                            onBlur={(e) => {
+                              // Si el campo queda vacío después de perder el foco, establecer como null
+                              if (e.target.value === "") {
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  base_price_cop: null,
+                                  base_price_usd: null,
+                                });
+                              }
+                            }}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                          />
+                          {exchangeRate && crudFormData.base_price_cop && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              ≈ ${crudFormData.base_price_usd?.toFixed(2)} USD
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">
+                            Precio en USD
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={crudFormData.base_price_usd !== undefined && crudFormData.base_price_usd !== null ? crudFormData.base_price_usd : ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "" || value === null || value === undefined) {
+                                // Si está vacío, establecer como null (sin precio)
                                 setCrudFormData({
                                   ...crudFormData,
                                   base_price_usd: null,
                                   base_price_cop: null,
                                 });
                               } else {
-                                const copPrice = exchangeRate
-                                  ? usdPrice * exchangeRate
-                                  : null;
+                                const usdPrice = parseFloat(value);
+                                if (isNaN(usdPrice)) {
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    base_price_usd: null,
+                                    base_price_cop: null,
+                                  });
+                                } else {
+                                  const copPrice = exchangeRate
+                                    ? usdPrice * exchangeRate
+                                    : null;
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    base_price_usd: usdPrice,
+                                    base_price_cop: copPrice,
+                                  });
+                                }
+                              }
+                            }}
+                            onBlur={(e) => {
+                              // Si el campo queda vacío después de perder el foco, establecer como null
+                              if (e.target.value === "") {
                                 setCrudFormData({
                                   ...crudFormData,
-                                  base_price_usd: usdPrice,
-                                  base_price_cop: copPrice,
+                                  base_price_usd: null,
+                                  base_price_cop: null,
                                 });
                               }
-                            }
-                          }}
-                          onBlur={(e) => {
-                            // Si el campo queda vacío después de perder el foco, establecer como null
-                            if (e.target.value === "") {
-                              setCrudFormData({
-                                ...crudFormData,
-                                base_price_usd: null,
-                                base_price_cop: null,
-                              });
-                            }
-                          }}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                        />
-                        {exchangeRate && crudFormData.base_price_usd && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            ≈ ${crudFormData.base_price_cop?.toFixed(2)} COP
-                          </p>
-                        )}
-                      </div>
+                            }}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                          />
+                          {exchangeRate && crudFormData.base_price_usd && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              ≈ ${crudFormData.base_price_cop?.toFixed(2)} COP
+                            </p>
+                          )}
+                        </div>
+                      )
                     )}
 
                     {/* Campo de sector (obligatorio, dropdown) */}

@@ -79,6 +79,9 @@ export type Database = {
           thumbnail_url: string | null;
           title: string;
           updated_at: string | null;
+          price_range_enabled: boolean | null;
+          max_price_usd: number | null;
+          max_price_cop: number | null;
         };
         Insert: {
           base_price_usd: number;
@@ -90,6 +93,9 @@ export type Database = {
           thumbnail_url?: string | null;
           title: string;
           updated_at?: string | null;
+          price_range_enabled?: boolean | null;
+          max_price_usd?: number | null;
+          max_price_cop?: number | null;
         };
         Update: {
           base_price_usd?: number;
@@ -101,6 +107,9 @@ export type Database = {
           thumbnail_url?: string | null;
           title?: string;
           updated_at?: string | null;
+          price_range_enabled?: boolean | null;
+          max_price_usd?: number | null;
+          max_price_cop?: number | null;
         };
         Relationships: [];
       };

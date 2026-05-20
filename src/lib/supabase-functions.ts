@@ -361,6 +361,9 @@ export async function createProduct(product: {
   action_url?: string;
   pricing_link?: string;
   button_text?: string;
+  price_range_enabled?: boolean | null;
+  max_price_usd?: number | null;
+  max_price_cop?: number | null;
 }) {
   // Generar public_id único
   let publicId = generatePublicId();
@@ -427,6 +430,9 @@ export async function updateProduct(
     pricing_link: string;
     button_text: string;
     is_active?: boolean;
+    price_range_enabled?: boolean | null;
+    max_price_usd?: number | null;
+    max_price_cop?: number | null;
   }>
 ) {
   const { data, error } = await supabase
