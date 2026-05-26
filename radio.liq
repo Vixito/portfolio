@@ -4,10 +4,10 @@
 # Sin ajustes de configuración globales para evitar incompatibilidades de versión.
 
 # 1. Configuración de Icecast (Cargada desde Doppler)
-icecast_host = getenv("ICECAST_HOST", default="localhost")
-icecast_port = int_of_string(getenv("ICECAST_PORT", default="8000"))
-icecast_mount = getenv("ICECAST_MOUNT", default="/vixis")
-icecast_password = getenv("ICECAST_SOURCE_PASSWORD", default=getenv("ICECAST_PASSWORD", default=""))
+icecast_host = environment.get(default="localhost", "ICECAST_HOST")
+icecast_port = int_of_string(environment.get(default="8000", "ICECAST_PORT"))
+icecast_mount = environment.get(default="/vixis", "ICECAST_MOUNT")
+icecast_password = environment.get(default=environment.get(default="", "ICECAST_PASSWORD"), "ICECAST_SOURCE_PASSWORD")
 
 playlist_file = "/tmp/radio-playlist.m3u"
 
