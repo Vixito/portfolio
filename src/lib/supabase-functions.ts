@@ -631,19 +631,27 @@ export async function getTestimonials(includeInactive = false) {
 
 export async function createTestimonial(testimonial: {
   client_id: string; // ID del cliente al que pertenece el testimonio
-  testimonial_content: string;
-  testimonial_author: string;
+  testimonial_content?: string;
+  testimonial_content_translations?: { es?: string; en?: string } | null;
+  testimonial_author?: string;
+  testimonial_author_translations?: { es?: string; en?: string } | null;
   testimonial_role?: string;
+  testimonial_role_translations?: { es?: string; en?: string } | null;
   testimonial_url?: string;
 }) {
+  const finalUpdates = {
+    testimonial_content: testimonial.testimonial_content || testimonial.testimonial_content_translations?.es || testimonial.testimonial_content_translations?.en || "",
+    testimonial_content_translations: testimonial.testimonial_content_translations,
+    testimonial_author: testimonial.testimonial_author || testimonial.testimonial_author_translations?.es || testimonial.testimonial_author_translations?.en || "",
+    testimonial_author_translations: testimonial.testimonial_author_translations,
+    testimonial_role: testimonial.testimonial_role || testimonial.testimonial_role_translations?.es || testimonial.testimonial_role_translations?.en || "",
+    testimonial_role_translations: testimonial.testimonial_role_translations,
+    testimonial_url: testimonial.testimonial_url,
+  };
+
   const { data, error } = await supabase
     .from("clients")
-    .update({
-      testimonial_content: testimonial.testimonial_content,
-      testimonial_author: testimonial.testimonial_author,
-      testimonial_role: testimonial.testimonial_role,
-      testimonial_url: testimonial.testimonial_url,
-    })
+    .update(finalUpdates)
     .eq("id", testimonial.client_id)
     .select()
     .single();
@@ -655,14 +663,29 @@ export async function updateTestimonial(
   clientId: string,
   updates: Partial<{
     testimonial_content: string;
+    testimonial_content_translations: { es?: string; en?: string } | null;
     testimonial_author: string;
+    testimonial_author_translations: { es?: string; en?: string } | null;
     testimonial_role: string;
+    testimonial_role_translations: { es?: string; en?: string } | null;
     testimonial_url: string;
   }>
 ) {
+  const finalUpdates: any = { ...updates };
+  
+  if (updates.testimonial_content_translations && !updates.testimonial_content) {
+    finalUpdates.testimonial_content = updates.testimonial_content_translations.es || updates.testimonial_content_translations.en || "";
+  }
+  if (updates.testimonial_author_translations && !updates.testimonial_author) {
+    finalUpdates.testimonial_author = updates.testimonial_author_translations.es || updates.testimonial_author_translations.en || "";
+  }
+  if (updates.testimonial_role_translations && !updates.testimonial_role) {
+    finalUpdates.testimonial_role = updates.testimonial_role_translations.es || updates.testimonial_role_translations.en || "";
+  }
+
   const { data, error } = await supabase
     .from("clients")
-    .update(updates)
+    .update(finalUpdates)
     .eq("id", clientId)
     .select()
     .single();

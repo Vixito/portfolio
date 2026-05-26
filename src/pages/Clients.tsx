@@ -154,11 +154,11 @@ function Clients() {
           </div>
         ) : (
           <>
-            {/* Carrousel de logos - Logo Cloud Animated style (SmoothUI) */}
+            {/* Carrousel de logos - CSS Infinite Scroll Marquee to the Right */}
             {clients.length > 0 && (
               <div className="mb-16 overflow-hidden">
                 <div
-                  className="relative overflow-hidden"
+                  className="marquee-container relative flex overflow-hidden w-full"
                   style={{
                     maskImage:
                       "linear-gradient(to right, hsl(0 0% 0% / 0), hsl(0 0% 0% / 1) 20%, hsl(0 0% 0% / 1) 80%, hsl(0 0% 0% / 0))",
@@ -166,45 +166,18 @@ function Clients() {
                       "linear-gradient(to right, hsl(0 0% 0% / 0), hsl(0 0% 0% / 1) 20%, hsl(0 0% 0% / 1) 80%, hsl(0 0% 0% / 0))",
                   }}
                 >
-                  <motion.div
-                    animate={{
-                      x: [0, -SCROLL_DISTANCE_FACTOR * clients.length],
-                    }}
-                    className="flex min-w-full shrink-0 items-center justify-around gap-8"
-                    transition={{
-                      x: {
-                        repeat: Number.POSITIVE_INFINITY,
-                        repeatType: "loop",
-                        duration: ANIMATION_DURATION,
-                        ease: "linear",
-                      },
-                    }}
-                  >
-                    {/* First set */}
-                    {clients.map((client, index) => (
-                      <motion.a
-                        animate={{ opacity: 1, scale: 1 }}
+                  {/* Track 1 */}
+                  <div className="flex shrink-0 min-w-full items-center justify-around gap-8 animate-marquee-right">
+                    {clients.map((client) => (
+                      <a
                         className="group flex shrink-0 flex-col items-center justify-center p-6 transition-all hover:scale-105 cursor-pointer"
                         href={client.url}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        key={`first-${client.id}`}
+                        key={`t1-${client.id}`}
                         rel="noopener noreferrer"
                         target="_blank"
-                        transition={{
-                          duration: 0.4,
-                          delay: index * STAGGER_DELAY,
-                        }}
                       >
-                        <motion.div
-                          className="mb-2 w-24 h-24 md:w-20 md:h-32 flex items-center justify-center"
-                          transition={{
-                            type: "spring",
-                            stiffness: SPRING_STIFFNESS,
-                          }}
-                          whileHover={{
-                            scale: HOVER_SCALE,
-                            rotate: HOVER_ROTATE,
-                          }}
+                        <div
+                          className="mb-2 w-24 h-24 md:w-20 md:h-32 flex items-center justify-center transition-transform duration-300 hover:scale-110 hover:rotate-6"
                         >
                           <img
                             src={client.logo}
@@ -223,34 +196,23 @@ function Clients() {
                               }
                             }}
                           />
-                        </motion.div>
-                      </motion.a>
+                        </div>
+                      </a>
                     ))}
-                    {/* Second set for seamless loop */}
-                    {clients.map((client, index) => (
-                      <motion.a
-                        animate={{ opacity: 1, scale: 1 }}
+                  </div>
+
+                  {/* Track 2 */}
+                  <div className="flex shrink-0 min-w-full items-center justify-around gap-8 animate-marquee-right" aria-hidden="true">
+                    {clients.map((client) => (
+                      <a
                         className="group flex shrink-0 flex-col items-center justify-center p-6 transition-all hover:scale-105 cursor-pointer"
                         href={client.url}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        key={`second-${client.id}`}
+                        key={`t2-${client.id}`}
                         rel="noopener noreferrer"
                         target="_blank"
-                        transition={{
-                          duration: 0.4,
-                          delay: index * STAGGER_DELAY,
-                        }}
                       >
-                        <motion.div
-                          className="mb-2 w-24 h-24 md:w-20 md:h-32 flex items-center justify-center"
-                          transition={{
-                            type: "spring",
-                            stiffness: SPRING_STIFFNESS,
-                          }}
-                          whileHover={{
-                            scale: HOVER_SCALE,
-                            rotate: HOVER_ROTATE,
-                          }}
+                        <div
+                          className="mb-2 w-24 h-24 md:w-20 md:h-32 flex items-center justify-center transition-transform duration-300 hover:scale-110 hover:rotate-6"
                         >
                           <img
                             src={client.logo}
@@ -269,56 +231,10 @@ function Clients() {
                               }
                             }}
                           />
-                        </motion.div>
-                      </motion.a>
+                        </div>
+                      </a>
                     ))}
-                    {/* Third set for even smoother loop */}
-                    {clients.map((client, index) => (
-                      <motion.a
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="group flex shrink-0 flex-col items-center justify-center p-6 transition-all hover:scale-105 cursor-pointer"
-                        href={client.url}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        key={`third-${client.id}`}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                        transition={{
-                          duration: 0.4,
-                          delay: index * STAGGER_DELAY,
-                        }}
-                      >
-                        <motion.div
-                          className="mb-2 w-24 h-24 md:w-20 md:h-32 flex items-center justify-center"
-                          transition={{
-                            type: "spring",
-                            stiffness: SPRING_STIFFNESS,
-                          }}
-                          whileHover={{
-                            scale: HOVER_SCALE,
-                            rotate: HOVER_ROTATE,
-                          }}
-                        >
-                          <img
-                            src={client.logo}
-                            alt={getTranslatedText(
-                              client.name_translations || client.name
-                            )}
-                            className="max-w-full max-h-full object-contain"
-                            loading="lazy"
-                            onError={(e) => {
-                              const target = e.currentTarget;
-                              if (!target.dataset.errorHandled) {
-                                target.dataset.errorHandled = "true";
-                                target.src =
-                                  "https://via.placeholder.com/128x128?text=No+Logo";
-                                target.classList.add("opacity-50");
-                              }
-                            }}
-                          />
-                        </motion.div>
-                      </motion.a>
-                    ))}
-                  </motion.div>
+                  </div>
                 </div>
               </div>
             )}

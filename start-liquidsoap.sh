@@ -30,15 +30,18 @@ else
 fi
 echo "🔍 DEBUG: RADIO_JINGLE_INTERVAL=${RADIO_JINGLE_INTERVAL:-NO_CONFIGURADA}" >&2
 
+# Obtener el directorio del script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Actualizar playlist antes de iniciar Liquidsoap
-RADIO_JINGLE_URL="$RADIO_JINGLE_URL" RADIO_JINGLE_INTERVAL="$RADIO_JINGLE_INTERVAL" /home/radio/liquidsoap/update-playlist.sh 2>&1
+RADIO_JINGLE_URL="$RADIO_JINGLE_URL" RADIO_JINGLE_INTERVAL="$RADIO_JINGLE_INTERVAL" "$SCRIPT_DIR/update-playlist.sh" 2>&1
 
 # Lanzar un actualizador en segundo plano para refrescar la lista cada 2 horas
 # Esto permite que Liquidsoap pille las nuevas canciones sin detener la transmisión
 (
   while true; do
     sleep 7200
-    RADIO_JINGLE_URL="$RADIO_JINGLE_URL" RADIO_JINGLE_INTERVAL="$RADIO_JINGLE_INTERVAL" /home/radio/liquidsoap/update-playlist.sh 2>&1
+    RADIO_JINGLE_URL="$RADIO_JINGLE_URL" RADIO_JINGLE_INTERVAL="$RADIO_JINGLE_INTERVAL" "$SCRIPT_DIR/update-playlist.sh" 2>&1
   done
 ) &
 
@@ -47,4 +50,4 @@ RADIO_JINGLE_URL="$RADIO_JINGLE_URL" RADIO_JINGLE_INTERVAL="$RADIO_JINGLE_INTERV
 unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
 
 # Ejecutar Liquidsoap con todas las variables de entorno cargadas
-exec /usr/bin/liquidsoap /home/radio/liquidsoap/radio.liq
+exec /usr/bin/liquidsoap "$SCRIPT_DIR/radio.liq"

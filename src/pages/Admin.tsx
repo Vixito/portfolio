@@ -1879,6 +1879,13 @@ function Admin() {
               workExpData.description_es || "",
               workExpData.description_en || ""
             );
+            
+            // Establecer valores planos como fallback en la base de datos
+            workExpData.position = workExpData.position_es || workExpData.position_en || "";
+            workExpData.company = workExpData.company_es || workExpData.company_en || "";
+            workExpData.location = workExpData.location_es || workExpData.location_en || "";
+            workExpData.description = workExpData.description_es || workExpData.description_en || "";
+
             delete workExpData.position_es;
             delete workExpData.position_en;
             delete workExpData.company_es;
@@ -2453,6 +2460,13 @@ function Admin() {
               newWorkExpData.description_es || "",
               newWorkExpData.description_en || ""
             );
+
+            // Establecer valores planos como fallback en la base de datos
+            newWorkExpData.position = newWorkExpData.position_es || newWorkExpData.position_en || "";
+            newWorkExpData.company = newWorkExpData.company_es || newWorkExpData.company_en || "";
+            newWorkExpData.location = newWorkExpData.location_es || newWorkExpData.location_en || "";
+            newWorkExpData.description = newWorkExpData.description_es || newWorkExpData.description_en || "";
+
             delete newWorkExpData.position_es;
             delete newWorkExpData.position_en;
             delete newWorkExpData.company_es;
