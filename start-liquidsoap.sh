@@ -8,7 +8,7 @@ set -e
 # Cargar variables de entorno desde Doppler
 # Usar 'set -a' para auto-exportar todas las variables que se definan
 set -a
-eval "$(doppler secrets download --no-file --format env --project vixis-portfolio --config cloud)"
+eval "$(doppler secrets download --no-file --format env --project vixis-portfolio --config prd)"
 set +a
 
 # Exportar explícitamente las variables críticas para asegurar que estén disponibles
@@ -34,14 +34,14 @@ echo "🔍 DEBUG: RADIO_JINGLE_INTERVAL=${RADIO_JINGLE_INTERVAL:-NO_CONFIGURADA}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Actualizar playlist antes de iniciar Liquidsoap
-RADIO_JINGLE_URL="$RADIO_JINGLE_URL" RADIO_JINGLE_INTERVAL="$RADIO_JINGLE_INTERVAL" "$SCRIPT_DIR/update-playlist.sh" 2>&1
+node "$SCRIPT_DIR/update-playlist.js" 2>&1
 
 # Lanzar un actualizador en segundo plano para refrescar la lista cada 2 horas
 # Esto permite que Liquidsoap pille las nuevas canciones sin detener la transmisión
 (
   while true; do
     sleep 7200
-    RADIO_JINGLE_URL="$RADIO_JINGLE_URL" RADIO_JINGLE_INTERVAL="$RADIO_JINGLE_INTERVAL" "$SCRIPT_DIR/update-playlist.sh" 2>&1
+    node "$SCRIPT_DIR/update-playlist.js" 2>&1
   done
 ) &
 
