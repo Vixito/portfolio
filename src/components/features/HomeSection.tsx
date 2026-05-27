@@ -6,7 +6,6 @@ import ContactSection from "./ContactSection";
 import LatestPostCard from "./LatestPostCard";
 import ExperienceCard from "./ExperienceCard";
 import AdSpace from "./AdSpace";
-import AdsterraBanner from "./AdsterraBanner";
 import { useTranslation } from "../../lib/i18n";
 
 function HomeSection() {

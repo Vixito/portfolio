@@ -6,28 +6,52 @@ interface AdSpaceProps {
 }
 
 /**
- * Componente para espacios publicitarios con Monetag
+ * Componente para espacios publicitarios (Banners 300x250 de Adsterra)
  */
 function AdSpace({ className = "", style }: AdSpaceProps) {
-  const adRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // El script principal de Monetag ya está en index.html o se carga vía AdsterraSocialbar.
-    // Para banners específicos se suele usar un zone diferente, 
-    // pero si el usuario quiere usar el Multitag global, el script ya se encarga.
-    // Si tienes un zone ID específico para Banners, cámbialo aquí.
+    // Asegurar que cargue solo si el contenedor está montado y vacío
+    if (containerRef.current && !containerRef.current.firstChild) {
+      const atOptions = {
+        key: "d1c3f3974459f71dfabd40e46ad89a97",
+        format: "iframe",
+        height: 250,
+        width: 300,
+        params: {},
+      };
+
+      // Crear script de configuración
+      const confScript = document.createElement("script");
+      confScript.type = "text/javascript";
+      confScript.innerHTML = `atOptions = ${JSON.stringify(atOptions)}`;
+
+      // Crear script de invocación
+      const invokeScript = document.createElement("script");
+      invokeScript.type = "text/javascript";
+      invokeScript.src = "https://www.highperformanceformat.com/d1c3f3974459f71dfabd40e46ad89a97/invoke.js";
+      invokeScript.async = true;
+
+      // Adjuntar al contenedor
+      containerRef.current.appendChild(confScript);
+      containerRef.current.appendChild(invokeScript);
+    }
+
+    return () => {
+      // Limpiar al desmontar para evitar duplicados al navegar entre páginas
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+    };
   }, []);
 
   return (
     <div
-      ref={adRef}
+      ref={containerRef}
       className={`bg-transparent rounded-lg flex items-center justify-center overflow-hidden ${className}`}
       style={{ minHeight: "250px", width: "100%", ...style }}
-    >
-      <div id="monetag-ad-placeholder" className="text-gray-400 text-xs italic">
-        {/* Placeholder para el anuncio de Monetag */}
-      </div>
-    </div>
+    />
   );
 }
 

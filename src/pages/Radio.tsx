@@ -9,7 +9,6 @@ import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
 import AdSpace from "../components/features/AdSpace";
-import AdsterraBanner from "../components/features/AdsterraBanner";
 import { sanitizeUserInput } from "../lib/security";
 import { emitRadioState } from "../hooks/useRadioState";
 
