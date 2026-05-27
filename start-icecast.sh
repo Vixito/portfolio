@@ -31,8 +31,18 @@ export ICECAST_SOURCE_PASSWORD=$(escape_xml "$ICECAST_SOURCE_PASSWORD")
 export ICECAST_RELAY_PASSWORD=$(escape_xml "$ICECAST_RELAY_PASSWORD")
 export ICECAST_ADMIN_PASSWORD=$(escape_xml "$ICECAST_ADMIN_PASSWORD")
 
+# Obtener el directorio del script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEMPLATE_PATH="$SCRIPT_DIR/icecast.xml"
+if [ ! -f "$TEMPLATE_PATH" ]; then
+    TEMPLATE_PATH="/etc/icecast2/icecast.xml.template"
+fi
+
+# Asegurar que el directorio de destino exista
+mkdir -p /tmp/icecast2
+
 # Generar icecast.xml desde el template en un directorio con permisos de escritura
-envsubst < /etc/icecast2/icecast.xml.template > /tmp/icecast2/icecast.xml
+envsubst < "$TEMPLATE_PATH" > /tmp/icecast2/icecast.xml
 
 # Iniciar Icecast con el archivo generado
 exec icecast2 -c /tmp/icecast2/icecast.xml
