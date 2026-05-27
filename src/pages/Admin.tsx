@@ -793,8 +793,12 @@ function Admin() {
           setClients(clientsData || []);
           break;
         case "testimonials":
-          const testimonialsData = await getTestimonials(true); // Incluir inactivos en Admin
+          const [testimonialsData, clientsList] = await Promise.all([
+            getTestimonials(true), // Incluir inactivos en Admin
+            getClients(true),      // Cargar clientes para el dropdown de testimonios
+          ]);
           setTestimonials(testimonialsData || []);
+          setClients(clientsList || []);
           break;
         case "socials":
           const socialsData = await getSocials(true); // Incluir inactivos en Admin
@@ -5319,7 +5323,7 @@ function Admin() {
                         <option value="">{t("common.selectOption")}</option>
                         {clients.map((client) => (
                           <option key={client.id} value={client.id}>
-                            {client.name}
+                            {client.name || client.name_translations?.es || client.name_translations?.en || "Sin nombre"}
                           </option>
                         ))}
                       </select>
