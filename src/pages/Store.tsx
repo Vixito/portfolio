@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { gsap } from "gsap";
 import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
-import { getProductsWithPricing } from "../lib/supabase-functions";
+import { getProductsWithPricing, getExchangeRate } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
 
 interface ProductPricing {
@@ -98,6 +98,8 @@ function Store() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchName, setSearchName] = useState<string>("");
   const [priceFilter, setPriceFilter] = useState<string>("all");
+  const [selectedCurrency, setSelectedCurrency] = useState<"USD" | "COP">("USD");
+  const [exchangeRate, setExchangeRate] = useState<number>(4000);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const productPanelRef = useRef<HTMLDivElement>(null);
   const productScrollRef = useRef<HTMLDivElement>(null);
@@ -128,6 +130,20 @@ function Store() {
     },
     { value: "ropa", label: t("store.category.clothing") || "Ropa" },
   ];
+
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      try {
+        const rate = await getExchangeRate("USD", "COP");
+        if (rate && rate.exchange_rate) {
+          setExchangeRate(rate.exchange_rate);
+        }
+      } catch (err) {
+        console.error("Error al obtener la tasa de cambio en la tienda:", err);
+      }
+    };
+    fetchExchangeRate();
+  }, []);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -433,6 +449,26 @@ function Store() {
     const basePrice = item.base_price_usd !== null && item.base_price_usd !== undefined ? item.base_price_usd : null;
     const currentPrice = pricing?.current_price_usd ?? basePrice;
     
+    // Función auxiliar para convertir y formatear precios a la moneda seleccionada
+    const formatPriceValue = (val: number) => {
+      if (selectedCurrency === "COP") {
+        const convertedVal = val * exchangeRate;
+        return new Intl.NumberFormat("es-CO", {
+          style: "currency",
+          currency: "COP",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(convertedVal);
+      } else {
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+          minimumFractionDigits: val % 1 === 0 ? 0 : 2,
+          maximumFractionDigits: val % 1 === 0 ? 0 : 2,
+        }).format(val);
+      }
+    };
+    
     // Si no hay precio (null) y es tipo "request", retornar null para no mostrar precio
     if (item.button_type === "request") {
       if (currentPrice === null || currentPrice === undefined) {
@@ -450,18 +486,9 @@ function Store() {
       const minPrice = currentPrice;
       const maxPrice = item.max_price_usd;
       
-      const formatVal = (val: number) => {
-        return new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: val % 1 === 0 ? 0 : 2,
-          maximumFractionDigits: val % 1 === 0 ? 0 : 2,
-        }).format(val);
-      };
-      
       return (
         <span className={`text-2xl font-bold ${colorClass}`}>
-          {`${formatVal(minPrice)}-${formatVal(maxPrice)}`}
+          {`${formatPriceValue(minPrice)} - ${formatPriceValue(maxPrice)}`}
         </span>
       );
     }
@@ -482,10 +509,7 @@ function Store() {
       }
       return (
         <span className={`text-2xl font-bold ${colorClass}`}>
-          {new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
-          }).format(basePrice as number)}
+          {formatPriceValue(basePrice as number)}
         </span>
       );
     }
@@ -502,20 +526,14 @@ function Store() {
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="line-through text-gray-500 text-lg">
-              {new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-              }).format(originalPrice)}
+              {formatPriceValue(originalPrice)}
             </span>
             <span className="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
               -{pricing.sale_percentage}%
             </span>
           </div>
           <span className="text-2xl font-bold text-red-600 dark:text-red-300">
-            {new Intl.NumberFormat("en-US", {
-              style: "currency",
-              currency: "USD",
-            }).format(salePrice)}
+            {formatPriceValue(salePrice)}
           </span>
         </div>
       );
@@ -525,10 +543,7 @@ function Store() {
 
     return (
       <span className={`text-2xl font-bold ${colorClass}`}>
-        {new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(price)}
+        {formatPriceValue(price)}
       </span>
     );
   };
@@ -828,6 +843,34 @@ function Store() {
                       <option value="25-50">$25 - $50</option>
                       <option value="50-100">$50 - $100</option>
                       <option value="100+">$100+</option>
+                    </select>
+                  </div>
+
+                  {/* Filtro por divisa */}
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                      />
+                    </svg>
+                    <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                      {t("status.currency") || "Divisa"}
+                    </span>
+                    <select
+                      value={selectedCurrency}
+                      onChange={(e) => setSelectedCurrency(e.target.value as "USD" | "COP")}
+                      className="ml-2 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded focus:outline-none focus:border-purple dark:focus:border-cyan-200"
+                    >
+                      <option value="USD">{t("status.currencyUSD") || "USD"}</option>
+                      <option value="COP">{t("status.currencyCOP") || "COP"}</option>
                     </select>
                   </div>
                 </div>
