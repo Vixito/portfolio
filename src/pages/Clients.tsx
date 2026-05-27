@@ -51,8 +51,8 @@ function Clients() {
       .map((client) => {
         const content = getTranslatedText(
           client.testimonial_content_translations ||
-            client.testimonial_content ||
-            ""
+          client.testimonial_content ||
+          ""
         );
         // Solo incluir si el contenido traducido no está vacío
         if (!content || content.trim() === "") return null;
@@ -66,13 +66,13 @@ function Clients() {
           content: content,
           author: getTranslatedText(
             client.testimonial_author_translations ||
-              client.testimonial_author ||
-              ""
+            client.testimonial_author ||
+            ""
           ),
           role: getTranslatedText(
             client.testimonial_role_translations ||
-              client.testimonial_role ||
-              ""
+            client.testimonial_role ||
+            ""
           ),
           url: client.testimonial_url,
         };
@@ -366,7 +366,7 @@ function Clients() {
                         )}
 
                       {/* Autor */}
-                      <div className="border-t border-gray-400 dark:border-gray-600 pt-4">
+                      <div className="border-t border-gray-600 dark:border-gray-200 pt-4">
                         <p className="font-semibold text-gray-900 dark:text-gray-100">
                           {testimonial.author}
                         </p>
