@@ -2,10 +2,22 @@
 
 # Script para generar icecast.xml desde variables de entorno
 
-# Verificar que las variables de entorno estén definidas
-if [ -z "$ICECAST_SOURCE_PASSWORD" ] || [ -z "$ICECAST_RELAY_PASSWORD" ] || [ -z "$ICECAST_ADMIN_PASSWORD" ] || [ -z "$ICECAST_HOSTNAME" ]; then
-    echo "Error: Variables de entorno requeridas no están definidas"
-    echo "Necesitas: ICECAST_SOURCE_PASSWORD, ICECAST_RELAY_PASSWORD, ICECAST_ADMIN_PASSWORD, ICECAST_HOSTNAME"
+# Cargar fallbacks si no están definidos
+if [ -z "$ICECAST_SOURCE_PASSWORD" ] && [ -n "$ICECAST_PASSWORD" ]; then
+    export ICECAST_SOURCE_PASSWORD="$ICECAST_PASSWORD"
+fi
+if [ -z "$ICECAST_RELAY_PASSWORD" ]; then
+    export ICECAST_RELAY_PASSWORD="${ICECAST_SOURCE_PASSWORD:-change-me}"
+fi
+if [ -z "$ICECAST_ADMIN_PASSWORD" ]; then
+    export ICECAST_ADMIN_PASSWORD="${ICECAST_SOURCE_PASSWORD:-change-me}"
+fi
+if [ -z "$ICECAST_HOSTNAME" ]; then
+    export ICECAST_HOSTNAME="localhost"
+fi
+
+if [ -z "$ICECAST_SOURCE_PASSWORD" ]; then
+    echo "Error: ICECAST_SOURCE_PASSWORD (o ICECAST_PASSWORD) no está definida"
     exit 1
 fi
 
