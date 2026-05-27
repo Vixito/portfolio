@@ -1172,6 +1172,29 @@ function Admin() {
       );
       formData.testimonial_role_es = testimonialRoleTrans.es;
       formData.testimonial_role_en = testimonialRoleTrans.en;
+    } else if (activeTab === "testimonials") {
+      formData.client_id = item.id; // Vincular al ID del cliente
+
+      const testimonialContentTrans = extractTranslations(
+        item.testimonial_content_translations,
+        item.testimonial_content || ""
+      );
+      formData.testimonial_content_es = testimonialContentTrans.es;
+      formData.testimonial_content_en = testimonialContentTrans.en;
+
+      const testimonialAuthorTrans = extractTranslations(
+        item.testimonial_author_translations,
+        item.testimonial_author || ""
+      );
+      formData.testimonial_author_es = testimonialAuthorTrans.es;
+      formData.testimonial_author_en = testimonialAuthorTrans.en;
+
+      const testimonialRoleTrans = extractTranslations(
+        item.testimonial_role_translations,
+        item.testimonial_role || ""
+      );
+      formData.testimonial_role_es = testimonialRoleTrans.es;
+      formData.testimonial_role_en = testimonialRoleTrans.en;
     } else if (activeTab === "socials") {
       const titleTrans = extractTranslations(
         item.title_translations,

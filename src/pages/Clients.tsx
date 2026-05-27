@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Pagination from "../components/ui/Pagination";
 import { getClients } from "../lib/supabase-functions";
@@ -32,9 +32,8 @@ interface Testimonial {
 }
 
 function Clients() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [clients, setClients] = useState<Client[]>([]);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -46,6 +45,42 @@ function Clients() {
   const HOVER_ROTATE = 5;
   const SPRING_STIFFNESS = 100;
   const SCROLL_DISTANCE_FACTOR = 93.333;
+
+  const testimonials = useMemo(() => {
+    return clients
+      .map((client) => {
+        const content = getTranslatedText(
+          client.testimonial_content_translations ||
+            client.testimonial_content ||
+            ""
+        );
+        // Solo incluir si el contenido traducido no está vacío
+        if (!content || content.trim() === "") return null;
+
+        return {
+          id: client.id,
+          clientName: getTranslatedText(
+            client.name_translations || client.name
+          ),
+          clientLogo: client.logo,
+          content: content,
+          author: getTranslatedText(
+            client.testimonial_author_translations ||
+              client.testimonial_author ||
+              ""
+          ),
+          role: getTranslatedText(
+            client.testimonial_role_translations ||
+              client.testimonial_role ||
+              ""
+          ),
+          url: client.testimonial_url,
+        };
+      })
+      .filter(
+        (testimonial): testimonial is Testimonial => testimonial !== null
+      );
+  }, [clients, language]);
 
   useEffect(() => {
     const loadClients = async () => {
@@ -76,47 +111,9 @@ function Clients() {
         );
 
         setClients(mappedClients);
-
-        // Extraer testimonios de los clientes que los tengan
-        // Filtrar solo aquellos que tienen contenido real después de traducir
-        const testimonialsData = mappedClients
-          .map((client) => {
-            const content = getTranslatedText(
-              client.testimonial_content_translations ||
-                client.testimonial_content ||
-                ""
-            );
-            // Solo incluir si el contenido traducido no está vacío
-            if (!content || content.trim() === "") return null;
-
-            return {
-              id: client.id,
-              clientName: getTranslatedText(
-                client.name_translations || client.name
-              ),
-              clientLogo: client.logo,
-              content: content,
-              author: getTranslatedText(
-                client.testimonial_author_translations ||
-                  client.testimonial_author ||
-                  ""
-              ),
-              role: getTranslatedText(
-                client.testimonial_role_translations ||
-                  client.testimonial_role ||
-                  ""
-              ),
-              url: client.testimonial_url,
-            };
-          })
-          .filter(
-            (testimonial): testimonial is Testimonial => testimonial !== null
-          );
-        setTestimonials(testimonialsData);
       } catch (error) {
         console.error(t("clients.errorLoadingClients"), error);
         setClients([]);
-        setTestimonials([]);
       } finally {
         setLoading(false);
       }
@@ -363,7 +360,7 @@ function Clients() {
                       {/* Contenido del testimonio */}
                       {testimonial.content &&
                         testimonial.content.trim() !== "" && (
-                          <p className="text-gray-700 mb-4 italic leading-relaxed">
+                          <p className="text-gray-700 dark:text-gray-300 mb-4 italic leading-relaxed">
                             "{testimonial.content}"
                           </p>
                         )}
