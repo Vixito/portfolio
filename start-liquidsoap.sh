@@ -5,12 +5,6 @@
 
 set -e
 
-# Cargar variables de entorno desde Doppler
-# Usar 'set -a' para auto-exportar todas las variables que se definan
-set -a
-eval "$(doppler secrets download --no-file --format env --project vixis-portfolio --config prd)"
-set +a
-
 # Exportar explícitamente las variables críticas para asegurar que estén disponibles
 export RADIO_JINGLE_URL
 export RADIO_JINGLE_INTERVAL

@@ -1,0 +1,31 @@
+FROM ubuntu:26.04
+
+# Avoid prompts during apt installations
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install curl and gnupg, then setup Node.js v24.x and install Node and Liquidsoap
+RUN apt-get update && \
+    apt-get install -y curl gnupg && \
+    curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
+    apt-get install -y nodejs liquidsoap && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create radio user to avoid running as root
+RUN useradd -m -s /bin/bash radio
+
+WORKDIR /home/radio/app
+
+# Copy the liquidsoap scripts
+COPY update-playlist.js radio.liq start-liquidsoap.sh ./
+
+# Adjust permissions
+RUN chmod +x update-playlist.js start-liquidsoap.sh && \
+    chown -R radio:radio /home/radio/app
+
+USER radio
+
+# Liquidsoap needs this to avoid X11 errors sometimes if configured with GUI support
+ENV DISPLAY=:0
+
+# Run liquidsoap using the wrapper script
+CMD ["./start-liquidsoap.sh"]

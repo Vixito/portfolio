@@ -1,0 +1,53 @@
+services:
+  icecast:
+    container_name: radio-icecast
+    build:
+      context: .
+      dockerfile: Dockerfile.icecast
+    restart: unless-stopped
+    environment:
+      - ICECAST_SOURCE_PASSWORD=${ICECAST_SOURCE_PASSWORD}
+      - ICECAST_RELAY_PASSWORD=${ICECAST_RELAY_PASSWORD:-change-me}
+      - ICECAST_ADMIN_PASSWORD=${ICECAST_ADMIN_PASSWORD:-change-me}
+      - ICECAST_HOSTNAME=${ICECAST_HOSTNAME:-radio.vixis.dev}
+    networks:
+      - core_vixis-core
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radio.rule=Host(`radio.vixis.dev`)"
+      - "traefik.http.routers.radio.entrypoints=web"
+      - "traefik.http.services.radio.loadbalancer.server.port=8000"
+
+  liquidsoap:
+    container_name: radio-liquidsoap
+    build:
+      context: .
+      dockerfile: Dockerfile.liquidsoap
+    restart: unless-stopped
+    environment:
+      - ICECAST_HOST=icecast
+      - ICECAST_PORT=8000
+      - ICECAST_PASSWORD=${ICECAST_SOURCE_PASSWORD}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - RADIO_JINGLE_URL=${RADIO_JINGLE_URL}
+      - RADIO_JINGLE_INTERVAL=${RADIO_JINGLE_INTERVAL}
+    depends_on:
+      - icecast
+    networks:
+      - core_vixis-core
+
+  cloudflared:
+    container_name: radio-cloudflared
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARED_TOKEN}
+    networks:
+      - core_vixis-core
+
+
+networks:
+  core_vixis-core:
+    external: true

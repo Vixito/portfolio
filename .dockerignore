@@ -50,10 +50,11 @@ README.md
 start.sh
 stream.sh
 liquidsoap-setup.sh
-radio-streaming-liquidsoap.service
-radio.liq
+# radio-streaming-liquidsoap.service (ya eliminado)
+# NOTA: NO excluir los scripts de liquidsoap ahora que corre en contenedor
+# radio.liq
+# start-liquidsoap.sh
 update-playlist.sh
-start-liquidsoap.sh
 
 # Archivos de configuración de otros servicios
 cloudbuild.yaml
