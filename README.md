@@ -115,12 +115,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Carlos Andrés Vicioso Lara (Vixis)**
 
+- ✝️ Christian
 - 🎓 Systems Engineer, Colombia
 - 💼 Specialized in Backend Development & AI
 - 🎸 Certified Digital Marketer (HubSpot) & Guitarist (Yousician)
 - 🔒 CyberOps Associate & Ethical Hacker (Cisco)
 - 🌐 B1 English Certified
-- ✝️ Christian
 
 ### 🏢 Vixis Studio
 
