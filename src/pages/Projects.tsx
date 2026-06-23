@@ -166,23 +166,65 @@ function ProjectCard({ project }: { project: Project }) {
         {/* Contenido del card */}
         <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
           {project.thumbnail ? (
-            <img
-              src={project.thumbnail}
-              alt={getTranslatedText(
-                project.title_translations || project.title
-              )}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.currentTarget;
-                if (!target.dataset.errorHandled) {
-                  target.dataset.errorHandled = "true";
-                  target.src =
-                    "https://via.placeholder.com/400x300?text=No+Image";
-                  target.classList.add("opacity-50");
+            (() => {
+              const thumbUrl = project.thumbnail;
+              const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)(?:\?.*)?$/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
+              
+              if (isVideo) {
+                const isYouTube = thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be');
+                const isVimeo = thumbUrl.includes('vimeo.com');
+                
+                if (isYouTube || isVimeo) {
+                  let embedUrl = thumbUrl;
+                  if (isYouTube) {
+                    const videoId = thumbUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
+                    if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&controls=0&mute=1`;
+                  } else if (isVimeo) {
+                    const videoId = thumbUrl.match(/vimeo\.com\/(\d+)/)?.[1];
+                    if (videoId) embedUrl = `https://player.vimeo.com/video/${videoId}?background=1`;
+                  }
+                  return (
+                    <div className="pointer-events-none w-full h-full">
+                      <iframe
+                        src={embedUrl}
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allow="autoplay; encrypted-media"
+                        title={project.title}
+                      />
+                    </div>
+                  );
                 }
-              }}
-            />
+                
+                return (
+                  <video
+                    src={thumbUrl}
+                    className="w-full h-full object-cover"
+                    autoPlay loop muted playsInline
+                  />
+                );
+              }
+              
+              return (
+                <img
+                  src={thumbUrl}
+                  alt={getTranslatedText(
+                    project.title_translations || project.title
+                  )}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.dataset.errorHandled) {
+                      target.dataset.errorHandled = "true";
+                      target.src =
+                        "https://via.placeholder.com/400x300?text=No+Image";
+                      target.classList.add("opacity-50");
+                    }
+                  }}
+                />
+              );
+            })()
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
               Sin imagen

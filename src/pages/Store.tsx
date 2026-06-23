@@ -617,16 +617,51 @@ function Store() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
             <div className="flex flex-col">
               <div className="w-full aspect-[4/3] bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden mb-4">
-                <img
-                  src={
-                    routeSelectedItem.thumbnail_url ||
-                    "https://tu-cdn.cloudfront.net/default-store-thumbnail.png"
+                {(() => {
+                  const thumbUrl = routeSelectedItem.thumbnail_url || "https://tu-cdn.cloudfront.net/default-store-thumbnail.png";
+                  const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)(?:\?.*)?$/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
+                  if (isVideo) {
+                    const isYouTube = thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be');
+                    const isVimeo = thumbUrl.includes('vimeo.com');
+                    
+                    if (isYouTube || isVimeo) {
+                      let embedUrl = thumbUrl;
+                      if (isYouTube) {
+                        const videoId = thumbUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
+                        if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                      } else if (isVimeo) {
+                        const videoId = thumbUrl.match(/vimeo\.com\/(\d+)/)?.[1];
+                        if (videoId) embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                      }
+                      return (
+                        <iframe
+                          src={embedUrl}
+                          className="w-full h-full"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          title={getTranslatedText(routeSelectedItem.title_translations || routeSelectedItem.title)}
+                        />
+                      );
+                    }
+                    return (
+                      <video
+                        src={thumbUrl}
+                        className="w-full h-full object-contain"
+                        autoPlay loop muted playsInline controls
+                      />
+                    );
                   }
-                  alt={getTranslatedText(
-                    routeSelectedItem.title_translations || routeSelectedItem.title
-                  )}
-                  className="w-full h-full object-contain"
-                />
+                  return (
+                    <img
+                      src={thumbUrl}
+                      alt={getTranslatedText(
+                        routeSelectedItem.title_translations || routeSelectedItem.title
+                      )}
+                      className="w-full h-full object-contain"
+                    />
+                  );
+                })()}
               </div>
 
               {routeSelectedItem.images && routeSelectedItem.images.length > 0 && (
@@ -907,18 +942,54 @@ function Store() {
                   className="w-full h-48 bg-gray-200 overflow-hidden cursor-pointer"
                   onClick={() => handleItemClick(item)}
                 >
-                  <img
-                    src={
-                      item.thumbnail_url ||
-                      "https://tu-cdn.cloudfront.net/default-store-thumbnail.png"
+                  {(() => {
+                    const thumbUrl = item.thumbnail_url || "https://tu-cdn.cloudfront.net/default-store-thumbnail.png";
+                    const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)(?:\?.*)?$/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
+                    if (isVideo) {
+                      const isYouTube = thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be');
+                      const isVimeo = thumbUrl.includes('vimeo.com');
+                      
+                      if (isYouTube || isVimeo) {
+                        let embedUrl = thumbUrl;
+                        if (isYouTube) {
+                          const videoId = thumbUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
+                          if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&controls=0&mute=1`;
+                        } else if (isVimeo) {
+                          const videoId = thumbUrl.match(/vimeo\.com\/(\d+)/)?.[1];
+                          if (videoId) embedUrl = `https://player.vimeo.com/video/${videoId}?background=1`;
+                        }
+                        return (
+                          <div className="pointer-events-none w-full h-full">
+                            <iframe
+                              src={embedUrl}
+                              className="w-full h-full"
+                              frameBorder="0"
+                              allow="autoplay; encrypted-media"
+                              title={item.title}
+                            />
+                          </div>
+                        );
+                      }
+                      return (
+                        <video
+                          src={thumbUrl}
+                          className="w-full h-full object-cover"
+                          autoPlay loop muted playsInline
+                        />
+                      );
                     }
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src =
-                        "https://tu-cdn.cloudfront.net/default-store-thumbnail.png";
-                    }}
-                  />
+                    return (
+                      <img
+                        src={thumbUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src =
+                            "https://tu-cdn.cloudfront.net/default-store-thumbnail.png";
+                        }}
+                      />
+                    );
+                  })()}
                 </div>
 
                 {/* Contenido */}
@@ -1063,16 +1134,51 @@ function Store() {
                   {/* Imágenes */}
                   <div className="flex flex-col">
                     <div className="w-full aspect-[4/3] bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden mb-4">
-                      <img
-                        src={
-                          selectedItem.thumbnail_url ||
-                          "https://tu-cdn.cloudfront.net/default-store-thumbnail.png"
+                      {(() => {
+                        const thumbUrl = selectedItem.thumbnail_url || "https://tu-cdn.cloudfront.net/default-store-thumbnail.png";
+                        const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)(?:\?.*)?$/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
+                        if (isVideo) {
+                          const isYouTube = thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be');
+                          const isVimeo = thumbUrl.includes('vimeo.com');
+                          
+                          if (isYouTube || isVimeo) {
+                            let embedUrl = thumbUrl;
+                            if (isYouTube) {
+                              const videoId = thumbUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
+                              if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                            } else if (isVimeo) {
+                              const videoId = thumbUrl.match(/vimeo\.com\/(\d+)/)?.[1];
+                              if (videoId) embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                            }
+                            return (
+                              <iframe
+                                src={embedUrl}
+                                className="w-full h-full"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                title={getTranslatedText(selectedItem.title_translations || selectedItem.title)}
+                              />
+                            );
+                          }
+                          return (
+                            <video
+                              src={thumbUrl}
+                              className="w-full h-full object-contain"
+                              autoPlay loop muted playsInline controls
+                            />
+                          );
                         }
-                        alt={getTranslatedText(
-                          selectedItem.title_translations || selectedItem.title
-                        )}
-                        className="w-full h-full object-contain"
-                      />
+                        return (
+                          <img
+                            src={thumbUrl}
+                            alt={getTranslatedText(
+                              selectedItem.title_translations || selectedItem.title
+                            )}
+                            className="w-full h-full object-contain"
+                          />
+                        );
+                      })()}
                     </div>
                     {selectedItem.images && selectedItem.images.length > 0 && (
                       <div className="space-y-3 mb-4">
