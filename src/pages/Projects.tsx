@@ -168,7 +168,7 @@ function ProjectCard({ project }: { project: Project }) {
           {project.thumbnail ? (
             (() => {
               const thumbUrl = project.thumbnail;
-              const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)(?:\?.*)?$/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
+              const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
               
               if (isVideo) {
                 const isYouTube = thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be');

@@ -619,7 +619,7 @@ function Store() {
               <div className="w-full aspect-[4/3] bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden mb-4">
                 {(() => {
                   const thumbUrl = routeSelectedItem.thumbnail_url || "https://tu-cdn.cloudfront.net/default-store-thumbnail.png";
-                  const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)(?:\?.*)?$/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
+                  const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
                   if (isVideo) {
                     const isYouTube = thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be');
                     const isVimeo = thumbUrl.includes('vimeo.com');
@@ -666,21 +666,67 @@ function Store() {
 
               {routeSelectedItem.images && routeSelectedItem.images.length > 0 && (
                 <div className="space-y-3 mb-4">
-                  {routeSelectedItem.images.map((image: string, index: number) => (
-                    <div
-                      key={index}
-                      className="w-full aspect-video bg-gray-200 dark:bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => setLightboxImage(image)}
-                    >
-                      <img
-                        src={image}
-                        alt={`${getTranslatedText(
-                          routeSelectedItem.title_translations || routeSelectedItem.title
-                        )} ${index + 1}`}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  ))}
+                  {routeSelectedItem.images.map((image: string, index: number) => {
+                    const isVideo = image.match(/\.(mp4|webm|ogg|mov)/i) || image.includes('youtube.com') || image.includes('youtu.be') || image.includes('vimeo.com');
+                    
+                    if (isVideo) {
+                      const isYouTube = image.includes('youtube.com') || image.includes('youtu.be');
+                      const isVimeo = image.includes('vimeo.com');
+                      
+                      if (isYouTube || isVimeo) {
+                        let embedUrl = image;
+                        if (isYouTube) {
+                          const videoId = image.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
+                          if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                        } else if (isVimeo) {
+                          const videoId = image.match(/vimeo\.com\/(\d+)/)?.[1];
+                          if (videoId) embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                        }
+                        
+                        return (
+                          <div key={index} className="w-full aspect-video bg-gray-200 dark:bg-gray-800 rounded overflow-hidden">
+                            <iframe
+                              src={embedUrl}
+                              className="w-full h-full"
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              title={`Video ${index + 1}`}
+                            />
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div key={index} className="w-full aspect-video bg-gray-200 dark:bg-gray-800 rounded overflow-hidden">
+                            <video
+                              controls
+                              className="w-full h-full object-contain"
+                              preload="metadata"
+                            >
+                              <source src={image} type={`video/${image.split('.').pop()?.split('?')[0]}`} />
+                              Tu navegador no soporta el tag de video.
+                            </video>
+                          </div>
+                        );
+                      }
+                    } else {
+                      return (
+                        <div
+                          key={index}
+                          className="w-full aspect-video bg-gray-200 dark:bg-gray-800 rounded overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setLightboxImage(image)}
+                        >
+                          <img
+                            src={image}
+                            alt={`${getTranslatedText(
+                              routeSelectedItem.title_translations || routeSelectedItem.title
+                            )} ${index + 1}`}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               )}
             </div>
@@ -944,7 +990,7 @@ function Store() {
                 >
                   {(() => {
                     const thumbUrl = item.thumbnail_url || "https://tu-cdn.cloudfront.net/default-store-thumbnail.png";
-                    const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)(?:\?.*)?$/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
+                    const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
                     if (isVideo) {
                       const isYouTube = thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be');
                       const isVimeo = thumbUrl.includes('vimeo.com');
@@ -1136,7 +1182,7 @@ function Store() {
                     <div className="w-full aspect-[4/3] bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden mb-4">
                       {(() => {
                         const thumbUrl = selectedItem.thumbnail_url || "https://tu-cdn.cloudfront.net/default-store-thumbnail.png";
-                        const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)(?:\?.*)?$/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
+                        const isVideo = thumbUrl.match(/\.(mp4|webm|ogg|mov)/i) || thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be') || thumbUrl.includes('vimeo.com');
                         if (isVideo) {
                           const isYouTube = thumbUrl.includes('youtube.com') || thumbUrl.includes('youtu.be');
                           const isVimeo = thumbUrl.includes('vimeo.com');
@@ -1183,7 +1229,7 @@ function Store() {
                     {selectedItem.images && selectedItem.images.length > 0 && (
                       <div className="space-y-3 mb-4">
                         {selectedItem.images.map((image: string, index: number) => {
-                          const isVideo = image.match(/\.(mp4|webm|ogg|mov)$/i) || image.includes('youtube.com') || image.includes('youtu.be') || image.includes('vimeo.com');
+                          const isVideo = image.match(/\.(mp4|webm|ogg|mov)/i) || image.includes('youtube.com') || image.includes('youtu.be') || image.includes('vimeo.com');
                           
                           if (isVideo) {
                             const isYouTube = image.includes('youtube.com') || image.includes('youtu.be');
