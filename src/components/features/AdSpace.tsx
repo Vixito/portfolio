@@ -1,12 +1,3 @@
-
-interface AdSpaceProps {
-  className?: string;
-  style?: React.CSSProperties;
-}
-
-/**
- * Componente para espacios publicitarios (Banners 300x250 de Adsterra)
- */
 interface AdSpaceProps {
   className?: string;
   style?: React.CSSProperties;
