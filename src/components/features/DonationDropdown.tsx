@@ -13,6 +13,7 @@ function DonationDropdown() {
     { name: "PayPal", url: "https://paypal.me/vizzzis" },
     { name: "Airtm", url: "https://airtm.me/vixis" },
     { name: "Buy Me a Coffee", url: "https://buymeacoffee.com/vixis" },
+    { name: "Decaf", url: "https://decaf.me/vixis" },
   ];
 
   // Cerrar al hacer click fuera
