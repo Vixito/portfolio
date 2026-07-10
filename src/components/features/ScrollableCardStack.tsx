@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { gsap } from "gsap";
-import { useTranslation } from "../../lib/i18n";
+import { useTranslation, getTranslatedText } from "../../lib/i18n";
 import { getHomeProjects } from "../../lib/supabase-functions";
 
 interface Project {
@@ -102,7 +102,7 @@ function ScrollableCardStack() {
 
           return {
             id: project.id,
-            title: project.title || "",
+            title: getTranslatedText(project.title_translations, language) || project.title || "",
             thumbnail: project.thumbnail || project.thumbnail_url || "",
             month,
             year,
