@@ -1776,6 +1776,7 @@ function Admin() {
               updateProjectData.title_es || "",
               updateProjectData.title_en || ""
             );
+            updateProjectData.title = updateProjectData.title_es || "Proyecto sin título";
             delete updateProjectData.title_es;
             delete updateProjectData.title_en;
             await updateProject(editingItem.id, updateProjectData);
@@ -2354,6 +2355,7 @@ function Admin() {
               createProjectData.title_es || "",
               createProjectData.title_en || ""
             );
+            createProjectData.title = createProjectData.title_es || "Proyecto sin título";
             delete createProjectData.title_es;
             delete createProjectData.title_en;
             await createProject(createProjectData);
@@ -3552,6 +3554,18 @@ function Admin() {
                         }`}>
                           {displayTitle}
                         </h3>
+                        {activeTab === "projects" && (
+                          <span 
+                            className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-300 rounded border border-blue-500/30 cursor-pointer hover:bg-blue-500/40"
+                            onClick={() => {
+                              navigator.clipboard.writeText(item.id);
+                              alert("ID copiado: " + item.id);
+                            }}
+                            title="Copiar ID"
+                          >
+                            Copiar ID
+                          </span>
+                        )}
                         {activeTab !== "invoices" && item.is_active === false && (
                           <span className="px-2 py-0.5 text-xs bg-gray-700/50 text-gray-400 rounded border border-gray-600/50">
                             Inactivo
