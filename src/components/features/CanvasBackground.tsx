@@ -218,7 +218,6 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
     <canvas 
       ref={canvasRef} 
       className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
-      style={{ opacity: 0.6 }} // Ajuste de opacidad para no opacar el contenido
     />
   );
 }
