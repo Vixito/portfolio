@@ -10,11 +10,14 @@ interface ScrollTransitionWrapperProps {
 function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollTransitionWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const clipPathId = useMemo(() => `transition-mask-${Math.random().toString(36).substr(2, 9)}`, []);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     if (transitionType === 'default') {
       return;
     }
+
+    setIsTransitioning(true);
 
     if (!containerRef.current) return;
 
@@ -22,7 +25,10 @@ function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollT
     if (rects.length === 0) return;
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline();
+      const tl = gsap.timeline({
+        onComplete: () => setIsTransitioning(false),
+        onReverseComplete: () => setIsTransitioning(false)
+      });
 
       if (transitionType === 'horizontal_blinds') {
         gsap.set(rects, { attr: { width: 0 } });
@@ -53,29 +59,31 @@ function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollT
           ease: "power1.inOut"
         });
       } else if (transitionType === 'column_grid') {
-        gsap.set(rects, { attr: { height: 0 } });
-        tl.to(rects, {
-          attr: { height: 0.205 },
-          duration: 0.8,
-          stagger: {
-            each: 0.05,
-            from: "random",
-            grid: "auto"
-          },
-          ease: "power2.out"
+        gsap.set(rects, { attr: { width: 0, height: 0 } });
+        
+        // Animamos columna por columna de izquierda a derecha
+        const columns = [0, 1, 2, 3, 4].map(c => {
+          return Array.from(rects).filter(r => (r as SVGRectElement).getAttribute('x') === (c * 0.2).toString());
+        });
+
+        columns.forEach((col, i) => {
+          tl.to(col, {
+            attr: { width: 0.205, height: 0.205 },
+            duration: 0.4,
+            ease: "power2.inOut"
+          }, i * 0.15);
         });
       }
 
-      if (isActive) {
-        tl.play();
-      } else {
-        // Start from end and reverse if not active initially
-        tl.progress(1).reverse();
+      if (!isActive) {
+        tl.reverse(0);
       }
     }, containerRef);
 
-    return () => ctx.revert();
-  }, [transitionType, clipPathId, isActive]);
+    return () => {
+      ctx.revert();
+    };
+  }, [isActive, transitionType, clipPathId]);
 
   if (transitionType === 'default') {
     return <>{children}</>;
@@ -93,8 +101,8 @@ function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollT
       <div 
         className="w-full h-full transition-wrapper" 
         style={{
-          clipPath: `url(#${clipPathId})`,
-          WebkitClipPath: `url(#${clipPathId})`
+          clipPath: (isActive && !isTransitioning) ? 'none' : `url(#${clipPathId})`,
+          WebkitClipPath: (isActive && !isTransitioning) ? 'none' : `url(#${clipPathId})`
         }}
       >
         {children}
