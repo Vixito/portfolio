@@ -17,18 +17,46 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
     let width = window.innerWidth;
     let height = window.innerHeight;
     let animationFrameId: number;
+    let entities: any[] = [];
+    const dpr = window.devicePixelRatio || 1;
+
+    const initEntities = () => {
+      entities = [];
+      if (mode === 'dark') {
+        // Adjust star count based on density so it doesn't look empty on large screens
+        const starCount = Math.floor((width * height) / 3000);
+        for (let i = 0; i < starCount; i++) {
+          entities.push(new Star({ x: Math.random() * width, y: Math.random() * height }));
+        }
+        entities.push(new ShootingStar());
+        entities.push(new ShootingStar());
+        entities.push(new Terrain({mHeight: (height/2)-120, fillStyle: "#191D4C"}));
+        entities.push(new Terrain({displacement: 120, scrollDelay: 50, fillStyle: "rgb(17,20,40)", mHeight: (height/2)-60}));
+        entities.push(new Terrain({displacement: 100, scrollDelay: 20, fillStyle: "rgb(10,10,5)", mHeight: height/2}));
+      } else {
+        entities.push(new Terrain({displacement: 120, scrollDelay: 50, fillStyle: "#A3D2CA", mHeight: (height/2)-120}));
+        entities.push(new Terrain({displacement: 100, scrollDelay: 20, fillStyle: "#5EAAA8", mHeight: (height/2)-60}));
+        entities.push(new Terrain({displacement: 80, scrollDelay: 10, fillStyle: "#05668D", mHeight: height/2}));
+      }
+    };
 
     const updateSize = () => {
       if (canvas.parentElement) {
         width = canvas.parentElement.clientWidth;
         height = canvas.parentElement.clientHeight;
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.scale(dpr, dpr);
+        initEntities();
       }
     };
 
+    let resizeTimeout: NodeJS.Timeout;
     const resizeObserver = new ResizeObserver(() => {
-      updateSize();
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        updateSize();
+      }, 200);
     });
 
     if (canvas.parentElement) {
@@ -172,23 +200,6 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
           }
         }
       }
-    }
-
-    const entities: any[] = [];
-    
-    if (mode === 'dark') {
-      for (let i = 0; i < height; i++) {
-        entities.push(new Star({ x: Math.random() * width, y: Math.random() * height }));
-      }
-      entities.push(new ShootingStar());
-      entities.push(new ShootingStar());
-      entities.push(new Terrain({mHeight: (height/2)-120, fillStyle: "#191D4C"}));
-      entities.push(new Terrain({displacement: 120, scrollDelay: 50, fillStyle: "rgb(17,20,40)", mHeight: (height/2)-60}));
-      entities.push(new Terrain({displacement: 100, scrollDelay: 20, fillStyle: "rgb(10,10,5)", mHeight: height/2}));
-    } else {
-      entities.push(new Terrain({displacement: 120, scrollDelay: 50, fillStyle: "#A3D2CA", mHeight: (height/2)-120}));
-      entities.push(new Terrain({displacement: 100, scrollDelay: 20, fillStyle: "#5EAAA8", mHeight: (height/2)-60}));
-      entities.push(new Terrain({displacement: 80, scrollDelay: 10, fillStyle: "#05668D", mHeight: height/2}));
     }
 
     const animate = () => {
