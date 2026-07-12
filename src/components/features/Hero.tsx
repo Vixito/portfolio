@@ -38,36 +38,68 @@ function Hero({ transitionType }: { transitionType?: any }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!heroRef.current) return;
+  const [activeSection, setActiveSection] = useState(0);
 
-    const elements = heroRef.current.querySelectorAll(".hero-section");
-    gsap.fromTo(
-      elements,
-      { opacity: 0, y: 50 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        stagger: 0.2,
-        ease: "power2.out",
-        scrollTrigger: {
-          trigger: heroRef.current,
-          start: "top 80%",
-          toggleActions: "play none none none",
-        },
+  useEffect(() => {
+    // Deshabilitar scroll nativo en body
+    document.body.style.overflow = 'hidden';
+
+    let isAnimating = false;
+    let touchStartY = 0;
+    const cooldown = 1200;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (isAnimating) return;
+
+      if (e.deltaY > 50 && activeSection < 1) {
+        isAnimating = true;
+        setActiveSection(1);
+        setTimeout(() => (isAnimating = false), cooldown);
+      } else if (e.deltaY < -50 && activeSection > 0) {
+        isAnimating = true;
+        setActiveSection(0);
+        setTimeout(() => (isAnimating = false), cooldown);
       }
-    );
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (isAnimating) return;
+      const touchEndY = e.touches[0].clientY;
+      const deltaY = touchStartY - touchEndY;
+
+      if (deltaY > 50 && activeSection < 1) {
+        isAnimating = true;
+        setActiveSection(1);
+        setTimeout(() => (isAnimating = false), cooldown);
+      } else if (deltaY < -50 && activeSection > 0) {
+        isAnimating = true;
+        setActiveSection(0);
+        setTimeout(() => (isAnimating = false), cooldown);
+      }
+    };
+
+    // Usar passive: false para poder prevenir el default si fuera necesario,
+    // pero aquí solo escuchamos para cambiar el estado.
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
 
     return () => {
-      ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
+      document.body.style.overflow = '';
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
     };
-  }, []);
+  }, [activeSection]);
 
   const profileImageUrl = "https://cdn.vixis.dev/Foto+de+Perfil+2.webp";
 
   return (
-    <section ref={heroRef} className="relative">
+    <section ref={heroRef} className="relative w-full h-screen overflow-hidden">
       <AnimatePresence>
         {heroBg === "starry_night" && (
           <motion.div
@@ -83,42 +115,47 @@ function Hero({ transitionType }: { transitionType?: any }) {
       </AnimatePresence>
       
       {/* Sección 1: Perfil */}
-      <ScrollTransitionWrapper transitionType={transitionType}>
-        <div className="hero-section min-h-screen flex items-center justify-center px-4 py-20 relative z-10">
+      <ScrollTransitionWrapper transitionType={transitionType} isActive={activeSection === 0}>
+        <div className="hero-section absolute inset-0 min-h-screen flex items-center justify-center px-4 py-20 relative z-10">
           <div className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             {/* Lado izquierdo: Perfil */}
             <div className="space-y-6">
               <div className="flex justify-center md:justify-start">
                 <img
                   src={profileImageUrl}
-                  alt="Carlos Andrés Vicioso Lara"
-                  className="w-32 h-32 rounded-full object-cover border-4 border-purple shadow-lg"
+                  alt={t("hero.imageAlt")}
+                  className="w-48 h-48 md:w-64 md:h-64 rounded-full border-4 border-[#8c52ff] shadow-[0_0_20px_rgba(140,82,255,0.3)] object-cover bg-[#1A1A1A]"
                 />
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 text-center md:text-left">
-                {t("home.title")}
-              </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400 text-center md:text-left">
-                {t("home.subtitle")}
-                <br />
-                {t("home.specialization")}
-              </p>
-              <div className="flex justify-center md:justify-start">
+              <div>
+                <h1 className="text-4xl md:text-6xl font-bold font-montserrat tracking-tight">
+                  <span className="block">{t("hero.nameLine1")}</span>
+                  <span className="block mt-2">{t("hero.nameLine2")}</span>
+                </h1>
+                <p className="mt-4 text-xl md:text-2xl text-gray-300">
+                  {t("hero.title")}
+                  <br />
+                  {t("hero.subtitle")}
+                </p>
+              </div>
+              <div className="pt-4">
                 <StatusBadge />
               </div>
             </div>
 
-            {/* Lado derecho: Timeline serpiente */}
-            <div className="hidden md:flex items-center justify-center bg-transparent">
-              <SnakeTimeline />
+            {/* Lado derecho: Timeline */}
+            <div className="hidden md:flex justify-center items-center h-full">
+              <div className="w-full max-w-md">
+                <SnakeTimeline />
+              </div>
             </div>
           </div>
         </div>
       </ScrollTransitionWrapper>
 
       {/* Sección 2: Contenido principal */}
-      <ScrollTransitionWrapper transitionType={transitionType}>
-        <div className="hero-section min-h-screen flex items-center justify-center px-4 relative z-10">
+      <ScrollTransitionWrapper transitionType={transitionType} isActive={activeSection === 1}>
+        <div className="hero-section absolute inset-0 min-h-screen flex items-center justify-center px-4 relative z-10">
           <HomeSection />
         </div>
       </ScrollTransitionWrapper>

@@ -1937,7 +1937,7 @@ export async function updateAppearanceSettings(settings: any) {
     if (existingData) {
       const { error } = await supabase
         .from("home_content")
-        .update({ project_data: settings })
+        .update({ project_data: { ...settings, is_appearance_settings: true } })
         .eq("id", existingData.id);
       
       if (error) throw error;
