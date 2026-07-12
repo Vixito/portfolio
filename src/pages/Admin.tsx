@@ -3294,6 +3294,7 @@ function Admin() {
                 {tab === "home_content" && "Home Content"}
                 {tab === "radio_settings" && "Radio Settings"}
                 {tab === "invoices" && "Invoices"}
+                {tab === "appearance" && "Apariencia"}
               </button>
             ))}
           </div>
