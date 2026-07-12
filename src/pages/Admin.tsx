@@ -3342,9 +3342,13 @@ function Admin() {
                   <p className="text-gray-400 text-xs mt-2">Nota: Estas transiciones se aplicarán con GSAP al hacer scroll en las secciones del Inicio.</p>
                 </div>
                 <div className="flex justify-end">
-                  <Button type="submit" disabled={isSavingAppearance}>
+                  <button 
+                    type="submit" 
+                    disabled={isSavingAppearance}
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  >
                     {isSavingAppearance ? "Guardando..." : "Guardar Cambios"}
-                  </Button>
+                  </button>
                 </div>
               </form>
             </div>
