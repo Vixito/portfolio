@@ -133,6 +133,7 @@ function Hero({ transitionType }: { transitionType?: any }) {
       <AnimatePresence>
         {heroBg === "starry_night" && (
           <motion.div
+            key="starry_night"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -145,7 +146,7 @@ function Hero({ transitionType }: { transitionType?: any }) {
       </AnimatePresence>
       
       {/* Sección 1: Perfil */}
-      <ScrollTransitionWrapper transitionType={transitionType} isActive={activeSection === 0}>
+      <ScrollTransitionWrapper key="section-0" transitionType={transitionType} isActive={activeSection === 0}>
         <div className={`hero-section ${transitionType !== "default" ? "absolute inset-0" : ""} min-h-screen flex items-center justify-center px-4 py-20 relative z-10`}>
           <div className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             {/* Lado izquierdo: Perfil */}
@@ -179,7 +180,7 @@ function Hero({ transitionType }: { transitionType?: any }) {
       </ScrollTransitionWrapper>
 
       {/* Sección 2: Contenido principal */}
-      <ScrollTransitionWrapper transitionType={transitionType} isActive={activeSection === 1}>
+      <ScrollTransitionWrapper key="section-1" transitionType={transitionType} isActive={activeSection === 1}>
         <div className={`hero-section ${transitionType !== "default" ? "absolute inset-0" : ""} min-h-screen flex items-center justify-center px-4 relative z-10`}>
           <HomeSection />
         </div>
