@@ -218,13 +218,15 @@ function Hero({ transitionType }: { transitionType?: any }) {
       {/* Sección 2: Contenido principal */}
       <ScrollTransitionWrapper key="section-1" transitionType={transitionType} isActive={activeSection === 1}>
         <div 
-          className={`hero-section ${transitionType !== "default" ? "absolute inset-0 overflow-y-auto" : ""} min-h-screen flex flex-col relative z-10 px-4`}
+          className={`hero-section ${transitionType !== "default" ? "absolute inset-0 overflow-y-auto" : ""} w-full relative z-10 bg-transparent`}
         >
-          <div className="flex-grow flex-shrink-0"></div>
-          <div className="flex-shrink-0 w-full">
-            <HomeSection />
+          <div className="min-h-screen flex flex-col w-full px-4 py-8">
+            <div className="flex-grow flex-shrink-0"></div>
+            <div className="flex-shrink-0 w-full">
+              <HomeSection />
+            </div>
+            <div className="flex-grow flex-shrink-0"></div>
           </div>
-          <div className="flex-grow flex-shrink-0"></div>
         </div>
       </ScrollTransitionWrapper>
     </section>
