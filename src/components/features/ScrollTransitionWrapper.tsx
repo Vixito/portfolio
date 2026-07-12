@@ -90,18 +90,7 @@ function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollT
   }, [transitionType, clipPathId, isActive]);
 
   if (transitionType === 'default') {
-    return (
-      <div 
-        className="absolute inset-0 w-full h-full transition-opacity duration-1000"
-        style={{ 
-          opacity: isActive ? 1 : 0, 
-          pointerEvents: isActive ? 'auto' : 'none',
-          zIndex: isActive ? 10 : 0
-        }}
-      >
-        {isRendered && children}
-      </div>
-    );
+    return <>{children}</>;
   }
 
   return (
