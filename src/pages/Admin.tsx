@@ -3326,6 +3326,21 @@ function Admin() {
                     <option value="starry_night">Starry Night (Canvas Animado)</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Transición de Scroll (Página de Inicio)</label>
+                  <select
+                    value={appearanceSettings.home_scroll_transition || "default"}
+                    onChange={(e) => setAppearanceSettings({...appearanceSettings, home_scroll_transition: e.target.value})}
+                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
+                  >
+                    <option value="default">Por defecto (Ninguna)</option>
+                    <option value="horizontal_blinds">Horizontal Blinds</option>
+                    <option value="vertical_blinds">Vertical Blinds</option>
+                    <option value="random_grid">Random Grid</option>
+                    <option value="column_grid">Column Grid</option>
+                  </select>
+                  <p className="text-gray-400 text-xs mt-2">Nota: Estas transiciones se aplicarán con GSAP al hacer scroll en las secciones del Inicio.</p>
+                </div>
                 <div className="flex justify-end">
                   <button 
                     type="submit" 
