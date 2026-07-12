@@ -1,11 +1,11 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, ReactNode } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
 interface ScrollTransitionWrapperProps {
-  children: React.ReactNode;
+  children: ReactNode;
   transitionType: 'default' | 'horizontal_blinds' | 'vertical_blinds' | 'random_grid' | 'column_grid';
 }
 
