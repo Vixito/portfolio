@@ -79,14 +79,24 @@ function Hero({ transitionType }: { transitionType?: any }) {
 
       const handleWheel = (e: WheelEvent) => {
         if (isAnimating) return;
-        if (e.deltaY > 50 && activeSection < 1) {
-          isAnimating = true;
-          setActiveSection(1);
-          setTimeout(() => (isAnimating = false), cooldown);
-        } else if (e.deltaY < -50 && activeSection > 0) {
-          isAnimating = true;
-          setActiveSection(0);
-          setTimeout(() => (isAnimating = false), cooldown);
+        if (e.deltaY > 50) {
+          setActiveSection((prev) => {
+            if (prev < 1) {
+              isAnimating = true;
+              setTimeout(() => (isAnimating = false), cooldown);
+              return 1;
+            }
+            return prev;
+          });
+        } else if (e.deltaY < -50) {
+          setActiveSection((prev) => {
+            if (prev > 0) {
+              isAnimating = true;
+              setTimeout(() => (isAnimating = false), cooldown);
+              return 0;
+            }
+            return prev;
+          });
         }
       };
 
@@ -99,14 +109,24 @@ function Hero({ transitionType }: { transitionType?: any }) {
         const touchEndY = e.touches[0].clientY;
         const deltaY = touchStartY - touchEndY;
 
-        if (deltaY > 50 && activeSection < 1) {
-          isAnimating = true;
-          setActiveSection(1);
-          setTimeout(() => (isAnimating = false), cooldown);
-        } else if (deltaY < -50 && activeSection > 0) {
-          isAnimating = true;
-          setActiveSection(0);
-          setTimeout(() => (isAnimating = false), cooldown);
+        if (deltaY > 50) {
+          setActiveSection((prev) => {
+            if (prev < 1) {
+              isAnimating = true;
+              setTimeout(() => (isAnimating = false), cooldown);
+              return 1;
+            }
+            return prev;
+          });
+        } else if (deltaY < -50) {
+          setActiveSection((prev) => {
+            if (prev > 0) {
+              isAnimating = true;
+              setTimeout(() => (isAnimating = false), cooldown);
+              return 0;
+            }
+            return prev;
+          });
         }
       };
 
@@ -121,7 +141,7 @@ function Hero({ transitionType }: { transitionType?: any }) {
         window.removeEventListener('touchmove', handleTouchMove);
       };
     }
-  }, [transitionType, activeSection]);
+  }, [transitionType]);
 
   const profileImageUrl = "https://cdn.vixis.dev/Foto+de+Perfil+2.webp";
 
