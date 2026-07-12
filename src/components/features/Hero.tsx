@@ -72,7 +72,8 @@ function Hero({ transitionType }: { transitionType?: any }) {
       };
     } else {
       // Comportamiento secuestrado: Transiciones de pantalla a pantalla
-      document.body.style.overflow = 'hidden';
+      // Eliminado document.body.style.overflow = 'hidden' porque rompe el scroll interno en iOS Safari.
+      // La etiqueta <section> principal ya tiene h-screen overflow-hidden.
       let isAnimating = false;
       let touchStartY = 0;
       const cooldown = 1200;
