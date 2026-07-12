@@ -99,7 +99,7 @@ function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollT
       }}
     >
       <div 
-        className="w-full h-full transition-wrapper" 
+        className="absolute inset-0 transition-wrapper" 
         style={{
           clipPath: (isActive && !isTransitioning) ? 'none' : `url(#${clipPathId})`,
           WebkitClipPath: (isActive && !isTransitioning) ? 'none' : `url(#${clipPathId})`

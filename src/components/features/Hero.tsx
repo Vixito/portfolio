@@ -219,6 +219,7 @@ function Hero({ transitionType }: { transitionType?: any }) {
       <ScrollTransitionWrapper key="section-1" transitionType={transitionType} isActive={activeSection === 1}>
         <div 
           className={`hero-section ${transitionType !== "default" ? "absolute inset-0 overflow-y-auto" : ""} w-full relative z-10 bg-transparent`}
+          style={{ WebkitOverflowScrolling: 'touch' }}
         >
           <div className="min-h-screen flex flex-col w-full px-4 py-8">
             <div className="flex-grow flex-shrink-0"></div>
