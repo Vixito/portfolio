@@ -77,8 +77,18 @@ function Hero({ transitionType }: { transitionType?: any }) {
       let touchStartY = 0;
       const cooldown = 1200;
 
+      const shouldIgnoreScroll = (e: Event) => {
+        const target = e.target as HTMLElement;
+        const scrollContainer = target.closest('.overflow-y-auto');
+        if (scrollContainer && scrollContainer.scrollTop > 0) {
+          return true; // Don't hijack if we can scroll up natively
+        }
+        return false;
+      };
+
       const handleWheel = (e: WheelEvent) => {
         if (isAnimating) return;
+        
         if (e.deltaY > 50) {
           setActiveSection((prev) => {
             if (prev < 1) {
@@ -89,6 +99,8 @@ function Hero({ transitionType }: { transitionType?: any }) {
             return prev;
           });
         } else if (e.deltaY < -50) {
+          if (shouldIgnoreScroll(e)) return;
+          
           setActiveSection((prev) => {
             if (prev > 0) {
               isAnimating = true;
@@ -119,6 +131,8 @@ function Hero({ transitionType }: { transitionType?: any }) {
             return prev;
           });
         } else if (deltaY < -50) {
+          if (shouldIgnoreScroll(e)) return;
+
           setActiveSection((prev) => {
             if (prev > 0) {
               isAnimating = true;
@@ -130,6 +144,7 @@ function Hero({ transitionType }: { transitionType?: any }) {
         }
       };
 
+      // Use passive: false ONLY if we ever plan to use preventDefault, but we don't need it.
       window.addEventListener('wheel', handleWheel, { passive: true });
       window.addEventListener('touchstart', handleTouchStart, { passive: true });
       window.addEventListener('touchmove', handleTouchMove, { passive: true });
@@ -201,7 +216,9 @@ function Hero({ transitionType }: { transitionType?: any }) {
 
       {/* Sección 2: Contenido principal */}
       <ScrollTransitionWrapper key="section-1" transitionType={transitionType} isActive={activeSection === 1}>
-        <div className={`hero-section ${transitionType !== "default" ? "absolute inset-0" : ""} min-h-screen flex items-center justify-center px-4 relative z-10`}>
+        <div 
+          className={`hero-section ${transitionType !== "default" ? "absolute inset-0 overflow-y-auto pb-20 pt-24" : ""} min-h-screen flex flex-col items-center ${transitionType !== "default" ? "justify-start" : "justify-center"} px-4 relative z-10`}
+        >
           <HomeSection />
         </div>
       </ScrollTransitionWrapper>
