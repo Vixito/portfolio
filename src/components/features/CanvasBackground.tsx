@@ -31,13 +31,13 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
         }
         entities.push(new ShootingStar());
         entities.push(new ShootingStar());
-        entities.push(new Terrain({mHeight: vh - 120, fillStyle: "#191D4C"}));
-        entities.push(new Terrain({displacement: 120, scrollDelay: 50, fillStyle: "rgb(17,20,40)", mHeight: vh - 60}));
-        entities.push(new Terrain({displacement: 100, scrollDelay: 20, fillStyle: "rgb(10,10,5)", mHeight: vh}));
+        entities.push(new Terrain({mHeight: (vh/2)-120, fillStyle: "#191D4C"}));
+        entities.push(new Terrain({displacement: 120, scrollDelay: 50, fillStyle: "rgb(17,20,40)", mHeight: (vh/2)-60}));
+        entities.push(new Terrain({displacement: 100, scrollDelay: 20, fillStyle: "rgb(10,10,5)", mHeight: vh/2}));
       } else {
-        entities.push(new Terrain({displacement: 120, scrollDelay: 50, fillStyle: "#A3D2CA", mHeight: vh - 120}));
-        entities.push(new Terrain({displacement: 100, scrollDelay: 20, fillStyle: "#5EAAA8", mHeight: vh - 60}));
-        entities.push(new Terrain({displacement: 80, scrollDelay: 10, fillStyle: "#05668D", mHeight: vh}));
+        entities.push(new Terrain({displacement: 120, scrollDelay: 50, fillStyle: "#D4E6F1", mHeight: (vh/2)-120}));
+        entities.push(new Terrain({displacement: 100, scrollDelay: 20, fillStyle: "#AED6F1", mHeight: (vh/2)-60}));
+        entities.push(new Terrain({displacement: 80, scrollDelay: 10, fillStyle: "#85C1E9", mHeight: vh/2}));
       }
     };
 
@@ -211,10 +211,10 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
         ctx!.fillStyle = '#ffffff';
         ctx!.strokeStyle = '#ffffff';
       } else {
-        ctx!.fillStyle = '#F0F8FF'; // AliceBlue
+        ctx!.fillStyle = '#EBF5FB'; // Soft Light Sky
         ctx!.fillRect(0, 0, width, height);
-        ctx!.fillStyle = '#ffffff';
-        ctx!.strokeStyle = '#ffffff';
+        ctx!.fillStyle = '#D6EAF8'; // Soft blue for light mode stars
+        ctx!.strokeStyle = '#D6EAF8';
       }
 
       for (let i = 0; i < entities.length; i++) {
