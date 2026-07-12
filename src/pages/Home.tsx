@@ -21,12 +21,10 @@ function Home() {
   }, []);
 
   return (
-    <ScrollTransitionWrapper transitionType={transitionType}>
-      <div>
-        <Hero />
-        {/* Aquí irá el resto del contenido de Home */}
-      </div>
-    </ScrollTransitionWrapper>
+    <div>
+      <Hero transitionType={transitionType} />
+      {/* Aquí irá el resto del contenido de Home */}
+    </div>
   );
 }
 

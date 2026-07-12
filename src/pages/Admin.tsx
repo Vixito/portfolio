@@ -1561,6 +1561,10 @@ function Admin() {
     setIsSavingAppearance(true);
     try {
       await updateAppearanceSettings(appearanceSettings);
+      // Notificar a otras pestañas sobre el cambio de apariencia
+      const channel = new BroadcastChannel('appearance_updates');
+      channel.postMessage('updated');
+      channel.close();
       alert("Configuración de apariencia guardada con éxito");
     } catch (error) {
       console.error("Error al guardar apariencia:", error);

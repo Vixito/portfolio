@@ -24,7 +24,7 @@ function ScrollTransitionWrapper({ children, transitionType }: ScrollTransitionW
         trigger: containerRef.current,
         start: "top 85%",
         end: "bottom 15%",
-        toggleActions: "play none none reverse",
+        toggleActions: "play reverse play reverse",
       }
     });
 

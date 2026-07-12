@@ -966,6 +966,17 @@ function Radio() {
       }
     };
     loadAppearance();
+
+    const channel = new BroadcastChannel('appearance_updates');
+    channel.onmessage = (event) => {
+      if (event.data === 'updated') {
+        loadAppearance();
+      }
+    };
+
+    return () => {
+      channel.close();
+    };
   }, []);
 
   // Cargar mensajes iniciales

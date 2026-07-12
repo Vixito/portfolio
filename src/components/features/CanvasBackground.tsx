@@ -10,26 +10,31 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationFrameId: number;
     let width = window.innerWidth;
     let height = window.innerHeight;
+    let animationFrameId: number;
 
-    if (height < 400) height = 400;
-
-    canvas.width = width;
-    canvas.height = height;
-
-    const handleResize = () => {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      if (height < 400) height = 400;
-      canvas.width = width;
-      canvas.height = height;
+    const updateSize = () => {
+      if (canvas.parentElement) {
+        width = canvas.parentElement.clientWidth;
+        height = canvas.parentElement.clientHeight;
+        canvas.width = width;
+        canvas.height = height;
+      }
     };
-    window.addEventListener('resize', handleResize);
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateSize();
+    });
+
+    if (canvas.parentElement) {
+      resizeObserver.observe(canvas.parentElement);
+    }
+    updateSize();
 
     // Terrain class
     class Terrain {
@@ -210,7 +215,7 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
     };
   }, [mode]);
 

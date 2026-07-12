@@ -7,12 +7,13 @@ import SnakeTimeline from "./SnakeTimeline";
 import HomeSection from "./HomeSection";
 import { useTranslation } from "../../lib/i18n";
 import CanvasBackground from "./CanvasBackground";
+import ScrollTransitionWrapper from "./ScrollTransitionWrapper";
 import { getAppearanceSettings } from "../../lib/supabase-functions";
 import { useThemeStore } from "../../stores/useThemeStore";
 
 gsap.registerPlugin(ScrollTrigger);
 
-function Hero() {
+function Hero({ transitionType }: { transitionType?: any }) {
   const { t } = useTranslation();
   const { theme } = useThemeStore();
   const heroRef = useRef<HTMLDivElement>(null);
@@ -24,6 +25,17 @@ function Hero() {
       setHeroBg(settings?.hero_background || "default");
     };
     fetchSettings();
+
+    const channel = new BroadcastChannel('appearance_updates');
+    channel.onmessage = (event) => {
+      if (event.data === 'updated') {
+        fetchSettings();
+      }
+    };
+
+    return () => {
+      channel.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -71,41 +83,50 @@ function Hero() {
       </AnimatePresence>
       
       {/* Sección 1: Perfil */}
-      <div className="hero-section min-h-screen flex items-center justify-center px-4 py-20 relative z-10">
-        <div className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          {/* Lado izquierdo: Perfil */}
-          <div className="space-y-6">
-            <div className="flex justify-center md:justify-start">
-              <img
-                src={profileImageUrl}
-                alt="Carlos Andrés Vicioso Lara"
-                className="w-32 h-32 rounded-full object-cover border-4 border-purple shadow-lg"
-              />
+      <ScrollTransitionWrapper transitionType={transitionType}>
+        <div className="hero-section min-h-screen flex items-center justify-center px-4 py-20 relative z-10">
+          <div className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            {/* Lado izquierdo: Perfil */}
+            <div className="space-y-6">
+              <div className="flex justify-center md:justify-start">
+                <img
+                  src={profileImageUrl}
+                  alt={t("hero.imageAlt")}
+                  className="w-48 h-48 md:w-64 md:h-64 rounded-full border-4 border-[#8c52ff] shadow-[0_0_20px_rgba(140,82,255,0.3)] object-cover bg-[#1A1A1A]"
+                />
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-6xl font-bold font-montserrat tracking-tight">
+                  <span className="block">{t("hero.nameLine1")}</span>
+                  <span className="block mt-2">{t("hero.nameLine2")}</span>
+                </h1>
+                <p className="mt-4 text-xl md:text-2xl text-gray-300">
+                  {t("hero.title")}
+                  <br />
+                  {t("hero.subtitle")}
+                </p>
+              </div>
+              <div className="pt-4">
+                <StatusBadge />
+              </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 text-center md:text-left">
-              {t("home.title")}
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-400 text-center md:text-left">
-              {t("home.subtitle")}
-              <br />
-              {t("home.specialization")}
-            </p>
-            <div className="flex justify-center md:justify-start">
-              <StatusBadge />
-            </div>
-          </div>
 
-          {/* Lado derecho: Timeline serpiente */}
-          <div className="hidden md:flex items-center justify-center bg-transparent">
-            <SnakeTimeline />
+            {/* Lado derecho: Timeline */}
+            <div className="hidden md:flex justify-center items-center h-full">
+              <div className="w-full max-w-md">
+                <SnakeTimeline />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </ScrollTransitionWrapper>
 
       {/* Sección 2: Contenido principal */}
-      <div className="hero-section min-h-screen flex items-center justify-center px-4">
-        <HomeSection />
-      </div>
+      <ScrollTransitionWrapper transitionType={transitionType}>
+        <div className="hero-section min-h-screen flex items-center justify-center px-4 relative z-10">
+          <HomeSection />
+        </div>
+      </ScrollTransitionWrapper>
     </section>
   );
 }
