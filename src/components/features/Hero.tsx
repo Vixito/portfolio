@@ -78,11 +78,11 @@ function Hero({ transitionType }: { transitionType?: any }) {
       let touchStartY = 0;
       const cooldown = 1200;
 
-      const shouldIgnoreScroll = (e: Event) => {
+      const shouldIgnoreScroll = (e: Event | TouchEvent) => {
         const target = e.target as HTMLElement;
         const scrollContainer = target.closest('.overflow-y-auto');
         if (scrollContainer && scrollContainer.scrollTop > 0) {
-          return true; // Don't hijack if we can scroll up natively
+          return true;
         }
         return false;
       };
@@ -122,7 +122,10 @@ function Hero({ transitionType }: { transitionType?: any }) {
         const touchEndY = e.touches[0].clientY;
         const deltaY = touchStartY - touchEndY;
 
+        if (Math.abs(deltaY) < 50) return; // Wait for a meaningful swipe
+
         if (deltaY > 50) {
+          // Swipe Up (Scrolling down)
           setActiveSection((prev) => {
             if (prev < 1) {
               isAnimating = true;
@@ -131,7 +134,9 @@ function Hero({ transitionType }: { transitionType?: any }) {
             }
             return prev;
           });
+          touchStartY = touchEndY; // Prevent flooding
         } else if (deltaY < -50) {
+          // Swipe Down (Scrolling up)
           if (shouldIgnoreScroll(e)) return;
 
           setActiveSection((prev) => {
@@ -142,6 +147,7 @@ function Hero({ transitionType }: { transitionType?: any }) {
             }
             return prev;
           });
+          touchStartY = touchEndY; // Prevent flooding
         }
       };
 
