@@ -58,6 +58,8 @@ import {
   getHomeContentItems,
   createHomeContentItem,
   updateHomeContentItem,
+  getAppearanceSettings,
+  updateAppearanceSettings,
   deleteHomeContentItem,
   getRadioSettings,
   updateRadioSettings,
@@ -249,6 +251,7 @@ function Admin() {
     | "home_content"
     | "radio_settings"
     | "invoices"
+    | "appearance"
   >("products");
   const [products, setProducts] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -262,6 +265,12 @@ function Admin() {
   const [blogPosts, setBlogPosts] = useState<any[]>([]);
   const [homeContentItems, setHomeContentItems] = useState<any[]>([]);
   const [radioSettings, setRadioSettings] = useState<any | null>(null);
+  const [appearanceSettings, setAppearanceSettings] = useState<any>({
+    hero_background: "default",
+    radio_background: "default",
+    home_scroll_transition: "default"
+  });
+  const [isSavingAppearance, setIsSavingAppearance] = useState(false);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loadingCRUD, setLoadingCRUD] = useState(false);
   
@@ -835,6 +844,10 @@ function Admin() {
         case "invoices":
           const invoicesData = await getInvoices();
           setInvoices(invoicesData || []);
+          break;
+        case "appearance":
+          const appearanceData = await getAppearanceSettings();
+          setAppearanceSettings(appearanceData || {});
           break;
           break;
       }
@@ -1540,6 +1553,20 @@ function Admin() {
       );
     } finally {
       setExtractingEventData(false);
+    }
+  };
+
+  const handleSaveAppearance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingAppearance(true);
+    try {
+      await updateAppearanceSettings(appearanceSettings);
+      alert("Configuración de apariencia guardada con éxito");
+    } catch (error) {
+      console.error("Error al guardar apariencia:", error);
+      alert("Error al guardar la configuración de apariencia");
+    } finally {
+      setIsSavingAppearance(false);
     }
   };
 
@@ -3237,6 +3264,7 @@ function Admin() {
                 "home_content",
                 "radio_settings",
                 "invoices",
+                "appearance",
               ] as const
             ).map((tab) => (
               <button
@@ -3271,7 +3299,55 @@ function Admin() {
           </div>
 
           {/* Lista de items o formulario de radio_settings */}
-          {activeTab === "radio_settings" ? (
+          {activeTab === "appearance" ? (
+            <div className="bg-[#111111] p-6 rounded-lg shadow-xl text-white">
+              <h2 className="text-xl font-bold mb-6">Configuración de Apariencia Global</h2>
+              <form onSubmit={handleSaveAppearance} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Fondo del Hero (Inicio)</label>
+                  <select
+                    value={appearanceSettings.hero_background || "default"}
+                    onChange={(e) => setAppearanceSettings({...appearanceSettings, hero_background: e.target.value})}
+                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
+                  >
+                    <option value="default">Por defecto</option>
+                    <option value="starry_night">Starry Night (Canvas Animado)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Fondo de la Radio</label>
+                  <select
+                    value={appearanceSettings.radio_background || "default"}
+                    onChange={(e) => setAppearanceSettings({...appearanceSettings, radio_background: e.target.value})}
+                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
+                  >
+                    <option value="default">Por defecto</option>
+                    <option value="starry_night">Starry Night (Canvas Animado)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Transición de Scroll (Página de Inicio)</label>
+                  <select
+                    value={appearanceSettings.home_scroll_transition || "default"}
+                    onChange={(e) => setAppearanceSettings({...appearanceSettings, home_scroll_transition: e.target.value})}
+                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
+                  >
+                    <option value="default">Por defecto (Ninguna)</option>
+                    <option value="horizontal_blinds">Horizontal Blinds</option>
+                    <option value="vertical_blinds">Vertical Blinds</option>
+                    <option value="random_grid">Random Grid</option>
+                    <option value="column_grid">Column Grid</option>
+                  </select>
+                  <p className="text-gray-400 text-xs mt-2">Nota: Estas transiciones se aplicarán con GSAP al hacer scroll en las secciones del Inicio.</p>
+                </div>
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={isSavingAppearance}>
+                    {isSavingAppearance ? "Guardando..." : "Guardar Cambios"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          ) : activeTab === "radio_settings" ? (
             <div className="admin-card bg-gray-900 rounded-lg p-4 md:p-6 border border-white/20">
               <h2 className="text-xl md:text-2xl font-bold text-white mb-4 md:mb-6">
                 Configuración de Radio

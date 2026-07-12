@@ -1891,6 +1891,71 @@ export async function getHomeContentItems() {
   return data || [];
 }
 
+export async function getAppearanceSettings() {
+  try {
+    const { data, error } = await supabase
+      .from("home_content")
+      .select("*")
+      .eq("content_type", "appearance_settings" as any)
+      .maybeSingle();
+
+    if (error || !data) {
+      return {
+        hero_background: "default",
+        radio_background: "default",
+        home_scroll_transition: "default"
+      };
+    }
+
+    return {
+      hero_background: data.project_data?.hero_background || "default",
+      radio_background: data.project_data?.radio_background || "default",
+      home_scroll_transition: data.project_data?.home_scroll_transition || "default"
+    };
+  } catch (error) {
+    console.error("Error al obtener configuraciones de apariencia:", error);
+    return {
+      hero_background: "default",
+      radio_background: "default",
+      home_scroll_transition: "default"
+    };
+  }
+}
+
+export async function updateAppearanceSettings(settings: any) {
+  try {
+    const { data: existingData } = await supabase
+      .from("home_content")
+      .select("id")
+      .eq("content_type", "appearance_settings" as any)
+      .maybeSingle();
+
+    if (existingData) {
+      const { error } = await supabase
+        .from("home_content")
+        .update({ project_data: settings })
+        .eq("id", existingData.id);
+      
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from("home_content")
+        .insert({
+          content_type: "appearance_settings" as any,
+          project_data: settings,
+          order_index: 999,
+          is_active: true
+        });
+        
+      if (error) throw error;
+    }
+    return true;
+  } catch (error) {
+    console.error("Error al actualizar configuraciones de apariencia:", error);
+    throw error;
+  }
+}
+
 export async function createHomeContentItem(item: {
   content_type: "latest_post" | "work_experience" | "projects" | "cv_download";
   blog_post_id?: string;

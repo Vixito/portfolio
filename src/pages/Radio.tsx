@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { gsap } from "gsap";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   getUpcomingEvents,
   getPlaylist,
   getRadioSettings,
+  getAppearanceSettings,
 } from "../lib/supabase-functions";
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
@@ -11,6 +13,8 @@ import { useTranslation, getTranslatedText } from "../lib/i18n";
 import AdSpace from "../components/features/AdSpace";
 import { sanitizeUserInput } from "../lib/security";
 import { emitRadioState } from "../hooks/useRadioState";
+import CanvasBackground from "../components/features/CanvasBackground";
+import { useThemeStore } from "../stores/useThemeStore";
 
 interface Song {
   id: string;
@@ -22,6 +26,8 @@ interface Song {
 
 function Radio() {
   const { t, language } = useTranslation();
+  const { theme } = useThemeStore();
+  const [radioBg, setRadioBg] = useState("default");
 
   // Log de montaje solo una vez en desarrollo
   useEffect(() => {
@@ -947,6 +953,19 @@ function Radio() {
     // Recargar cada 30 segundos para detectar cambios desde Admin
     const interval = setInterval(loadJingleConfig, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Cargar configuración de apariencia
+  useEffect(() => {
+    const loadAppearance = async () => {
+      try {
+        const settings = await getAppearanceSettings();
+        setRadioBg(settings?.radio_background || "default");
+      } catch (error) {
+        console.error("Error cargando appearanceSettings:", error);
+      }
+    };
+    loadAppearance();
   }, []);
 
   // Cargar mensajes iniciales
@@ -2332,7 +2351,20 @@ function Radio() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      <AnimatePresence>
+        {radioBg === "starry_night" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1 }}
+            className="absolute inset-0 z-0 pointer-events-none"
+          >
+            <CanvasBackground mode={theme as 'light' | 'dark'} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Barra del reproductor (fija arriba, negra, h-10, sin animaciones) */}
       <div
         className="fixed top-0 left-0 right-0 bg-black text-white z-40 h-10 md:h-12 flex items-center px-2 md:px-4"

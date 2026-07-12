@@ -1,16 +1,30 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { AnimatePresence, motion } from "framer-motion";
 import StatusBadge from "./StatusBadge";
 import SnakeTimeline from "./SnakeTimeline";
 import HomeSection from "./HomeSection";
 import { useTranslation } from "../../lib/i18n";
+import CanvasBackground from "./CanvasBackground";
+import { getAppearanceSettings } from "../../lib/supabase-functions";
+import { useThemeStore } from "../../stores/useThemeStore";
 
 gsap.registerPlugin(ScrollTrigger);
 
 function Hero() {
   const { t } = useTranslation();
+  const { theme } = useThemeStore();
   const heroRef = useRef<HTMLDivElement>(null);
+  const [heroBg, setHeroBg] = useState("default");
+  
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const settings = await getAppearanceSettings();
+      setHeroBg(settings?.hero_background || "default");
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     if (!heroRef.current) return;
@@ -38,13 +52,26 @@ function Hero() {
     };
   }, []);
 
-  // URL de tu imagen desde S3/CloudFront
   const profileImageUrl = "https://cdn.vixis.dev/Foto+de+Perfil+2.webp";
 
   return (
     <section ref={heroRef} className="relative">
+      <AnimatePresence>
+        {heroBg === "starry_night" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1 }}
+            className="absolute inset-0 z-0"
+          >
+            <CanvasBackground mode={theme as 'light' | 'dark'} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
       {/* Sección 1: Perfil */}
-      <div className="hero-section min-h-screen flex items-center justify-center px-4 py-20">
+      <div className="hero-section min-h-screen flex items-center justify-center px-4 py-20 relative z-10">
         <div className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Lado izquierdo: Perfil */}
           <div className="space-y-6">
