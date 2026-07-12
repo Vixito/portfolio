@@ -31,9 +31,9 @@ function HomeSection() {
   return (
     <div
       ref={sectionRef}
-      className="w-full min-h-screen flex items-center justify-center px-4 py-20"
+      className="w-full min-h-screen flex px-4 py-20"
     >
-      <div className="max-w-7xl w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="m-auto w-full max-w-7xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Último Post */}
         <div className="home-card">
           <LatestPostCard />

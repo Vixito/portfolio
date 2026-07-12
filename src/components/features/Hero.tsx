@@ -217,9 +217,11 @@ function Hero({ transitionType }: { transitionType?: any }) {
       {/* Sección 2: Contenido principal */}
       <ScrollTransitionWrapper key="section-1" transitionType={transitionType} isActive={activeSection === 1}>
         <div 
-          className={`hero-section ${transitionType !== "default" ? "absolute inset-0 overflow-y-auto" : ""} min-h-screen flex items-center justify-center px-4 relative z-10`}
+          className={`hero-section ${transitionType !== "default" ? "absolute inset-0 overflow-y-auto" : ""} min-h-screen flex px-4 relative z-10`}
         >
-          <HomeSection />
+          <div className="m-auto w-full">
+            <HomeSection />
+          </div>
         </div>
       </ScrollTransitionWrapper>
     </section>
