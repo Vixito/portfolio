@@ -10,16 +10,10 @@ interface ScrollTransitionWrapperProps {
 function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollTransitionWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const clipPathId = useMemo(() => `transition-mask-${Math.random().toString(36).substr(2, 9)}`, []);
-  const [isRendered, setIsRendered] = useState(isActive);
 
   useEffect(() => {
     if (transitionType === 'default') {
-      setIsRendered(isActive);
       return;
-    }
-
-    if (isActive) {
-      setIsRendered(true);
     }
 
     if (!containerRef.current) return;
@@ -28,13 +22,7 @@ function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollT
     if (rects.length === 0) return;
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        onReverseComplete: () => {
-          if (!isActive) {
-            setIsRendered(false);
-          }
-        }
-      });
+      const tl = gsap.timeline();
 
       if (transitionType === 'horizontal_blinds') {
         gsap.set(rects, { attr: { width: 0 } });
@@ -109,7 +97,7 @@ function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollT
           WebkitClipPath: `url(#${clipPathId})`
         }}
       >
-        {isRendered && children}
+        {children}
       </div>
       
       <svg width="0" height="0" style={{ position: 'absolute' }}>
