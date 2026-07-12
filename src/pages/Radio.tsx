@@ -2573,7 +2573,7 @@ function Radio() {
       {/* Se crea dinámicamente en handleEnded, pero lo dejamos aquí por si acaso */}
 
       {/* Contenido principal */}
-      <div className="pt-10 md:pt-15 flex-1">
+      <div className="pt-10 md:pt-15 flex-1 relative z-10">
         <div className="max-w-7xl mx-auto px-4 py-12 pb-20">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
             {t("radio.title")}
