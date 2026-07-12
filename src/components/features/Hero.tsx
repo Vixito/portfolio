@@ -123,22 +123,19 @@ function Hero({ transitionType }: { transitionType?: any }) {
               <div className="flex justify-center md:justify-start">
                 <img
                   src={profileImageUrl}
-                  alt={t("hero.imageAlt")}
+                  alt="Carlos Andrés Vicioso Lara"
                   className="w-48 h-48 md:w-64 md:h-64 rounded-full border-4 border-[#8c52ff] shadow-[0_0_20px_rgba(140,82,255,0.3)] object-cover bg-[#1A1A1A]"
                 />
               </div>
-              <div>
-                <h1 className="text-4xl md:text-6xl font-bold font-montserrat tracking-tight">
-                  <span className="block">{t("hero.nameLine1")}</span>
-                  <span className="block mt-2">{t("hero.nameLine2")}</span>
-                </h1>
-                <p className="mt-4 text-xl md:text-2xl text-gray-300">
-                  {t("hero.title")}
-                  <br />
-                  {t("hero.subtitle")}
-                </p>
-              </div>
-              <div className="pt-4">
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 text-center md:text-left font-montserrat tracking-tight">
+                {t("home.title")}
+              </h1>
+              <p className="mt-4 text-xl md:text-2xl text-gray-600 dark:text-gray-400 text-center md:text-left">
+                {t("home.subtitle")}
+                <br />
+                {t("home.specialization")}
+              </p>
+              <div className="pt-4 flex justify-center md:justify-start">
                 <StatusBadge />
               </div>
             </div>
