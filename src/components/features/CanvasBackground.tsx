@@ -51,18 +51,6 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
       }
     };
 
-    let resizeTimeout: NodeJS.Timeout;
-    const resizeObserver = new ResizeObserver(() => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        updateSize();
-      }, 200);
-    });
-
-    if (canvas.parentElement) {
-      resizeObserver.observe(canvas.parentElement);
-    }
-    updateSize();
 
     // Terrain class
     class Terrain {
@@ -201,6 +189,19 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
         }
       }
     }
+
+    let resizeTimeout: NodeJS.Timeout;
+    const resizeObserver = new ResizeObserver(() => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        updateSize();
+      }, 200);
+    });
+
+    if (canvas.parentElement) {
+      resizeObserver.observe(canvas.parentElement);
+    }
+    updateSize();
 
     const animate = () => {
       if (mode === 'dark') {
