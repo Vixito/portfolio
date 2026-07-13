@@ -33,19 +33,19 @@ function HomeSection() {
       ref={sectionRef}
       className="w-full flex flex-col py-20"
     >
-      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="w-full max-w-7xl mx-auto flex overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8 md:pb-0 px-2 md:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {/* Último Post */}
-        <div className="home-card">
+        <div className="home-card flex-shrink-0 w-[85vw] md:w-auto snap-center">
           <LatestPostCard />
         </div>
 
         {/* Experiencia */}
-        <div className="home-card">
+        <div className="home-card flex-shrink-0 w-[85vw] md:w-auto snap-center">
           <ExperienceCard />
         </div>
 
         {/* Proyectos con Scrollable Card Stack */}
-        <div className="home-card">
+        <div className="home-card flex-shrink-0 w-[85vw] md:w-auto snap-center">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 h-full transition-colors">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
@@ -72,17 +72,17 @@ function HomeSection() {
         </div>
 
         {/* Radio */}
-        <div className="home-card">
+        <div className="home-card flex-shrink-0 w-[85vw] md:w-auto snap-center">
           <RadioPlayer />
         </div>
 
         {/* Contactar */}
-        <div className="home-card">
+        <div className="home-card flex-shrink-0 w-[85vw] md:w-auto snap-center">
           <ContactSection />
         </div>
 
         {/* Anuncio unificado de Monetag */}
-        <div className="home-card md:col-span-2 lg:col-span-1 mb-4">
+        <div className="home-card flex-shrink-0 w-[85vw] md:w-auto snap-center md:col-span-2 lg:col-span-1 mb-4">
           <div className="relative h-full min-h-[250px] bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
             <AdSpace className="h-full w-full" />
           </div>

@@ -224,10 +224,10 @@ function Hero({ transitionType }: { transitionType?: any }) {
       {/* Sección 2: Contenido principal */}
       <ScrollTransitionWrapper key="section-1" transitionType={transitionType} isActive={activeSection === 1}>
         <div 
-          className={`hero-section ${transitionType !== "default" ? "absolute inset-0 overflow-y-auto" : ""} w-full relative z-10 bg-transparent`}
-          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+          className={`hero-section ${transitionType !== "default" ? "absolute inset-0 overflow-y-auto overflow-x-hidden" : ""} w-full relative z-10 bg-transparent`}
+          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
         >
-          <div className="min-h-screen flex flex-col w-full px-4 py-8">
+          <div className="min-h-screen flex flex-col w-full py-8">
             <div className="flex-grow flex-shrink-0"></div>
             <div className="flex-shrink-0 w-full">
               <HomeSection />
