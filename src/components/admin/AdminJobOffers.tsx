@@ -296,14 +296,22 @@ export default function AdminJobOffers() {
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between border-b border-white/5 pb-2">
                         <span className="text-gray-400">Modalidad</span>
-                        <span className="text-gray-200 font-medium">{selectedOffer.modalidad}</span>
+                        <span className="text-gray-200 font-medium">{selectedOffer.modalidad || '-'}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-gray-400">Prioridad</span>
+                        <span className="text-gray-200 font-medium">{selectedOffer.prioridad || 'No asignada'}</span>
                       </div>
                       <div className="flex justify-between border-b border-white/5 pb-2">
                         <span className="text-gray-400">Match AI</span>
                         <span className="text-gray-200 font-medium">{selectedOffer.match_score}%</span>
                       </div>
                       <div className="flex justify-between border-b border-white/5 pb-2">
-                        <span className="text-gray-400">Fecha Creada</span>
+                        <span className="text-gray-400">Publicada</span>
+                        <span className="text-gray-200 font-medium">{selectedOffer.publicacion_oferta ? new Date(selectedOffer.publicacion_oferta).toLocaleDateString() : '-'}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-gray-400">Guardada el</span>
                         <span className="text-gray-200 font-medium">{new Date(selectedOffer.fecha_creacion || (selectedOffer as any).created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
