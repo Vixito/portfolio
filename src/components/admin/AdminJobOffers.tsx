@@ -230,7 +230,16 @@ export default function AdminJobOffers() {
                     <div className="line-clamp-2" title={offer.introduccion}>{offer.introduccion}</div>
                   </td>
                   <td className="px-5 py-4 align-top text-xs text-gray-400">
-                    <div className="line-clamp-2" title={offer.consejos_para_aplicar}>{offer.consejos_para_aplicar}</div>
+                    <div className="line-clamp-2" title={offer.consejos_para_aplicar}>
+                      {(() => {
+                        try {
+                          const parsed = JSON.parse(offer.consejos_para_aplicar);
+                          return Array.isArray(parsed) ? parsed.map((c, i) => `${i+1}. ${c}`).join(' ') : offer.consejos_para_aplicar;
+                        } catch {
+                          return offer.consejos_para_aplicar;
+                        }
+                      })()}
+                    </div>
                   </td>
                   <td className="px-5 py-4 align-top text-xs text-gray-400">
                     <div>Pub: {offer.publicacion_oferta ? new Date(offer.publicacion_oferta).toLocaleDateString() : '-'}</div>
@@ -309,7 +318,23 @@ export default function AdminJobOffers() {
                   
                   <div className="bg-[#18181b] p-5 rounded-lg border border-white/5">
                     <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">Consejos para Aplicar</h3>
-                    <p className="text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{selectedOffer.consejos_para_aplicar}</p>
+                    <div className="text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                      {(() => {
+                        try {
+                          const parsed = JSON.parse(selectedOffer.consejos_para_aplicar);
+                          if (Array.isArray(parsed)) {
+                            return (
+                              <ul className="list-disc pl-5 space-y-2">
+                                {parsed.map((c, i) => <li key={i}>{c}</li>)}
+                              </ul>
+                            );
+                          }
+                          return selectedOffer.consejos_para_aplicar;
+                        } catch {
+                          return selectedOffer.consejos_para_aplicar;
+                        }
+                      })()}
+                    </div>
                   </div>
                 </div>
 
