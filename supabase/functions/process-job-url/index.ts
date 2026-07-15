@@ -34,6 +34,7 @@ serve(async (req) => {
     }
 
     const html = await response.text();
+    const finalUrl = response.url; // Guardamos la URL final (real) después de cualquier redirección
     // Limpieza muy básica de HTML para sacar el texto
     const cleanText = html.replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').substring(0, 8000);
 
@@ -71,7 +72,7 @@ serve(async (req) => {
         match_score: aiAnalysis.match_score || 50,
         modalidad: "Remote/Manual",
         publicacion_oferta: new Date().toISOString(),
-        url_oferta: url,
+        url_oferta: finalUrl,
         cv_generado_url: null // Se puede generar asíncronamente o dejar null para links manuales
       })
       .select()
