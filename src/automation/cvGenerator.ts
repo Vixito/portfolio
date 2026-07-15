@@ -63,37 +63,50 @@ export async function generateCV(
     currentY -= 15;
   };
 
+  // Helper to wrap text
+  const wrapText = (text: string, font: any, size: number, maxW: number) => {
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let currentLine = "";
+    
+    for (const word of words) {
+      const testLine = currentLine + word + " ";
+      const testWidth = font.widthOfTextAtSize(sanitizeWinAnsi(testLine), size);
+      if (testWidth > maxW && currentLine !== "") {
+        lines.push(currentLine);
+        currentLine = word + " ";
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+  };
+
   // 2. PROFESSIONAL SUMMARY
   drawSectionHeader("PROFESSIONAL SUMMARY");
-  
-  // A simple word wrap for the summary
   const summaryText = jobData.tailoredSummary || userData.summary || "";
-  const words = summaryText.split(" ");
-  let line = "";
-  
-  for (const word of words) {
-    const testLine = sanitizeWinAnsi(line + word + " ");
-    const testWidth = fontRegular.widthOfTextAtSize(testLine, 10);
-    if (testWidth > maxWidth && line !== "") {
-      drawText(line, fontRegular, 10, margin, currentY);
-      currentY -= 14;
-      line = word + " ";
-    } else {
-      line = testLine;
-    }
+  const summaryLines = wrapText(summaryText, fontRegular, 10, maxWidth);
+  for (const line of summaryLines) {
+    drawText(line, fontRegular, 10, margin, currentY);
+    currentY -= 14;
   }
-  drawText(line, fontRegular, 10, margin, currentY);
-  currentY -= 25;
+  currentY -= 10;
 
   // 3. SKILLS
   drawSectionHeader("SKILLS");
   if (userData.skills) {
     for (const [category, skills] of Object.entries(userData.skills)) {
-      drawText(`${category}:`, fontBold, 10, margin, currentY);
-      const safeCategory = sanitizeWinAnsi(`${category}: `);
+      const catText = `${category}: `;
+      drawText(catText, fontBold, 10, margin, currentY);
+      const safeCategory = sanitizeWinAnsi(catText);
       const catWidth = fontBold.widthOfTextAtSize(safeCategory, 10);
-      drawText(skills as string, fontRegular, 10, margin + catWidth, currentY);
-      currentY -= 14;
+      
+      const skillsLines = wrapText(skills as string, fontRegular, 10, maxWidth - catWidth);
+      for (let i = 0; i < skillsLines.length; i++) {
+        drawText(skillsLines[i], fontRegular, 10, i === 0 ? margin + catWidth : margin + 20, currentY);
+        currentY -= 14;
+      }
     }
   }
   currentY -= 10;
@@ -113,8 +126,11 @@ export async function generateCV(
 
       if (exp.bullets) {
         for (const bullet of exp.bullets) {
-          drawText(`•  ${bullet}`, fontRegular, 10, margin + 10, currentY);
-          currentY -= 14; // simplistic wrap not applied to bullets for brevity, but could be added
+          const bulletLines = wrapText(`•  ${bullet}`, fontRegular, 10, maxWidth - 10);
+          for (let i = 0; i < bulletLines.length; i++) {
+             drawText(i === 0 ? bulletLines[i] : `   ${bulletLines[i]}`, fontRegular, 10, margin + 10, currentY);
+             currentY -= 14;
+          }
         }
       }
       currentY -= 10;

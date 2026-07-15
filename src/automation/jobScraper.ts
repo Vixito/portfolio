@@ -41,6 +41,15 @@ async function buildDynamicProfile() {
     .select('name, category')
     .eq('is_active', true);
 
+  // 4. Obtener Redes Sociales (LinkedIn)
+  const { data: socials } = await supabase
+    .from('socials')
+    .select('url')
+    .ilike('title', '%linkedin%')
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle();
+
   // Mapear experiencias
   const mappedExps = (exps || []).map((exp: any) => ({
     company: exp.company || "Empresa",
@@ -56,15 +65,21 @@ async function buildDynamicProfile() {
     year: s.start_date ? new Date(s.start_date).getFullYear().toString() : ""
   }));
 
-  // Agrupar tecnologías por categoría de forma básica
+  // Enviar todas las habilidades para que la IA filtre
   const mappedSkills = techs ? techs.map((t: any) => t.name).join(", ") : "Node.js, React, TypeScript, Docker, PostgreSQL";
+
+  let linkedinUrl = "carlosvicioso";
+  if (socials && socials.url) {
+    // Intentar extraer el username o la URL limpia
+    linkedinUrl = socials.url.replace('https://www.linkedin.com/in/', '').replace('https://linkedin.com/in/', '').replace(/\/$/, '');
+  }
 
   return {
     name: "Carlos Andrés Vicioso Lara",
     phone: "+57 322 6171458", // Datos de contacto
     location: "Valledupar, Colombia",
     email: "carlosvicioso@vixis.dev",
-    linkedin: "carlosvicioso",
+    linkedin: linkedinUrl,
     portfolio: "vixis.dev",
     summary: "Ingeniero de Sistemas especializado en desarrollo backend y automatización.",
     skills: {
@@ -75,7 +90,7 @@ async function buildDynamicProfile() {
       {
         company: "Vixis Studio",
         title: "Software Engineer & Founder",
-        dates: "2024 - Present",
+        dates: "2026 - Present",
         bullets: [
           "Desarrollo de plataformas e-commerce escalables y sistemas automatizados.",
           "Implementación de infraestructuras seguras con Docker y Traefik."
@@ -99,7 +114,7 @@ async function fetchLocalUrl(url: string) {
         "X-Return-Format": "markdown"
       }
     });
-    
+
     if (!response.ok) {
       console.warn(`Jina Reader falló (${response.status}), intentando fetch directo...`);
       // Fallback a fetch directo si Jina falla
@@ -111,7 +126,7 @@ async function fetchLocalUrl(url: string) {
       $('script, style, noscript, iframe').remove();
       return $('body').text().replace(/\s+/g, ' ').substring(0, 8000);
     }
-    
+
     const text = await response.text();
     // Limitar el texto a 8000 caracteres para no saturar el prompt
     return text.substring(0, 8000);
@@ -159,6 +174,7 @@ async function processQueue() {
       - introduccion: (Párrafo corto vendiendo mi perfil para este rol, resaltando mi experiencia real y qué ofrezco. MÁXIMO 5 líneas).
       - consejos_para_aplicar: (3 consejos clave para la entrevista o prueba técnica).
       - tailored_summary: (Un Professional Summary para el CV adaptado a esta oferta, en base a mi perfil real. Contesta: ¿Qué quiero hacer? ¿Qué ofrezco? ¿Por qué lo puedo hacer?).
+      - top_10_skills: (String con solo las 10 o 12 tecnologías y habilidades blandas de mi perfil que MÁS HAGAN MATCH con la oferta, separadas por comas. ESTRICTAMENTE de la lista proporcionada).
       `;
 
       console.log("Analizando con Groq (openai/gpt-oss-120b)...");
@@ -172,7 +188,15 @@ async function processQueue() {
 
       // 3. Generar CV
       console.log(`Generando CV PDF para ${aiAnalysis.empresa}...`);
-      const pdfBytes = await generateCV(realProfile, { tailoredSummary: aiAnalysis.tailored_summary });
+      // Clonar y sobrescribir skills con las top 10 de Groq
+      const tailoredProfile = {
+        ...realProfile,
+        skills: {
+          "Habilidades Clave": aiAnalysis.top_10_skills || realProfile.skills["Tecnologías Clave"]
+        }
+      };
+
+      const pdfBytes = await generateCV(tailoredProfile, { tailoredSummary: aiAnalysis.tailored_summary });
       const pdfFileName = `CV_${aiAnalysis.empresa.replace(/\W+/g, '_')}_${Date.now()}.pdf`;
       const { data: uploadData, error: uploadError } = await supabase
         .storage

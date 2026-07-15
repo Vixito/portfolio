@@ -193,53 +193,35 @@ export default function AdminJobOffers() {
       {loading ? (
         <div className="flex justify-center py-10"><span className="text-[#2093c4] font-bold">Cargando ofertas... ⏳</span></div>
       ) : (
-        <div className="w-full overflow-x-auto rounded-lg border border-white/10">
+        <div className="w-full overflow-x-auto rounded-xl border border-white/10 bg-[#09090b] shadow-sm">
           <table className="w-full min-w-[800px] text-left text-sm">
-            <thead className="bg-white/5 text-gray-300">
+            <thead className="bg-[#18181b] text-gray-400 border-b border-white/10">
               <tr>
-                <th className="px-4 py-3 font-semibold">Empresa & Puesto</th>
-                <th className="px-4 py-3 font-semibold text-center">Match</th>
-                <th className="px-4 py-3 font-semibold hidden md:table-cell">Modalidad & Prioridad</th>
-                <th className="px-4 py-3 font-semibold hidden lg:table-cell max-w-xs">Introducción</th>
-                <th className="px-4 py-3 font-semibold hidden lg:table-cell max-w-xs">Consejos</th>
-                <th className="px-4 py-3 font-semibold hidden xl:table-cell">Fechas</th>
-                <th className="px-4 py-3 font-semibold text-center">Acciones</th>
+                <th className="px-5 py-4 font-medium">Empresa & Puesto</th>
+                <th className="px-5 py-4 font-medium">Match</th>
+                <th className="px-5 py-4 font-medium">Modalidad & Prioridad</th>
+                <th className="px-5 py-4 font-medium">Introducción</th>
+                <th className="px-5 py-4 font-medium">Consejos</th>
+                <th className="px-5 py-4 font-medium">Fechas</th>
+                <th className="px-5 py-4 font-medium text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/10">
-              {paginatedOffers.map((offer) => (
-                <tr key={offer.id} className="hover:bg-white/5 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="font-bold text-[#2093c4]">{offer.empresa}</div>
-                    <div className="text-gray-300 text-xs font-medium">{offer.puesto}</div>
+            <tbody className="divide-y divide-white/5">
+              {offers.map((offer) => (
+                <tr key={offer.id} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="px-5 py-4 align-top">
+                    <div className="font-semibold text-[#3b82f6] truncate max-w-[150px]" title={offer.empresa}>
+                      {offer.empresa}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1 truncate max-w-[150px]" title={offer.puesto}>
+                      {offer.puesto}
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${offer.match_score >= 80 ? 'bg-green-500/20 text-green-400' : offer.match_score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                  <td className="px-5 py-4 align-top">
+                    <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-md text-xs font-medium border ${offer.match_score >= 80 ? 'bg-green-500/10 text-green-400 border-green-500/20' : offer.match_score >= 50 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                       {offer.match_score}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-400">
-                    <div><span className="font-semibold">Mod:</span> {offer.modalidad || '-'}</div>
-                    <div><span className="font-semibold">Prio:</span> {offer.prioridad || '-'}</div>
-                  </td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-400 max-w-xs truncate" title={offer.introduccion}>
-                    {offer.introduccion ? (offer.introduccion.length > 50 ? offer.introduccion.substring(0, 50) + '...' : offer.introduccion) : '-'}
-                  </td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-400 max-w-xs truncate" title={offer.consejos_para_aplicar}>
-                    {offer.consejos_para_aplicar ? (offer.consejos_para_aplicar.length > 50 ? offer.consejos_para_aplicar.substring(0, 50) + '...' : offer.consejos_para_aplicar) : '-'}
-                  </td>
-                  <td className="px-4 py-3 hidden xl:table-cell text-xs text-gray-400">
-                    <div><span className="font-semibold">Pub:</span> {offer.publicacion_oferta ? new Date(offer.publicacion_oferta).toLocaleDateString() : '-'}</div>
-                    <div><span className="font-semibold">Cre:</span> {(offer.fecha_creacion || (offer as any).created_at) ? new Date(offer.fecha_creacion || (offer as any).created_at).toLocaleDateString() : '-'}</div>
-                  </td>
-                  <td className="px-4 py-3 flex justify-center gap-2 items-center h-full mt-2">
-                    <button onClick={() => setSelectedOffer(offer)} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors" title="Ver Detalles Completos">
-                      👁️
-                    </button>
-                    {offer.url_oferta && (
-                      <a href={offer.url_oferta} target="_blank" rel="noreferrer" className="p-1.5 bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 rounded-md transition-colors" title="Abrir Oferta Original">
-                        🔗
-                      </a>
                     )}
                     <button onClick={() => handleDelete(offer.id)} className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-md transition-colors" title="Eliminar">
                       🗑️
@@ -266,67 +248,90 @@ export default function AdminJobOffers() {
         </div>
       )}
 
-      {/* MODAL FULL SCREEN DETALLE */}
+      {/* MODAL SHADCN STYLE */}
       {selectedOffer && (
-        <div className="fixed inset-0 z-[9999] flex flex-col bg-[#121212] overflow-y-auto w-full h-full">
-          <div className="w-full max-w-7xl mx-auto p-4 md:p-8 relative min-h-screen flex flex-col">
-            <div className="flex justify-between items-center mb-6">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto">
+          <div className="w-full max-w-5xl bg-[#09090b] border border-white/10 rounded-xl shadow-2xl flex flex-col max-h-full">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center sticky top-0 bg-[#09090b]/90 backdrop-blur z-10 rounded-t-xl">
               <div className="flex items-center gap-4">
-                <span className={`px-4 py-2 rounded-full text-sm font-bold ${selectedOffer.match_score >= 80 ? 'bg-green-500/20 text-green-400' : selectedOffer.match_score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                <span className={`inline-flex items-center justify-center px-3 py-1 rounded-md text-sm font-semibold border ${selectedOffer.match_score >= 80 ? 'bg-green-500/10 text-green-400 border-green-500/20' : selectedOffer.match_score >= 50 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                   {selectedOffer.match_score}% Match
                 </span>
                 <div>
-                  <h1 className="text-2xl md:text-4xl font-bold text-white">{selectedOffer.puesto}</h1>
-                  <p className="text-[#2093c4] text-xl mt-1">{selectedOffer.empresa}</p>
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-100">{selectedOffer.puesto}</h1>
+                  <p className="text-[#3b82f6] text-sm font-medium mt-0.5">{selectedOffer.empresa}</p>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedOffer(null)} 
-                className="bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-colors flex items-center justify-center"
+                className="p-2 bg-transparent hover:bg-white/5 text-gray-400 hover:text-gray-100 rounded-md transition-colors"
                 title="Cerrar"
               >
-                ✕
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
-              <div className="lg:col-span-2 space-y-6">
-                <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
-                  <h3 className="text-2xl font-semibold text-gray-200 mb-4 border-b border-white/10 pb-3">Introducción (Cover Letter)</h3>
-                  <p className="text-gray-300 text-lg leading-relaxed whitespace-pre-wrap">{selectedOffer.introduccion}</p>
-                </div>
-                <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
-                  <h3 className="text-2xl font-semibold text-gray-200 mb-4 border-b border-white/10 pb-3">Consejos para Aplicar</h3>
-                  <p className="text-gray-300 text-lg leading-relaxed whitespace-pre-wrap">{selectedOffer.consejos_para_aplicar}</p>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
-                  <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Detalles de la Vacante</h3>
-                  <div className="space-y-3 text-lg">
-                    <p><strong>Modalidad:</strong> <span className="text-gray-300">{selectedOffer.modalidad}</span></p>
-                    <p><strong>Fecha guardada:</strong> <span className="text-gray-300">{new Date(selectedOffer.fecha_creacion || (selectedOffer as any).created_at).toLocaleString()}</span></p>
+            {/* Body */}
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Main Content */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-[#18181b] p-5 rounded-lg border border-white/5">
+                    <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">Introducción (Cover Letter)</h3>
+                    <p className="text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{selectedOffer.introduccion}</p>
                   </div>
-                  <a href={selectedOffer.url_oferta} target="_blank" rel="noreferrer" className="mt-6 flex items-center justify-center gap-2 w-full py-3 bg-blue-500/20 text-blue-400 border border-blue-500/50 rounded-xl hover:bg-blue-500/30 transition-colors font-bold">
-                    🔗 Abrir Link Original
-                  </a>
+                  
+                  <div className="bg-[#18181b] p-5 rounded-lg border border-white/5">
+                    <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">Consejos para Aplicar</h3>
+                    <p className="text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{selectedOffer.consejos_para_aplicar}</p>
+                  </div>
                 </div>
 
-                {selectedOffer.cv_generado_url ? (
-                  <a 
-                    href={selectedOffer.cv_generado_url} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="flex items-center justify-center gap-3 w-full py-5 bg-green-600 hover:bg-green-500 text-white font-bold text-xl rounded-2xl transition-all shadow-lg hover:shadow-green-500/20"
-                  >
-                    📄 VER CV GENERADO (PDF)
-                  </a>
-                ) : (
-                  <div className="flex items-center justify-center w-full py-5 bg-gray-800 text-gray-400 font-bold text-xl rounded-2xl border border-gray-700 border-dashed">
-                    CV No Generado
+                {/* Sidebar */}
+                <div className="space-y-6">
+                  <div className="bg-[#18181b] p-5 rounded-lg border border-white/5">
+                    <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">Detalles de la Vacante</h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-gray-400">Modalidad</span>
+                        <span className="text-gray-200 font-medium">{selectedOffer.modalidad}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-gray-400">Match AI</span>
+                        <span className="text-gray-200 font-medium">{selectedOffer.match_score}%</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-gray-400">Fecha Creada</span>
+                        <span className="text-gray-200 font-medium">{new Date(selectedOffer.fecha_creacion || (selectedOffer as any).created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    
+                    <a href={selectedOffer.url_oferta} target="_blank" rel="noreferrer" className="mt-5 flex items-center justify-center gap-2 w-full py-2.5 bg-[#27272a] hover:bg-[#3f3f46] text-gray-200 text-sm font-medium rounded-md transition-colors border border-white/5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                      Abrir Oferta Original
+                    </a>
                   </div>
-                )}
+
+                  <div className="pt-2">
+                    {selectedOffer.cv_generado_url ? (
+                      <a 
+                        href={selectedOffer.cv_generado_url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3 bg-[#10b981] hover:bg-[#059669] text-white font-medium text-sm rounded-md transition-colors shadow-sm"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Descargar CV Generado
+                      </a>
+                    ) : (
+                      <div className="flex items-center justify-center w-full py-3 bg-[#18181b] text-gray-500 font-medium text-sm rounded-md border border-dashed border-white/10">
+                        CV No Disponible
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
