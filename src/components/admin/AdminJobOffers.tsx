@@ -60,6 +60,19 @@ export default function AdminJobOffers() {
   useEffect(() => {
     fetchOffers();
     fetchSettings();
+
+    // Suscribirse a cambios en job_offers para que la UI se actualice mágicamente en tiempo real
+    const channel = supabase
+      .channel('public:job_offers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_offers' }, payload => {
+        console.log('Cambio detectado en job_offers!', payload);
+        fetchOffers(); // Refrescar la tabla
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const toggleScraper = async () => {
