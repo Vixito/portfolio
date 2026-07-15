@@ -14,14 +14,26 @@ export async function generateCV(
   let currentY = page.getHeight() - margin;
   const maxWidth = page.getWidth() - margin * 2;
 
+  const sanitizeWinAnsi = (text: string) => {
+    if (!text) return "";
+    return text
+      .replace(/[\u2011\u2012\u2013\u2014]/g, "-") // dashes
+      .replace(/[\u2018\u2019\u201A\u201B]/g, "'") // single quotes
+      .replace(/[\u201C\u201D\u201E\u201F]/g, '"') // double quotes
+      .replace(/[\u2022\u2023\u25E6\u2043]/g, "*") // bullets
+      .replace(/[\u2026]/g, "...")                 // ellipsis
+      .replace(/[^\x00-\xFF]/g, "");               // remove remaining unsupported chars
+  };
+
   const drawText = (text: string, font: any, size: number, x: number, y: number, color = rgb(0, 0, 0)) => {
-    page.drawText(text, { x, y, size, font, color, maxWidth });
+    page.drawText(sanitizeWinAnsi(text), { x, y, size, font, color, maxWidth });
   };
 
   // 1. HEADER
   const nameSize = 20;
-  const nameWidth = fontBold.widthOfTextAtSize(userData.name, nameSize);
-  drawText(userData.name, fontBold, nameSize, (page.getWidth() - nameWidth) / 2, currentY);
+  const safeName = sanitizeWinAnsi(userData.name);
+  const nameWidth = fontBold.widthOfTextAtSize(safeName, nameSize);
+  drawText(safeName, fontBold, nameSize, (page.getWidth() - nameWidth) / 2, currentY);
   currentY -= 20;
 
   const contactText = [
@@ -33,8 +45,9 @@ export async function generateCV(
   ].filter(Boolean).join(" | ");
   
   const contactSize = 10;
-  const contactWidth = fontRegular.widthOfTextAtSize(contactText, contactSize);
-  drawText(contactText, fontRegular, contactSize, (page.getWidth() - contactWidth) / 2, currentY, rgb(0.3, 0.3, 0.3));
+  const safeContact = sanitizeWinAnsi(contactText);
+  const contactWidth = fontRegular.widthOfTextAtSize(safeContact, contactSize);
+  drawText(safeContact, fontRegular, contactSize, (page.getWidth() - contactWidth) / 2, currentY, rgb(0.3, 0.3, 0.3));
   currentY -= 30;
 
   // Helper for Section Headers
@@ -59,7 +72,7 @@ export async function generateCV(
   let line = "";
   
   for (const word of words) {
-    const testLine = line + word + " ";
+    const testLine = sanitizeWinAnsi(line + word + " ");
     const testWidth = fontRegular.widthOfTextAtSize(testLine, 10);
     if (testWidth > maxWidth && line !== "") {
       drawText(line, fontRegular, 10, margin, currentY);
@@ -77,7 +90,8 @@ export async function generateCV(
   if (userData.skills) {
     for (const [category, skills] of Object.entries(userData.skills)) {
       drawText(`${category}:`, fontBold, 10, margin, currentY);
-      const catWidth = fontBold.widthOfTextAtSize(`${category}: `, 10);
+      const safeCategory = sanitizeWinAnsi(`${category}: `);
+      const catWidth = fontBold.widthOfTextAtSize(safeCategory, 10);
       drawText(skills as string, fontRegular, 10, margin + catWidth, currentY);
       currentY -= 14;
     }
@@ -89,7 +103,8 @@ export async function generateCV(
     drawSectionHeader("EXPERIENCE");
     for (const exp of userData.experience) {
       drawText(exp.company, fontBold, 11, margin, currentY);
-      const datesWidth = fontRegular.widthOfTextAtSize(exp.dates, 10);
+      const safeDates = sanitizeWinAnsi(exp.dates);
+      const datesWidth = fontRegular.widthOfTextAtSize(safeDates, 10);
       drawText(exp.dates, fontRegular, 10, page.getWidth() - margin - datesWidth, currentY);
       currentY -= 14;
       
