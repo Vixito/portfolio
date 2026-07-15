@@ -193,8 +193,8 @@ export default function AdminJobOffers() {
       {loading ? (
         <div className="flex justify-center py-10"><span className="text-[#2093c4] font-bold">Cargando ofertas... ⏳</span></div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
-          <table className="w-full text-left text-sm">
+        <div className="w-full overflow-x-auto rounded-lg border border-white/10">
+          <table className="w-full min-w-[800px] text-left text-sm">
             <thead className="bg-white/5 text-gray-300">
               <tr>
                 <th className="px-4 py-3 font-semibold">Empresa & Puesto</th>
@@ -268,43 +268,49 @@ export default function AdminJobOffers() {
 
       {/* MODAL FULL SCREEN DETALLE */}
       {selectedOffer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-10">
-          <div className="bg-[#1a1a1a] border border-white/20 w-full max-w-4xl max-h-full rounded-2xl p-6 md:p-8 overflow-y-auto relative shadow-2xl">
-            <button 
-              onClick={() => setSelectedOffer(null)} 
-              className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors"
-            >
-              ✕
-            </button>
-            
-            <div className="flex items-center gap-4 mb-6">
-              <span className={`px-3 py-1 rounded-full text-lg font-bold ${selectedOffer.match_score >= 80 ? 'bg-green-500/20 text-green-400' : selectedOffer.match_score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
-                {selectedOffer.match_score}% Match
-              </span>
-              <div>
-                <h1 className="text-3xl font-bold text-white">{selectedOffer.puesto}</h1>
-                <p className="text-[#2093c4] text-lg">{selectedOffer.empresa}</p>
+        <div className="fixed inset-0 z-[9999] flex flex-col bg-[#121212] overflow-y-auto w-full h-full">
+          <div className="w-full max-w-7xl mx-auto p-4 md:p-8 relative min-h-screen flex flex-col">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-4">
+                <span className={`px-4 py-2 rounded-full text-sm font-bold ${selectedOffer.match_score >= 80 ? 'bg-green-500/20 text-green-400' : selectedOffer.match_score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                  {selectedOffer.match_score}% Match
+                </span>
+                <div>
+                  <h1 className="text-2xl md:text-4xl font-bold text-white">{selectedOffer.puesto}</h1>
+                  <p className="text-[#2093c4] text-xl mt-1">{selectedOffer.empresa}</p>
+                </div>
               </div>
+              <button 
+                onClick={() => setSelectedOffer(null)} 
+                className="bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-colors flex items-center justify-center"
+                title="Cerrar"
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-200 mb-2 border-b border-white/10 pb-2">Introducción (Cover Letter)</h3>
-                  <p className="text-gray-400 leading-relaxed whitespace-pre-wrap">{selectedOffer.introduccion}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                  <h3 className="text-2xl font-semibold text-gray-200 mb-4 border-b border-white/10 pb-3">Introducción (Cover Letter)</h3>
+                  <p className="text-gray-300 text-lg leading-relaxed whitespace-pre-wrap">{selectedOffer.introduccion}</p>
                 </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-200 mb-2 border-b border-white/10 pb-2">Consejos para Aplicar</h3>
-                  <p className="text-gray-400 leading-relaxed whitespace-pre-wrap">{selectedOffer.consejos_para_aplicar}</p>
+                <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                  <h3 className="text-2xl font-semibold text-gray-200 mb-4 border-b border-white/10 pb-3">Consejos para Aplicar</h3>
+                  <p className="text-gray-300 text-lg leading-relaxed whitespace-pre-wrap">{selectedOffer.consejos_para_aplicar}</p>
                 </div>
               </div>
 
               <div className="space-y-6">
-                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                  <h3 className="text-sm font-semibold text-gray-400 mb-2 uppercase tracking-wider">Detalles</h3>
-                  <p><strong>Modalidad:</strong> {selectedOffer.modalidad}</p>
-                  <p><strong>Fecha:</strong> {new Date(selectedOffer.fecha_creacion || (selectedOffer as any).created_at).toLocaleString()}</p>
-                  <a href={selectedOffer.url_oferta} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline mt-2 inline-block">🔗 Abrir Link Original</a>
+                <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                  <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Detalles de la Vacante</h3>
+                  <div className="space-y-3 text-lg">
+                    <p><strong>Modalidad:</strong> <span className="text-gray-300">{selectedOffer.modalidad}</span></p>
+                    <p><strong>Fecha guardada:</strong> <span className="text-gray-300">{new Date(selectedOffer.fecha_creacion || (selectedOffer as any).created_at).toLocaleString()}</span></p>
+                  </div>
+                  <a href={selectedOffer.url_oferta} target="_blank" rel="noreferrer" className="mt-6 flex items-center justify-center gap-2 w-full py-3 bg-blue-500/20 text-blue-400 border border-blue-500/50 rounded-xl hover:bg-blue-500/30 transition-colors font-bold">
+                    🔗 Abrir Link Original
+                  </a>
                 </div>
 
                 {selectedOffer.cv_generado_url ? (
@@ -312,12 +318,12 @@ export default function AdminJobOffers() {
                     href={selectedOffer.cv_generado_url} 
                     target="_blank" 
                     rel="noreferrer"
-                    className="block w-full py-4 bg-green-600 hover:bg-green-500 text-white text-center font-bold text-lg rounded-xl transition-colors shadow-lg"
+                    className="flex items-center justify-center gap-3 w-full py-5 bg-green-600 hover:bg-green-500 text-white font-bold text-xl rounded-2xl transition-all shadow-lg hover:shadow-green-500/20"
                   >
                     📄 VER CV GENERADO (PDF)
                   </a>
                 ) : (
-                  <div className="w-full py-4 bg-gray-800 text-gray-500 text-center font-bold text-lg rounded-xl border border-gray-700 border-dashed">
+                  <div className="flex items-center justify-center w-full py-5 bg-gray-800 text-gray-400 font-bold text-xl rounded-2xl border border-gray-700 border-dashed">
                     CV No Generado
                   </div>
                 )}

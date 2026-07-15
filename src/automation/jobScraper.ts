@@ -89,24 +89,34 @@ async function buildDynamicProfile() {
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 async function fetchLocalUrl(url: string) {
-  console.log(`Descargando URL localmente (bypass anti-scraping cloud): ${url}`);
+  console.log(`Descargando URL con Jina Reader (Soporte para páginas dinámicas/JS): ${url}`);
   try {
-    const response = await fetch(url, {
+    // Jina Reader extrae el contenido incluso si está renderizado con JavaScript (como Discord/Greenhouse)
+    const jinaUrl = `https://r.jina.ai/${url}`;
+    const response = await fetch(jinaUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
+        "Accept": "text/plain",
+        "X-Return-Format": "markdown"
       }
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    // Eliminar scripts y estilos para dejar el contenido limpio
-    $('script, style, noscript, iframe').remove();
-    const cleanText = $('body').text().replace(/\s+/g, ' ').substring(0, 8000);
-    return cleanText;
+    
+    if (!response.ok) {
+      console.warn(`Jina Reader falló (${response.status}), intentando fetch directo...`);
+      // Fallback a fetch directo si Jina falla
+      const fallbackResponse = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
+      });
+      const html = await fallbackResponse.text();
+      const $ = cheerio.load(html);
+      $('script, style, noscript, iframe').remove();
+      return $('body').text().replace(/\s+/g, ' ').substring(0, 8000);
+    }
+    
+    const text = await response.text();
+    // Limitar el texto a 8000 caracteres para no saturar el prompt
+    return text.substring(0, 8000);
   } catch (error) {
-    console.error("Error haciendo fetch local:", error);
+    console.error("Error extrayendo URL:", error);
     throw error;
   }
 }
