@@ -72,6 +72,7 @@ import {
 import { supabase } from "../lib/supabase";
 import Invoice from "../components/features/Invoice";
 import RichTextEditor from "../components/ui/RichTextEditor";
+import AdminJobOffers from "../components/admin/AdminJobOffers";
 
 // Componente para selector de productos con tabs por idioma
 function ProductSelectorWithTabs({
@@ -252,6 +253,7 @@ function Admin() {
     | "radio_settings"
     | "invoices"
     | "appearance"
+    | "job_offers"
   >("products");
   const [products, setProducts] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -3269,6 +3271,7 @@ function Admin() {
                 "radio_settings",
                 "invoices",
                 "appearance",
+                "job_offers",
               ] as const
             ).map((tab) => (
               <button
@@ -3299,12 +3302,15 @@ function Admin() {
                 {tab === "radio_settings" && "Radio Settings"}
                 {tab === "invoices" && "Invoices"}
                 {tab === "appearance" && "Apariencia"}
+                {tab === "job_offers" && "Ofertas de Trabajo"}
               </button>
             ))}
           </div>
 
           {/* Lista de items o formulario de radio_settings */}
-          {activeTab === "appearance" ? (
+          {activeTab === "job_offers" ? (
+            <AdminJobOffers />
+          ) : activeTab === "appearance" ? (
             <div className="bg-[#111111] p-6 rounded-lg shadow-xl text-white">
               <h2 className="text-xl font-bold mb-6">Configuración de Apariencia Global</h2>
               <form onSubmit={handleSaveAppearance} className="space-y-6">
