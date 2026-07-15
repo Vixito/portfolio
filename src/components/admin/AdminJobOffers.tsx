@@ -35,9 +35,11 @@ export default function AdminJobOffers() {
     const { data, error } = await supabase
       .from("job_offers")
       .select("*")
-      .order("fecha_creacion", { ascending: false });
+      .order("id", { ascending: false }); // Usar ID para ordenar y evitar errores de columnas de fecha
       
-    if (!error && data) {
+    if (error) {
+      console.error("Error al cargar las ofertas de la BD:", error);
+    } else if (data) {
       setOffers(data);
     }
     setLoading(false);
@@ -118,7 +120,7 @@ export default function AdminJobOffers() {
     const csvContent = [
       headers.join(","),
       ...offers.map(o => 
-        [o.empresa, o.puesto, o.match_score, o.url_oferta, new Date(o.fecha_creacion).toLocaleDateString()].join(",")
+        [o.empresa, o.puesto, o.match_score, o.url_oferta, new Date(o.fecha_creacion || (o as any).created_at).toLocaleDateString()].join(",")
       )
     ].join("\\n");
     
@@ -228,7 +230,7 @@ export default function AdminJobOffers() {
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell text-xs text-gray-400">
                     <div><span className="font-semibold">Pub:</span> {offer.publicacion_oferta ? new Date(offer.publicacion_oferta).toLocaleDateString() : '-'}</div>
-                    <div><span className="font-semibold">Cre:</span> {new Date(offer.fecha_creacion).toLocaleDateString()}</div>
+                    <div><span className="font-semibold">Cre:</span> {(offer.fecha_creacion || (offer as any).created_at) ? new Date(offer.fecha_creacion || (offer as any).created_at).toLocaleDateString() : '-'}</div>
                   </td>
                   <td className="px-4 py-3 flex justify-center gap-2 items-center h-full mt-2">
                     <button onClick={() => setSelectedOffer(offer)} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors" title="Ver Detalles Completos">
@@ -301,7 +303,7 @@ export default function AdminJobOffers() {
                 <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <h3 className="text-sm font-semibold text-gray-400 mb-2 uppercase tracking-wider">Detalles</h3>
                   <p><strong>Modalidad:</strong> {selectedOffer.modalidad}</p>
-                  <p><strong>Fecha:</strong> {new Date(selectedOffer.fecha_creacion).toLocaleString()}</p>
+                  <p><strong>Fecha:</strong> {new Date(selectedOffer.fecha_creacion || (selectedOffer as any).created_at).toLocaleString()}</p>
                   <a href={selectedOffer.url_oferta} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline mt-2 inline-block">🔗 Abrir Link Original</a>
                 </div>
 
