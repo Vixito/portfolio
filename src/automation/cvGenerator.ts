@@ -42,21 +42,32 @@ export async function generateCV(
 
   // Helper to wrap text
   const wrapText = (text: string, font: any, size: number, maxW: number) => {
-    const words = text.split(" ");
+    if (!text) return [];
+    // Primero, dividir por saltos de línea reales (\n)
+    const paragraphs = text.split('\n');
     const lines: string[] = [];
-    let currentLine = "";
-    
-    for (const word of words) {
-      const testLine = currentLine + word + " ";
-      const testWidth = font.widthOfTextAtSize(sanitizeWinAnsi(testLine), size);
-      if (testWidth > maxW && currentLine !== "") {
-        lines.push(currentLine);
-        currentLine = word + " ";
-      } else {
-        currentLine = testLine;
+
+    for (const paragraph of paragraphs) {
+      if (paragraph.trim() === '') {
+        lines.push(''); // Conservar párrafos vacíos
+        continue;
       }
+      
+      const words = paragraph.split(" ");
+      let currentLine = "";
+      
+      for (const word of words) {
+        const testLine = currentLine + word + " ";
+        const testWidth = font.widthOfTextAtSize(sanitizeWinAnsi(testLine), size);
+        if (testWidth > maxW && currentLine !== "") {
+          lines.push(currentLine);
+          currentLine = word + " ";
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
     }
-    if (currentLine) lines.push(currentLine);
     return lines;
   };
 

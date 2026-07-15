@@ -195,6 +195,7 @@ async function processQueue() {
       - top_10_skills: (String con las 10 tecnologías/habilidades de mi perfil que MÁS HAGAN MATCH. Tradúcelas al 'idioma_oferta' si es necesario).
       - translated_experience: (Array con mi 'experience' real, pero traduce estrictamente el 'title' y los 'bullets' al 'idioma_oferta').
       - translated_education: (Array con mi 'education' real, pero traduce estrictamente el 'degree' al 'idioma_oferta').
+      - translated_projects: (Array con mis 'projects' reales, pero traduce estrictamente el 'title' y 'bullets' al 'idioma_oferta').
       `;
 
       console.log("Analizando con Groq (openai/gpt-oss-120b)...");
@@ -219,11 +220,15 @@ async function processQueue() {
         },
         experience: aiAnalysis.translated_experience || realProfile.experience,
         education: aiAnalysis.translated_education || realProfile.education,
-        projects: realProfile.projects
+        projects: aiAnalysis.translated_projects || realProfile.projects
       };
 
       const pdfBytes = await generateCV(tailoredProfile, { tailoredSummary: aiAnalysis.tailored_summary });
-      const pdfFileName = `CV_${aiAnalysis.empresa.replace(/\W+/g, '_')}_${Date.now()}.pdf`;
+      
+      const fileNameSuffix = aiAnalysis.idioma_oferta === 'en' ? 'Resume' : 'Currículum Vitae';
+      const cleanPuesto = (aiAnalysis.puesto || "Rol").replace(/[^\w\s-]/g, '');
+      const pdfFileName = `${cleanPuesto}, Carlos Andres Vicioso Lara -- ${fileNameSuffix}_${Date.now()}.pdf`.replace(/\s+/g, ' ');
+
       const { data: uploadData, error: uploadError } = await supabase
         .storage
         .from('cv-pdfs')
