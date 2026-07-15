@@ -258,17 +258,20 @@ export default function AdminJobOffers() {
                     <div className="mt-1">Cre: {new Date(offer.fecha_creacion || (offer as any).created_at).toLocaleDateString()}</div>
                   </td>
                   <td className="px-5 py-4 align-top">
-                    <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => setSelectedOffer(offer)} className="p-2 bg-[#27272a] hover:bg-[#3f3f46] text-gray-300 rounded-md transition-colors" title="Ver detalle">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => setSelectedOffer(offer)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#27272a] hover:bg-[#3f3f46] text-gray-200 text-xs font-medium rounded-md transition-colors border border-white/10" title="Ver detalle">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        Abrir Detalles
                       </button>
                       {offer.url_oferta && (
-                        <a href={offer.url_oferta} target="_blank" rel="noreferrer" className="p-2 bg-[#27272a] hover:bg-[#3f3f46] text-gray-300 rounded-md transition-colors" title="Abrir Link">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                        <a href={offer.url_oferta} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-900/30 hover:bg-blue-800/50 text-blue-400 text-xs font-medium rounded-md transition-colors border border-blue-800/50" title="Abrir Link Original">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                          Link Original
                         </a>
                       )}
-                      <button onClick={() => handleDelete(offer.id!)} className="p-2 bg-red-950/30 hover:bg-red-900/50 text-red-400 rounded-md transition-colors border border-red-900/50" title="Eliminar">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      <button onClick={() => handleDelete(offer.id!)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/30 hover:bg-red-900/50 text-red-400 text-xs font-medium rounded-md transition-colors border border-red-900/50 mt-1" title="Eliminar">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Eliminar Oferta
                       </button>
                     </div>
                   </td>
