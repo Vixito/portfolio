@@ -50,25 +50,29 @@ async function buildDynamicProfile() {
     .limit(1)
     .maybeSingle();
 
-  // Mapear experiencias
-  const mappedExps = (exps || []).map((exp: any) => ({
-    company: exp.company || "Empresa",
-    title: exp.position || "Cargo",
-    dates: `${exp.start_date ? new Date(exp.start_date).getFullYear() : ""} - ${exp.status === 'current' ? 'Presente' : (exp.end_date ? new Date(exp.end_date).getFullYear() : "")}`,
-    bullets: exp.description ? [exp.description] : ["Desarrollo y optimización de soluciones de software."] // Idealmente debería dividirse en viñetas si hay saltos de línea
-  }));
+  // Mapear experiencias (Solo válidas)
+  const mappedExps = (exps || [])
+    .filter((exp: any) => exp.company && exp.position)
+    .map((exp: any) => ({
+      company: exp.company,
+      title: exp.position,
+      dates: `${exp.start_date ? new Date(exp.start_date).getFullYear() : ""} - ${exp.status === 'current' ? 'Presente' : (exp.end_date ? new Date(exp.end_date).getFullYear() : "")}`,
+      bullets: exp.description ? [exp.description] : []
+    }));
 
-  // Mapear educación
-  const mappedEducation = (studies || []).map((s: any) => ({
-    institution: s.institution || "Institución",
-    degree: s.title || "Título",
-    year: s.start_date ? new Date(s.start_date).getFullYear().toString() : ""
-  }));
+  // Mapear educación (Solo válidas)
+  const mappedEducation = (studies || [])
+    .filter((s: any) => s.institution && s.title)
+    .map((s: any) => ({
+      institution: s.institution,
+      degree: s.title,
+      year: s.start_date ? new Date(s.start_date).getFullYear().toString() : ""
+    }));
 
   // Enviar todas las habilidades para que la IA filtre
-  const mappedSkills = techs ? techs.map((t: any) => t.name).join(", ") : "Node.js, React, TypeScript, Docker, PostgreSQL";
+  const mappedSkills = techs && techs.length > 0 ? techs.map((t: any) => t.name).join(", ") : "";
 
-  let linkedinUrl = "carlosvicioso";
+  let linkedinUrl = "";
   if (socials && socials.url) {
     // Intentar extraer el username o la URL limpia
     linkedinUrl = socials.url.replace('https://www.linkedin.com/in/', '').replace('https://linkedin.com/in/', '').replace(/\/$/, '');
@@ -76,27 +80,16 @@ async function buildDynamicProfile() {
 
   return {
     name: "Carlos Andrés Vicioso Lara",
-    phone: "+57 322 6171458", // Datos de contacto
+    phone: "+57 322 6171458",
     location: "Valledupar, Colombia",
     email: "carlosvicioso@vixis.dev",
-    linkedin: linkedinUrl,
+    linkedin: linkedinUrl || undefined,
     portfolio: "vixis.dev",
     summary: "Ingeniero de Sistemas especializado en desarrollo backend y automatización.",
-    skills: {
-      "Tecnologías Clave": mappedSkills,
-      "Habilidades Blandas": "Trabajo en equipo, Adaptabilidad, Liderazgo, Comunicación asertiva"
-    },
-    experience: mappedExps.length > 0 ? mappedExps : [
-      {
-        company: "Vixis Studio",
-        title: "Software Engineer & Founder",
-        dates: "2026 - Present",
-        bullets: [
-          "Desarrollo de plataformas e-commerce escalables y sistemas automatizados.",
-          "Implementación de infraestructuras seguras con Docker y Traefik."
-        ]
-      }
-    ],
+    skills: mappedSkills ? {
+      "Habilidades": mappedSkills
+    } : undefined,
+    experience: mappedExps.length > 0 ? mappedExps : undefined,
     education: mappedEducation.length > 0 ? mappedEducation : undefined
   };
 }
@@ -191,9 +184,9 @@ async function processQueue() {
       // Clonar y sobrescribir skills con las top 10 de Groq
       const tailoredProfile = {
         ...realProfile,
-        skills: {
-          "Habilidades Clave": aiAnalysis.top_10_skills || realProfile.skills["Tecnologías Clave"]
-        }
+        skills: aiAnalysis.top_10_skills ? {
+          "Habilidades Clave": aiAnalysis.top_10_skills
+        } : realProfile.skills
       };
 
       const pdfBytes = await generateCV(tailoredProfile, { tailoredSummary: aiAnalysis.tailored_summary });
