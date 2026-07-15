@@ -52,9 +52,9 @@ serve(async (req) => {
     - consejos_para_aplicar: (3 consejos clave para la entrevista).
     `;
 
-    const completion = await groq.chat.completions.create({
+      const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "llama3-70b-8192",
+      model: "gpt-oss-120b",
       response_format: { type: "json_object" }
     });
 
