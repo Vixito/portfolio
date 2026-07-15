@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase"; // Asumiendo que el cliente de Supabase está aquí
-import { Loader2, Trash2, Download, Eye, ExternalLink, Power } from "lucide-react";
+// Iconos eliminados de lucide-react para evitar dependencias externas. Se usan SVGs nativos.
 
 interface JobOffer {
   id: string;
@@ -136,7 +136,7 @@ export default function AdminJobOffers() {
             onClick={toggleScraper}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${isEnabled ? 'bg-green-500/20 text-green-400 border border-green-500/50' : 'bg-red-500/20 text-red-400 border border-red-500/50'}`}
           >
-            <Power size={16} />
+            <span className="mr-2">🔌</span>
             {isEnabled ? "Scraper Activo" : "Scraper Pausado"}
           </button>
           
@@ -144,7 +144,7 @@ export default function AdminJobOffers() {
             onClick={exportToCSV}
             className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/50 rounded-lg text-sm font-semibold hover:bg-blue-500/30 transition-colors"
           >
-            <Download size={16} /> CSV
+            <span className="mr-1">⬇️</span> CSV
           </button>
         </div>
       </div>
@@ -164,13 +164,13 @@ export default function AdminJobOffers() {
           disabled={isProcessingUrl}
           className="bg-[#2093c4] hover:bg-[#1a7a9e] text-white px-6 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50"
         >
-          {isProcessingUrl ? <Loader2 size={20} className="animate-spin" /> : "Procesar Link"}
+          {isProcessingUrl ? "⏳ Procesando..." : "Procesar Link"}
         </button>
       </form>
 
       {/* TABLE */}
       {loading ? (
-        <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#2093c4]" size={32} /></div>
+        <div className="flex justify-center py-10"><span className="text-[#2093c4] font-bold">Cargando ofertas... ⏳</span></div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-white/10">
           <table className="w-full text-left text-sm">
@@ -194,15 +194,15 @@ export default function AdminJobOffers() {
                   </td>
                   <td className="px-4 py-3 flex justify-center gap-2">
                     <button onClick={() => setSelectedOffer(offer)} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors" title="Ver Detalles">
-                      <Eye size={16} />
+                      👁️
                     </button>
                     {offer.url_oferta && (
                       <a href={offer.url_oferta} target="_blank" rel="noreferrer" className="p-1.5 bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 rounded-md transition-colors" title="Abrir Oferta Original">
-                        <ExternalLink size={16} />
+                        🔗
                       </a>
                     )}
                     <button onClick={() => handleDelete(offer.id)} className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-md transition-colors" title="Eliminar">
-                      <Trash2 size={16} />
+                      🗑️
                     </button>
                   </td>
                 </tr>
