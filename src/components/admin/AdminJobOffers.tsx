@@ -10,6 +10,8 @@ interface JobOffer {
   consejos_para_aplicar: string;
   match_score: number;
   modalidad: string;
+  prioridad: string;
+  publicacion_oferta: string;
   url_oferta: string;
   cv_generado_url: string;
   fecha_creacion: string;
@@ -176,24 +178,43 @@ export default function AdminJobOffers() {
           <table className="w-full text-left text-sm">
             <thead className="bg-white/5 text-gray-300">
               <tr>
-                <th className="px-4 py-3 font-semibold">Empresa</th>
-                <th className="px-4 py-3 font-semibold">Puesto</th>
+                <th className="px-4 py-3 font-semibold">Empresa & Puesto</th>
                 <th className="px-4 py-3 font-semibold text-center">Match</th>
+                <th className="px-4 py-3 font-semibold hidden md:table-cell">Modalidad & Prioridad</th>
+                <th className="px-4 py-3 font-semibold hidden lg:table-cell max-w-xs">Introducción</th>
+                <th className="px-4 py-3 font-semibold hidden lg:table-cell max-w-xs">Consejos</th>
+                <th className="px-4 py-3 font-semibold hidden xl:table-cell">Fechas</th>
                 <th className="px-4 py-3 font-semibold text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">
               {paginatedOffers.map((offer) => (
                 <tr key={offer.id} className="hover:bg-white/5 transition-colors">
-                  <td className="px-4 py-3 font-medium">{offer.empresa}</td>
-                  <td className="px-4 py-3 text-gray-300">{offer.puesto}</td>
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-[#2093c4]">{offer.empresa}</div>
+                    <div className="text-gray-300 text-xs font-medium">{offer.puesto}</div>
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${offer.match_score >= 80 ? 'bg-green-500/20 text-green-400' : offer.match_score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
                       {offer.match_score}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 flex justify-center gap-2">
-                    <button onClick={() => setSelectedOffer(offer)} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors" title="Ver Detalles">
+                  <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-400">
+                    <div><span className="font-semibold">Mod:</span> {offer.modalidad || '-'}</div>
+                    <div><span className="font-semibold">Prio:</span> {offer.prioridad || '-'}</div>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-400 max-w-xs truncate" title={offer.introduccion}>
+                    {offer.introduccion ? (offer.introduccion.length > 50 ? offer.introduccion.substring(0, 50) + '...' : offer.introduccion) : '-'}
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-xs text-gray-400 max-w-xs truncate" title={offer.consejos_para_aplicar}>
+                    {offer.consejos_para_aplicar ? (offer.consejos_para_aplicar.length > 50 ? offer.consejos_para_aplicar.substring(0, 50) + '...' : offer.consejos_para_aplicar) : '-'}
+                  </td>
+                  <td className="px-4 py-3 hidden xl:table-cell text-xs text-gray-400">
+                    <div><span className="font-semibold">Pub:</span> {offer.publicacion_oferta ? new Date(offer.publicacion_oferta).toLocaleDateString() : '-'}</div>
+                    <div><span className="font-semibold">Cre:</span> {new Date(offer.fecha_creacion).toLocaleDateString()}</div>
+                  </td>
+                  <td className="px-4 py-3 flex justify-center gap-2 items-center h-full mt-2">
+                    <button onClick={() => setSelectedOffer(offer)} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors" title="Ver Detalles Completos">
                       👁️
                     </button>
                     {offer.url_oferta && (
@@ -209,7 +230,7 @@ export default function AdminJobOffers() {
               ))}
               {paginatedOffers.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">No hay ofertas guardadas.</td>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">No hay ofertas guardadas.</td>
                 </tr>
               )}
             </tbody>
