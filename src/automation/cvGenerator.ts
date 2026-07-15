@@ -5,62 +5,39 @@ export async function generateCV(
   jobData: any
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([612, 792]); // Carta (Letter) size: 8.5 x 11 inches
+  let page = pdfDoc.addPage([612, 792]); // Carta (Letter)
   
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   
-  const margin = 36; // 0.5 inch margins
+  const margin = 50;
+  const usableWidth = page.getWidth() - margin * 2;
   let currentY = page.getHeight() - margin;
-  const maxWidth = page.getWidth() - margin * 2;
+
+  const colorBlack = rgb(0, 0, 0);
+  const colorBlue = rgb(0, 0.3, 0.7);
+  const colorDarkGray = rgb(0.2, 0.2, 0.2);
 
   const sanitizeWinAnsi = (text: string) => {
     if (!text) return "";
     return text
-      .replace(/[\u2011\u2012\u2013\u2014]/g, "-") // dashes
-      .replace(/[\u2018\u2019\u201A\u201B]/g, "'") // single quotes
-      .replace(/[\u201C\u201D\u201E\u201F]/g, '"') // double quotes
-      .replace(/[\u2022\u2023\u25E6\u2043]/g, "*") // bullets
-      .replace(/[\u2026]/g, "...")                 // ellipsis
-      .replace(/[^\x00-\xFF]/g, "");               // remove remaining unsupported chars
+      .replace(/[\u2011\u2012\u2013\u2014]/g, "-")
+      .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+      .replace(/[\u2022\u2023\u25E6\u2043]/g, "*")
+      .replace(/[\u2026]/g, "...")
+      .replace(/[^\x00-\xFF]/g, "");
   };
 
-  const drawText = (text: string, font: any, size: number, x: number, y: number, color = rgb(0, 0, 0)) => {
-    page.drawText(sanitizeWinAnsi(text), { x, y, size, font, color, maxWidth });
+  const checkPageBreak = (neededHeight: number) => {
+    if (currentY - neededHeight < margin) {
+      page = pdfDoc.addPage([612, 792]);
+      currentY = page.getHeight() - margin;
+    }
   };
 
-  // 1. HEADER
-  const nameSize = 20;
-  const safeName = sanitizeWinAnsi(userData.name);
-  const nameWidth = fontBold.widthOfTextAtSize(safeName, nameSize);
-  drawText(safeName, fontBold, nameSize, (page.getWidth() - nameWidth) / 2, currentY);
-  currentY -= 20;
-
-  const contactText = [
-    userData.phone,
-    userData.location,
-    userData.email,
-    userData.linkedin ? `linkedin.com/in/${userData.linkedin}` : null,
-    userData.portfolio
-  ].filter(Boolean).join(" | ");
-  
-  const contactSize = 10;
-  const safeContact = sanitizeWinAnsi(contactText);
-  const contactWidth = fontRegular.widthOfTextAtSize(safeContact, contactSize);
-  drawText(safeContact, fontRegular, contactSize, (page.getWidth() - contactWidth) / 2, currentY, rgb(0.3, 0.3, 0.3));
-  currentY -= 30;
-
-  // Helper for Section Headers
-  const drawSectionHeader = (title: string) => {
-    drawText(title, fontBold, 12, margin, currentY);
-    currentY -= 4;
-    page.drawLine({
-      start: { x: margin, y: currentY },
-      end: { x: page.getWidth() - margin, y: currentY },
-      thickness: 1,
-      color: rgb(0, 0, 0)
-    });
-    currentY -= 15;
+  const drawText = (text: string, font: any, size: number, x: number, y: number, color = colorBlack) => {
+    page.drawText(sanitizeWinAnsi(text), { x, y, size, font, color });
   };
 
   // Helper to wrap text
@@ -83,61 +60,127 @@ export async function generateCV(
     return lines;
   };
 
+  // 1. HEADER (Alineado a la izquierda)
+  const nameSize = 22;
+  drawText(userData.name || "Carlos Andres Vicioso Lara", fontBold, nameSize, margin, currentY);
+  currentY -= 18;
+
+  // Info de contacto (2 líneas)
+  const contactSize = 9;
+  const line1 = [userData.location, userData.phone].filter(Boolean).join(" | ") + " | ";
+  drawText(line1, fontRegular, contactSize, margin, currentY, colorDarkGray);
+  const line1Width = fontRegular.widthOfTextAtSize(sanitizeWinAnsi(line1), contactSize);
+  drawText(userData.email || "", fontRegular, contactSize, margin + line1Width, currentY, colorBlue);
+  currentY -= 14;
+
+  const github = "github.com/vixito";
+  drawText(github, fontRegular, contactSize, margin, currentY, colorBlue);
+  let linkX = margin + fontRegular.widthOfTextAtSize(github, contactSize);
+  drawText(" | ", fontRegular, contactSize, linkX, currentY, colorDarkGray);
+  linkX += fontRegular.widthOfTextAtSize(" | ", contactSize);
+  
+  const linkedin = userData.linkedin || "linkedin.com/in/vixis";
+  drawText(linkedin, fontRegular, contactSize, linkX, currentY, colorBlue);
+  linkX += fontRegular.widthOfTextAtSize(linkedin, contactSize);
+  drawText(" | ", fontRegular, contactSize, linkX, currentY, colorDarkGray);
+  linkX += fontRegular.widthOfTextAtSize(" | ", contactSize);
+
+  const portfolio = userData.portfolio || "vixis.dev";
+  drawText(portfolio, fontRegular, contactSize, linkX, currentY, colorBlue);
+  currentY -= 25;
+
+  // Helper for Section Headers
+  const drawSectionHeader = (title: string) => {
+    checkPageBreak(30);
+    drawText(title, fontBold, 11, margin, currentY);
+    currentY -= 6;
+    page.drawLine({
+      start: { x: margin, y: currentY },
+      end: { x: page.getWidth() - margin, y: currentY },
+      thickness: 1,
+      color: colorBlack
+    });
+    currentY -= 12;
+  };
+
   // 2. PROFESSIONAL SUMMARY
   drawSectionHeader("PROFESSIONAL SUMMARY");
   const summaryText = jobData.tailoredSummary || userData.summary || "";
-  const summaryLines = wrapText(summaryText, fontRegular, 10, maxWidth);
+  const summaryLines = wrapText(summaryText, fontRegular, 9.5, usableWidth);
   for (const line of summaryLines) {
-    drawText(line, fontRegular, 10, margin, currentY);
-    currentY -= 14;
+    checkPageBreak(12);
+    drawText(line, fontRegular, 9.5, margin, currentY);
+    currentY -= 13;
   }
-  currentY -= 10;
+  currentY -= 8;
 
-  // 3. SKILLS
-  drawSectionHeader("SKILLS");
-  if (userData.skills) {
-    for (const [category, skills] of Object.entries(userData.skills)) {
-      const catText = `${category}: `;
-      drawText(catText, fontBold, 10, margin, currentY);
-      const safeCategory = sanitizeWinAnsi(catText);
-      const catWidth = fontBold.widthOfTextAtSize(safeCategory, 10);
-      
-      const skillsLines = wrapText(skills as string, fontRegular, 10, maxWidth - catWidth);
-      for (let i = 0; i < skillsLines.length; i++) {
-        drawText(skillsLines[i], fontRegular, 10, i === 0 ? margin + catWidth : margin + 20, currentY);
-        currentY -= 14;
-      }
-    }
-  }
-  currentY -= 10;
+  // Helper para items con fechas a la derecha
+  const drawExperienceItem = (title: string, date: string, bullets: string[]) => {
+    checkPageBreak(25);
+    drawText(title, fontBold, 10, margin, currentY);
+    const safeDate = sanitizeWinAnsi(date).toUpperCase();
+    const dateWidth = fontBold.widthOfTextAtSize(safeDate, 9.5);
+    drawText(safeDate, fontBold, 9.5, page.getWidth() - margin - dateWidth, currentY);
+    currentY -= 13;
 
-  // 4. EXPERIENCE
-  if (userData.experience && userData.experience.length > 0) {
-    drawSectionHeader("EXPERIENCE");
-    for (const exp of userData.experience) {
-      drawText(exp.company, fontBold, 11, margin, currentY);
-      const safeDates = sanitizeWinAnsi(exp.dates);
-      const datesWidth = fontRegular.widthOfTextAtSize(safeDates, 10);
-      drawText(exp.dates, fontRegular, 10, page.getWidth() - margin - datesWidth, currentY);
-      currentY -= 14;
-      
-      drawText(exp.title, fontBold, 10, margin, currentY);
-      currentY -= 14;
-
-      if (exp.bullets) {
-        for (const bullet of exp.bullets) {
-          const bulletLines = wrapText(`•  ${bullet}`, fontRegular, 10, maxWidth - 10);
-          for (let i = 0; i < bulletLines.length; i++) {
-             drawText(i === 0 ? bulletLines[i] : `   ${bulletLines[i]}`, fontRegular, 10, margin + 10, currentY);
-             currentY -= 14;
+    if (bullets && bullets.length > 0) {
+      for (const bullet of bullets) {
+        const bulletLines = wrapText(bullet, fontRegular, 9.5, usableWidth - 12);
+        for (let i = 0; i < bulletLines.length; i++) {
+          checkPageBreak(12);
+          if (i === 0) {
+            page.drawCircle({ x: margin + 4, y: currentY + 3, size: 1.5, color: colorBlack });
           }
+          drawText(bulletLines[i], fontRegular, 9.5, margin + 12, currentY);
+          currentY -= 13;
         }
       }
-      currentY -= 10;
+    }
+    currentY -= 8;
+  };
+
+  // 3. WORK EXPERIENCE
+  if (userData.experience && userData.experience.length > 0) {
+    drawSectionHeader("WORK EXPERIENCE");
+    for (const exp of userData.experience) {
+      drawExperienceItem(`${exp.title}, ${exp.company}`, exp.dates, exp.bullets);
     }
   }
 
-  // Generate bytes
-  const pdfBytes = await pdfDoc.save();
-  return pdfBytes;
+  // 4. SKILLS
+  if (userData.skills && Object.keys(userData.skills).length > 0) {
+    drawSectionHeader("SKILLS");
+    for (const [category, skills] of Object.entries(userData.skills)) {
+      checkPageBreak(15);
+      const catText = `${category}: `;
+      drawText(catText, fontBold, 9.5, margin, currentY);
+      const catWidth = fontBold.widthOfTextAtSize(sanitizeWinAnsi(catText), 9.5);
+      
+      const skillsLines = wrapText(skills as string, fontRegular, 9.5, usableWidth - catWidth);
+      for (let i = 0; i < skillsLines.length; i++) {
+        checkPageBreak(12);
+        drawText(skillsLines[i], fontRegular, 9.5, i === 0 ? margin + catWidth : margin, currentY);
+        currentY -= 13;
+      }
+    }
+    currentY -= 8;
+  }
+
+  // 5. EDUCATION
+  if (userData.education && userData.education.length > 0) {
+    drawSectionHeader("EDUCATION");
+    for (const edu of userData.education) {
+      drawExperienceItem(`${edu.degree}, ${edu.institution}`, edu.year, edu.bullets);
+    }
+  }
+
+  // 6. PROJECTS
+  if (userData.projects && userData.projects.length > 0) {
+    drawSectionHeader("PROJECTS");
+    for (const proj of userData.projects) {
+      drawExperienceItem(`${proj.title}, ${proj.company}`, proj.dates, proj.bullets);
+    }
+  }
+
+  return await pdfDoc.save();
 }

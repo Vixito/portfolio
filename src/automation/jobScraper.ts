@@ -35,13 +35,20 @@ async function buildDynamicProfile() {
     .order('start_date', { ascending: false })
     .limit(3);
 
-  // 3. Obtener Tecnologías (Habilidades)
+  // 3. Obtener Proyectos
+  const { data: projectsData } = await supabase
+    .from('projects')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(4);
+
+  // 4. Obtener Tecnologías (Habilidades)
   const { data: techs } = await supabase
     .from('technologies')
     .select('name, category')
     .eq('is_active', true);
 
-  // 4. Obtener Redes Sociales (LinkedIn)
+  // 5. Obtener Redes Sociales (LinkedIn)
   const { data: socials } = await supabase
     .from('socials')
     .select('url')
@@ -60,6 +67,14 @@ async function buildDynamicProfile() {
       bullets: exp.description ? [exp.description] : []
     }));
 
+  // Añadir Proyectos a la experiencia (como en el CV original)
+  const mappedProjects = (projectsData || []).map((p: any) => ({
+    company: p.title,
+    title: "Backend Developer", // Generic or based on user profile
+    dates: p.created_at ? new Date(p.created_at).getFullYear().toString() : "Present",
+    bullets: p.description ? [p.description] : []
+  }));
+
   // Mapear educación (Solo válidas)
   const mappedEducation = (studies || [])
     .filter((s: any) => s.institution && s.title)
@@ -69,8 +84,15 @@ async function buildDynamicProfile() {
       year: s.start_date ? new Date(s.start_date).getFullYear().toString() : ""
     }));
 
-  // Enviar todas las habilidades para que la IA filtre
-  const mappedSkills = techs && techs.length > 0 ? techs.map((t: any) => t.name).join(", ") : "";
+  // Agrupar habilidades por categoría
+  const categorizedSkills: Record<string, string> = {};
+  if (techs) {
+    for (const t of techs) {
+      const cat = t.category || "Core Stack";
+      if (!categorizedSkills[cat]) categorizedSkills[cat] = "";
+      categorizedSkills[cat] += categorizedSkills[cat] ? `, ${t.name}` : t.name;
+    }
+  }
 
   let linkedinUrl = "";
   if (socials && socials.url) {
@@ -85,12 +107,11 @@ async function buildDynamicProfile() {
     email: "carlosvicioso@vixis.dev",
     linkedin: linkedinUrl || undefined,
     portfolio: "vixis.dev",
-    summary: "Ingeniero de Sistemas especializado en desarrollo backend y automatización.",
-    skills: mappedSkills ? {
-      "Habilidades": mappedSkills
-    } : undefined,
+    summary: "Backend-focused Systems Engineer with hands-on experience architecting scalable infrastructure in Python, Java, Dart, TypeScript, and SQL. Built and maintained a bot platform serving 50K+ monthly active users at 99.9% uptime. Specialized in API design, relational data layers, asynchronous processing, and cloud-integrated deployments.",
+    skills: Object.keys(categorizedSkills).length > 0 ? categorizedSkills : undefined,
     experience: mappedExps.length > 0 ? mappedExps : undefined,
-    education: mappedEducation.length > 0 ? mappedEducation : undefined
+    education: mappedEducation.length > 0 ? mappedEducation : undefined,
+    projects: mappedProjects.length > 0 ? mappedProjects : undefined
   };
 }
 
@@ -187,11 +208,15 @@ async function processQueue() {
       // Clonar y sobrescribir con los datos adaptados y traducidos por la IA
       const tailoredProfile = {
         ...realProfile,
-        skills: aiAnalysis.top_10_skills ? {
-          [aiAnalysis.idioma_oferta === 'en' ? "Key Skills" : "Habilidades Clave"]: aiAnalysis.top_10_skills
-        } : realProfile.skills,
+        skills: {
+          ...(aiAnalysis.top_10_skills ? {
+            [aiAnalysis.idioma_oferta === 'en' ? "Key Skills" : "Habilidades Clave"]: aiAnalysis.top_10_skills
+          } : {}),
+          ...realProfile.skills
+        },
         experience: aiAnalysis.translated_experience || realProfile.experience,
-        education: aiAnalysis.translated_education || realProfile.education
+        education: aiAnalysis.translated_education || realProfile.education,
+        projects: realProfile.projects
       };
 
       const pdfBytes = await generateCV(tailoredProfile, { tailoredSummary: aiAnalysis.tailored_summary });
@@ -208,6 +233,12 @@ async function processQueue() {
 
       const { data: publicUrlData } = supabase.storage.from('cv-pdfs').getPublicUrl(pdfFileName);
 
+      // Determinar Prioridad
+      let priority = "-";
+      if (aiAnalysis.match_score >= 80) priority = "Alta";
+      else if (aiAnalysis.match_score >= 50) priority = "Media";
+      else priority = "Baja";
+
       // 4. Guardar oferta y actualizar cola
       await supabase.from('job_offers').insert({
         puesto: aiAnalysis.puesto || "Oferta Manual",
@@ -216,6 +247,7 @@ async function processQueue() {
         consejos_para_aplicar: aiAnalysis.consejos_para_aplicar,
         match_score: aiAnalysis.match_score || 50,
         modalidad: "Remote/Manual",
+        prioridad: priority,
         publicacion_oferta: new Date().toISOString(),
         url_oferta: item.url,
         cv_generado_url: publicUrlData.publicUrl
@@ -251,18 +283,11 @@ async function radioLoop() {
       }
     });
 
-  // Escaneo inicial para recoger los que hayan quedado pendientes
-  await processQueue();
-
-  // Bucle infinito: Cada 12 horas ejecuta el Scraper Automatizado Completo (Apify)
-  // y también vuelve a revisar la cola por si se perdió algún evento de realtime.
+  // Bucle infinito: Polling rápido (Fallback) para inmediatez sin importar Realtime
   while (true) {
-    // Escaneo profundo (por si algo falló en realtime)
     await processQueue();
-
-    // Esperamos 12 horas antes del escaneo automático diario
-    console.log("⏳ Esperando 12 horas para el próximo barrido automático masivo...");
-    await delay(12 * 60 * 60 * 1000);
+    // Polling rápido cada 5 segundos para que parezca instantáneo aunque Realtime falle
+    await delay(5000);
   }
 }
 
