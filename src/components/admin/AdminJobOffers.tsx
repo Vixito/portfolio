@@ -84,24 +84,16 @@ export default function AdminJobOffers() {
     if (!manualUrl) return;
     setIsProcessingUrl(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-job-url`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({ url: manualUrl })
-        }
-      );
-      if (res.ok) {
+      const { error } = await supabase
+        .from("job_queue")
+        .insert([{ url: manualUrl }]);
+        
+      if (!error) {
         setManualUrl("");
-        fetchOffers();
-        alert("Oferta añadida correctamente.");
+        alert("Oferta añadida correctamente a la cola local. El scraper de background la procesará en breve.");
       } else {
-        alert("Error procesando la URL.");
+        console.error("Error al insertar en la cola:", error);
+        alert("Error al añadir la URL a la cola local.");
       }
     } catch (err) {
       console.error(err);
