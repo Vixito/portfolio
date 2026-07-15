@@ -54,7 +54,7 @@ serve(async (req) => {
 
       const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "mixtral-8x7b-32768",
+      model: "openai/gpt-oss-120b",
       response_format: { type: "json_object" }
     });
 
