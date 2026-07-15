@@ -54,7 +54,7 @@ serve(async (req) => {
 
       const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "openai/gpt-oss-120b",
+      model: "llama-3.1-8b-instant",
       response_format: { type: "json_object" }
     });
 
@@ -86,9 +86,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error(error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: error.message || "Error procesando la URL." }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+    );
   }
 });

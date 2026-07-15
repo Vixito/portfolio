@@ -106,7 +106,7 @@ async function run() {
     try {
       const completion = await groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.1-8b-instant",
         response_format: { type: "json_object" }
       });
       aiAnalysis = JSON.parse(completion.choices[0].message.content);
