@@ -164,6 +164,9 @@ async function processQueue() {
   if (!queue || queue.length === 0) return;
 
   for (const item of queue) {
+    // 0. Bloquear el item inmediatamente para evitar procesamientos duplicados (Race condition entre Realtime y Polling)
+    await supabase.from('job_queue').update({ status: 'processing' }).eq('id', item.id);
+
     console.log(`Procesando item de la cola: ${item.url}`);
     try {
       // 1. Extraer texto usando fetch local
