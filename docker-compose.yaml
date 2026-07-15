@@ -47,6 +47,21 @@ services:
     networks:
       - core_vixis-core
 
+  job-scraper:
+    container_name: job-scraper-radio
+    image: denoland/deno:alpine
+    restart: unless-stopped
+    command: run --allow-net --allow-env src/automation/jobScraper.ts
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    networks:
+      - core_vixis-core
+
 
 networks:
   core_vixis-core:
