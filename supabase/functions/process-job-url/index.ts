@@ -29,12 +29,16 @@ serve(async (req) => {
     console.log(`Haciendo fetch a la URL manual: ${url}`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 segundos máximo
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos máximo para Jina
 
     let response;
     try {
-      response = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      // Usamos Jina Reader como proxy gratuito anti-bot para poder extraer webs protegidas como Discord
+      response = await fetch(`https://r.jina.ai/${url}`, {
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/plain' // Jina devuelve markdown limpio por defecto
+        },
         signal: controller.signal
       });
     } catch (fetchError) {
