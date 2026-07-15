@@ -1,21 +1,22 @@
 import { createClient } from "npm:@supabase/supabase-js";
+import OpenAI from "npm:openai";
 import Groq from "npm:groq-sdk";
 import { ApifyClient } from "npm:apify-client";
 import { generateCV } from "./cvGenerator.ts";
 
 // Configuración mediante variables de entorno (Doppler las inyectará)
+const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
 const APIFY_TOKEN = Deno.env.get("APIFY_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-if (!GROQ_API_KEY || !APIFY_TOKEN || !SUPABASE_URL || !SUPABASE_KEY) {
+if ((!XAI_API_KEY && !GROQ_API_KEY) || !APIFY_TOKEN || !SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Faltan variables de entorno esenciales.");
   Deno.exit(1);
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const groq = new Groq({ apiKey: GROQ_API_KEY });
 const apifyClient = new ApifyClient({ token: APIFY_TOKEN });
 
 const baseProfile = {
@@ -103,16 +104,33 @@ async function run() {
     `;
 
     let aiAnalysis;
+    let fallbackUsed = false;
+    
     try {
-      const completion = await groq.chat.completions.create({
+      if (!XAI_API_KEY) throw new Error("XAI_API_KEY no disponible");
+      const openai = new OpenAI({ apiKey: XAI_API_KEY, baseURL: "https://api.x.ai/v1" });
+      const completion = await openai.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: "llama-3.1-8b-instant",
+        model: "grok-beta",
         response_format: { type: "json_object" }
       });
-      aiAnalysis = JSON.parse(completion.choices[0].message.content);
-    } catch (e) {
-      console.error("Error analizando con Groq:", e);
-      continue; // Continuar con la siguiente oferta si falla
+      aiAnalysis = JSON.parse(completion.choices[0].message?.content || "{}");
+    } catch (errXAI) {
+      console.warn(`xAI falló para la oferta ${job.companyName}, intentando Groq...`, errXAI.message);
+      fallbackUsed = true;
+      try {
+        if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY no disponible");
+        const groq = new Groq({ apiKey: GROQ_API_KEY });
+        const completion = await groq.chat.completions.create({
+          messages: [{ role: "user", content: prompt }],
+          model: "llama-3.1-8b-instant",
+          response_format: { type: "json_object" }
+        });
+        aiAnalysis = JSON.parse(completion.choices[0].message.content);
+      } catch (errGroq) {
+        console.error("Ambas IA (xAI y Groq) fallaron:", errGroq.message);
+        continue; // Continuar con la siguiente oferta
+      }
     }
 
     const pdfBytes = await generateCV(baseProfile, { tailoredSummary: aiAnalysis.tailored_summary });

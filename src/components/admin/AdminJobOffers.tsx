@@ -143,6 +143,13 @@ export default function AdminJobOffers() {
           </button>
           
           <button 
+            onClick={() => { fetchOffers(); fetchSettings(); }}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-500/50 rounded-lg text-sm font-semibold hover:bg-purple-500/30 transition-colors"
+          >
+            <span className="mr-1">🔄</span> Recargar
+          </button>
+          
+          <button 
             onClick={exportToCSV}
             className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/50 rounded-lg text-sm font-semibold hover:bg-blue-500/30 transition-colors"
           >
