@@ -92,25 +92,29 @@ export default function AdminJobOffers() {
     setOffers(offers.filter(o => o.id !== id));
   };
 
+  const [formMessage, setFormMessage] = useState<{type: 'success'|'error', text: string} | null>(null);
+
   const handleManualUrl = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualUrl) return;
     setIsProcessingUrl(true);
+    setFormMessage(null);
     try {
       const { error } = await supabase
         .from("job_queue")
-        .insert([{ url: manualUrl }]);
+        .insert([{ url: manualUrl, status: 'pending' }]);
         
       if (!error) {
         setManualUrl("");
-        alert("Oferta añadida correctamente a la cola local. El scraper de background la procesará en breve.");
+        setFormMessage({ type: 'success', text: 'URL enviada al scraper exitosamente.' });
+        setTimeout(() => setFormMessage(null), 5000);
       } else {
         console.error("Error al insertar en la cola:", error);
-        alert("Error al añadir la URL a la cola local.");
+        setFormMessage({ type: 'error', text: 'Error al enviar la URL. Revisa RLS.' });
       }
     } catch (err) {
       console.error(err);
-      alert("Error de conexión.");
+      setFormMessage({ type: 'error', text: 'Error de conexión.' });
     }
     setIsProcessingUrl(false);
   };
@@ -171,23 +175,31 @@ export default function AdminJobOffers() {
       </div>
 
       {/* ADD MANUAL URL */}
-      <form onSubmit={handleManualUrl} className="flex gap-2">
-        <input 
-          type="url"
-          required
-          placeholder="https://linkedin.com/jobs/view/..." 
-          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-          value={manualUrl}
-          onChange={(e) => setManualUrl(e.target.value)}
-        />
-        <button 
-          type="submit" 
-          disabled={isProcessingUrl}
-          className="bg-[#2093c4] hover:bg-[#1a7a9e] text-white px-6 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50"
-        >
-          {isProcessingUrl ? "⏳ Procesando..." : "Procesar Link"}
-        </button>
-      </form>
+      <div className="flex flex-col gap-2">
+        <form onSubmit={handleManualUrl} className="flex gap-2">
+          <input 
+            type="url"
+            required
+            placeholder="https://linkedin.com/jobs/view/..." 
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors"
+            value={manualUrl}
+            onChange={(e) => setManualUrl(e.target.value)}
+            disabled={isProcessingUrl}
+          />
+          <button 
+            type="submit" 
+            disabled={isProcessingUrl}
+            className="bg-[#2093c4] hover:bg-[#1a7a9e] text-white px-6 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50"
+          >
+            {isProcessingUrl ? "⏳ Procesando..." : "Procesar Link"}
+          </button>
+        </form>
+        {formMessage && (
+          <div className={`text-sm px-2 ${formMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+            {formMessage.text}
+          </div>
+        )}
+      </div>
 
       {/* TABLE */}
       {loading ? (
