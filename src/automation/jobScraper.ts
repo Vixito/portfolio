@@ -161,13 +161,16 @@ async function processQueue() {
       ${JSON.stringify(realProfile)}
 
       Genera un JSON EXACTO con las siguientes claves:
+      - idioma_oferta: (El idioma en el que está escrita la vacante, ej: "es", "en", "pt", etc).
       - puesto: (Título del empleo).
       - empresa: (Nombre de la empresa, si no aparece pon "Desconocida").
       - match_score: (Número del 0 al 100 de qué tan bien encajo con los requisitos de la vacante, sé honesto).
-      - introduccion: (Párrafo corto vendiendo mi perfil para este rol, resaltando mi experiencia real y qué ofrezco. MÁXIMO 5 líneas).
-      - consejos_para_aplicar: (3 consejos clave para la entrevista o prueba técnica).
-      - tailored_summary: (Un Professional Summary para el CV adaptado a esta oferta, en base a mi perfil real. Contesta: ¿Qué quiero hacer? ¿Qué ofrezco? ¿Por qué lo puedo hacer?).
-      - top_10_skills: (String con solo las 10 o 12 tecnologías y habilidades blandas de mi perfil que MÁS HAGAN MATCH con la oferta, separadas por comas. ESTRICTAMENTE de la lista proporcionada).
+      - introduccion: (Párrafo corto vendiendo mi perfil para este rol. Escríbelo SIEMPRE en Español, es solo para mí en el panel).
+      - consejos_para_aplicar: (3 consejos clave para la entrevista. Escríbelo SIEMPRE en Español).
+      - tailored_summary: (Un Professional Summary ROBUSTO e IMPACTANTE de 4 a 5 líneas para el CV, adaptado a esta oferta. Responde con detalle: ¿Qué quiero hacer? ¿Qué ofrezco? ¿Por qué lo puedo hacer? Demuestra autoridad, no seas breve. Escríbelo ESTRICTAMENTE en el mismo 'idioma_oferta').
+      - top_10_skills: (String con las 10 tecnologías/habilidades de mi perfil que MÁS HAGAN MATCH. Tradúcelas al 'idioma_oferta' si es necesario).
+      - translated_experience: (Array con mi 'experience' real, pero traduce estrictamente el 'title' y los 'bullets' al 'idioma_oferta').
+      - translated_education: (Array con mi 'education' real, pero traduce estrictamente el 'degree' al 'idioma_oferta').
       `;
 
       console.log("Analizando con Groq (openai/gpt-oss-120b)...");
@@ -180,13 +183,15 @@ async function processQueue() {
       const aiAnalysis = JSON.parse(completion.choices[0].message.content);
 
       // 3. Generar CV
-      console.log(`Generando CV PDF para ${aiAnalysis.empresa}...`);
-      // Clonar y sobrescribir skills con las top 10 de Groq
+      console.log(`Generando CV PDF para ${aiAnalysis.empresa} en idioma [${aiAnalysis.idioma_oferta}]...`);
+      // Clonar y sobrescribir con los datos adaptados y traducidos por la IA
       const tailoredProfile = {
         ...realProfile,
         skills: aiAnalysis.top_10_skills ? {
-          "Habilidades Clave": aiAnalysis.top_10_skills
-        } : realProfile.skills
+          [aiAnalysis.idioma_oferta === 'en' ? "Key Skills" : "Habilidades Clave"]: aiAnalysis.top_10_skills
+        } : realProfile.skills,
+        experience: aiAnalysis.translated_experience || realProfile.experience,
+        education: aiAnalysis.translated_education || realProfile.education
       };
 
       const pdfBytes = await generateCV(tailoredProfile, { tailoredSummary: aiAnalysis.tailored_summary });
