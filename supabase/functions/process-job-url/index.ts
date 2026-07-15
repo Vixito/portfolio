@@ -2,12 +2,14 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js";
 import OpenAI from "npm:openai";
 import Groq from "npm:groq-sdk";
+import { ApifyClient } from "npm:apify-client";
 
 // IMPORTANTE: En Edge Functions de Supabase, las variables se inyectan en el entorno
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || Deno.env.get("SUPABASE_DB_URL");
 const SUPABASE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+const APIFY_TOKEN = Deno.env.get("APIFY_TOKEN");
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,39 +27,33 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "URL is required" }), { status: 400, headers: corsHeaders });
     }
 
-    // 1. Obtener el texto de la URL (Scraping básico) con timeout para evitar cuelgues (tarpit de anti-bots)
-    console.log(`Haciendo fetch a la URL manual: ${url}`);
+    // 1. Obtener el texto de la URL usando Apify para burlar anti-bots agresivos
+    console.log(`Haciendo scraping con Apify a la URL: ${url}`);
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos máximo para Jina
-
-    let response;
-    try {
-      // Usamos Jina Reader como proxy gratuito anti-bot para poder extraer webs protegidas como Discord
-      response = await fetch(`https://r.jina.ai/${url}`, {
-        headers: { 
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/plain' // Jina devuelve markdown limpio por defecto
-        },
-        signal: controller.signal
-      });
-    } catch (fetchError) {
-      if (fetchError.name === 'AbortError') {
-        throw new Error("Tiempo de espera agotado. La web está bloqueando la conexión (posible protección anti-bots).");
-      }
-      throw fetchError;
-    } finally {
-      clearTimeout(timeoutId);
+    if (!APIFY_TOKEN) {
+      throw new Error("APIFY_TOKEN no está configurado en las variables de entorno.");
     }
     
-    if (!response.ok) {
-      throw new Error(`No se pudo acceder a la URL. Status: ${response.status}`);
+    const apify = new ApifyClient({ token: APIFY_TOKEN });
+    
+    // Usamos cheerio-scraper que es muy rápido y le activamos el proxy residencial de Apify
+    const run = await apify.actor("apify/cheerio-scraper").call({
+      startUrls: [{ url }],
+      proxyConfiguration: { useApifyProxy: true },
+      pageFunction: `async function pageFunction(context) { 
+        return { text: context.$('body').text() }; 
+      }`
+    });
+
+    const { items } = await apify.dataset(run.defaultDatasetId).listItems();
+    if (!items || items.length === 0) {
+      throw new Error("Apify no devolvió datos para esta URL.");
     }
 
-    const html = await response.text();
-    const finalUrl = response.url; // Guardamos la URL final (real) después de cualquier redirección
+    const html = items[0]?.text || "";
+    const finalUrl = url; // Mantenemos la original ya que Apify lo procesó
     // Limpieza muy básica de HTML para sacar el texto
-    const cleanText = html.replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').substring(0, 8000);
+    const cleanText = html.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').substring(0, 8000);
 
     // 2. Analizar con IA (xAI con fallback a Groq)
     const prompt = `
