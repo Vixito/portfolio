@@ -44,12 +44,19 @@ export default function AdminJobOffers() {
   };
 
   const fetchSettings = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("job_scraper_settings")
       .select("is_enabled")
       .eq("id", 1)
-      .single();
-    if (data) setIsEnabled(data.is_enabled);
+      .maybeSingle();
+      
+    if (data) {
+      setIsEnabled(data.is_enabled);
+    } else {
+      // Si no existe la fila, la creamos por defecto
+      setIsEnabled(true);
+      await supabase.from("job_scraper_settings").insert({ id: 1, is_enabled: true });
+    }
   };
 
   useEffect(() => {

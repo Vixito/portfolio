@@ -111,7 +111,7 @@ async function run() {
       const openai = new OpenAI({ apiKey: XAI_API_KEY, baseURL: "https://api.x.ai/v1" });
       const completion = await openai.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: "grok-beta",
+        model: "grok-latest",
         response_format: { type: "json_object" }
       });
       aiAnalysis = JSON.parse(completion.choices[0].message?.content || "{}");
