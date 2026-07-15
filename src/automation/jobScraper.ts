@@ -16,31 +16,75 @@ if (!GROQ_API_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const groq = new Groq({ apiKey: GROQ_API_KEY });
 
-const baseProfile = {
-  name: "Carlos Andrés Vicioso Lara",
-  phone: "+57 XXXXXXXX",
-  location: "Valledupar, Colombia",
-  email: "carlosvicioso@vixis.dev",
-  linkedin: "carlosvicioso",
-  portfolio: "vixis.dev",
-  summary: "Ingeniero de Sistemas especializado en desarrollo backend y automatización.",
-  skills: {
-    "Backend": "Node.js, Deno, PHP, Python, PostgreSQL, Supabase",
-    "Frontend": "React, TypeScript, TailwindCSS",
-    "DevOps & Automation": "Docker, GitHub Actions, n8n, Doppler, Apify"
-  },
-  experience: [
-    {
-      company: "Vixis Studio",
-      title: "Software Engineer & Founder",
-      dates: "2024 - Present",
-      bullets: [
-        "Desarrollo de plataformas e-commerce escalables y sistemas automatizados.",
-        "Implementación de infraestructuras seguras con Docker y Traefik."
-      ]
-    }
-  ]
-};
+async function buildDynamicProfile() {
+  console.log("📥 Obteniendo datos reales del portfolio desde Supabase...");
+
+  // 1. Obtener Experiencia (Máximo 4, ordenados por más reciente)
+  const { data: exps } = await supabase
+    .from('work_experiences')
+    .select('*')
+    .eq('is_active', true)
+    .order('start_date', { ascending: false })
+    .limit(4);
+
+  // 2. Obtener Estudios (Educación)
+  const { data: studies } = await supabase
+    .from('studies')
+    .select('*')
+    .eq('is_active', true)
+    .order('start_date', { ascending: false })
+    .limit(3);
+
+  // 3. Obtener Tecnologías (Habilidades)
+  const { data: techs } = await supabase
+    .from('technologies')
+    .select('name, category')
+    .eq('is_active', true);
+
+  // Mapear experiencias
+  const mappedExps = (exps || []).map((exp: any) => ({
+    company: exp.company || "Empresa",
+    title: exp.position || "Cargo",
+    dates: `${exp.start_date ? new Date(exp.start_date).getFullYear() : ""} - ${exp.status === 'current' ? 'Presente' : (exp.end_date ? new Date(exp.end_date).getFullYear() : "")}`,
+    bullets: exp.description ? [exp.description] : ["Desarrollo y optimización de soluciones de software."] // Idealmente debería dividirse en viñetas si hay saltos de línea
+  }));
+
+  // Mapear educación
+  const mappedEducation = (studies || []).map((s: any) => ({
+    institution: s.institution || "Institución",
+    degree: s.title || "Título",
+    year: s.start_date ? new Date(s.start_date).getFullYear().toString() : ""
+  }));
+
+  // Agrupar tecnologías por categoría de forma básica
+  const mappedSkills = techs ? techs.map((t: any) => t.name).join(", ") : "Node.js, React, TypeScript, Docker, PostgreSQL";
+
+  return {
+    name: "Carlos Andrés Vicioso Lara",
+    phone: "+57 322 6171458", // Datos de contacto
+    location: "Valledupar, Colombia",
+    email: "carlosvicioso@vixis.dev",
+    linkedin: "carlosvicioso",
+    portfolio: "vixis.dev",
+    summary: "Ingeniero de Sistemas especializado en desarrollo backend y automatización.",
+    skills: {
+      "Tecnologías Clave": mappedSkills,
+      "Habilidades Blandas": "Trabajo en equipo, Adaptabilidad, Liderazgo, Comunicación asertiva"
+    },
+    experience: mappedExps.length > 0 ? mappedExps : [
+      {
+        company: "Vixis Studio",
+        title: "Software Engineer & Founder",
+        dates: "2024 - Present",
+        bullets: [
+          "Desarrollo de plataformas e-commerce escalables y sistemas automatizados.",
+          "Implementación de infraestructuras seguras con Docker y Traefik."
+        ]
+      }
+    ],
+    education: mappedEducation.length > 0 ? mappedEducation : undefined
+  };
+}
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -86,22 +130,25 @@ async function processQueue() {
       // 1. Extraer texto usando fetch local
       const text = await fetchLocalUrl(item.url);
 
-      // 2. IA Groq llama-3.3-70b-versatile
+      // 1.5 Obtener datos reales del portfolio
+      const realProfile = await buildDynamicProfile();
+
+      // 2. IA Groq
       const prompt = `
       Eres un analista de empleos experto.
       Extrae los datos de esta oferta de trabajo basándote en el siguiente texto de la página web extraída:
       ${text}
 
-      Y aquí está mi perfil:
-      ${JSON.stringify(baseProfile)}
+      Y aquí está la información REAL de mi portfolio:
+      ${JSON.stringify(realProfile)}
 
       Genera un JSON EXACTO con las siguientes claves:
       - puesto: (Título del empleo).
       - empresa: (Nombre de la empresa, si no aparece pon "Desconocida").
-      - match_score: (Número del 0 al 100 de qué tan bien encajo con los requisitos de la vacante).
-      - introduccion: (Párrafo corto vendiendo mi perfil para este rol, máximo 3 frases).
+      - match_score: (Número del 0 al 100 de qué tan bien encajo con los requisitos de la vacante, sé honesto).
+      - introduccion: (Párrafo corto vendiendo mi perfil para este rol, resaltando mi experiencia real y qué ofrezco. MÁXIMO 5 líneas).
       - consejos_para_aplicar: (3 consejos clave para la entrevista o prueba técnica).
-      - tailored_summary: (Un Professional Summary para el CV adaptado a esta oferta).
+      - tailored_summary: (Un Professional Summary para el CV adaptado a esta oferta, en base a mi perfil real. Contesta: ¿Qué quiero hacer? ¿Qué ofrezco? ¿Por qué lo puedo hacer?).
       `;
 
       console.log("Analizando con Groq (openai/gpt-oss-120b)...");
@@ -115,7 +162,7 @@ async function processQueue() {
 
       // 3. Generar CV
       console.log(`Generando CV PDF para ${aiAnalysis.empresa}...`);
-      const pdfBytes = await generateCV(baseProfile, { tailoredSummary: aiAnalysis.tailored_summary });
+      const pdfBytes = await generateCV(realProfile, { tailoredSummary: aiAnalysis.tailored_summary });
       const pdfFileName = `CV_${aiAnalysis.empresa.replace(/\W+/g, '_')}_${Date.now()}.pdf`;
       const { data: uploadData, error: uploadError } = await supabase
         .storage
@@ -158,7 +205,7 @@ async function processQueue() {
 // Bucle principal tipo "Radio"
 async function radioLoop() {
   console.log("📻 Job Scraper Radio iniciado. Escuchando la cola 'job_queue' en Supabase en tiempo real...");
-  
+
   // Suscribirse a los INSERTS en la cola para procesar de inmediato
   supabase
     .channel('job_queue_channel')
