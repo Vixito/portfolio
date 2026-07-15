@@ -53,9 +53,7 @@ export default function AdminJobOffers() {
     if (data) {
       setIsEnabled(data.is_enabled);
     } else {
-      // Si no existe la fila, la creamos por defecto
       setIsEnabled(true);
-      await supabase.from("job_scraper_settings").insert({ id: 1, is_enabled: true });
     }
   };
 

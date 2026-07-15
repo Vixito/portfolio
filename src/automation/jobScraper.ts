@@ -157,11 +157,33 @@ async function processQueue() {
 
 // Bucle principal tipo "Radio"
 async function radioLoop() {
-  console.log("📻 Job Scraper Radio iniciado. Escuchando la cola 'job_queue' en Supabase...");
+  console.log("📻 Job Scraper Radio iniciado. Escuchando la cola 'job_queue' en Supabase en tiempo real...");
+  
+  // Suscribirse a los INSERTS en la cola para procesar de inmediato
+  supabase
+    .channel('job_queue_channel')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'job_queue' }, async (payload) => {
+      console.log(`⚡ Evento en tiempo real recibido: Nueva URL en cola -> ${payload.new.url}`);
+      await processQueue();
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log("✅ Suscrito exitosamente a Supabase Realtime. El procesamiento manual será inmediato.");
+      }
+    });
+
+  // Escaneo inicial para recoger los que hayan quedado pendientes
+  await processQueue();
+
+  // Bucle infinito: Cada 12 horas ejecuta el Scraper Automatizado Completo (Apify)
+  // y también vuelve a revisar la cola por si se perdió algún evento de realtime.
   while (true) {
+    // Escaneo profundo (por si algo falló en realtime)
     await processQueue();
-    // Esperar 15 segundos antes de volver a consultar la cola
-    await delay(15000);
+
+    // Esperamos 12 horas antes del escaneo automático diario
+    console.log("⏳ Esperando 12 horas para el próximo barrido automático masivo...");
+    await delay(12 * 60 * 60 * 1000);
   }
 }
 
