@@ -27,13 +27,8 @@ async function buildDynamicProfile() {
     .order('start_date', { ascending: false })
     .limit(4);
 
-  // 2. Obtener Estudios (Educación)
-  const { data: studies } = await supabase
-    .from('studies')
-    .select('*')
-    .eq('is_active', true)
-    .order('start_date', { ascending: false })
-    .limit(3);
+  // 2. Obtener Estudios (Educación) - HARDCODED según instrucciones del usuario
+  // El usuario especificó que esta información es determinada y no cambia.
 
   // 3. Obtener Proyectos (Solo los marcados como especiales)
   const { data: projectsData } = await supabase
@@ -76,14 +71,48 @@ async function buildDynamicProfile() {
     bullets: p.description ? [p.description] : []
   }));
 
-  // Mapear educación (Solo válidas)
-  const mappedEducation = (studies || [])
-    .filter((s: any) => s.institution && s.title)
-    .map((s: any) => ({
-      institution: s.institution,
-      degree: s.title,
-      year: s.start_date ? new Date(s.start_date).getFullYear().toString() : ""
-    }));
+  // Mapear educación (HARDCODED)
+  const mappedEducation = [
+    {
+      institution: "Andean Area University Foundation",
+      degree: "Bachelor's Degree, Systems Engineering",
+      year: "AUG 2025",
+      bullets: [
+        "GPA: 4.46/5.00",
+        "Relevant Coursework: Software Engineering, Database Systems, Computer Networks, Systems Analysis, Programming Fundamentals"
+      ]
+    },
+    {
+      institution: "Andean Area University Foundation",
+      degree: "Diploma, Cybersecurity Operations",
+      year: "AUG 2024",
+      bullets: [
+        "GPA: 4.88/5.00",
+        "Relevant Coursework: Cybersecurity Operations, Network Security, Incident Response, Risk Management"
+      ]
+    },
+    {
+      institution: "National Learning Service",
+      degree: "Technologist Degree, Information Systems Analysis and Development",
+      year: "OCT 2021",
+      bullets: [
+        "GPA: 4.50/5.00",
+        "Relevant Coursework: System Analysis, Software Development, Database Management, Web Development"
+      ]
+    }
+  ];
+
+  // Awards and Accolades (HARDCODED)
+  const mappedAwards = [
+    {
+      title: "Best Game Master - Haddoz Awards",
+      year: "2017"
+    },
+    {
+      title: "New Year, New You Portfolio Challenge Completion Badge - DEV Community x Google AI",
+      year: "2026"
+    }
+  ];
 
   // Agrupar habilidades por categoría
   const categorizedSkills: Record<string, string> = {};
@@ -111,8 +140,9 @@ async function buildDynamicProfile() {
     summary: "Backend-focused Systems Engineer with hands-on experience architecting scalable infrastructure in Python, Java, Dart, TypeScript, and SQL. Built and maintained a bot platform serving 50K+ monthly active users at 99.9% uptime. Specialized in API design, relational data layers, asynchronous processing, and cloud-integrated deployments.",
     skills: Object.keys(categorizedSkills).length > 0 ? categorizedSkills : undefined,
     experience: mappedExps.length > 0 ? mappedExps : undefined,
-    education: mappedEducation.length > 0 ? mappedEducation : undefined,
-    projects: mappedProjects.length > 0 ? mappedProjects : undefined
+    education: mappedEducation,
+    projects: mappedProjects.length > 0 ? mappedProjects : undefined,
+    awards: mappedAwards
   };
 }
 
@@ -207,8 +237,9 @@ async function processQueue() {
       - tailored_summary: (Un Professional Summary ROBUSTO e IMPACTANTE de 4 a 5 líneas para el CV, adaptado a esta oferta. Responde con detalle: ¿Qué quiero hacer? ¿Qué ofrezco? ¿Por qué lo puedo hacer? Demuestra autoridad, no seas breve. Escríbelo ESTRICTAMENTE en el mismo 'idioma_oferta').
       - top_10_skills: (String con las habilidades de mi perfil que MÁS HAGAN MATCH. Tradúcelas al 'idioma_oferta'. AGRÚPALAS por categoría si es posible, ej: "Languages: JS, Python. Frameworks: React, Node").
       - translated_experience: (Array con mi 'experience' real. DEBES REESCRIBIR y traducir estrictamente el 'title' y los 'bullets' al 'idioma_oferta'. APLICA LA FÓRMULA DE GOOGLE X-Y-Z en los bullets: 'Accomplished X, as measured by Y, by doing Z'. Cuantifica el impacto con números siempre que sea lógico. Selecciona y enfócate en los logros más relevantes para esta oferta).
-      - translated_education: (Array con mi 'education' real, pero traduce estrictamente el 'degree' al 'idioma_oferta').
+      - translated_education: (Array con mi 'education' real. Traduce estrictamente 'institution', 'degree', 'year' y 'bullets' al 'idioma_oferta').
       - translated_projects: (Array con mis 'projects' reales. DEBES REESCRIBIR y traducir estrictamente el 'title' y 'bullets' al 'idioma_oferta', aplicando también la fórmula X-Y-Z y resaltando las tecnologías usadas relevantes para la vacante).
+      - translated_awards: (Array con mis 'awards' reales. Traduce estrictamente 'title' y 'year' al 'idioma_oferta').
       `;
 
       console.log("Analizando con Groq (openai/gpt-oss-120b)...");
@@ -233,7 +264,8 @@ async function processQueue() {
         },
         experience: aiAnalysis.translated_experience || realProfile.experience,
         education: aiAnalysis.translated_education || realProfile.education,
-        projects: aiAnalysis.translated_projects || realProfile.projects
+        projects: aiAnalysis.translated_projects || realProfile.projects,
+        awards: aiAnalysis.translated_awards || realProfile.awards
       };
 
       const pdfBytes = await generateCV(tailoredProfile, { tailoredSummary: aiAnalysis.tailored_summary });

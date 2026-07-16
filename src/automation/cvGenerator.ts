@@ -218,5 +218,26 @@ export async function generateCV(
     }
   }
 
+  // 7. AWARDS AND ACCOLADES
+  if (userData.awards && userData.awards.length > 0) {
+    drawSectionHeader("AWARDS AND ACCOLADES");
+    for (const award of userData.awards) {
+      checkPageBreak(15);
+      const bulletLines = wrapText(`• ${award.title}`, fontRegular, 9.5, usableWidth - 50); // -50 to leave room for the date
+      for (let i = 0; i < bulletLines.length; i++) {
+        checkPageBreak(12);
+        drawText(bulletLines[i], fontRegular, 9.5, margin + 4, currentY);
+        // Sólo dibujar la fecha en la primera línea del premio
+        if (i === 0 && award.year) {
+           const dateStr = sanitizeWinAnsi(award.year).toUpperCase();
+           const dateWidth = fontRegular.widthOfTextAtSize(dateStr, 9.5);
+           drawText(dateStr, fontRegular, 9.5, page.getWidth() - margin - dateWidth, currentY);
+        }
+        currentY -= 13;
+      }
+      currentY -= 4; // Spacing between awards
+    }
+  }
+
   return await pdfDoc.save();
 }
