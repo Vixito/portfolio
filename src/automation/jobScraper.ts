@@ -188,14 +188,16 @@ async function processQueue() {
       - idioma_oferta: (El idioma en el que está escrita la vacante, ej: "es", "en", "pt", etc).
       - puesto: (Título del empleo).
       - empresa: (Nombre de la empresa, si no aparece pon "Desconocida").
+      - modalidad: (Modalidad de trabajo extraída de la oferta: Remoto, Híbrido, Presencial. Si no dice, asume "No especificado").
+      - publicacion_oferta: (Antigüedad de la oferta extraída del texto, ej: "Hace 2 días", "Hoy", "3w ago". Si no dice, asume "Desconocida").
       - match_score: (Número del 0 al 100 de qué tan bien encajo con los requisitos de la vacante, sé honesto).
       - introduccion: (Párrafo corto vendiendo mi perfil para este rol. Escríbelo SIEMPRE en Español, es solo para mí en el panel).
       - consejos_para_aplicar: (3 consejos clave para la entrevista. Escríbelo SIEMPRE en Español).
       - tailored_summary: (Un Professional Summary ROBUSTO e IMPACTANTE de 4 a 5 líneas para el CV, adaptado a esta oferta. Responde con detalle: ¿Qué quiero hacer? ¿Qué ofrezco? ¿Por qué lo puedo hacer? Demuestra autoridad, no seas breve. Escríbelo ESTRICTAMENTE en el mismo 'idioma_oferta').
-      - top_10_skills: (String con las 10 tecnologías/habilidades de mi perfil que MÁS HAGAN MATCH. Tradúcelas al 'idioma_oferta' si es necesario).
-      - translated_experience: (Array con mi 'experience' real, pero traduce estrictamente el 'title' y los 'bullets' al 'idioma_oferta').
+      - top_10_skills: (String con las habilidades de mi perfil que MÁS HAGAN MATCH. Tradúcelas al 'idioma_oferta'. AGRÚPALAS por categoría si es posible, ej: "Languages: JS, Python. Frameworks: React, Node").
+      - translated_experience: (Array con mi 'experience' real. DEBES REESCRIBIR y traducir estrictamente el 'title' y los 'bullets' al 'idioma_oferta'. APLICA LA FÓRMULA DE GOOGLE X-Y-Z en los bullets: 'Accomplished X, as measured by Y, by doing Z'. Cuantifica el impacto con números siempre que sea lógico. Selecciona y enfócate en los logros más relevantes para esta oferta).
       - translated_education: (Array con mi 'education' real, pero traduce estrictamente el 'degree' al 'idioma_oferta').
-      - translated_projects: (Array con mis 'projects' reales, pero traduce estrictamente el 'title' y 'bullets' al 'idioma_oferta').
+      - translated_projects: (Array con mis 'projects' reales. DEBES REESCRIBIR y traducir estrictamente el 'title' y 'bullets' al 'idioma_oferta', aplicando también la fórmula X-Y-Z y resaltando las tecnologías usadas relevantes para la vacante).
       `;
 
       console.log("Analizando con Groq (openai/gpt-oss-120b)...");
@@ -248,27 +250,29 @@ async function processQueue() {
       else priority = "Baja";
 
       // 4. Guardar oferta y actualizar cola
-      await supabase.from('job_offers').insert({
-        puesto: aiAnalysis.puesto || "Oferta Manual",
-        empresa: aiAnalysis.empresa || "Desconocida",
+      const { error: insertError } = await supabase.from('job_offers').insert([{
+        puesto: aiAnalysis.puesto,
+        empresa: aiAnalysis.empresa,
         introduccion: aiAnalysis.introduccion,
         consejos_para_aplicar: aiAnalysis.consejos_para_aplicar,
-        match_score: aiAnalysis.match_score || 50,
-        modalidad: "Remote/Manual",
+        match_score: aiAnalysis.match_score,
+        modalidad: aiAnalysis.modalidad || "Remoto",
         prioridad: priority,
-        publicacion_oferta: new Date().toISOString(),
+        publicacion_oferta: aiAnalysis.publicacion_oferta || "Reciente",
         url_oferta: item.url,
         cv_generado_url: publicUrlData.publicUrl
-      });
+      }]);
 
-      await supabase.from('job_queue').update({ status: 'completed' }).eq('id', item.id);
-      console.log(`✅ Oferta guardada exitosamente: ${aiAnalysis.empresa}`);
-
-      // Retraso para no saturar Rate Limits de Groq (aunque 70b tiene buen rate limit, mejor prevenir)
-      await delay(5000);
-
+      if (insertError) {
+        console.error("Error guardando oferta:", insertError);
+        await supabase.from('job_queue').update({ status: 'failed' }).eq('id', item.id);
+      } else {
+        console.log(`✅ Oferta guardada exitosamente: ${aiAnalysis.empresa}`);
+        // 5. Marcar como completado en la cola
+        await supabase.from('job_queue').update({ status: 'completed' }).eq('id', item.id);
+      }
     } catch (err) {
-      console.error(`Error procesando URL ${item.url}:`, err);
+      console.error("Error general en processQueue:", err);
       await supabase.from('job_queue').update({ status: 'failed' }).eq('id', item.id);
     }
   }
