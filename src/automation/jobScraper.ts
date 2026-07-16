@@ -181,32 +181,27 @@ async function fetchLocalUrl(url: string) {
   }
 }
 
-async function processQueue() {
-  const { data: queue, error: queueError } = await supabase
+const processingItems = new Set<string>();
+
+async function processQueue(realtimeItem?: any[]) {
+  const queue = realtimeItem || (await supabase
     .from('job_queue')
     .select('*')
-    .eq('status', 'pending');
-
-  if (queueError) {
-    console.error("Error leyendo job_queue:", queueError);
-    return;
-  }
+    .eq('status', 'pending')).data;
 
   if (!queue || queue.length === 0) return;
 
   for (const item of queue) {
-    // 0. Bloquear el item inmediatamente y verificar si logramos el bloqueo
-    const { data: lockData } = await supabase
-      .from('job_queue')
-      .update({ status: 'processing' })
-      .eq('id', item.id)
-      .eq('status', 'pending')
-      .select();
-      
-    if (!lockData || lockData.length === 0) {
-      console.log(`⏳ Item ya tomado por otra instancia o procesado: ${item.url}`);
+    // 0. Bloquear en memoria y actualizar DB
+    if (processingItems.has(item.id)) {
       continue;
     }
+    processingItems.add(item.id);
+    
+    await supabase
+      .from('job_queue')
+      .update({ status: 'processing' })
+      .eq('id', item.id);
 
     console.log(`Procesando item de la cola: ${item.url}`);
     try {
@@ -310,13 +305,15 @@ async function processQueue() {
         console.error("Error guardando oferta:", insertError);
         await supabase.from('job_queue').update({ status: 'failed' }).eq('id', item.id);
       } else {
-        console.log(`✅ Oferta guardada exitosamente: ${aiAnalysis.empresa}`);
+        console.log(`✅ Oferta guardada exitosamente: ${aiAnalysis.empresa || 'Desconocida'}`);
         // 5. Marcar como completado en la cola
         await supabase.from('job_queue').update({ status: 'completed' }).eq('id', item.id);
       }
     } catch (err) {
-      console.error("Error general en processQueue:", err);
+      console.error(`Error procesando ${item.url}:`, err);
       await supabase.from('job_queue').update({ status: 'failed' }).eq('id', item.id);
+    } finally {
+      processingItems.delete(item.id);
     }
   }
 }
@@ -330,7 +327,7 @@ async function radioLoop() {
     .channel('job_queue_channel')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'job_queue' }, async (payload) => {
       console.log(`⚡ Evento en tiempo real recibido: Nueva URL en cola -> ${payload.new.url}`);
-      await processQueue();
+      await processQueue([payload.new]);
     })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
