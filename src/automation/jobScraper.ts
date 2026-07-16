@@ -35,10 +35,11 @@ async function buildDynamicProfile() {
     .order('start_date', { ascending: false })
     .limit(3);
 
-  // 3. Obtener Proyectos
+  // 3. Obtener Proyectos (Solo los marcados como especiales)
   const { data: projectsData } = await supabase
     .from('projects')
     .select('*')
+    .eq('is_featured', true)
     .order('created_at', { ascending: false })
     .limit(4);
 
@@ -164,8 +165,18 @@ async function processQueue() {
   if (!queue || queue.length === 0) return;
 
   for (const item of queue) {
-    // 0. Bloquear el item inmediatamente para evitar procesamientos duplicados (Race condition entre Realtime y Polling)
-    await supabase.from('job_queue').update({ status: 'processing' }).eq('id', item.id);
+    // 0. Bloquear el item inmediatamente y verificar si logramos el bloqueo
+    const { data: lockData } = await supabase
+      .from('job_queue')
+      .update({ status: 'processing' })
+      .eq('id', item.id)
+      .eq('status', 'pending')
+      .select();
+      
+    if (!lockData || lockData.length === 0) {
+      console.log(`⏳ Item ya tomado por otra instancia o procesado: ${item.url}`);
+      continue;
+    }
 
     console.log(`Procesando item de la cola: ${item.url}`);
     try {

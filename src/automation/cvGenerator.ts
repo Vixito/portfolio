@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib";
+import { PDFDocument, StandardFonts, rgb, PDFString, PDFName } from "npm:pdf-lib";
 
 export async function generateCV(
   userData: any,
@@ -6,10 +6,10 @@ export async function generateCV(
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   let page = pdfDoc.addPage([612, 792]); // Carta (Letter)
-  
+
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  
+
   const margin = 50;
   const usableWidth = page.getWidth() - margin * 2;
   let currentY = page.getHeight() - margin;
@@ -52,10 +52,10 @@ export async function generateCV(
         lines.push(''); // Conservar párrafos vacíos
         continue;
       }
-      
+
       const words = paragraph.split(" ");
       let currentLine = "";
-      
+
       for (const word of words) {
         const testLine = currentLine + word + " ";
         const testWidth = font.widthOfTextAtSize(sanitizeWinAnsi(testLine), size);
@@ -84,20 +84,43 @@ export async function generateCV(
   drawText(userData.email || "", fontRegular, contactSize, margin + line1Width, currentY, colorBlue);
   currentY -= 14;
 
-  const github = "github.com/vixito";
-  drawText(github, fontRegular, contactSize, margin, currentY, colorBlue);
-  let linkX = margin + fontRegular.widthOfTextAtSize(github, contactSize);
+  const addLink = (text: string, x: number, y: number, url: string, size: number) => {
+    drawText(text, fontRegular, size, x, y, colorBlue);
+    const width = fontRegular.widthOfTextAtSize(sanitizeWinAnsi(text), size);
+
+    const link = pdfDoc.context.obj({
+      Type: 'Annot',
+      Subtype: 'Link',
+      Rect: [x, y - 2, x + width, y + size + 2],
+      Border: [0, 0, 0],
+      C: [0, 0, 0],
+      A: { Type: 'Action', S: 'URI', URI: PDFString.of(url) }
+    });
+
+    let annots = page.node.lookup(PDFName.of('Annots')) as any;
+    if (!annots) {
+      annots = pdfDoc.context.obj([]);
+      page.node.set(PDFName.of('Annots'), annots);
+    }
+    annots.push(link);
+
+    return width;
+  };
+
+  const github = "github.com/Vixito";
+  const ghWidth = addLink(github, margin, currentY, "https://github.com/Vixito", contactSize);
+  let linkX = margin + ghWidth;
   drawText(" | ", fontRegular, contactSize, linkX, currentY, colorDarkGray);
   linkX += fontRegular.widthOfTextAtSize(" | ", contactSize);
-  
+
   const linkedin = userData.linkedin || "linkedin.com/in/vixis";
-  drawText(linkedin, fontRegular, contactSize, linkX, currentY, colorBlue);
-  linkX += fontRegular.widthOfTextAtSize(linkedin, contactSize);
+  const inWidth = addLink(linkedin, linkX, currentY, "https://" + linkedin, contactSize);
+  linkX += inWidth;
   drawText(" | ", fontRegular, contactSize, linkX, currentY, colorDarkGray);
   linkX += fontRegular.widthOfTextAtSize(" | ", contactSize);
 
   const portfolio = userData.portfolio || "vixis.dev";
-  drawText(portfolio, fontRegular, contactSize, linkX, currentY, colorBlue);
+  addLink(portfolio, linkX, currentY, "https://" + portfolio, contactSize);
   currentY -= 25;
 
   // Helper for Section Headers
@@ -163,10 +186,12 @@ export async function generateCV(
     drawSectionHeader("SKILLS");
     for (const [category, skills] of Object.entries(userData.skills)) {
       checkPageBreak(15);
-      const catText = `${category}: `;
+      // Capitalizar primera letra de la categoría ("language" -> "Language")
+      const capitalizedCategory = category.charAt(0).toUpperCase() + category.slice(1);
+      const catText = `${capitalizedCategory}: `;
       drawText(catText, fontBold, 9.5, margin, currentY);
       const catWidth = fontBold.widthOfTextAtSize(sanitizeWinAnsi(catText), 9.5);
-      
+
       const skillsLines = wrapText(skills as string, fontRegular, 9.5, usableWidth - catWidth);
       for (let i = 0; i < skillsLines.length; i++) {
         checkPageBreak(12);
