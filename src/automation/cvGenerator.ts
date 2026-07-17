@@ -84,43 +84,15 @@ export async function generateCV(
   drawText(userData.email || "", fontRegular, contactSize, margin + line1Width, currentY, colorBlue);
   currentY -= 14;
 
-  const addLink = (text: string, x: number, y: number, url: string, size: number) => {
-    drawText(text, fontRegular, size, x, y, colorBlue);
-    const width = fontRegular.widthOfTextAtSize(sanitizeWinAnsi(text), size);
+  // Enlaces de contacto (Texto negro plano, tal como el CV original)
+  const github = "github.com/vixito";
+  const linkedin = "linkedin.com/in/vixis";
+  const portfolio = "vixis.dev";
 
-    const link = pdfDoc.context.obj({
-      Type: 'Annot',
-      Subtype: 'Link',
-      Rect: [x, y - 2, x + width, y + size + 2],
-      Border: [0, 0, 0],
-      C: [0, 0, 0],
-      A: { Type: 'Action', S: 'URI', URI: PDFString.of(url) }
-    });
+  const contactText = `${github} | ${linkedin} | ${portfolio}`;
+  const contactTextWidth = fontRegular.widthOfTextAtSize(contactText, contactSize);
+  drawText(contactText, fontRegular, contactSize, margin, currentY, colorDarkGray);
 
-    let annots = page.node.lookup(PDFName.of('Annots')) as any;
-    if (!annots) {
-      annots = pdfDoc.context.obj([]);
-      page.node.set(PDFName.of('Annots'), annots);
-    }
-    annots.push(link);
-
-    return width;
-  };
-
-  const github = "github.com/Vixito";
-  const ghWidth = addLink(github, margin, currentY, "https://github.com/Vixito", contactSize);
-  let linkX = margin + ghWidth;
-  drawText(" | ", fontRegular, contactSize, linkX, currentY, colorDarkGray);
-  linkX += fontRegular.widthOfTextAtSize(" | ", contactSize);
-
-  const linkedin = userData.linkedin || "linkedin.com/in/vixis";
-  const inWidth = addLink(linkedin, linkX, currentY, "https://" + linkedin, contactSize);
-  linkX += inWidth;
-  drawText(" | ", fontRegular, contactSize, linkX, currentY, colorDarkGray);
-  linkX += fontRegular.widthOfTextAtSize(" | ", contactSize);
-
-  const portfolio = userData.portfolio || "vixis.dev";
-  addLink(portfolio, linkX, currentY, "https://" + portfolio, contactSize);
   currentY -= 25;
 
   // Helper for Section Headers
@@ -229,9 +201,9 @@ export async function generateCV(
         drawText(bulletLines[i], fontRegular, 9.5, margin + 4, currentY);
         // Sólo dibujar la fecha en la primera línea del premio
         if (i === 0 && award.year) {
-           const dateStr = sanitizeWinAnsi(award.year).toUpperCase();
-           const dateWidth = fontRegular.widthOfTextAtSize(dateStr, 9.5);
-           drawText(dateStr, fontRegular, 9.5, page.getWidth() - margin - dateWidth, currentY);
+          const dateStr = sanitizeWinAnsi(award.year).toUpperCase();
+          const dateWidth = fontRegular.widthOfTextAtSize(dateStr, 9.5);
+          drawText(dateStr, fontRegular, 9.5, page.getWidth() - margin - dateWidth, currentY);
         }
         currentY -= 13;
       }

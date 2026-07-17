@@ -16,6 +16,13 @@ if (!GROQ_API_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const groq = new Groq({ apiKey: GROQ_API_KEY });
 
+function formatMonthYear(dateString: string | null) {
+  if (!dateString) return "";
+  const d = new Date(dateString);
+  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  return `${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 async function buildDynamicProfile() {
   console.log("📥 Obteniendo datos reales del portfolio desde Supabase...");
 
@@ -53,13 +60,12 @@ async function buildDynamicProfile() {
     .limit(1)
     .maybeSingle();
 
-  // Mapear experiencias (Solo válidas)
   const mappedExps = (exps || [])
     .filter((exp: any) => exp.company && exp.position)
     .map((exp: any) => ({
       company: exp.company,
       title: exp.position,
-      dates: `${exp.start_date ? new Date(exp.start_date).getFullYear() : ""} - ${exp.status === 'current' ? 'Presente' : (exp.end_date ? new Date(exp.end_date).getFullYear() : "")}`,
+      dates: `${formatMonthYear(exp.start_date)} – ${exp.status === 'current' ? 'PRESENT' : formatMonthYear(exp.end_date)}`,
       bullets: exp.description ? [exp.description] : []
     }));
 
@@ -67,7 +73,7 @@ async function buildDynamicProfile() {
   const mappedProjects = (projectsData || []).map((p: any) => ({
     company: p.title,
     title: "Backend Developer", // Generic or based on user profile
-    dates: p.created_at ? new Date(p.created_at).getFullYear().toString() : "Present",
+    dates: `${formatMonthYear(p.created_at)} – PRESENT`,
     bullets: p.description ? [p.description] : []
   }));
 
@@ -230,7 +236,6 @@ async function processQueue(realtimeItem?: any[]) {
       - introduccion: (Párrafo corto vendiendo mi perfil para este rol. Escríbelo SIEMPRE en Español, es solo para mí en el panel).
       - consejos_para_aplicar: (3 consejos clave para la entrevista. Escríbelo SIEMPRE en Español).
       - tailored_summary: (Un Professional Summary ROBUSTO e IMPACTANTE de 4 a 5 líneas para el CV, adaptado a esta oferta. Responde con detalle: ¿Qué quiero hacer? ¿Qué ofrezco? ¿Por qué lo puedo hacer? Demuestra autoridad, no seas breve. Escríbelo ESTRICTAMENTE en el mismo 'idioma_oferta').
-      - top_10_skills: (String con las habilidades de mi perfil que MÁS HAGAN MATCH. Tradúcelas al 'idioma_oferta'. AGRÚPALAS por categoría si es posible, ej: "Languages: JS, Python. Frameworks: React, Node").
       - translated_experience: (Array con mi 'experience' real. DEBES REESCRIBIR y traducir estrictamente el 'title' y los 'bullets' al 'idioma_oferta'. APLICA LA FÓRMULA DE GOOGLE X-Y-Z en los bullets: 'Accomplished X, as measured by Y, by doing Z'. Cuantifica el impacto con números siempre que sea lógico. Selecciona y enfócate en los logros más relevantes para esta oferta).
       - translated_education: (Array con mi 'education' real. Traduce estrictamente 'institution', 'degree', 'year' y 'bullets' al 'idioma_oferta').
       - translated_projects: (Array con mis 'projects' reales. DEBES REESCRIBIR y traducir estrictamente el 'title' y 'bullets' al 'idioma_oferta', aplicando también la fórmula X-Y-Z y resaltando las tecnologías usadas relevantes para la vacante).
@@ -251,16 +256,11 @@ async function processQueue(realtimeItem?: any[]) {
       // Clonar y sobrescribir con los datos adaptados y traducidos por la IA
       const tailoredProfile = {
         ...realProfile,
-        skills: {
-          ...(aiAnalysis.top_10_skills ? {
-            [aiAnalysis.idioma_oferta === 'en' ? "Key Skills" : "Habilidades Clave"]: aiAnalysis.top_10_skills
-          } : {}),
-          ...realProfile.skills
-        },
-        experience: aiAnalysis.translated_experience || realProfile.experience,
-        education: aiAnalysis.translated_education || realProfile.education,
-        projects: aiAnalysis.translated_projects || realProfile.projects,
-        awards: aiAnalysis.translated_awards || realProfile.awards
+        skills: realProfile.skills,
+        experience: (aiAnalysis.translated_experience && aiAnalysis.translated_experience.length > 0) ? aiAnalysis.translated_experience : realProfile.experience,
+        education: (aiAnalysis.translated_education && aiAnalysis.translated_education.length > 0) ? aiAnalysis.translated_education : realProfile.education,
+        projects: (aiAnalysis.translated_projects && aiAnalysis.translated_projects.length > 0) ? aiAnalysis.translated_projects : realProfile.projects,
+        awards: (aiAnalysis.translated_awards && aiAnalysis.translated_awards.length > 0) ? aiAnalysis.translated_awards : realProfile.awards
       };
 
       const pdfBytes = await generateCV(tailoredProfile, { tailoredSummary: aiAnalysis.tailored_summary });
