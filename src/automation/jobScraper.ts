@@ -12,7 +12,6 @@ const AWS_ACCESS_KEY_ID = Deno.env.get("AWS_ACCESS_KEY_ID");
 const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY");
 const AWS_REGION = Deno.env.get("AWS_REGION");
 const AWS_S3_BUCKET = Deno.env.get("AWS_S3_BUCKET");
-const VITE_CDN_URL = Deno.env.get("VITE_CDN_URL");
 
 if (!GROQ_API_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Faltan variables de entorno esenciales (GROQ_API_KEY, SUPABASE_URL, SUPABASE_KEY).");
@@ -31,6 +30,9 @@ if (AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY && AWS_REGION) {
       secretAccessKey: AWS_SECRET_ACCESS_KEY,
     }
   });
+} else {
+  console.error("Faltan variables de entorno de AWS S3. El sistema requiere S3.");
+  Deno.exit(1);
 }
 
 function formatMonthYear(dateString: string | null) {
@@ -288,38 +290,21 @@ async function processQueue(realtimeItem?: any[]) {
 
       let finalPdfUrl = "";
 
-      if (s3Client && AWS_S3_BUCKET) {
-        console.log(`Subiendo PDF a AWS S3 (Bucket: ${AWS_S3_BUCKET})...`);
-        const s3Key = `cv-pdfs/${pdfFileName}`;
-        const command = new PutObjectCommand({
-          Bucket: AWS_S3_BUCKET,
-          Key: s3Key,
-          Body: pdfBytes,
-          ContentType: "application/pdf"
-        });
-        await s3Client.send(command);
-
-        if (VITE_CDN_URL) {
-          const cdnDomain = VITE_CDN_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
-          finalPdfUrl = `https://${cdnDomain}/${s3Key}`;
-        } else {
-          finalPdfUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${s3Key}`;
-        }
-      } else {
-        console.log("Subiendo PDF a Supabase Storage (Fallback)...");
-        const { error: uploadError } = await supabase
-          .storage
-          .from('cv-pdfs')
-          .upload(pdfFileName, pdfBytes, { contentType: 'application/pdf' });
-
-        if (uploadError) {
-          console.error("Error subiendo PDF a Supabase:", uploadError);
-          throw uploadError;
-        }
-
-        const { data: publicUrlData } = supabase.storage.from('cv-pdfs').getPublicUrl(pdfFileName);
-        finalPdfUrl = publicUrlData.publicUrl;
+      if (!s3Client || !AWS_S3_BUCKET) {
+        throw new Error("AWS S3 no está configurado correctamente.");
       }
+
+      console.log(`Subiendo PDF a AWS S3 (Bucket: ${AWS_S3_BUCKET})...`);
+      const s3Key = `cv-pdfs/${pdfFileName}`;
+      const command = new PutObjectCommand({
+        Bucket: AWS_S3_BUCKET,
+        Key: s3Key,
+        Body: pdfBytes,
+        ContentType: "application/pdf"
+      });
+      await s3Client.send(command);
+
+      finalPdfUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${s3Key}`;
 
       // Determinar Prioridad
       let priority = "-";
