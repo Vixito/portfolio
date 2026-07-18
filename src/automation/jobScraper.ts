@@ -1,12 +1,18 @@
 import { createClient } from "npm:@supabase/supabase-js";
 import Groq from "npm:groq-sdk";
 import * as cheerio from "npm:cheerio";
+import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3";
 import { generateCV } from "./cvGenerator.ts";
 
 // Configuración
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const AWS_ACCESS_KEY_ID = Deno.env.get("AWS_ACCESS_KEY_ID");
+const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY");
+const AWS_REGION = Deno.env.get("AWS_REGION");
+const AWS_S3_BUCKET = Deno.env.get("AWS_S3_BUCKET");
+const VITE_CDN_URL = Deno.env.get("VITE_CDN_URL");
 
 if (!GROQ_API_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Faltan variables de entorno esenciales (GROQ_API_KEY, SUPABASE_URL, SUPABASE_KEY).");
@@ -15,6 +21,17 @@ if (!GROQ_API_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const groq = new Groq({ apiKey: GROQ_API_KEY });
+
+let s3Client: S3Client | null = null;
+if (AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY && AWS_REGION) {
+  s3Client = new S3Client({
+    region: AWS_REGION,
+    credentials: {
+      accessKeyId: AWS_ACCESS_KEY_ID,
+      secretAccessKey: AWS_SECRET_ACCESS_KEY,
+    }
+  });
+}
 
 function formatMonthYear(dateString: string | null) {
   if (!dateString) return "";
@@ -269,17 +286,40 @@ async function processQueue(realtimeItem?: any[]) {
       const cleanPuesto = (aiAnalysis.puesto || "Rol").replace(/[^\w\s-]/g, '');
       const pdfFileName = `${cleanPuesto}, Carlos Andres Vicioso Lara -- ${fileNameSuffix}_${Date.now()}.pdf`.replace(/\s+/g, ' ');
 
-      const { data: uploadData, error: uploadError } = await supabase
-        .storage
-        .from('cv-pdfs')
-        .upload(pdfFileName, pdfBytes, { contentType: 'application/pdf' });
+      let finalPdfUrl = "";
 
-      if (uploadError) {
-        console.error("Error subiendo PDF:", uploadError);
-        throw uploadError;
+      if (s3Client && AWS_S3_BUCKET) {
+        console.log(`Subiendo PDF a AWS S3 (Bucket: ${AWS_S3_BUCKET})...`);
+        const s3Key = `cv-pdfs/${pdfFileName}`;
+        const command = new PutObjectCommand({
+          Bucket: AWS_S3_BUCKET,
+          Key: s3Key,
+          Body: pdfBytes,
+          ContentType: "application/pdf"
+        });
+        await s3Client.send(command);
+
+        if (VITE_CDN_URL) {
+          const cdnDomain = VITE_CDN_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+          finalPdfUrl = `https://${cdnDomain}/${s3Key}`;
+        } else {
+          finalPdfUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${s3Key}`;
+        }
+      } else {
+        console.log("Subiendo PDF a Supabase Storage (Fallback)...");
+        const { error: uploadError } = await supabase
+          .storage
+          .from('cv-pdfs')
+          .upload(pdfFileName, pdfBytes, { contentType: 'application/pdf' });
+
+        if (uploadError) {
+          console.error("Error subiendo PDF a Supabase:", uploadError);
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage.from('cv-pdfs').getPublicUrl(pdfFileName);
+        finalPdfUrl = publicUrlData.publicUrl;
       }
-
-      const { data: publicUrlData } = supabase.storage.from('cv-pdfs').getPublicUrl(pdfFileName);
 
       // Determinar Prioridad
       let priority = "-";
@@ -298,7 +338,7 @@ async function processQueue(realtimeItem?: any[]) {
         prioridad: priority,
         publicacion_oferta: aiAnalysis.publicacion_oferta || "Reciente",
         url_oferta: item.url,
-        cv_generado_url: publicUrlData.publicUrl
+        cv_generado_url: finalPdfUrl
       }]);
 
       if (insertError) {
