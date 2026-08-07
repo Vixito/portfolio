@@ -254,11 +254,11 @@ async function processQueue(realtimeItem?: any[]) {
       - empresa: (Nombre de la empresa, si no aparece pon "Desconocida").
       - modalidad: (Modalidad de trabajo extraída de la oferta: Remoto, Híbrido, Presencial. Si no dice, asume "No especificado").
       - publicacion_oferta: (Antigüedad de la oferta extraída del texto, ej: "Hace 2 días", "Hoy", "3w ago". Si no dice, asume "Desconocida").
-      - match_score: (Número del 0 al 100 de qué tan bien encajo con los requisitos de la vacante, sé honesto).
-      - introduccion: (Párrafo corto vendiendo mi perfil para este rol. Escríbelo SIEMPRE en Español, es solo para mí en el panel).
+      - match_score: (Número del 0 al 100. Analiza de manera EXTREMADAMENTE CRÍTICA Y ESTRICTA qué tan bien encaja mi perfil REAL con los requisitos OBLIGATORIOS de la vacante. Si piden tecnologías clave, roles o años de experiencia que no tengo documentados, el score debe ser muy bajo. Sé implacable).
+      - introduccion: (Párrafo en Español solo para mí. Si el match_score es MENOR a 60, DEBES empezar obligatoriamente con "🚨 NO RECOMENDADO:" y explicar de forma cruda y directa por qué NO debería aplicar a esta oferta y qué me falta. Si es 60 o mayor, resume por qué soy un buen candidato).
       - consejos_para_aplicar: (3 consejos clave para la entrevista. Escríbelo SIEMPRE en Español).
       - tailored_summary: (Un Professional Summary ROBUSTO e IMPACTANTE de 4 a 5 líneas para el CV, adaptado a esta oferta. Responde con detalle: ¿Qué quiero hacer? ¿Qué ofrezco? ¿Por qué lo puedo hacer? Demuestra autoridad, no seas breve. Escríbelo ESTRICTAMENTE en el mismo 'idioma_oferta').
-      - translated_experience: (Array con mi 'experience' real. DEBES REESCRIBIR y traducir estrictamente el 'title' y los 'bullets' al 'idioma_oferta'. APLICA LA FÓRMULA DE GOOGLE X-Y-Z en los bullets: 'Accomplished X, as measured by Y, by doing Z'. Cuantifica el impacto con números siempre que sea lógico. Selecciona y enfócate en los logros más relevantes para esta oferta).
+      - translated_experience: (Array con mi 'experience' real. DEBES REESCRIBIR y traducir estrictamente el 'title' y los 'bullets' al 'idioma_oferta'. APLICA LA FÓRMULA DE GOOGLE X-Y-Z en los bullets: 'Accomplished X, as measured by Y, by doing Z'. Cuantifica el impacto con números siempre que sea lógico. ELIMINA bullets irrelevantes y RESALTA los logros que hagan MÁXIMO MATCH con esta vacante específica).
       - translated_education: (Array con mi 'education' real. Traduce estrictamente 'institution', 'degree', 'year' y 'bullets' al 'idioma_oferta').
       - translated_projects: (Array con mis 'projects' reales. DEBES REESCRIBIR y traducir estrictamente el 'title' y 'bullets' al 'idioma_oferta', aplicando también la fórmula X-Y-Z y resaltando las tecnologías usadas relevantes para la vacante).
       - translated_awards: (Array con mis 'awards' reales. Traduce estrictamente 'title' y 'year' al 'idioma_oferta').
