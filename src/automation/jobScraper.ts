@@ -1,11 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js";
-import Groq from "npm:groq-sdk";
+import OpenAI from "npm:openai";
 import * as cheerio from "npm:cheerio";
 import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3";
 import { generateCV } from "./cvGenerator.ts";
 
 // Configuración
-const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const AWS_ACCESS_KEY_ID = Deno.env.get("AWS_ACCESS_KEY_ID");
@@ -13,13 +13,16 @@ const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY");
 const AWS_REGION = Deno.env.get("AWS_REGION");
 const AWS_S3_BUCKET = Deno.env.get("AWS_S3_BUCKET");
 
-if (!GROQ_API_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
-  console.error("Faltan variables de entorno esenciales (GROQ_API_KEY, SUPABASE_URL, SUPABASE_KEY).");
+if (!OPENROUTER_API_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
+  console.error("Faltan variables de entorno esenciales (OPENROUTER_API_KEY, SUPABASE_URL, SUPABASE_KEY).");
   Deno.exit(1);
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const groq = new Groq({ apiKey: GROQ_API_KEY });
+const openai = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: OPENROUTER_API_KEY
+});
 
 let s3Client: S3Client | null = null;
 if (AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY && AWS_REGION) {
@@ -261,14 +264,16 @@ async function processQueue(realtimeItem?: any[]) {
       - translated_awards: (Array con mis 'awards' reales. Traduce estrictamente 'title' y 'year' al 'idioma_oferta').
       `;
 
-      console.log("Analizando con Groq (openai/gpt-oss-120b)...");
-      const completion = await groq.chat.completions.create({
+      console.log("Analizando con OpenRouter (openai/gpt-4o-mini)...");
+      const completion = await openai.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: "openai/gpt-oss-120b",
+        model: "openai/gpt-4o-mini",
         response_format: { type: "json_object" }
       });
 
-      const aiAnalysis = JSON.parse(completion.choices[0].message.content);
+      const aiContent = completion.choices[0].message?.content;
+      if (!aiContent) throw new Error("La IA no devolvió contenido.");
+      const aiAnalysis = JSON.parse(aiContent);
 
       // 3. Generar CV
       console.log(`Generando CV PDF para ${aiAnalysis.empresa} en idioma [${aiAnalysis.idioma_oferta}]...`);
