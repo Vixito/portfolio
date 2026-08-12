@@ -1620,35 +1620,70 @@ function Radio() {
         sources = [];
       }
 
+      // Pre-procesar las fuentes para asegurar que tengan la propiedad 'mount'
+      sources.forEach((s: any) => {
+        if (!s.mount && s.listenurl) {
+          try {
+            s.mount = new URL(s.listenurl).pathname;
+          } catch (e) {
+            const parts = s.listenurl.split('/').filter(Boolean);
+            if (parts.length > 0) {
+              s.mount = '/' + parts[parts.length - 1];
+            }
+          }
+        }
+      });
+
       // Buscar mount activo: priorizar /live (transmisión en vivo) sobre /vixis (automático)
       let mountpoint: any = null;
+      let detectedMount: string | null = null;
+      
       if (sources.length > 0) {
         // Primero buscar /live (transmisión en vivo con BUTT)
         mountpoint = sources.find(
           (source: any) =>
-            source?.mount === "/live" || source?.mount?.includes("/live")
+            source?.mount === "/live" || source?.mount === "live"
         );
+        
+        if (mountpoint) {
+          detectedMount = "/live";
+        }
 
         // Si no hay /live, buscar /vixis (transmisión automática con Liquidsoap)
         if (!mountpoint) {
           mountpoint = sources.find(
             (source: any) =>
-              source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+              source?.mount === "/vixis" || source?.mount === "vixis"
           );
+          
+          if (mountpoint) {
+            detectedMount = "/vixis";
+          }
         }
 
+        // Si no se encuentra, buscar por server_name
         if (!mountpoint) {
           mountpoint = sources.find(
             (source: any) =>
               source?.server_name?.toLowerCase().includes("vixis") ||
-              source?.listenurl?.includes("vixis") ||
               source?.mount?.includes("vixis") ||
               source?.mount?.includes("live")
           );
+          
+          if (mountpoint && mountpoint.mount) {
+            detectedMount = mountpoint.mount;
+          }
         }
 
+        // Si aún no se encuentra, pero dice vixis, usarlo como fallback
         if (!mountpoint && sources.length > 0) {
-          mountpoint = sources[0];
+          const fallbackMount = sources.find((s: any) => s?.mount?.includes('vixis'));
+          if (fallbackMount) {
+            mountpoint = fallbackMount;
+            if (mountpoint?.mount) {
+              detectedMount = mountpoint.mount;
+            }
+          }
         }
       }
 
