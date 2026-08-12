@@ -70,19 +70,31 @@ function RadioPlayer() {
           sources = [data.source];
         }
 
+        // Pre-procesar las fuentes para asegurar que tengan la propiedad 'mount'
+        // Icecast a veces solo devuelve 'listenurl' (ej: "http://radio.vixis.dev:8000/vixis")
+        sources.forEach((s: any) => {
+          if (!s.mount && s.listenurl) {
+            try {
+              s.mount = new URL(s.listenurl).pathname;
+            } catch (e) {
+              const match = s.listenurl.match(/\\/[^\\/]+(?:\\/|$)/);
+              if (match) s.mount = match[0].replace(/\\/$/, "");
+            }
+          }
+        });
+
         // Buscar mountpoint /vixis
         let mountpoint: any = null;
         if (sources.length > 0) {
           mountpoint = sources.find(
             (source: any) =>
-              source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+              source?.mount === "/vixis" || source?.mount === "vixis"
           );
 
           if (!mountpoint) {
             mountpoint = sources.find(
               (source: any) =>
                 source?.server_name?.toLowerCase().includes("vixis") ||
-                source?.listenurl?.includes("vixis") ||
                 source?.mount?.includes("vixis")
             );
           }

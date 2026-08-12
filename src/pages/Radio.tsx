@@ -264,6 +264,18 @@ function Radio() {
           sources = [];
         }
 
+        // Pre-procesar las fuentes para asegurar que tengan la propiedad 'mount'
+        sources.forEach((s: any) => {
+          if (!s.mount && s.listenurl) {
+            try {
+              s.mount = new URL(s.listenurl).pathname;
+            } catch (e) {
+              const match = s.listenurl.match(/\/[^\/]+(?:\/|$)/);
+              if (match) s.mount = match[0].replace(/\/$/, "");
+            }
+          }
+        });
+
         // Buscar mount activo: priorizar /live (transmisión en vivo) sobre /vixis (automático)
         let mountpoint: any = null;
         let detectedMount: string | null = null;
@@ -272,7 +284,7 @@ function Radio() {
           // Primero buscar /live (transmisión en vivo con BUTT)
           mountpoint = sources.find(
             (source: any) =>
-              source?.mount === "/live" || source?.mount?.includes("/live")
+              source?.mount === "/live" || source?.mount === "live"
           );
 
           if (mountpoint) {
@@ -283,7 +295,7 @@ function Radio() {
           if (!mountpoint) {
             mountpoint = sources.find(
               (source: any) =>
-                source?.mount === "/vixis" || source?.mount?.includes("/vixis")
+                source?.mount === "/vixis" || source?.mount === "vixis"
             );
 
             if (mountpoint) {
@@ -291,32 +303,32 @@ function Radio() {
             }
           }
 
-          // Si no se encuentra, buscar por server_name o listenurl
+          // Si no se encuentra, buscar por server_name
           if (!mountpoint) {
             mountpoint = sources.find(
               (source: any) =>
                 source?.server_name?.toLowerCase().includes("vixis") ||
-                source?.listenurl?.includes("vixis") ||
                 source?.mount?.includes("vixis") ||
                 source?.mount?.includes("live")
             );
 
             if (mountpoint) {
-              // Intentar detectar el mount desde listenurl o mount
+              // Intentar detectar el mount
               if (mountpoint.mount) {
                 detectedMount = mountpoint.mount;
-              } else if (mountpoint.listenurl) {
-                const match = mountpoint.listenurl.match(/\/[^\/]+(?:\/|$)/);
-                if (match) detectedMount = match[0].replace(/\/$/, "");
               }
             }
           }
 
-          // Si aún no se encuentra, usar la primera fuente disponible (fallback)
+          // Si aún no se encuentra, pero no es de otro dominio/proyecto en el mismo servidor (como habbten)
+          // usamos la primera fuente disponible que al menos diga vixis
           if (!mountpoint && sources.length > 0) {
-            mountpoint = sources[0];
-            if (mountpoint?.mount) {
-              detectedMount = mountpoint.mount;
+            const fallbackMount = sources.find((s: any) => s?.mount?.includes('vixis'));
+            if (fallbackMount) {
+              mountpoint = fallbackMount;
+              if (mountpoint?.mount) {
+                detectedMount = mountpoint.mount;
+              }
             }
           }
         }
