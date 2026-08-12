@@ -77,8 +77,10 @@ function RadioPlayer() {
             try {
               s.mount = new URL(s.listenurl).pathname;
             } catch (e) {
-              const match = s.listenurl.match(/\\/[^\\/]+(?:\\/|$)/);
-              if (match) s.mount = match[0].replace(/\\/$/, "");
+              const parts = s.listenurl.split('/').filter(Boolean);
+              if (parts.length > 0) {
+                s.mount = '/' + parts[parts.length - 1];
+              }
             }
           }
         });
