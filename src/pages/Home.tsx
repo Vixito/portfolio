@@ -10,12 +10,21 @@ function Home() {
   useSEO({
     description: t("contactSection.description"),
   });
-  const [transitionType, setTransitionType] = useState<"default" | "horizontal_blinds" | "vertical_blinds" | "random_grid" | "column_grid">("default");
+  const [transitionType, setTransitionType] = useState<"default" | "horizontal_blinds" | "vertical_blinds" | "random_grid" | "column_grid">(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("home_scroll_transition");
+      if (cached) return cached as any;
+    }
+    return "default";
+  });
 
   useEffect(() => {
     const fetchSettings = async () => {
       const settings = await getAppearanceSettings();
-      setTransitionType(settings?.home_scroll_transition || "default");
+      if (settings?.home_scroll_transition) {
+        setTransitionType(settings.home_scroll_transition);
+        localStorage.setItem("home_scroll_transition", settings.home_scroll_transition);
+      }
     };
     fetchSettings();
   }, []);

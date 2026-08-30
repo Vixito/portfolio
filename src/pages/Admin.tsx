@@ -1563,6 +1563,9 @@ function Admin() {
     setIsSavingAppearance(true);
     try {
       await updateAppearanceSettings(appearanceSettings);
+      if (appearanceSettings.home_scroll_transition) {
+        localStorage.setItem("home_scroll_transition", appearanceSettings.home_scroll_transition);
+      }
       // Notificar a otras pestañas sobre el cambio de apariencia
       const channel = new BroadcastChannel('appearance_updates');
       channel.postMessage('updated');
