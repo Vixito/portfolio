@@ -12,17 +12,23 @@ function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollT
   const clipPathId = useMemo(() => `transition-mask-${Math.random().toString(36).substr(2, 9)}`, []);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  const isFirstMount = useRef(true);
+
   useEffect(() => {
     if (transitionType === 'default') {
       return;
     }
 
-    setIsTransitioning(true);
-
     if (!containerRef.current) return;
-
     const rects = containerRef.current.querySelectorAll(`clipPath#${clipPathId} rect`);
     if (rects.length === 0) return;
+
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+
+    setIsTransitioning(true);
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({

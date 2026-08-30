@@ -34,12 +34,15 @@ function ScrollToTop() {
   const location = useLocation();
 
   useEffect(() => {
+    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
     // Para Home, scroll horizontal a la izquierda
     if (location.pathname === "/") {
-      window.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+      window.scrollTo({ left: 0, top: 0, behavior: "instant" });
     } else {
       // Para otras páginas, scroll vertical arriba
-      window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     }
   }, [location.pathname]);
 
