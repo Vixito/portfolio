@@ -113,18 +113,24 @@ function ScrollTransitionWrapper({ children, transitionType, isActive }: ScrollT
            {(() => {
              if (transitionType === 'horizontal_blinds') {
                return Array.from({ length: 10 }).map((_, i) => (
-                 <rect key={i} x="0" y={i * 0.1} width="1" height="0.105" />
+                 <rect key={i} x="0" y={i * 0.1} width={isActive ? "1" : "0"} height="0.105" />
                ));
              } else if (transitionType === 'vertical_blinds') {
                return Array.from({ length: 10 }).map((_, i) => (
-                 <rect key={i} x={i * 0.1} y="0" width="0.105" height="1" />
+                 <rect key={i} x={i * 0.1} y="0" width="0.105" height={isActive ? "1" : "0"} />
                ));
              } else if (transitionType === 'random_grid' || transitionType === 'column_grid') {
                const rects = [];
                for (let r = 0; r < 5; r++) {
                  for (let c = 0; c < 5; c++) {
                    rects.push(
-                     <rect key={`${r}-${c}`} x={c * 0.2} y={r * 0.2} width="0.205" height="0.205" />
+                     <rect 
+                       key={`${r}-${c}`} 
+                       x={c * 0.2} 
+                       y={r * 0.2} 
+                       width={isActive ? "0.205" : "0"} 
+                       height={isActive ? "0.205" : "0"} 
+                     />
                    );
                  }
                }
