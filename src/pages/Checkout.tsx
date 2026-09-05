@@ -24,6 +24,7 @@ import {
   getPayPalConfig,
 } from "../lib/supabase-functions";
 import { useThemeStore } from "../stores/useThemeStore";
+import NotFound from "./NotFound";
 
 interface CheckoutDelivery {
   access_links?: string[];
@@ -325,19 +326,7 @@ function Checkout() {
   }
 
   if (error && !product) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4 relative">
-        <div className="text-center max-w-md">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">
-            {t("checkout.error") || "Error"}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
-          <Button onClick={() => navigate("/store")}>
-            {t("checkout.backToStore") || "Volver a la tienda"}
-          </Button>
-        </div>
-      </div>
-    );
+    return <NotFound />;
   }
 
   if (!product) {

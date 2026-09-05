@@ -5,6 +5,7 @@ import {
   jsonCheckoutResponse,
   getCheckoutInvoiceWithProduct,
   deliverCheckoutOrder,
+  getNowPaymentsEnv,
 } from "../_shared/checkout.ts";
 
 // Verifica la firma HMAC-SHA512 que NowPayments envía en x-nowpayments-sig.
@@ -46,7 +47,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const ipnSecret = Deno.env.get("NOWPAYMENTS_IPN_SECRET");
+    const { ipnSecret } = getNowPaymentsEnv();
 
     // Leer el body crudo para verificar la firma
     const rawBody = await req.text();

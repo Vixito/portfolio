@@ -6,6 +6,7 @@ import {
   resolveCheckoutProduct,
   getCheckoutPriceUsd,
   createCheckoutInvoice,
+  getPayPalEnv,
 } from "../_shared/checkout.ts";
 
 // Obtiene el access token de PayPal (OAuth 2.0 client credentials)
@@ -98,9 +99,9 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const paypalClientId = Deno.env.get("PAYPAL_CLIENT_ID");
-    const paypalClientSecret = Deno.env.get("PAYPAL_SECRET_KEY");
-    const paypalSandbox = Deno.env.get("PAYPAL_SANDBOX") === "true";
+    const paypalClientId = getPayPalEnv().clientId;
+    const paypalClientSecret = getPayPalEnv().clientSecret;
+    const paypalSandbox = getPayPalEnv().sandbox;
 
     const { product_id, user_name, user_email, delivery_time, success_url } =
       await req.json();

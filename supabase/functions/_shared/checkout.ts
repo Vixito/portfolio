@@ -19,6 +19,52 @@ export const jsonCheckoutResponse = (status: number, body: unknown) =>
     },
   });
 
+/**
+ * Resuelve las credenciales de PayPal según el entorno:
+ * - Modo sandbox si PAYPAL_SANDBOX === "true" o si existen
+ *   PAYPAL_SANDBOX_CLIENT_ID y PAYPAL_SANDBOX_SECRET_KEY.
+ * - En sandbox usa las credenciales de prueba; si faltan, cae a producción.
+ */
+export function getPayPalEnv() {
+  const hasSandboxCreds =
+    !!Deno.env.get("PAYPAL_SANDBOX_CLIENT_ID") &&
+    !!Deno.env.get("PAYPAL_SANDBOX_SECRET_KEY");
+  const sandbox =
+    Deno.env.get("PAYPAL_SANDBOX") === "true" || hasSandboxCreds;
+  const clientId = sandbox
+    ? Deno.env.get("PAYPAL_SANDBOX_CLIENT_ID") ||
+      Deno.env.get("PAYPAL_CLIENT_ID")
+    : Deno.env.get("PAYPAL_CLIENT_ID");
+  const clientSecret = sandbox
+    ? Deno.env.get("PAYPAL_SANDBOX_SECRET_KEY") ||
+      Deno.env.get("PAYPAL_SECRET_KEY")
+    : Deno.env.get("PAYPAL_SECRET_KEY");
+  return { sandbox, clientId, clientSecret };
+}
+
+/**
+ * Resuelve las credenciales de NowPayments según el entorno:
+ * - Modo sandbox si NOWPAYMENTS_SANDBOX === "true" o si existen
+ *   NOWPAYMENTS_SANDBOX_API_KEY y NOWPAYMENTS_SANDBOX_IPN_SECRET.
+ * - En sandbox usa las credenciales de prueba; si faltan, cae a producción.
+ */
+export function getNowPaymentsEnv() {
+  const hasSandboxKeys =
+    !!Deno.env.get("NOWPAYMENTS_SANDBOX_API_KEY") &&
+    !!Deno.env.get("NOWPAYMENTS_SANDBOX_IPN_SECRET");
+  const sandbox =
+    Deno.env.get("NOWPAYMENTS_SANDBOX") === "true" || hasSandboxKeys;
+  const apiKey = sandbox
+    ? Deno.env.get("NOWPAYMENTS_SANDBOX_API_KEY") ||
+      Deno.env.get("NOWPAYMENTS_API_KEY")
+    : Deno.env.get("NOWPAYMENTS_API_KEY");
+  const ipnSecret = sandbox
+    ? Deno.env.get("NOWPAYMENTS_SANDBOX_IPN_SECRET") ||
+      Deno.env.get("NOWPAYMENTS_IPN_SECRET")
+    : Deno.env.get("NOWPAYMENTS_IPN_SECRET");
+  return { sandbox, apiKey, ipnSecret };
+}
+
 export interface CheckoutSettings {
   gateways?: string[];
   access_links?: string[];

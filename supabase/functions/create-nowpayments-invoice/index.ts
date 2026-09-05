@@ -6,6 +6,7 @@ import {
   resolveCheckoutProduct,
   getCheckoutPriceUsd,
   createCheckoutInvoice,
+  getNowPaymentsEnv,
 } from "../_shared/checkout.ts";
 
 // Crea una invoice de NowPayments (hosted checkout)
@@ -64,8 +65,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const nowPaymentsApiKey = Deno.env.get("NOWPAYMENTS_API_KEY");
-    const nowPaymentsSandbox = Deno.env.get("NOWPAYMENTS_SANDBOX") === "true";
+    const { sandbox: nowPaymentsSandbox, apiKey: nowPaymentsApiKey } = getNowPaymentsEnv();
 
     const {
       product_id,
@@ -81,7 +81,8 @@ serve(async (req) => {
     }
     if (!nowPaymentsApiKey) {
       return jsonCheckoutResponse(500, {
-        error: "NowPayments no está configurado (NOWPAYMENTS_API_KEY)",
+        error:
+          "NowPayments no está configurado (NOWPAYMENTS_API_KEY / NOWPAYMENTS_SANDBOX_API_KEY)",
       });
     }
 
