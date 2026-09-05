@@ -268,7 +268,10 @@ function Checkout() {
   const onPayPalCreateOrder = async () => {
     if (!product) throw new Error("Product not found");
     const validationError = validateBuyer();
-    if (validationError) throw new Error(validationError);
+    if (validationError) {
+      setError(validationError);
+      throw new Error(validationError);
+    }
 
     setError(null);
 
@@ -519,16 +522,21 @@ function Checkout() {
                     }}
                   >
                     <PayPalButtons
-                      style={{ layout: "vertical", shape: "rect" }}
+                      style={{
+                        layout: "vertical",
+                        shape: "rect",
+                        height: 45,
+                      }}
                       createOrder={onPayPalCreateOrder}
                       onApprove={onPayPalApprove}
                       onCancel={() => setPageState("checkout")}
-                      onError={() => {
-                        setError(
+                      onError={() =>
+                        setError((prev) =>
+                          prev ||
                           t("checkout.paypalError") ||
-                            "Ocurrió un error con PayPal. Inténtalo de nuevo."
-                        );
-                      }}
+                          "Ocurrió un error con PayPal. Inténtalo de nuevo."
+                        )
+                      }
                     />
                   </PayPalScriptProvider>
                 ) : (
