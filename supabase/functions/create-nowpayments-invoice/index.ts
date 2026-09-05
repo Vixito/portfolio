@@ -36,6 +36,12 @@ async function createNowPaymentsInvoice(params: {
     is_fee_paid_by_user: true,
   };
 
+  // En sandbox NowPayments emula flujos reales sin dinero:
+  // el parámetro "case" decide qué estado simular (finished = pago completado).
+  if (params.sandbox) {
+    body.case = "finished";
+  }
+
   const res = await fetch(`${baseUrl}/v1/invoice`, {
     method: "POST",
     headers: {
