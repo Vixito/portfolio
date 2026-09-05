@@ -1592,6 +1592,154 @@ export async function createDlocalPayment(params: {
   return data;
 }
 
+// ========== CHECKOUT PROPIO (PayPal + NowPayments) ==========
+
+/**
+ * Obtiene un producto por id o public_id incluyendo pricing y
+ * configuración de checkout.
+ */
+export async function getCheckoutProduct(id: string) {
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      id
+    );
+
+  let query = supabase
+    .from("products")
+    .select(`
+      *,
+      product_pricing (*)
+    `)
+    .eq("is_active", true);
+
+  query = isUuid ? query.eq("id", id) : query.eq("public_id", id);
+
+  let { data, error } = await query.maybeSingle();
+
+  // Fallback: short url (prefijo del uuid) usada por Store cuando no hay public_id
+  if ((error || !data) && id.length === 8) {
+    const prefix = await supabase
+      .from("products")
+      .select(`
+        *,
+        product_pricing (*)
+      `)
+      .eq("is_active", true)
+      .like("id", `${id}%`)
+      .limit(1)
+      .maybeSingle();
+    data = prefix.data;
+    error = prefix.error;
+  }
+
+  if (error) {
+    throw new Error(`Error al obtener el producto: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Configuración pública del SDK de PayPal (solo client_id).
+ */
+export async function getPayPalConfig() {
+  const { data, error } = await supabase.functions.invoke("get-paypal-config", {
+    method: "GET",
+  });
+
+  if (error) {
+    throw new Error(`Error al obtener configuración de PayPal: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Crea la orden de PayPal para el checkout de un producto.
+ */
+export async function createPayPalOrder(params: {
+  product_id: string;
+  user_name: string;
+  user_email: string;
+  delivery_time?: string;
+  success_url?: string;
+}) {
+  const { data, error } = await supabase.functions.invoke(
+    "create-paypal-order",
+    { body: params }
+  );
+
+  if (error) {
+    throw new Error(`Error al crear la orden de PayPal: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Captura la orden de PayPal aprobada y entrega el producto.
+ */
+export async function capturePayPalOrder(params: {
+  paypal_order_id: string;
+  invoice_id?: string;
+}) {
+  const { data, error } = await supabase.functions.invoke(
+    "capture-paypal-order",
+    { body: params }
+  );
+
+  if (error) {
+    throw new Error(`Error al capturar el pago de PayPal: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Crea la invoice de NowPayments y devuelve el link de pago.
+ */
+export async function createNowPaymentsCheckout(params: {
+  product_id: string;
+  user_name: string;
+  user_email: string;
+  delivery_time?: string;
+  success_url?: string;
+  cancel_url?: string;
+}) {
+  const { data, error } = await supabase.functions.invoke(
+    "create-nowpayments-invoice",
+    { body: params }
+  );
+
+  if (error) {
+    throw new Error(
+      `Error al crear el pago con NowPayments: ${error.message}`
+    );
+  }
+
+  return data;
+}
+
+/**
+ * Consulta el estado de una factura del checkout y, si está pagada,
+ * recibe la información de entrega (links de acceso).
+ */
+export async function getCheckoutInvoiceStatus(invoiceId: string) {
+  const { data, error } = await supabase.functions.invoke(
+    "get-checkout-invoice",
+    {
+      method: "GET",
+      query: { invoice_id: invoiceId },
+    }
+  );
+
+  if (error) {
+    throw new Error(`Error al consultar el estado de la factura: ${error.message}`);
+  }
+
+  return data;
+}
+
 /**
  * Obtiene la playlist de la radio (para reproducción automática cuando no está en vivo)
  * Las URLs deben apuntar a Google Cloud Storage (storage.googleapis.com)

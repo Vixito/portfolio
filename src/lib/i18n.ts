@@ -649,6 +649,43 @@ export const translations = {
       paymentMethods: "+500 métodos de pago",
       paymentDetails: "Transferencias bancarias, cripto, pagos móviles y más. Cancela en cualquier momento.",
     },
+    // Checkout Propio
+    checkout: {
+      backToProduct: "Volver al producto",
+      backToStore: "Volver a la tienda",
+      productNotFound: "Producto no encontrado",
+      error: "Error",
+      buyerInfo: "Información del comprador",
+      fullName: "Nombre completo",
+      email: "Email",
+      deliveryNote:
+        "Recibirás tu factura y el acceso al producto en este email.",
+      nameRequired: "Tu nombre es requerido",
+      emailRequired: "Tu email es requerido",
+      emailInvalid: "Email inválido",
+      tabPaypal: "Tarjeta / PayPal",
+      tabCrypto: "Criptomonedas",
+      payWithPayPal: "Pagar con tarjeta o PayPal",
+      payWithCrypto: "Pagar con criptomonedas",
+      cryptoInfo:
+        "Aceptamos BTC, ETH, USDT y más de 300 criptomonedas. Recibirás un enlace de pago seguro.",
+      payCryptoButton: "Pagar con criptomonedas",
+      paypalUnavailable: "PayPal no está disponible en este momento.",
+      paypalError: "Ocurrió un error con PayPal. Inténtalo de nuevo.",
+      creatingPayment: "Creando pago seguro...",
+      waitingConfirmation: "Esperando confirmación del pago...",
+      confirmingPayment: "Confirmando tu pago...",
+      stillWaiting:
+        "Tu pago está siendo procesado. Te enviaremos el acceso por email.",
+      paymentFailed: "El pago no se pudo completar.",
+      noRedirect: "No se pudo obtener el link de pago",
+      successTitle: "¡Pago confirmado!",
+      successMessage:
+        "¡Pago confirmado! Te hemos enviado la factura y el acceso a tu producto por email.",
+      invoiceLabel: "Factura",
+      yourAccess: "Accede a tu producto:",
+      done: "Listo",
+    },
   },
   en: {
     // Navigation
@@ -1294,6 +1331,43 @@ export const translations = {
       poweredBy: "Secure payments powered by",
       paymentMethods: "+500 payment methods",
       paymentDetails: "Bank transfers, crypto, mobile payments & more. Cancel anytime.",
+    },
+    // Custom Checkout
+    checkout: {
+      backToProduct: "Back to product",
+      backToStore: "Back to store",
+      productNotFound: "Product not found",
+      error: "Error",
+      buyerInfo: "Buyer information",
+      fullName: "Full name",
+      email: "Email",
+      deliveryNote:
+        "You'll receive your invoice and product access at this email.",
+      nameRequired: "Your name is required",
+      emailRequired: "Your email is required",
+      emailInvalid: "Invalid email",
+      tabPaypal: "Card / PayPal",
+      tabCrypto: "Cryptocurrencies",
+      payWithPayPal: "Pay with card or PayPal",
+      payWithCrypto: "Pay with cryptocurrencies",
+      cryptoInfo:
+        "We accept BTC, ETH, USDT and 300+ cryptocurrencies. You'll get a secure payment link.",
+      payCryptoButton: "Pay with cryptocurrencies",
+      paypalUnavailable: "PayPal is not available right now.",
+      paypalError: "There was a PayPal error. Please try again.",
+      creatingPayment: "Creating secure payment...",
+      waitingConfirmation: "Waiting for payment confirmation...",
+      confirmingPayment: "Confirming your payment...",
+      stillWaiting:
+        "Your payment is being processed. We'll email you your access.",
+      paymentFailed: "The payment could not be completed.",
+      noRedirect: "Could not get the payment link",
+      successTitle: "Payment confirmed!",
+      successMessage:
+        "Payment confirmed! We've emailed your invoice and product access.",
+      invoiceLabel: "Invoice",
+      yourAccess: "Access your product:",
+      done: "Done",
     },
   },
 } as const;

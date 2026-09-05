@@ -25,6 +25,7 @@ import {
   HowToPayMe,
   NotFound,
   DevButtons,
+  Checkout,
 } from "./pages";
 import Layout from "./components/layout/Layout";
 import { useEffect } from "react";
@@ -168,6 +169,22 @@ function App() {
           element={
             <Layout>
               <Store />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/checkout/:productId"
+          element={
+            <Layout>
+              <Checkout />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/pay/:id"
+          element={
+            <Layout>
+              <PayInvoice />
             </Layout>
           }
         ></Route>

@@ -92,6 +92,50 @@ serve(async (req) => {
 
     // Si es confirmación de pago, generar HTML diferente
     if (is_payment_confirmation) {
+      // Resolver mensajes de entrega del checkout (si existen)
+      const checkoutLanguage = invoice.custom_fields?.product_language || "es";
+      const deliveryMessageRaw = invoice.custom_fields?.delivery_message;
+      const deliveryMessage =
+        typeof deliveryMessageRaw === "string"
+          ? deliveryMessageRaw
+          : deliveryMessageRaw?.[checkoutLanguage] ||
+            deliveryMessageRaw?.es ||
+            "";
+
+      const deliveryLinks = Array.isArray(invoice.custom_fields?.delivery_links)
+        ? invoice.custom_fields.delivery_links.filter(
+            (link: unknown) => typeof link === "string" && link.trim()
+          )
+        : [];
+
+      const deliveryHTML = `
+      ${
+        deliveryLinks.length > 0 || deliveryMessage
+          ? `
+    <div style="background-color: #f0f7fa; border: 1px solid #2093c4; border-radius: 8px; padding: 18px; margin: 20px 0;">
+      <h2 style="color: #2093c4; font-size: 16px; margin: 0 0 10px 0;">🎁 Your product access</h2>
+      ${
+        deliveryMessage
+          ? `<p style="font-size: 14px; line-height: 1.6; color: #333; margin: 0 0 10px 0;">${deliveryMessage.replace(/</g, "&lt;")}</p>`
+          : ""
+      }
+      ${
+        deliveryLinks.length > 0
+          ? `<ul style="margin: 0; padding-left: 20px;">
+              ${deliveryLinks
+                .map(
+                  (link: string) =>
+                    `<li style="margin-bottom: 6px;"><a href="${link.replace(/"/g, "&quot;")}" target="_blank" rel="noopener noreferrer" style="color: #2093c4; word-break: break-all;">${link.replace(/</g, "&lt;")}</a></li>`
+                )
+                .join("")}
+            </ul>`
+          : ""
+      }
+    </div>
+          `
+          : ""
+      }`;
+
       const confirmationHTML = `
 <!DOCTYPE html>
 <html>
@@ -118,6 +162,8 @@ serve(async (req) => {
     <p style="font-size: 16px; line-height: 1.6; color: #333;">
       We have successfully received your payment for <strong>Invoice #${invoice.invoice_number}</strong>.
     </p>
+    
+    ${deliveryHTML}
     
     <div style="background-color: #f9f9f9; border-left: 4px solid #2093c4; padding: 15px; margin: 20px 0;">
       <p style="margin: 0; font-size: 14px; color: #666;">
@@ -212,16 +258,16 @@ serve(async (req) => {
     }
 
     // Función para extraer traducciones del producto
-    const getProductTitle = (product: any, productLanguage?: string) => {
-      if (!product) return '';
+    function getProductTitle(product: any, productLanguage?: string): string {
+      if (!product) return "";
       // Usar el idioma guardado en custom_fields.product_language, o español por defecto
       const language = productLanguage || "es";
-      if (product.title_translations && typeof product.title_translations === 'object') {
+      if (product.title_translations && typeof product.title_translations === "object") {
         const translations = product.title_translations as { es?: string; en?: string };
-        return translations[language as keyof typeof translations] || product.title || '';
+        return translations[language as keyof typeof translations] || product.title || "";
       }
-      return product.title || '';
-    };
+      return product.title || "";
+    }
 
     const productLanguage = invoice.custom_fields?.product_language as string | undefined;
     const productTitle = invoice.products 

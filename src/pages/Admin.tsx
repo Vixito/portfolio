@@ -944,6 +944,12 @@ function Admin() {
       defaultFormData.price_range_enabled = false;
       defaultFormData.max_price_usd = null;
       defaultFormData.max_price_cop = null;
+      defaultFormData.checkout_settings = {
+        gateways: ["paypal", "nowpayments"],
+        access_links: [],
+        delivery_message: { es: "", en: "" },
+        success_message: { es: "", en: "" },
+      };
     } else if (activeTab === "invoices") {
       // Valores por defecto para facturas
       defaultFormData.currency = "USD";
@@ -1138,6 +1144,26 @@ function Admin() {
         // Si es custom_checkout, preservar el buy_button_url como string
         formData.buy_button_url = currentItem.buy_button_url || "";
       }
+
+      // Cargar configuración de checkout propio
+      const cs = currentItem.checkout_settings;
+      formData.checkout_settings =
+        cs && typeof cs === "object"
+          ? {
+              gateways: Array.isArray(cs.gateways)
+                ? cs.gateways.filter(
+                    (g: string) => g === "paypal" || g === "nowpayments"
+                  )
+                : ["paypal", "nowpayments"],
+              access_links: Array.isArray(cs.access_links)
+                ? cs.access_links
+                : [],
+              delivery_message:
+                cs.delivery_message || { es: "", en: "" },
+              success_message:
+                cs.success_message || { es: "", en: "" },
+            }
+          : null;
       
       // Manejar request_button_url
       if (currentItem.request_button_type === "external_link") {
@@ -1676,6 +1702,33 @@ function Admin() {
                 updateProductData.buy_button_url = null;
               }
               delete updateProductData.buy_external_links;
+            }
+
+            // Checkout propio: construir checkout_settings JSONB
+            if (updateProductData.buy_button_type === "custom_checkout") {
+              const cs = updateProductData.checkout_settings || {};
+              const gateways = Array.isArray(cs.gateways)
+                ? cs.gateways.filter(
+                    (g: string) => g === "paypal" || g === "nowpayments"
+                  )
+                : ["paypal", "nowpayments"];
+              const accessLinks = Array.isArray(cs.access_links)
+                ? cs.access_links.filter((l: string) => l && l.trim())
+                : [];
+              updateProductData.checkout_settings = {
+                gateways,
+                access_links: accessLinks,
+                delivery_message: cs.delivery_message || {
+                  es: "",
+                  en: "",
+                },
+                success_message: cs.success_message || {
+                  es: "",
+                  en: "",
+                },
+              };
+            } else {
+              delete updateProductData.checkout_settings;
             }
 
             // Determinar moneda y convertir precios
@@ -2257,6 +2310,33 @@ function Admin() {
                 productData.buy_button_url = null;
               }
               delete productData.buy_external_links;
+            }
+
+            // Checkout propio: construir checkout_settings JSONB
+            if (productData.buy_button_type === "custom_checkout") {
+              const cs = productData.checkout_settings || {};
+              const gateways = Array.isArray(cs.gateways)
+                ? cs.gateways.filter(
+                    (g: string) => g === "paypal" || g === "nowpayments"
+                  )
+                : ["paypal", "nowpayments"];
+              const accessLinks = Array.isArray(cs.access_links)
+                ? cs.access_links.filter((l: string) => l && l.trim())
+                : [];
+              productData.checkout_settings = {
+                gateways,
+                access_links: accessLinks,
+                delivery_message: cs.delivery_message || {
+                  es: "",
+                  en: "",
+                },
+                success_message: cs.success_message || {
+                  es: "",
+                  en: "",
+                },
+              };
+            } else {
+              delete productData.checkout_settings;
             }
 
             // Determinar moneda y convertir precios
@@ -5098,29 +5178,313 @@ function Admin() {
 
                           {crudFormData.buy_button_type ===
                             "custom_checkout" && (
-                            <div className="mb-4">
-                              <label className="block text-gray-300 text-sm mb-2">
-                                ID del Producto para Checkout (se generará
-                                /checkout/:id) *
-                              </label>
-                              <input
-                                type="text"
-                                value={crudFormData.buy_button_url || ""}
-                                onChange={(e) =>
-                                  setCrudFormData({
-                                    ...crudFormData,
-                                    buy_button_url: e.target.value,
-                                  })
-                                }
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
-                                placeholder="producto-123"
-                                required
-                              />
-                              <p className="text-xs text-gray-400 mt-1">
-                                El link generado será: /checkout/
-                                {crudFormData.buy_button_url || "id"}
-                              </p>
-                            </div>
+                            <>
+                              <div className="mb-4">
+                                <label className="block text-gray-300 text-sm mb-2">
+                                  ID del Producto para Checkout (se generará
+                                  /checkout/:id)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={crudFormData.buy_button_url || ""}
+                                  onChange={(e) =>
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      buy_button_url: e.target.value,
+                                    })
+                                  }
+                                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                  placeholder="(vacío = usar id del producto)"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">
+                                  El link generado será: /checkout/
+                                  {crudFormData.buy_button_url || "id"}
+                                </p>
+                              </div>
+
+                              {/* Pasarelas de pago */}
+                              <div className="mb-4">
+                                <label className="block text-gray-300 text-sm mb-2">
+                                  Pasarelas de pago habilitadas
+                                </label>
+                                <div className="space-y-2">
+                                  <label className="flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-lg p-3 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        (
+                                          crudFormData.checkout_settings
+                                            ?.gateways || ["paypal", "nowpayments"]
+                                        ).includes("paypal")
+                                          ? true
+                                          : false
+                                      }
+                                      onChange={(e) => {
+                                        const cs =
+                                          crudFormData.checkout_settings || {};
+                                        const gateways =
+                                          cs.gateways || [
+                                            "paypal",
+                                            "nowpayments",
+                                          ];
+                                        const next = e.target.checked
+                                          ? Array.from(
+                                              new Set([
+                                                ...gateways,
+                                                "paypal",
+                                              ])
+                                            )
+                                          : gateways.filter(
+                                              (g: string) => g !== "paypal"
+                                            );
+                                        setCrudFormData({
+                                          ...crudFormData,
+                                          checkout_settings: {
+                                            ...cs,
+                                            gateways: next,
+                                          },
+                                        });
+                                      }}
+                                      className="w-4 h-4"
+                                    />
+                                    <span className="text-white text-sm">
+                                      PayPal / Tarjetas (PayPal Checkout)
+                                    </span>
+                                  </label>
+                                  <label className="flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-lg p-3 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        (
+                                          crudFormData.checkout_settings
+                                            ?.gateways || ["paypal", "nowpayments"]
+                                        ).includes("nowpayments")
+                                          ? true
+                                          : false
+                                      }
+                                      onChange={(e) => {
+                                        const cs =
+                                          crudFormData.checkout_settings || {};
+                                        const gateways =
+                                          cs.gateways || [
+                                            "paypal",
+                                            "nowpayments",
+                                          ];
+                                        const next = e.target.checked
+                                          ? Array.from(
+                                              new Set([
+                                                ...gateways,
+                                                "nowpayments",
+                                              ])
+                                            )
+                                          : gateways.filter(
+                                              (g: string) =>
+                                                g !== "nowpayments"
+                                            );
+                                        setCrudFormData({
+                                          ...crudFormData,
+                                          checkout_settings: {
+                                            ...cs,
+                                            gateways: next,
+                                          },
+                                        });
+                                      }}
+                                      className="w-4 h-4"
+                                    />
+                                    <span className="text-white text-sm">
+                                      Criptomonedas (NowPayments)
+                                    </span>
+                                  </label>
+                                </div>
+                              </div>
+
+                              {/* Links de acceso */}
+                              <div className="mb-4">
+                                <label className="block text-gray-300 text-sm mb-2">
+                                  Links de acceso al producto (se entregan al
+                                  pagar)
+                                </label>
+                                {(
+                                  (crudFormData.checkout_settings
+                                    ?.access_links as string[]) || []
+                                ).map((link: string, index: number) => (
+                                  <div
+                                    key={index}
+                                    className="flex gap-2 mb-2"
+                                  >
+                                    <input
+                                      type="url"
+                                      placeholder="https://..."
+                                      value={link || ""}
+                                      onChange={(e) => {
+                                        const cs =
+                                          crudFormData.checkout_settings || {};
+                                        const links =
+                                          cs.access_links || [];
+                                        links[index] = e.target.value;
+                                        setCrudFormData({
+                                          ...crudFormData,
+                                          checkout_settings: {
+                                            ...cs,
+                                            access_links: [...links],
+                                          },
+                                        });
+                                      }}
+                                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const cs =
+                                          crudFormData.checkout_settings || {};
+                                        const links =
+                                          (cs.access_links || []).filter(
+                                            (_: string, i: number) =>
+                                              i !== index
+                                          );
+                                        setCrudFormData({
+                                          ...crudFormData,
+                                          checkout_settings: {
+                                            ...cs,
+                                            access_links: links,
+                                          },
+                                        });
+                                      }}
+                                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cs =
+                                      crudFormData.checkout_settings || {};
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      checkout_settings: {
+                                        ...cs,
+                                        access_links: [
+                                          ...(cs.access_links || []),
+                                          "",
+                                        ],
+                                      },
+                                    });
+                                  }}
+                                  className="w-full px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+                                >
+                                  + Agregar link de acceso
+                                </button>
+                              </div>
+
+                              {/* Mensaje de entrega */}
+                              <div className="mb-4">
+                                <label className="block text-gray-300 text-sm mb-2">
+                                  Mensaje de entrega (se muestra junto a los
+                                  links)
+                                </label>
+                                <textarea
+                                  value={
+                                    crudFormData.checkout_settings
+                                      ?.delivery_message?.es || ""
+                                  }
+                                  onChange={(e) => {
+                                    const cs =
+                                      crudFormData.checkout_settings || {};
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      checkout_settings: {
+                                        ...cs,
+                                        delivery_message: {
+                                          ...(cs.delivery_message || {}),
+                                          es: e.target.value,
+                                        },
+                                      },
+                                    });
+                                  }}
+                                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm mb-2"
+                                  placeholder="Mensaje en español (opcional)"
+                                  rows={2}
+                                />
+                                <textarea
+                                  value={
+                                    crudFormData.checkout_settings
+                                      ?.delivery_message?.en || ""
+                                  }
+                                  onChange={(e) => {
+                                    const cs =
+                                      crudFormData.checkout_settings || {};
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      checkout_settings: {
+                                        ...cs,
+                                        delivery_message: {
+                                          ...(cs.delivery_message || {}),
+                                          en: e.target.value,
+                                        },
+                                      },
+                                    });
+                                  }}
+                                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm"
+                                  placeholder="Mensaje en inglés (opcional)"
+                                  rows={2}
+                                />
+                              </div>
+
+                              {/* Mensaje de éxito */}
+                              <div className="mb-4">
+                                <label className="block text-gray-300 text-sm mb-2">
+                                  Mensaje de éxito (pantalla post-pago)
+                                </label>
+                                <textarea
+                                  value={
+                                    crudFormData.checkout_settings
+                                      ?.success_message?.es || ""
+                                  }
+                                  onChange={(e) => {
+                                    const cs =
+                                      crudFormData.checkout_settings || {};
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      checkout_settings: {
+                                        ...cs,
+                                        success_message: {
+                                          ...(cs.success_message || {}),
+                                          es: e.target.value,
+                                        },
+                                      },
+                                    });
+                                  }}
+                                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm mb-2"
+                                  placeholder="Mensaje en español (opcional)"
+                                  rows={2}
+                                />
+                                <textarea
+                                  value={
+                                    crudFormData.checkout_settings
+                                      ?.success_message?.en || ""
+                                  }
+                                  onChange={(e) => {
+                                    const cs =
+                                      crudFormData.checkout_settings || {};
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      checkout_settings: {
+                                        ...cs,
+                                        success_message: {
+                                          ...(cs.success_message || {}),
+                                          en: e.target.value,
+                                        },
+                                      },
+                                    });
+                                  }}
+                                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm"
+                                  placeholder="Mensaje en inglés (opcional)"
+                                  rows={2}
+                                />
+                              </div>
+                            </>
                           )}
                         </>
                       )}

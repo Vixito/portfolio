@@ -2,7 +2,9 @@
   "version": "5",
   "specifiers": {
     "npm:@aws-sdk/client-s3@*": "3.1089.0",
+    "npm:@biomejs/biome@*": "2.5.12",
     "npm:@hookform/resolvers@^3.9.0": "3.10.0_react-hook-form@7.71.1__react@18.3.1_react@18.3.1",
+    "npm:@paypal/react-paypal-js@8.9.1": "8.9.1_react@18.3.1_react-dom@18.3.1__react@18.3.1",
     "npm:@remix-run/router@^1.19.0": "1.23.2",
     "npm:@supabase/auth-js@^2.45.0": "2.91.1",
     "npm:@supabase/functions-js@^2.45.0": "2.91.1",
@@ -12,9 +14,11 @@
     "npm:@supabase/supabase-js@*": "2.91.1",
     "npm:@supabase/supabase-js@^2.45.0": "2.91.1",
     "npm:@tanstack/react-query@^5.56.0": "5.90.20_react@18.3.1",
+    "npm:@types/node@*": "22.15.15",
     "npm:@types/react-dom@^18.3.0": "18.3.7_@types+react@18.3.27",
     "npm:@types/react@^18.3.0": "18.3.27",
-    "npm:@vitejs/plugin-react@^5.1.2": "5.1.2_vite@7.3.1__tsx@4.21.0__picomatch@4.0.3_@babel+core@7.28.6_tsx@4.21.0",
+    "npm:@vitejs/plugin-react@*": "5.1.2_vite@7.3.1__tsx@4.21.0__picomatch@4.0.3_@babel+core@7.28.6_tsx@4.21.0_@types+node@22.15.15",
+    "npm:@vitejs/plugin-react@^5.1.2": "5.1.2_vite@7.3.1__tsx@4.21.0__picomatch@4.0.3_@babel+core@7.28.6_tsx@4.21.0_@types+node@22.15.15",
     "npm:autoprefixer@*": "10.4.23_postcss@8.5.6",
     "npm:autoprefixer@^10.4.20": "10.4.23_postcss@8.5.6",
     "npm:canvas-confetti@^1.9.3": "1.9.4",
@@ -45,8 +49,8 @@
     "npm:tailwindcss@^3.4.1": "3.4.1_postcss@8.5.6",
     "npm:tslib@^2.6.0": "2.8.1",
     "npm:tsx@^4.19.0": "4.21.0",
-    "npm:vite@*": "7.3.1_tsx@4.21.0_picomatch@4.0.3",
-    "npm:vite@^7.3.0": "7.3.1_tsx@4.21.0_picomatch@4.0.3",
+    "npm:vite@*": "7.3.1_tsx@4.21.0_picomatch@4.0.3_@types+node@22.15.15",
+    "npm:vite@^7.3.0": "7.3.1_tsx@4.21.0_picomatch@4.0.3_@types+node@22.15.15",
     "npm:zod@^3.23.8": "3.25.76",
     "npm:zustand@5": "5.0.10_@types+react@18.3.27_react@18.3.1"
   },
@@ -394,6 +398,60 @@
         "@babel/helper-validator-identifier"
       ]
     },
+    "@biomejs/biome@2.5.12": {
+      "integrity": "sha512-Lw4VHZRebrReBBnlHa12JQjnIBm3JJAA55PDB9LbBVBF0q4RYphm6KfmIjqtPhf61MxZ5Q9KoK8R8x+7per5Aw==",
+      "optionalDependencies": [
+        "@biomejs/cli-darwin-arm64",
+        "@biomejs/cli-darwin-x64",
+        "@biomejs/cli-linux-arm64",
+        "@biomejs/cli-linux-arm64-musl",
+        "@biomejs/cli-linux-x64",
+        "@biomejs/cli-linux-x64-musl",
+        "@biomejs/cli-win32-arm64",
+        "@biomejs/cli-win32-x64"
+      ],
+      "bin": true
+    },
+    "@biomejs/cli-darwin-arm64@2.5.12": {
+      "integrity": "sha512-lCRY1rwgNeWNgTr4DI/u6ZwXTRwRLHAvbaio1YLLGS+4r1nhvB2ssyPqIpfUSmRveNfv0fn/N58C7CAdK2XVrg==",
+      "os": ["darwin"],
+      "cpu": ["arm64"]
+    },
+    "@biomejs/cli-darwin-x64@2.5.12": {
+      "integrity": "sha512-vhPgwnh+6tN3ArdAXuET99xaNbFt7CG82Bqn+omHVLC5xdVx45JsYjGPmUIGNzjDek5XdNCP1HKksK7fn8+3bQ==",
+      "os": ["darwin"],
+      "cpu": ["x64"]
+    },
+    "@biomejs/cli-linux-arm64-musl@2.5.12": {
+      "integrity": "sha512-couHYjFLL5uuI8ne6zhT7KwEsXo5YP7ry/2xmEqah7qanu0YmfDi3mwJg47YXSuv/NpZj22CZzcRH/5c4gjPSQ==",
+      "os": ["linux"],
+      "cpu": ["arm64"]
+    },
+    "@biomejs/cli-linux-arm64@2.5.12": {
+      "integrity": "sha512-2gp8aVwXYKdAtmBfRFCUuyDMcfN1ahHqUkGfLYrZlNRFmryMATLVvJgWKvyA8wu4Rwn5OSxM1UcUmOuOFNGeBQ==",
+      "os": ["linux"],
+      "cpu": ["arm64"]
+    },
+    "@biomejs/cli-linux-x64-musl@2.5.12": {
+      "integrity": "sha512-8A0oDW58/w9f/PQNYuq0sGUZtGtGrkNF4Z6n0PUoXpLCshi85vtKTv1XSznQawhdE4MXJ8ufpzHXyLFe87M/+w==",
+      "os": ["linux"],
+      "cpu": ["x64"]
+    },
+    "@biomejs/cli-linux-x64@2.5.12": {
+      "integrity": "sha512-SnvOs3TSTiuia4SQOUNe1aWC9RT4+YkjcKnOhL/nsKOV0k5ycgBkDzF0lUxKn1V7Q8CLTRq6iV23ZAivHomRoA==",
+      "os": ["linux"],
+      "cpu": ["x64"]
+    },
+    "@biomejs/cli-win32-arm64@2.5.12": {
+      "integrity": "sha512-b9vtoZFsuZt1pdjNwJvXl0f+BpayRzV008uS2+JpmwIKdSE2qdu4A/l04FESwLoou5g2E/Qlec0xwJydZplH+A==",
+      "os": ["win32"],
+      "cpu": ["arm64"]
+    },
+    "@biomejs/cli-win32-x64@2.5.12": {
+      "integrity": "sha512-B1R/l+CwEpKFSuqiwePzPNRk1EiJN8kc0UhdafNz6MZN9v5OFP9HYP1irptvWzHrwVI4blVNGMbxc5zt70m3IA==",
+      "os": ["win32"],
+      "cpu": ["x64"]
+    },
     "@esbuild/aix-ppc64@0.27.2": {
       "integrity": "sha512-GZMB+a0mOMZs4MpDbj8RJp4cw+w1WV5NYD6xzgvzUJ5Ek2jerwfO2eADyI6ExDSUED+1X8aMbegahsJi+8mgpw==",
       "os": ["aix"],
@@ -572,6 +630,27 @@
       "dependencies": [
         "@nodelib/fs.scandir",
         "fastq"
+      ]
+    },
+    "@paypal/paypal-js@8.4.2": {
+      "integrity": "sha512-UbY2lvwW65KX4migWbAx8KK0TCbPdIxeHIHogpJ5Z6yta5Qd2+90rXyx8FGdp6wrcr1f/srotlxnBXvqYWyHog==",
+      "dependencies": [
+        "promise-polyfill"
+      ]
+    },
+    "@paypal/react-paypal-js@8.9.1_react@18.3.1_react-dom@18.3.1__react@18.3.1": {
+      "integrity": "sha512-7UWGvv+5XD2OexlUpNBRvONErYuxzi0k8wlsjxFsnVSav8hgpfu/27oTMdvGREDzXnQYOKIBn3tbTbNlNc6psA==",
+      "dependencies": [
+        "@paypal/paypal-js",
+        "@paypal/sdk-constants",
+        "react",
+        "react-dom"
+      ]
+    },
+    "@paypal/sdk-constants@1.0.158": {
+      "integrity": "sha512-OrX2kN4gsBl6fG1GS1ewsNk7TTqYmdtUMVaJ+wAzPhsv9M7dfni95WuJdt4pMALOo5ioZeJ05a16BUSca5IC+Q==",
+      "dependencies": [
+        "hi-base32"
       ]
     },
     "@pdf-lib/standard-fonts@1.0.0": {
@@ -930,7 +1009,19 @@
         "@rolldown/pluginutils",
         "@types/babel__core",
         "react-refresh",
-        "vite"
+        "vite@7.3.1_tsx@4.21.0_picomatch@4.0.3"
+      ]
+    },
+    "@vitejs/plugin-react@5.1.2_vite@7.3.1__tsx@4.21.0__picomatch@4.0.3_@babel+core@7.28.6_tsx@4.21.0_@types+node@22.15.15": {
+      "integrity": "sha512-EcA07pHJouywpzsoTUqNh5NwGayl2PPVEJKUSinGGSxFGYn+shYbqMGBg6FXDqgXum9Ou/ecb+411ssw8HImJQ==",
+      "dependencies": [
+        "@babel/core",
+        "@babel/plugin-transform-react-jsx-self",
+        "@babel/plugin-transform-react-jsx-source",
+        "@rolldown/pluginutils",
+        "@types/babel__core",
+        "react-refresh",
+        "vite@7.3.1_tsx@4.21.0_picomatch@4.0.3_@types+node@22.15.15"
       ]
     },
     "any-promise@1.3.0": {
@@ -1446,6 +1537,9 @@
         "function-bind"
       ]
     },
+    "hi-base32@0.5.1": {
+      "integrity": "sha512-EmBBpvdYh/4XxsnUybsPag6VikPYnN30td+vQk+GI3qpahVEG9+gTkG0aXVxTjBqQ5T6ijbWIu77O+C5WFWsnA=="
+    },
     "htmlparser2@10.1.0": {
       "integrity": "sha512-VTZkM9GWRAtEpveh7MSF6SjjrpNVNNVJfFup7xTY3UpFtm67foy9HDVXneLtFVt4pMz5kZtgNcvCniNFb1hlEQ==",
       "dependencies": [
@@ -1731,6 +1825,9 @@
         "picocolors",
         "source-map-js"
       ]
+    },
+    "promise-polyfill@8.3.0": {
+      "integrity": "sha512-H5oELycFml5yto/atYqmjyigJoAo3+OXwolYiH7OfQuYlAqhxNvTfiNMbV9hsC6Yp83yE5r2KTVmtrG6R9i6Pg=="
     },
     "prop-types@15.8.1": {
       "integrity": "sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==",
@@ -2126,6 +2223,27 @@
       ],
       "bin": true
     },
+    "vite@7.3.1_tsx@4.21.0_picomatch@4.0.3_@types+node@22.15.15": {
+      "integrity": "sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==",
+      "dependencies": [
+        "@types/node",
+        "esbuild",
+        "fdir",
+        "picomatch@4.0.3",
+        "postcss",
+        "rollup",
+        "tinyglobby",
+        "tsx"
+      ],
+      "optionalDependencies": [
+        "fsevents"
+      ],
+      "optionalPeers": [
+        "@types/node",
+        "tsx"
+      ],
+      "bin": true
+    },
     "whatwg-encoding@3.1.1": {
       "integrity": "sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==",
       "dependencies": [
@@ -2165,6 +2283,7 @@
     "dependencies": [
       "npm:@biomejs/biome@*",
       "npm:@hookform/resolvers@*",
+      "npm:@paypal/react-paypal-js@8.9.1",
       "npm:@supabase/supabase-js@2",
       "npm:@tanstack/react-query@*",
       "npm:@types/react-dom@*",

@@ -13,6 +13,7 @@ import Status from "./Status";
 import Store from "./Store";
 import Studies from "./Studies";
 import Studio from "./Studio";
+import Checkout from "./Checkout";
 import WorkExperience from "./Work-experience";
 import PayInvoice from "./PayInvoice";
 import DevButtons from "./DevButtons";
@@ -33,6 +34,7 @@ export {
   Store,
   Studies,
   Studio,
+  Checkout,
   WorkExperience,
   PayInvoice,
   DevButtons,
