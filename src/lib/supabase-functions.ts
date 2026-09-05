@@ -1616,6 +1616,21 @@ export async function getCheckoutProduct(id: string) {
 
   let { data, error } = await query.maybeSingle();
 
+  // Fallback: slug de buy_button_url (id que se guarda en el producto para el checkout)
+  if ((error || !data) && !isUuid) {
+    const slugResult = await supabase
+      .from("products")
+      .select(`
+        *,
+        product_pricing (*)
+      `)
+      .eq("is_active", true)
+      .eq("buy_button_url", id)
+      .maybeSingle();
+    data = slugResult.data;
+    error = slugResult.error;
+  }
+
   // Fallback: short url (prefijo del uuid) usada por Store cuando no hay public_id
   if ((error || !data) && id.length === 8) {
     const prefix = await supabase

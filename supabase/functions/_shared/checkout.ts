@@ -140,6 +140,24 @@ export async function resolveCheckoutProduct(
 
   let { data, error } = await query.maybeSingle();
 
+  // Fallback: slug de buy_button_url (id que se guarda en el producto para el checkout)
+  if ((error || !data) && !isUuid) {
+    const slugResult = await supabase
+      .from("products")
+      .select(
+        `
+        id, public_id, title, title_translations, description, full_description,
+        thumbnail_url, base_price_usd, base_price_cop, delivery_time, checkout_settings,
+        product_pricing (*)
+      `
+      )
+      .eq("is_active", true)
+      .eq("buy_button_url", productId)
+      .maybeSingle();
+    data = slugResult.data;
+    error = slugResult.error;
+  }
+
   // Fallback: short url (prefijo del uuid) usada por Store cuando no hay public_id
   if ((error || !data) && productId.length === 8) {
     const prefixResult = await supabase
