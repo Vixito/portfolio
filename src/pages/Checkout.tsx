@@ -70,6 +70,7 @@ function Checkout() {
   const [error, setError] = useState<string | null>(null);
 
   const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
+  const [paypalSandbox, setPaypalSandbox] = useState(false);
   const [buyerInfo, setBuyerInfo] = useState({ name: "", email: "" });
 
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
@@ -128,8 +129,11 @@ function Checkout() {
   useEffect(() => {
     let mounted = true;
     getPayPalConfig()
-      .then((config: { client_id?: string } | null) => {
-        if (mounted && config?.client_id) setPaypalClientId(config.client_id);
+      .then((config: { client_id?: string; sandbox?: boolean } | null) => {
+        if (mounted) {
+          if (config?.client_id) setPaypalClientId(config.client_id);
+          if (config?.sandbox) setPaypalSandbox(true);
+        }
       })
       .catch(() => {
         // Si falla, se muestra mensaje en la pestaña de PayPal
@@ -511,6 +515,7 @@ function Checkout() {
                       currency: "USD",
                       intent: "capture",
                       components: "buttons",
+                      environment: paypalSandbox ? "sandbox" : "production",
                     }}
                   >
                     <PayPalButtons

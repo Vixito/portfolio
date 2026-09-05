@@ -21,7 +21,7 @@ async function createNowPaymentsInvoice(params: {
   cancelUrl: string;
 }): Promise<{ id: number; invoice_url: string }> {
   const baseUrl = params.sandbox
-    ? "https://api.sandbox.nowpayments.io"
+    ? "https://api-sandbox.nowpayments.io"
     : "https://api.nowpayments.io";
 
   const body: Record<string, unknown> = {
@@ -35,12 +35,6 @@ async function createNowPaymentsInvoice(params: {
     is_fixed_rate: true,
     is_fee_paid_by_user: true,
   };
-
-  // En sandbox NowPayments emula flujos reales sin dinero:
-  // el parámetro "case" decide qué estado simular (finished = pago completado).
-  if (params.sandbox) {
-    body.case = "finished";
-  }
 
   const res = await fetch(`${baseUrl}/v1/invoice`, {
     method: "POST",
