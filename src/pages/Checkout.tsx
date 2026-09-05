@@ -38,7 +38,9 @@ interface CheckoutProduct {
   title: string;
   title_translations?: { es?: string; en?: string } | null;
   description?: string | null;
+  description_translations?: { es?: string; en?: string } | null;
   full_description?: string | null;
+  full_description_translations?: { es?: string; en?: string } | null;
   thumbnail_url?: string | null;
   base_price_usd?: number | null;
   checkout_settings?: {
@@ -409,7 +411,9 @@ function Checkout() {
                   </h1>
                   {product.description && (
                     <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
-                      {getTranslatedText(product.description)}
+                      {getTranslatedText(
+                        product.description_translations || product.description
+                      )}
                     </p>
                   )}
                   <div className="mt-2">
@@ -563,7 +567,7 @@ function Checkout() {
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                   {t("checkout.cryptoInfo") ||
-                    "Aceptamos BTC, ETH, USDT y más de 300 criptomonedas. Recibirás un enlace de pago seguro."}
+                    "Acepto BTC, ETH, USDT y más de 300 criptomonedas. Recibirás un enlace de pago seguro."}
                 </p>
                 <Button
                   onClick={startNowPayments}

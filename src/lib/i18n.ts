@@ -668,7 +668,7 @@ export const translations = {
       payWithPayPal: "Pagar con tarjeta o PayPal",
       payWithCrypto: "Pagar con criptomonedas",
       cryptoInfo:
-        "Aceptamos BTC, ETH, USDT y más de 300 criptomonedas. Recibirás un enlace de pago seguro.",
+        "Acepto BTC, ETH, USDT y más de 300 criptomonedas. Recibirás un enlace de pago seguro.",
       payCryptoButton: "Pagar con criptomonedas",
       paypalUnavailable: "PayPal no está disponible en este momento.",
       paypalError: "Ocurrió un error con PayPal. Inténtalo de nuevo.",
@@ -1351,7 +1351,7 @@ export const translations = {
       payWithPayPal: "Pay with card or PayPal",
       payWithCrypto: "Pay with cryptocurrencies",
       cryptoInfo:
-        "We accept BTC, ETH, USDT and 300+ cryptocurrencies. You'll get a secure payment link.",
+        "I accept BTC, ETH, USDT and 300+ cryptocurrencies. You'll get a secure payment link.",
       payCryptoButton: "Pay with cryptocurrencies",
       paypalUnavailable: "PayPal is not available right now.",
       paypalError: "There was a PayPal error. Please try again.",
