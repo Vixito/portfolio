@@ -1625,7 +1625,8 @@ export async function getCheckoutProduct(id: string) {
         product_pricing (*)
       `)
       .eq("is_active", true)
-      .eq("buy_button_url", id)
+      // buy_button_url es jsonb: hay que pasar el valor serializado como JSON
+      .eq("buy_button_url", JSON.stringify(id))
       .maybeSingle();
     data = slugResult.data;
     error = slugResult.error;
@@ -1640,7 +1641,7 @@ export async function getCheckoutProduct(id: string) {
         product_pricing (*)
       `)
       .eq("is_active", true)
-      .like("id", `${id}%`)
+      .filter("id::text", "like", `${id}%`)
       .limit(1)
       .maybeSingle();
     data = prefix.data;

@@ -126,7 +126,7 @@ export async function resolveCheckoutProduct(
     .select(
       `
       id, public_id, title, title_translations, description, full_description,
-      thumbnail_url, base_price_usd, base_price_cop, delivery_time, checkout_settings,
+      thumbnail_url, base_price_usd, base_price_cop, checkout_settings,
       product_pricing (*)
     `
     )
@@ -147,12 +147,13 @@ export async function resolveCheckoutProduct(
       .select(
         `
         id, public_id, title, title_translations, description, full_description,
-        thumbnail_url, base_price_usd, base_price_cop, delivery_time, checkout_settings,
+        thumbnail_url, base_price_usd, base_price_cop, checkout_settings,
         product_pricing (*)
       `
       )
       .eq("is_active", true)
-      .eq("buy_button_url", productId)
+      // buy_button_url es jsonb: hay que pasar el valor serializado como JSON
+      .eq("buy_button_url", JSON.stringify(productId))
       .maybeSingle();
     data = slugResult.data;
     error = slugResult.error;
@@ -165,12 +166,12 @@ export async function resolveCheckoutProduct(
       .select(
         `
         id, public_id, title, title_translations, description, full_description,
-        thumbnail_url, base_price_usd, base_price_cop, delivery_time, checkout_settings,
+        thumbnail_url, base_price_usd, base_price_cop, checkout_settings,
         product_pricing (*)
       `
       )
       .eq("is_active", true)
-      .like("id", `${productId}%`)
+      .filter("id::text", "like", `${productId}%`)
       .limit(1)
       .maybeSingle();
     data = prefixResult.data;
