@@ -521,6 +521,11 @@ function Checkout() {
                       environment: paypalSandbox ? "sandbox" : "production",
                     }}
                   >
+                    <div
+                      className={
+                        "dark:bg-white dark:rounded-2xl dark:p-2 dark:border dark:border-gray-200"
+                      }
+                    >
                     <PayPalButtons
                       style={{
                         layout: "vertical",
@@ -538,6 +543,7 @@ function Checkout() {
                         )
                       }
                     />
+                    </div>
                   </PayPalScriptProvider>
                 ) : (
                   <p className="text-sm text-red-500">
