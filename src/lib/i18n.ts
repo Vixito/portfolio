@@ -681,7 +681,7 @@ export const translations = {
       noRedirect: "No se pudo obtener el link de pago",
       successTitle: "¡Pago confirmado!",
       successMessage:
-        "¡Pago confirmado! Te hemos enviado la factura y el acceso a tu producto por email.",
+        "¡Pago confirmado! Te he enviado la factura y el acceso a tu producto por email.",
       invoiceLabel: "Factura",
       yourAccess: "Accede a tu producto:",
       done: "Listo",
@@ -1364,7 +1364,7 @@ export const translations = {
       noRedirect: "Could not get the payment link",
       successTitle: "Payment confirmed!",
       successMessage:
-        "Payment confirmed! We've emailed your invoice and product access.",
+        "Payment confirmed! I've emailed your invoice and product access.",
       invoiceLabel: "Invoice",
       yourAccess: "Access your product:",
       done: "Done",

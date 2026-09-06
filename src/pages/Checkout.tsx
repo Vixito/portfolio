@@ -648,7 +648,7 @@ function SuccessScreen({
   const successMessage =
     delivery?.success_message ||
     t("checkout.successMessage") ||
-    "¡Pago confirmado! Te hemos enviado la factura y el acceso a tu producto por email.";
+    "¡Pago confirmado! Te he enviado la factura y el acceso a tu producto por email.";
 
   const title = getTranslatedText(product.title_translations || product.title);
 
