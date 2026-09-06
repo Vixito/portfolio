@@ -19,6 +19,18 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Función para extraer traducciones del producto
+    function getProductTitle(product: any, productLanguage?: string): string {
+      if (!product) return "";
+      // Usar el idioma guardado en custom_fields.product_language, o español por defecto
+      const language = productLanguage || "es";
+      if (product.title_translations && typeof product.title_translations === "object") {
+        const translations = product.title_translations as { es?: string; en?: string };
+        return translations[language as keyof typeof translations] || product.title || "";
+      }
+      return product.title || "";
+    }
+
     // Parsear request body
     const { invoice_id, is_update, is_payment_confirmation } = await req.json();
 
@@ -255,18 +267,6 @@ serve(async (req) => {
           }
         );
       }
-    }
-
-    // Función para extraer traducciones del producto
-    function getProductTitle(product: any, productLanguage?: string): string {
-      if (!product) return "";
-      // Usar el idioma guardado en custom_fields.product_language, o español por defecto
-      const language = productLanguage || "es";
-      if (product.title_translations && typeof product.title_translations === "object") {
-        const translations = product.title_translations as { es?: string; en?: string };
-        return translations[language as keyof typeof translations] || product.title || "";
-      }
-      return product.title || "";
     }
 
     const productLanguage = invoice.custom_fields?.product_language as string | undefined;
