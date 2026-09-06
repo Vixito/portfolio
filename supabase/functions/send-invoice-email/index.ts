@@ -161,6 +161,16 @@ serve(async (req) => {
         )
       : [];
 
+    // El tiempo de entrega por defecto era "Inmediato" (es). Al renderizar se
+    // traduce a "Immediately" cuando la factura está en inglés.
+    const deliveryTimeText = (value: string | null | undefined): string => {
+      const v = (value || "").trim().toLowerCase();
+      if (v === "inmediato" || v === "immediate" || v === "immediately") {
+        return lang === "en" ? "Immediately" : "Inmediato";
+      }
+      return value || "";
+    };
+
     // Acción de confirmación de pago: UN SOLO botón que lleva al acceso del
     // producto. En HTML de email un enlace solo apunta a una URL y no hay
     // JavaScript, así que el botón abre el primer enlace de acceso. Si el
@@ -273,7 +283,7 @@ serve(async (req) => {
           <span style="font-size:0.85rem; font-weight:800;">${T.deliveryLabel}</span>
         </td>
         <td style="text-align:right; padding:4px 0; border-bottom:1px solid #888989; word-wrap:break-word; overflow-wrap:break-word;">
-          <span style="font-size:0.85rem;">${invoice.delivery_time}</span>
+          <span style="font-size:0.85rem;">${deliveryTimeText(invoice.delivery_time)}</span>
         </td>
       </tr>
       ${

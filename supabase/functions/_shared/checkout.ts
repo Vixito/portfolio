@@ -268,6 +268,11 @@ export async function createCheckoutInvoice(
 
   const invoiceNumber = await generateCheckoutInvoiceNumber(supabase);
 
+  const lang =
+    params.extra_custom_fields?.product_language === "en" ? "en" : "es";
+  const defaultDeliveryTime =
+    lang === "en" ? "Immediately" : "Inmediato";
+
   const customFields: Record<string, unknown> = {
     checkout: true,
     gateway,
@@ -289,7 +294,8 @@ export async function createCheckoutInvoice(
       request_type: "Checkout",
       amount: Math.round(amount * 100) / 100,
       currency: "USD",
-      delivery_time: params.delivery_time || product.delivery_time || "Inmediato",
+      delivery_time:
+        params.delivery_time || product.delivery_time || defaultDeliveryTime,
       custom_fields: customFields,
       pay_now_link: null,
       status: "pending",
