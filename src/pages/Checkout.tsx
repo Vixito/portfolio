@@ -81,6 +81,7 @@ function Checkout() {
   const [processingMsg, setProcessingMsg] = useState("");
 
   const pollRef = useRef<number | null>(null);
+  const creatingNowPaymentsRef = useRef(false);
 
   const originalInvoiceId = searchParams.get("invoice_id");
   const returnInvoiceId = invoiceId || originalInvoiceId;
@@ -215,7 +216,8 @@ function Checkout() {
   }, [pageState, returnInvoiceId]);
 
   const startNowPayments = async () => {
-    if (!product) return;
+    if (!product || creatingNowPaymentsRef.current) return;
+    creatingNowPaymentsRef.current = true;
     setError(null);
 
     if (!buyerInfo.email.trim()) {
@@ -246,6 +248,7 @@ function Checkout() {
         setError(
           t("checkout.noRedirect") || "No se pudo obtener el link de pago"
         );
+        creatingNowPaymentsRef.current = false;
         setPageState("checkout");
       }
     } catch (err) {
@@ -254,6 +257,7 @@ function Checkout() {
           ? err.message
           : "Error creando el pago con criptomonedas"
       );
+      creatingNowPaymentsRef.current = false;
       setPageState("checkout");
     }
   };
