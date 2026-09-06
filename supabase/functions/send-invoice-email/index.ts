@@ -185,12 +185,12 @@ serve(async (req) => {
             href="${primaryHref}"
             target="_blank"
             rel="noopener noreferrer"
-            style="padding:10px 20px; background-color:#1550b1; color:#ffffff !important; text-decoration:none; border-radius:4px; font-weight:700; display:inline-block;"
+            style="padding:10px 20px; background-color:#0d0d0d; color:#03fff6 !important; text-decoration:none; border-radius:4px; font-weight:700; display:inline-block;"
           >
             ${T.getProduct}
           </a>${extraHTML}`;
       } else {
-        confirmationAction = `<span style="padding:10px 20px; background-color:#1550b1; color:#ffffff !important; border-radius:4px; font-weight:700; display:inline-block;">${T.getProduct}</span>`;
+        confirmationAction = `<span style="padding:10px 20px; background-color:#0d0d0d; color:#03fff6 !important; border-radius:4px; font-weight:700; display:inline-block;">${T.getProduct}</span>`;
       }
     }
 

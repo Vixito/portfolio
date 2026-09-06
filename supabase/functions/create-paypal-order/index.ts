@@ -103,7 +103,7 @@ serve(async (req) => {
     const paypalClientSecret = getPayPalEnv().clientSecret;
     const paypalSandbox = getPayPalEnv().sandbox;
 
-    const { product_id, user_name, user_email, delivery_time, success_url } =
+    const { product_id, user_name, user_email, delivery_time, success_url, product_language } =
       await req.json();
 
     if (!product_id) {
@@ -151,7 +151,9 @@ serve(async (req) => {
       user_email: buyerEmail,
       gateway: "paypal",
       delivery_time,
-      extra_custom_fields: {},
+      extra_custom_fields: {
+        product_language: product_language === "en" ? "en" : "es",
+      },
     });
 
     const productTitle =

@@ -1679,6 +1679,7 @@ export async function createPayPalOrder(params: {
   user_email: string;
   delivery_time?: string;
   success_url?: string;
+  product_language?: "es" | "en";
 }) {
   const { data, error } = await supabase.functions.invoke(
     "create-paypal-order",
@@ -1721,6 +1722,7 @@ export async function createNowPaymentsCheckout(params: {
   delivery_time?: string;
   success_url?: string;
   cancel_url?: string;
+  product_language?: "es" | "en";
 }) {
   const { data, error } = await supabase.functions.invoke(
     "create-nowpayments-invoice",

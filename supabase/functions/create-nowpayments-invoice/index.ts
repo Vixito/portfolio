@@ -74,6 +74,7 @@ serve(async (req) => {
       delivery_time,
       success_url,
       cancel_url,
+      product_language,
     } = await req.json();
 
     if (!product_id) {
@@ -122,7 +123,9 @@ serve(async (req) => {
       user_email: buyerEmail,
       gateway: "nowpayments",
       delivery_time,
-      extra_custom_fields: {},
+      extra_custom_fields: {
+        product_language: product_language === "en" ? "en" : "es",
+      },
     });
 
     const productPublicId = product.public_id || product.id;

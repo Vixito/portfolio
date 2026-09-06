@@ -61,7 +61,7 @@ function Checkout() {
   const { productId } = useParams<{ productId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { theme } = useThemeStore();
 
   const [product, setProduct] = useState<CheckoutProduct | null>(null);
@@ -233,6 +233,7 @@ function Checkout() {
         product_id: product.id,
         user_name: buyerInfo.name.trim() || "Cliente",
         user_email: buyerInfo.email.trim(),
+        product_language: language,
         success_url: successUrl,
         cancel_url: `${window.location.origin}/store/${productPublicId}`,
       });
@@ -281,6 +282,7 @@ function Checkout() {
       product_id: product.id,
       user_name: buyerInfo.name.trim(),
       user_email: buyerInfo.email.trim(),
+      product_language: language,
       success_url: `${window.location.origin}/checkout/${product.public_id || product.id}`,
     });
 
