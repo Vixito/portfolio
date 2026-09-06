@@ -86,7 +86,9 @@ serve(async (req) => {
           : "Tiempo aproximado de entrega",
       payNow: lang === "en" ? "Pay Now" : "Pagar ahora",
       getProduct: lang === "en" ? "Get product" : "Obtener producto",
-      linkLabel: lang === "en" ? "Link" : "Enlace",
+      accessLabel: lang === "en" ? "Access" : "Acceso",
+      additionalAccess:
+        lang === "en" ? "Additional access" : "Accesos adicionales",
       orderIdAuto:
         lang === "en"
           ? "* Order ID (automatically included):"
@@ -174,21 +176,31 @@ serve(async (req) => {
     // Acción de confirmación de pago: UN SOLO botón que lleva al acceso del
     // producto. En HTML de email un enlace solo apunta a una URL y no hay
     // JavaScript, así que el botón abre el primer enlace de acceso. Si el
-    // Admin Panel configuró varios accesos, los restantes se muestran como
-    // enlaces de texto discretos debajo del botón (todos directamente en el
-    // correo, sin páginas intermedias).
+    // Admin Panel configuró varios accesos, los restantes se muestran en un
+    // bloque con borde, coherente con el diseño de la factura (nada de texto
+    // plano), todos directamente en el correo.
     let confirmationAction = "";
     if (is_payment_confirmation) {
       if (accessLinks.length > 0) {
         const primaryHref = accessLinks[0];
         const extraLinks = accessLinks.slice(1);
-        const extraHTML = extraLinks.length
-          ? `<br>${extraLinks
-              .map(
-                (l: string, idx: number) =>
-                  `<a href="${l}" target="_blank" rel="noopener noreferrer" style="font-size:0.65rem; color:#1550b1; text-decoration:underline;">${T.linkLabel} ${idx + 2}</a>`
-              )
-              .join("&nbsp;&nbsp;·&nbsp;&nbsp;")}`
+        const extrasHTML = extraLinks.length
+          ? `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #888989; border-radius:4px; margin-top:10px; border-collapse:collapse;">
+          <tr>
+            <td style="padding:6px 10px 2px; text-align:center; font-size:0.7rem; font-weight:800;">${T.additionalAccess}</td>
+          </tr>
+          ${extraLinks
+            .map(
+              (_l: string, idx: number) =>
+                `<tr>
+            <td style="padding:2px 10px;">
+              <a href="${_l}" target="_blank" rel="noopener noreferrer" style="display:block; color:#0d0d0d !important; font-size:0.7rem; font-weight:600; text-decoration:underline; padding:3px 0;">${T.accessLabel} ${idx + 2}</a>
+            </td>
+          </tr>`
+            )
+            .join("")}
+        </table>`
           : "";
         confirmationAction = `
           <a
@@ -198,7 +210,7 @@ serve(async (req) => {
             style="padding:10px 20px; background-color:#0d0d0d; color:#03fff6 !important; text-decoration:none; border-radius:4px; font-weight:700; display:inline-block;"
           >
             ${T.getProduct}
-          </a>${extraHTML}`;
+          </a>${extrasHTML}`;
       } else {
         confirmationAction = `<span style="padding:10px 20px; background-color:#0d0d0d; color:#03fff6 !important; border-radius:4px; font-weight:700; display:inline-block;">${T.getProduct}</span>`;
       }
