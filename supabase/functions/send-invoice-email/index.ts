@@ -64,9 +64,42 @@ serve(async (req) => {
       );
     }
 
+    // Idioma de la factura: el mismo que usó el comprador en el checkout
+    const lang = invoice.custom_fields?.product_language === "en" ? "en" : "es";
+
+    // Textos localizados (sin Spanglish): todo en español o todo en inglés
+    const T = {
+      invoiceRef: lang === "en" ? "Invoice" : "Factura",
+      amountLabel: lang === "en" ? "Amount to pay" : "Cantidad a pagar",
+      totalLabel: "Total",
+      deliveryLabel:
+        lang === "en"
+          ? "Approximate delivery time"
+          : "Tiempo aproximado de entrega",
+      payNow: lang === "en" ? "Pay Now" : "Pagar ahora",
+      orderIdAuto:
+        lang === "en"
+          ? "* Order ID (automatically included):"
+          : "* ID de pedido (incluido automáticamente):",
+      paymentNote:
+        lang === "en"
+          ? "* In the payment note you must put:"
+          : "* En la nota del pago debes poner:",
+    };
+
+    const subject = is_payment_confirmation
+      ? `${
+          lang === "en" ? "Payment Confirmed" : "Pago confirmado"
+        } - ${T.invoiceRef} #${invoice.invoice_number} - Vixis Studio`
+      : is_update
+      ? `${T.invoiceRef} #${invoice.invoice_number} ${
+          lang === "en" ? "Updated" : "actualizada"
+        } - Vixis Studio`
+      : `${T.invoiceRef} #${invoice.invoice_number} - Vixis Studio`;
+
     // Generar HTML de la factura (estilo Nutrition Facts)
     const formatPrice = (amount: number, currency: string) => {
-      return new Intl.NumberFormat("en-US", {
+      return new Intl.NumberFormat(lang === "en" ? "en-US" : "es-ES", {
         style: "currency",
         currency: currency === "USD" ? "USD" : "COP",
         minimumFractionDigits: currency === "USD" ? 2 : 0,
@@ -75,7 +108,7 @@ serve(async (req) => {
 
     // Calcular ancho dinámico del contenedor basado en el precio total
     const calculateInvoiceWidth = (priceString: string): number => {
-      const baseWidth = 560; // ancho grande (como el email de confirmación antiguo)
+      const baseWidth = 270; // ancho normal
       const priceLength = priceString.length;
       if (priceLength <= 10) return baseWidth; // valores cortos, no expandir
       const charWidth = 10;
@@ -85,10 +118,10 @@ serve(async (req) => {
 
     // Calcular font-size dinámico para el precio total
     const calculatePriceFontSize = (priceLength: number): string => {
-      if (priceLength > 18) return "3.0em";
-      if (priceLength > 14) return "3.5em";
-      if (priceLength > 10) return "4.0em";
-      return "4.5em";
+      if (priceLength > 18) return "1.6em";
+      if (priceLength > 14) return "1.9em";
+      if (priceLength > 10) return "2.2em";
+      return "2.4em";
     };
 
     const totalPriceString = formatPrice(invoice.amount, invoice.currency);
@@ -107,175 +140,81 @@ serve(async (req) => {
       ? getProductTitle(invoice.products as any, productLanguage)
       : '';
 
-    // Resolver mensajes de entrega del checkout (solo para confirmación de pago)
-    const checkoutLanguage = invoice.custom_fields?.product_language || "es";
-    const deliveryMessageRaw = invoice.custom_fields?.delivery_message;
-    const deliveryMessage =
-      typeof deliveryMessageRaw === "string"
-        ? deliveryMessageRaw
-        : deliveryMessageRaw?.[checkoutLanguage] ||
-          deliveryMessageRaw?.es ||
-          "";
-
-    const deliveryLinks = Array.isArray(invoice.custom_fields?.delivery_links)
-      ? invoice.custom_fields.delivery_links.filter(
-          (link: unknown) => typeof link === "string" && link.trim()
-        )
-      : [];
-
-    const deliveryAccessHTML = !is_payment_confirmation
-      ? ""
-      : `
-    <tr>
-      <td colspan="2" style="padding: 8px 0 0 0;">
-        <div style="background-color: #f0f7fa; border: 1px solid #2093c4; border-radius: 8px; padding: 24px; margin: 0 0 12px 0;">
-          <h2 style="color: #2093c4; font-size: 1.3rem; margin: 0 0 12px 0;">Your product access</h2>
-          ${
-            deliveryMessage
-              ? `<p style="font-size: 1.1rem; line-height: 1.6; color: #333; margin: 0 0 12px 0;">${deliveryMessage.replace(/</g, "&lt;")}</p>`
-              : ""
-          }
-          ${
-            deliveryLinks.length > 0
-              ? `<ul style="margin: 0; padding-left: 24px;">
-                  ${deliveryLinks
-                    .map(
-                      (link: string) =>
-                        `<li style="margin-bottom: 6px;"><a href="${link.replace(/"/g, "&quot;")}" target="_blank" rel="noopener noreferrer" style="color: #2093c4; word-break: break-all; font-size: 1.1rem;">${link.replace(/</g, "&lt;")}</a></li>`
-                    )
-                    .join("")}
-                </ul>`
-              : ""
-          }
-        </div>
-      </td>
-    </tr>
-    `;
+    // Diviseries con estilos inline: Gmail ignora las clases <style>, así que
+    // se usan estilos en línea para que SIEMPRE se vean las líneas separadoras
+    // y los recuadros negros del diseño "Nutrition Facts".
+    const dividerRow = () =>
+      `<tr><td colspan="2" style="padding:0; margin:0;"><div style="border-bottom:1px solid #888989; height:1px; line-height:0; font-size:0; margin:4px 0;">&nbsp;</div></td></tr>`;
 
     const invoiceHTML = `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${is_payment_confirmation ? "Payment Confirmed" : "Invoice"} #${invoice.invoice_number}</title>
+  <title>${T.invoiceRef} #${invoice.invoice_number}</title>
   <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700,800" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; }
-    html { font-size: 16px; }
-    body {
-      font-family: 'Open Sans', sans-serif;
-      background-color: #f5f5f5;
-      padding: 40px;
-      margin: 0;
-    }
-    .invoice-label {
-      border: 3px solid black;
-      width: ${invoiceWidth}px;
-      min-width: 560px;
-      max-width: min(90vw, ${invoiceWidth}px);
-      margin: 20px auto;
-      padding: 0 14px;
-      background: white;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      overflow: hidden;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 0;
-      padding: 0;
-      table-layout: fixed;
-    }
-    td {
-      padding: 0;
-      margin: 0;
-      vertical-align: bottom;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      max-width: 0;
-    }
-    .bold { font-weight: 800; }
-    .divider { border-bottom: 1px solid #888989; margin: 4px 0; }
-    .divider-large {
-      height: 20px;
-      background-color: black;
-      border: 0;
-      margin: 4px 0;
-    }
-    .divider-medium {
-      height: 10px;
-      background-color: black;
-      border: 0;
-      margin: 4px 0;
-    }
-  </style>
 </head>
-<body>
-  <div class="invoice-label">
-    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+<body style="margin:0; padding:20px; font-family:'Open Sans', Arial, sans-serif; background-color:#f5f5f5;">
+  <div style="border:2px solid #000; width:${invoiceWidth}px; min-width:270px; margin:20px auto; padding:0 7px; background:#fff; word-wrap:break-word; overflow-wrap:break-word; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse; margin:0; padding:0; table-layout:fixed;">
       <tr>
-        <td colspan="2" style="text-align: center; padding: 8px 0;">
-          <h1 style="margin: 8px 0; letter-spacing: 0.3px; font-weight: 800; font-size: 2.3em; text-align: center;">${is_payment_confirmation ? "Payment Confirmed" : "Invoice"} #${invoice.invoice_number}</h1>
+        <td colspan="2" style="padding:4px 0; text-align:center;">
+          <h1 style="margin:4px 0; letter-spacing:0.15px; font-weight:800; font-size:1.2em; text-align:center;">${T.invoiceRef} #${invoice.invoice_number}</h1>
         </td>
       </tr>
+      ${dividerRow()}
       <tr>
-        <td colspan="2" class="divider"></td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0; vertical-align: middle;">
-            <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-block; vertical-align: bottom;">
+        <td style="padding:4px 0; vertical-align:middle;">
+            <a href="https://vixis.dev/studio" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:inline-block; vertical-align:bottom;">
               <img
                 src="https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp"
                 alt="Vixis Studio"
-                style="height: 38px; border-radius: 6px; display: inline-block; vertical-align: bottom;"
+                style="height:20px; border-radius:4px; display:inline-block; vertical-align:bottom;"
               >
             </a>
-            <span style="font-size: 1.7em; font-weight: 800; margin-left: 12px; display: inline-block; vertical-align: middle;">Vixis Studio</span>
+            <span style="font-size:0.9em; font-weight:800; margin-left:6px; display:inline-block; vertical-align:middle;">Vixis Studio</span>
         </td>
-        <td style="text-align: right; font-size: 1.7em; font-weight: 400; padding: 8px 0; vertical-align: bottom; word-wrap: break-word; overflow-wrap: break-word;">${productTitle}</td>
+        <td style="text-align:right; font-size:0.9em; font-weight:400; padding:4px 0; vertical-align:bottom; word-wrap:break-word; overflow-wrap:break-word;">${productTitle}</td>
       </tr>
+      ${dividerRow()}
       <tr>
-        <td colspan="2" class="divider"></td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0;">
-          <span style="font-size: 1.6em; font-weight: 800;">${invoice.user_name}</span>
+        <td style="padding:4px 0;">
+          <span style="font-weight:800;">${invoice.user_name}</span>
         </td>
-        <td style="text-align: right; padding: 8px 0;">
-          <span style="font-size: 1.6em; font-weight: 800;">${invoice.request_type}</span>
-        </td>
-      </tr>
-      <tr>
-        <td colspan="2">
-          <div class="divider-large"></div>
-        </td>
-      </tr>
-      <tr>
-        <td colspan="2" style="padding: 8px 0; word-wrap: break-word; overflow-wrap: break-word;">
-          <div style="font-size: 1.5rem; font-weight: 800;">${is_payment_confirmation ? "Amount paid" : "Amount to pay"}</div>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0; width: 40%;">
-          <span style="font-size: 2.6em; font-weight: 800;">Total</span>
-        </td>
-        <td style="text-align: right; padding: 8px 0; width: 60%; white-space: nowrap;">
-          <span style="font-size: ${priceFontSize}; font-weight: 700; line-height: 1.1; white-space: wrap;">${formatPrice(invoice.amount, invoice.currency)}</span>
+        <td style="text-align:right; padding:4px 0;">
+          <span style="font-weight:800;">${invoice.request_type}</span>
         </td>
       </tr>
       <tr>
         <td colspan="2">
-          <div class="divider-medium"></div>
+          <div style="background-color:#000; height:10px; line-height:0; font-size:0; margin:4px 0;">&nbsp;</div>
         </td>
       </tr>
       <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #888989;">
-          <span style="font-size: 1.5rem; font-weight: 800;">Approximate delivery time</span>
+        <td colspan="2" style="padding:4px 0; word-wrap:break-word; overflow-wrap:break-word;">
+          <div style="font-size:0.85rem; font-weight:800;">${T.amountLabel}</div>
         </td>
-        <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #888989; word-wrap: break-word; overflow-wrap: break-word;">
-          <span style="font-size: 1.5rem;">${invoice.delivery_time}</span>
+      </tr>
+      <tr>
+        <td style="padding:4px 0; width:40%;">
+          <span style="font-size:1.5em; font-weight:800;">${T.totalLabel}</span>
+        </td>
+        <td style="text-align:right; padding:4px 0; width:60%; white-space:nowrap;">
+          <span style="font-size:${priceFontSize}; font-weight:700; line-height:1.1; white-space:wrap;">${formatPrice(invoice.amount, invoice.currency)}</span>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2">
+          <div style="background-color:#000; height:5px; line-height:0; font-size:0; margin:4px 0;">&nbsp;</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0; border-bottom:1px solid #888989;">
+          <span style="font-size:0.85rem; font-weight:800;">${T.deliveryLabel}</span>
+        </td>
+        <td style="text-align:right; padding:4px 0; border-bottom:1px solid #888989; word-wrap:break-word; overflow-wrap:break-word;">
+          <span style="font-size:0.85rem;">${invoice.delivery_time}</span>
         </td>
       </tr>
       ${
@@ -309,11 +248,11 @@ serve(async (req) => {
                         }
                         return `
       <tr>
-        <td style="padding: 4px 0 4px 32px;">
-          <span style="font-size: 1.2rem; font-weight: 600;">${subfeature.name || "Subfeature"}</span>
+        <td style="padding:2px 0 2px 16px;">
+          <span style="font-size:0.7rem; font-weight:600;">${subfeature.name || "Subfeature"}</span>
         </td>
-        <td style="text-align: right; padding: 4px 0;">
-          <span style="font-size: 1.2rem;">${subPriceDisplay}</span>
+        <td style="text-align:right; padding:2px 0;">
+          <span style="font-size:0.7rem;">${subPriceDisplay}</span>
         </td>
       </tr>
       `;
@@ -321,15 +260,13 @@ serve(async (req) => {
                     : "";
 
                   return `
+      ${dividerRow()}
       <tr>
-        <td colspan="2" class="divider"></td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0;">
-          <span style="font-size: 1.5rem; font-weight: 800;">${feature.name || "Feature"}</span>
+        <td style="padding:4px 0;">
+          <span style="font-size:0.85rem; font-weight:800;">${feature.name || "Feature"}</span>
         </td>
-        <td style="text-align: right; padding: 8px 0; word-wrap: break-word; overflow-wrap: break-word;">
-          <span style="font-size: 1.5rem;">${priceDisplay}</span>
+        <td style="text-align:right; padding:4px 0; word-wrap:break-word; overflow-wrap:break-word;">
+          <span style="font-size:0.85rem;">${priceDisplay}</span>
         </td>
       </tr>
       ${subfeaturesHTML}
@@ -341,45 +278,32 @@ serve(async (req) => {
       }
       <tr>
         <td colspan="2">
-          <div class="divider-large"></div>
+          <div style="background-color:#000; height:10px; line-height:0; font-size:0; margin:4px 0;">&nbsp;</div>
         </td>
       </tr>
-      ${
-        is_payment_confirmation
-          ? `
       <tr>
-        <td colspan="2" style="text-align: center; padding: 16px 0;">
-          <span style="display: inline-block; padding: 16px 32px; background-color: #1550b1; color: #ffffff !important; border-radius: 6px; font-weight: 700; font-size: 1.4rem;">✓ Payment Confirmed</span>
-        </td>
-      </tr>
-      ${deliveryAccessHTML}`
-          : `
-      <tr>
-        <td colspan="2" style="text-align: center; padding: 10px 0;">
+        <td colspan="2" style="text-align:center; padding:10px 0;">
           <a
             href="${payLink}"
             target="_blank"
             rel="noopener noreferrer"
-            style="padding: 20px 40px; background-color: #0d0d0d; color: #03fff6 !important; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 1.4rem; display: inline-block;"
+            style="padding:10px 20px; background-color:#0d0d0d; color:#03fff6 !important; text-decoration:none; border-radius:4px; font-weight:700; display:inline-block;"
           >
-            Pay Now
+            ${T.payNow}
           </a>
-        </td>
-      </tr>`
-      }
-      <tr>
-        <td colspan="2">
-          <div class="divider-medium"></div>
         </td>
       </tr>
       <tr>
-        <td colspan="2" style="font-size: 1.1rem; padding: 10px 0 10px 16px; text-indent: -16px;">
+        <td colspan="2">
+          <div style="background-color:#000; height:5px; line-height:0; font-size:0; margin:4px 0;">&nbsp;</div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="font-size:0.6rem; padding:5px 0 5px 8px; text-indent:-8px;">
           ${
-            is_payment_confirmation
-              ? `* Payment received:<br>Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis`
-              : isDefaultPayLink
-              ? `* Order ID (automatically included):<br>Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis`
-              : `* In the payment note you must put:<br>Product #${invoice.product_id.substring(0, 8)} - Invoice #${invoice.invoice_number} - Vixis`
+            isDefaultPayLink
+              ? `${T.orderIdAuto}<br>Product #${invoice.product_id.substring(0, 8)} - ${T.invoiceRef} #${invoice.invoice_number} - Vixis`
+              : `${T.paymentNote}<br>Product #${invoice.product_id.substring(0, 8)} - ${T.invoiceRef} #${invoice.invoice_number} - Vixis`
           }
         </td>
       </tr>
@@ -418,11 +342,7 @@ serve(async (req) => {
             custom_fields: invoice.custom_fields,
             from_email: "noreply@vixis.dev",
             from_name: "Vixis Studio",
-            subject: is_payment_confirmation
-              ? `Payment Confirmed - Invoice #${invoice.invoice_number} - Vixis Studio`
-              : is_update
-              ? `Invoice #${invoice.invoice_number} Updated - Vixis Studio`
-              : `Invoice #${invoice.invoice_number} - Vixis Studio`,
+            subject,
           }),
         });
 
@@ -445,11 +365,7 @@ serve(async (req) => {
               body: JSON.stringify({
                 from: "noreply@vixis.dev",
                 to: invoice.user_email,
-                subject: is_payment_confirmation
-              ? `Payment Confirmed - Invoice #${invoice.invoice_number} - Vixis Studio`
-              : is_update
-              ? `Invoice #${invoice.invoice_number} Updated - Vixis Studio`
-              : `Invoice #${invoice.invoice_number} - Vixis Studio`,
+                subject,
                 html: invoiceHTML,
               }),
             });
@@ -476,11 +392,7 @@ serve(async (req) => {
           body: JSON.stringify({
             from: "noreply@vixis.dev",
             to: invoice.user_email,
-            subject: is_payment_confirmation
-              ? `Payment Confirmed - Invoice #${invoice.invoice_number} - Vixis Studio`
-              : is_update
-              ? `Invoice #${invoice.invoice_number} Updated - Vixis Studio`
-              : `Invoice #${invoice.invoice_number} - Vixis Studio`,
+            subject,
             html: invoiceHTML,
           }),
         });
