@@ -25,7 +25,16 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const url = new URL(req.url);
-    const invoiceId = url.searchParams.get("invoice_id");
+    let invoiceId = url.searchParams.get("invoice_id");
+
+    if (!invoiceId) {
+      try {
+        const body = await req.json();
+        invoiceId = body?.invoice_id;
+      } catch {
+        // sin body, no hacer nada
+      }
+    }
 
     if (!invoiceId) {
       return jsonCheckoutResponse(400, { error: "invoice_id es requerido" });

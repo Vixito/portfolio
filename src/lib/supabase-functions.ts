@@ -1746,8 +1746,8 @@ export async function getCheckoutInvoiceStatus(invoiceId: string) {
   const { data, error } = await supabase.functions.invoke(
     "get-checkout-invoice",
     {
-      method: "GET",
-      query: { invoice_id: invoiceId },
+      method: "POST",
+      body: { invoice_id: invoiceId },
     }
   );
 

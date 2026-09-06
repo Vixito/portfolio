@@ -436,6 +436,7 @@ function Checkout() {
             )}
 
             {/* Tabs de pasarelas */}
+            {pageState === "checkout" && (<>
             <div className="flex gap-2 mb-5">
               {paypalEnabled && (
                 <TabButton
@@ -591,6 +592,7 @@ function Checkout() {
                 </p>
               </div>
             )}
+            </>)}
           </>
         )}
 
