@@ -67,16 +67,26 @@ serve(async (req) => {
     // Idioma de la factura: el mismo que usó el comprador en el checkout
     const lang = invoice.custom_fields?.product_language === "en" ? "en" : "es";
 
-    // Textos localizados (sin Spanglish): todo en español o todo en inglés
+    // Textos localizados (sin Spanglish): todo en español o todo en inglés.
+    // Cada caso usa sus textos propios: factura pendiente (proyecto) o
+    // confirmación de pago (producto).
     const T = {
       invoiceRef: lang === "en" ? "Invoice" : "Factura",
-      amountLabel: lang === "en" ? "Amount to pay" : "Cantidad a pagar",
+      amountLabel: is_payment_confirmation
+        ? lang === "en"
+          ? "Amount paid"
+          : "Cantidad pagada"
+        : lang === "en"
+        ? "Amount to pay"
+        : "Cantidad a pagar",
       totalLabel: "Total",
       deliveryLabel:
         lang === "en"
           ? "Approximate delivery time"
           : "Tiempo aproximado de entrega",
       payNow: lang === "en" ? "Pay Now" : "Pagar ahora",
+      getProduct: lang === "en" ? "Get product" : "Obtener producto",
+      linkLabel: lang === "en" ? "Link" : "Enlace",
       orderIdAuto:
         lang === "en"
           ? "* Order ID (automatically included):"
@@ -85,6 +95,9 @@ serve(async (req) => {
         lang === "en"
           ? "* In the payment note you must put:"
           : "* En la nota del pago debes poner:",
+      paymentReceived:
+        lang === "en" ? "* Payment received:" : "* Pago recibido:",
+      productRef: lang === "en" ? "Product" : "Producto",
     };
 
     const subject = is_payment_confirmation
@@ -98,8 +111,10 @@ serve(async (req) => {
       : `${T.invoiceRef} #${invoice.invoice_number} - Vixis Studio`;
 
     // Generar HTML de la factura (estilo Nutrition Facts)
+    // El formato de moneda siempre es "$600.00" (en-US): el es-ES con USD
+    // produce "600,00 US$" que los clientes de correo rompen en "U" / "S$".
     const formatPrice = (amount: number, currency: string) => {
-      return new Intl.NumberFormat(lang === "en" ? "en-US" : "es-ES", {
+      return new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: currency === "USD" ? "USD" : "COP",
         minimumFractionDigits: currency === "USD" ? 2 : 0,
@@ -134,6 +149,50 @@ serve(async (req) => {
 
     // Detectar si se está usando el link por defecto (dLocal) o uno personalizado
     const isDefaultPayLink = !rawPayLink || rawPayLink === `https://vixis.dev/pay/${invoice.id}`;
+
+    // Enlaces de acceso al producto (configurados en el Admin Panel):
+    // para el checkout se copian desde access_links al crear la factura, así
+    // que ya viajan dentro de custom_fields.delivery_links. El botón lleva
+    // directo a cada enlace de acceso: el acceso ocurre en el email, sin
+    // páginas intermedias.
+    const accessLinks = Array.isArray(invoice.custom_fields?.delivery_links)
+      ? invoice.custom_fields.delivery_links.filter(
+          (l: unknown) => typeof l === "string" && l.trim().length > 0
+        )
+      : [];
+
+    // Acción de confirmación de pago: UN SOLO botón que lleva al acceso del
+    // producto. En HTML de email un enlace solo apunta a una URL y no hay
+    // JavaScript, así que el botón abre el primer enlace de acceso. Si el
+    // Admin Panel configuró varios accesos, los restantes se muestran como
+    // enlaces de texto discretos debajo del botón (todos directamente en el
+    // correo, sin páginas intermedias).
+    let confirmationAction = "";
+    if (is_payment_confirmation) {
+      if (accessLinks.length > 0) {
+        const primaryHref = accessLinks[0];
+        const extraLinks = accessLinks.slice(1);
+        const extraHTML = extraLinks.length
+          ? `<br>${extraLinks
+              .map(
+                (l: string, idx: number) =>
+                  `<a href="${l}" target="_blank" rel="noopener noreferrer" style="font-size:0.65rem; color:#1550b1; text-decoration:underline;">${T.linkLabel} ${idx + 2}</a>`
+              )
+              .join("&nbsp;&nbsp;·&nbsp;&nbsp;")}`
+          : "";
+        confirmationAction = `
+          <a
+            href="${primaryHref}"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="padding:10px 20px; background-color:#1550b1; color:#ffffff !important; text-decoration:none; border-radius:4px; font-weight:700; display:inline-block;"
+          >
+            ${T.getProduct}
+          </a>${extraHTML}`;
+      } else {
+        confirmationAction = `<span style="padding:10px 20px; background-color:#1550b1; color:#ffffff !important; border-radius:4px; font-weight:700; display:inline-block;">${T.getProduct}</span>`;
+      }
+    }
 
     const productLanguage = invoice.custom_fields?.product_language as string | undefined;
     const productTitle = invoice.products
@@ -283,6 +342,10 @@ serve(async (req) => {
       </tr>
       <tr>
         <td colspan="2" style="text-align:center; padding:10px 0;">
+          ${
+            is_payment_confirmation
+              ? confirmationAction
+              : `
           <a
             href="${payLink}"
             target="_blank"
@@ -290,7 +353,8 @@ serve(async (req) => {
             style="padding:10px 20px; background-color:#0d0d0d; color:#03fff6 !important; text-decoration:none; border-radius:4px; font-weight:700; display:inline-block;"
           >
             ${T.payNow}
-          </a>
+          </a>`
+          }
         </td>
       </tr>
       <tr>
@@ -301,9 +365,11 @@ serve(async (req) => {
       <tr>
         <td colspan="2" style="font-size:0.6rem; padding:5px 0 5px 8px; text-indent:-8px;">
           ${
-            isDefaultPayLink
-              ? `${T.orderIdAuto}<br>Product #${invoice.product_id.substring(0, 8)} - ${T.invoiceRef} #${invoice.invoice_number} - Vixis`
-              : `${T.paymentNote}<br>Product #${invoice.product_id.substring(0, 8)} - ${T.invoiceRef} #${invoice.invoice_number} - Vixis`
+            is_payment_confirmation
+              ? `${T.paymentReceived}<br>${T.productRef} #${invoice.product_id.substring(0, 8)} - ${T.invoiceRef} #${invoice.invoice_number} - Vixis`
+              : isDefaultPayLink
+              ? `${T.orderIdAuto}<br>${T.productRef} #${invoice.product_id.substring(0, 8)} - ${T.invoiceRef} #${invoice.invoice_number} - Vixis`
+              : `${T.paymentNote}<br>${T.productRef} #${invoice.product_id.substring(0, 8)} - ${T.invoiceRef} #${invoice.invoice_number} - Vixis`
           }
         </td>
       </tr>
