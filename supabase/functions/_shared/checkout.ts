@@ -20,6 +20,31 @@ export const jsonCheckoutResponse = (status: number, body: unknown) =>
   });
 
 /**
+ * Consulta el estado de una invoice de NowPayments (sandbox o producción).
+ * Fallback inmune al IPN: permite confirmar el pago incluso si el webhook
+ * nunca llega (típico en sandbox).
+ */
+export async function getNowPaymentsInvoiceStatus(
+  npInvoiceId: string
+): Promise<any | null> {
+  const { sandbox, apiKey } = getNowPaymentsEnv();
+  if (!npInvoiceId || !apiKey) return null;
+  const baseUrl = sandbox
+    ? "https://api-sandbox.nowpayments.io"
+    : "https://api.nowpayments.io";
+
+  try {
+    const res = await fetch(`${baseUrl}/v1/invoice/${npInvoiceId}`, {
+      headers: { "x-api-key": apiKey },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Resuelve las credenciales de PayPal según el entorno:
  * - Modo sandbox si PAYPAL_SANDBOX === "true" o si existen
  *   PAYPAL_SANDBOX_CLIENT_ID y PAYPAL_SANDBOX_SECRET_KEY.

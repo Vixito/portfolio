@@ -5,10 +5,15 @@ import {
   jsonCheckoutResponse,
   getCheckoutInvoiceWithProduct,
   buildDeliveryPayload,
+  deliverCheckoutOrder,
+  getNowPaymentsInvoiceStatus,
 } from "../_shared/checkout.ts";
 
 // Devuelve el estado de una factura de checkout y, SOLO si está pagada,
 // la información de entrega (links de acceso, mensajes).
+// Para NowPayments, si la factura sigue pendiente se consulta el estado a la
+// API de NowPayments: si ya está "finished", se entrega sin depender del IPN
+// (el webhook puede no llegar en sandbox).
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsCheckoutHeaders });
@@ -29,6 +34,30 @@ serve(async (req) => {
     const invoice = await getCheckoutInvoiceWithProduct(supabase, invoiceId);
     if (!invoice) {
       return jsonCheckoutResponse(404, { error: "Factura no encontrada" });
+    }
+
+    const paid =
+      invoice.status === "paid" || invoice.status === "completed";
+
+    // Fallback NowPayments: confirmar el pago directamente contra la API
+    if (!paid) {
+      const npInvoiceId = invoice.custom_fields?.np_invoice_id;
+      if (npInvoiceId) {
+        const npStatus = await getNowPaymentsInvoiceStatus(String(npInvoiceId));
+        if (
+          npStatus?.payment_status === "finished" &&
+          (invoice.status === "pending" || invoice.status === "waiting")
+        ) {
+          const delivery = await deliverCheckoutOrder(supabase, {
+            invoice,
+            gateway: "nowpayments",
+            transactionId: String(
+              npStatus.payment_id || npStatus.id || `NP-${invoice.id}`
+            ),
+          });
+          return jsonCheckoutResponse(200, delivery);
+        }
+      }
     }
 
     return jsonCheckoutResponse(200, buildDeliveryPayload(invoice));
