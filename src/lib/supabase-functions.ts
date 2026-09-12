@@ -1774,8 +1774,22 @@ export async function createDLocalGoToken(params: {
   );
 
   if (error) {
+    // FunctionsHttpError trae el cuerpo real de la respuesta; usarlo para
+    // los mensajes de error (p.ej. el mensaje de rechazo de dLocal).
+    const httpError = error as {
+      context?: { json?: () => Promise<{ error?: string }> };
+    };
+    let message = error.message;
+    try {
+      if (httpError?.context?.json) {
+        const body = await httpError.context.json();
+        if (body?.error) message = body.error;
+      }
+    } catch {
+      // No tocar el mensaje si no se pudo parsear el cuerpo
+    }
     throw new Error(
-      `Error al iniciar el pago con tarjeta: ${error.message}`
+      `Error al iniciar el pago con tarjeta: ${message}`
     );
   }
 

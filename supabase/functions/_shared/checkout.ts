@@ -386,8 +386,6 @@ export async function createCheckoutInvoice(
   const { product, amount, user_name, user_email, gateway } = params;
   const settings = product.checkout_settings || {};
 
-  const invoiceNumber = await generateCheckoutInvoiceNumber(supabase);
-
   const lang =
     params.extra_custom_fields?.product_language === "en" ? "en" : "es";
   const defaultDeliveryTime =
@@ -404,35 +402,48 @@ export async function createCheckoutInvoice(
     ...(params.extra_custom_fields || {}),
   };
 
-  const { data, error } = await supabase
-    .from("invoices")
-    .insert({
-      invoice_number: invoiceNumber,
-      product_id: product.id,
-      user_name,
-      user_email,
-      request_type: "Checkout",
-      amount: Math.round(amount * 100) / 100,
-      currency: "USD",
-      delivery_time:
-        params.delivery_time || product.delivery_time || defaultDeliveryTime,
-      custom_fields: customFields,
-      pay_now_link: null,
-      status: "pending",
-    })
-    .select(
-      `
+  // El número de factura no se genera atómicamente: dos peticiones
+  // concurrentes pueden recibir el mismo INV-YYYY-NNNN y una viola la
+  // unicidad. Reintentamos regenerando el número (máx. 8 intentos).
+  const maxAttempts = 8;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const invoiceNumber = await generateCheckoutInvoiceNumber(supabase);
+
+    const { data, error } = await supabase
+      .from("invoices")
+      .insert({
+        invoice_number: invoiceNumber,
+        product_id: product.id,
+        user_name,
+        user_email,
+        request_type: "Checkout",
+        amount: Math.round(amount * 100) / 100,
+        currency: "USD",
+        delivery_time:
+          params.delivery_time || product.delivery_time || defaultDeliveryTime,
+        custom_fields: customFields,
+        pay_now_link: null,
+        status: "pending",
+      })
+      .select(
+        `
       id, invoice_number, product_id, user_name, user_email, request_type,
       amount, currency, delivery_time, custom_fields, status, created_at
     `
-    )
-    .single();
+      )
+      .single();
 
-  if (error) {
+    if (!error) return data;
+
+    // unique_violation → carrera por el número: reintentar con otro
+    if ((error as { code?: string })?.code === "23505") continue;
+
     throw new Error(`Error al crear la factura: ${error.message}`);
   }
 
-  return data;
+  throw new Error(
+    "Error al crear la factura: no se pudo asignar un número de factura único"
+  );
 }
 
 /**

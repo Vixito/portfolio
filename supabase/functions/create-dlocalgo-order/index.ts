@@ -83,7 +83,12 @@ serve(async (req: Request) => {
       ? String(success_url).trim()
       : `https://vixis.dev/store/${product.public_id || product.id}`;
 
-    const successUrl = new URL(storeUrl);
+    let successUrl: URL;
+    try {
+      successUrl = new URL(storeUrl);
+    } catch {
+      return jsonCheckoutResponse(400, { error: "success_url inválido" });
+    }
     successUrl.searchParams.set("invoice_id", invoice.id);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
