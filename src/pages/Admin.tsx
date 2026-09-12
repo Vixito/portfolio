@@ -1152,7 +1152,10 @@ function Admin() {
           ? {
               gateways: Array.isArray(cs.gateways)
                 ? cs.gateways.filter(
-                    (g: string) => g === "paypal" || g === "nowpayments"
+                    (g: string) =>
+                      g === "paypal" ||
+                      g === "nowpayments" ||
+                      g === "dlocalgo"
                   )
                 : ["paypal", "nowpayments"],
               access_links: Array.isArray(cs.access_links)
@@ -1709,7 +1712,10 @@ function Admin() {
               const cs = updateProductData.checkout_settings || {};
               const gateways = Array.isArray(cs.gateways)
                 ? cs.gateways.filter(
-                    (g: string) => g === "paypal" || g === "nowpayments"
+                    (g: string) =>
+                      g === "paypal" ||
+                      g === "nowpayments" ||
+                      g === "dlocalgo"
                   )
                 : ["paypal", "nowpayments"];
               const accessLinks = Array.isArray(cs.access_links)
@@ -2317,7 +2323,10 @@ function Admin() {
               const cs = productData.checkout_settings || {};
               const gateways = Array.isArray(cs.gateways)
                 ? cs.gateways.filter(
-                    (g: string) => g === "paypal" || g === "nowpayments"
+                    (g: string) =>
+                      g === "paypal" ||
+                      g === "nowpayments" ||
+                      g === "dlocalgo"
                   )
                 : ["paypal", "nowpayments"];
               const accessLinks = Array.isArray(cs.access_links)
@@ -5215,7 +5224,7 @@ function Admin() {
                                         (
                                           crudFormData.checkout_settings
                                             ?.gateways || ["paypal", "nowpayments"]
-                                        ).includes("paypal")
+                                        ).includes("dlocalgo")
                                           ? true
                                           : false
                                       }
@@ -5231,11 +5240,11 @@ function Admin() {
                                           ? Array.from(
                                               new Set([
                                                 ...gateways,
-                                                "paypal",
+                                                "dlocalgo",
                                               ])
                                             )
                                           : gateways.filter(
-                                              (g: string) => g !== "paypal"
+                                              (g: string) => g !== "dlocalgo"
                                             );
                                         setCrudFormData({
                                           ...crudFormData,
@@ -5248,7 +5257,7 @@ function Admin() {
                                       className="w-4 h-4"
                                     />
                                     <span className="text-white text-sm">
-                                      PayPal / Tarjetas (PayPal Checkout)
+                                      Tarjeta (dLocal Go)
                                     </span>
                                   </label>
                                   <label className="flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-lg p-3 cursor-pointer">

@@ -1,9 +1,7 @@
 import {
-  type OnApproveData,
-  PayPalButtons,
-  PayPalScriptProvider,
-} from "@paypal/react-paypal-js";
-import { AnimatePresence, motion } from "framer-motion";
+  AnimatePresence,
+  motion,
+} from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import {
   Link,
@@ -15,13 +13,11 @@ import CanvasBackground from "../components/features/CanvasBackground";
 import Button from "../components/ui/Button";
 import { getTranslatedText, useTranslation } from "../lib/i18n";
 import {
-  capturePayPalOrder,
+  createDLocalGoCheckout,
   createNowPaymentsCheckout,
-  createPayPalOrder,
   getAppearanceSettings,
   getCheckoutInvoiceStatus,
   getCheckoutProduct,
-  getPayPalConfig,
 } from "../lib/supabase-functions";
 import { useThemeStore } from "../stores/useThemeStore";
 import NotFound from "./NotFound";
@@ -54,7 +50,7 @@ interface CheckoutProduct {
   }> | null;
 }
 
-type ActiveTab = "paypal" | "nowpayments";
+type ActiveTab = "card" | "nowpayments";
 type PageState = "checkout" | "processing" | "success" | "error";
 
 function Checkout() {
@@ -67,12 +63,10 @@ function Checkout() {
   const [product, setProduct] = useState<CheckoutProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [starryBg, setStarryBg] = useState(false);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("paypal");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("card");
   const [pageState, setPageState] = useState<PageState>("checkout");
   const [error, setError] = useState<string | null>(null);
 
-  const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
-  const [paypalSandbox, setPaypalSandbox] = useState(false);
   const [buyerInfo, setBuyerInfo] = useState({ name: "", email: "" });
 
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
@@ -82,6 +76,7 @@ function Checkout() {
 
   const pollRef = useRef<number | null>(null);
   const creatingNowPaymentsRef = useRef(false);
+  const creatingCardRef = useRef(false);
 
   const originalInvoiceId = searchParams.get("invoice_id");
   const returnInvoiceId = invoiceId || originalInvoiceId;
@@ -91,7 +86,10 @@ function Checkout() {
     "paypal",
     "nowpayments",
   ];
-  const paypalEnabled = gateways.includes("paypal");
+  // La pestaña "Tarjeta" usa dLocal Go; se muestra también si el producto
+  // tenía habilitado PayPal (migración) para no romper productos existentes.
+  const cardEnabled =
+    gateways.includes("dlocalgo") || gateways.includes("paypal");
   const nowpaymentsEnabled = gateways.includes("nowpayments");
 
   const effectivePrice = useMemoPrice(product);
@@ -128,30 +126,13 @@ function Checkout() {
     load();
   }, [productId]);
 
-  // Cargar client_id de PayPal (config pública)
-  useEffect(() => {
-    let mounted = true;
-    getPayPalConfig()
-      .then((config: { client_id?: string; sandbox?: boolean } | null) => {
-        if (mounted) {
-          if (config?.client_id) setPaypalClientId(config.client_id);
-          if (config?.sandbox) setPaypalSandbox(true);
-        }
-      })
-      .catch(() => {
-        // Si falla, se muestra mensaje en la pestaña de PayPal
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // Determinar estados iniciales por query params (retorno de NowPayments)
+  // Determinar estados iniciales por query params (retorno de pasarela
+  // hosteada: NowPayments / dLocal Go)
   useEffect(() => {
     if (pageState !== "checkout") return;
     if (!originalInvoiceId) return;
 
-    // Retorno de NowPayments: esperar confirmación y entregar
+    // Retorno de la pasarela: esperar confirmación y entregar
     setInvoiceId(originalInvoiceId);
     setPageState("processing");
     setProcessingMsg(
@@ -272,57 +253,47 @@ function Checkout() {
     return null;
   };
 
-  const onPayPalCreateOrder = async () => {
-    if (!product) throw new Error("Product not found");
+  const startCard = async () => {
+    if (!product || creatingCardRef.current) return;
+    creatingCardRef.current = true;
+    setError(null);
+
     const validationError = validateBuyer();
     if (validationError) {
       setError(validationError);
-      throw new Error(validationError);
+      creatingCardRef.current = false;
+      return;
     }
 
-    setError(null);
-
-    const res = await createPayPalOrder({
-      product_id: product.id,
-      user_name: buyerInfo.name.trim(),
-      user_email: buyerInfo.email.trim(),
-      product_language: language,
-      success_url: `${window.location.origin}/checkout/${product.public_id || product.id}`,
-    });
-
-    setInvoiceId(res?.invoice_id || null);
-    return res?.paypal_order_id as string;
-  };
-
-  const onPayPalApprove = async (data: OnApproveData) => {
     setPageState("processing");
-    setProcessingMsg(
-      t("checkout.confirmingPayment") || "Confirmando tu pago..."
-    );
+    setProcessingMsg(t("checkout.creatingPayment") || "Creando pago seguro...");
 
     try {
-      const res = await capturePayPalOrder({
-        paypal_order_id: data.orderID,
-        invoice_id: invoiceId || undefined,
+      const productPublicId = product.public_id || product.id;
+      const res = await createDLocalGoCheckout({
+        product_id: product.id,
+        user_name: buyerInfo.name.trim(),
+        user_email: buyerInfo.email.trim(),
+        product_language: language,
+        success_url: `${window.location.origin}/checkout/${productPublicId}?gateway=card`,
       });
 
-      if (res?.paid) {
-        if (res.invoice_number) setInvoiceNumber(res.invoice_number);
-        setDelivery(res.delivery || null);
-        setPageState("success");
-      } else if (res?.error) {
-        throw new Error(res.error);
+      if (res?.redirect_url) {
+        window.location.href = res.redirect_url;
       } else {
-        throw new Error(
-          t("checkout.paymentFailed") || "El pago no se pudo confirmar"
+        setError(
+          t("checkout.noRedirect") || "No se pudo obtener el link de pago"
         );
+        creatingCardRef.current = false;
+        setPageState("checkout");
       }
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Error confirmando el pago de PayPal"
+          : "Error creando el pago con tarjeta"
       );
+      creatingCardRef.current = false;
       setPageState("checkout");
     }
   };
@@ -442,11 +413,14 @@ function Checkout() {
             {/* Tabs de pasarelas */}
             {pageState === "checkout" && (<>
             <div className="flex gap-2 mb-5">
-              {paypalEnabled && (
+              {cardEnabled && (
                 <TabButton
-                  active={activeTab === "paypal"}
-                  onClick={() => setActiveTab("paypal")}
-                  label={t("checkout.tabPaypal") || "Tarjeta / PayPal"}
+                  active={activeTab === "card"}
+                  onClick={() => {
+                    setActiveTab("card");
+                    setError(null);
+                  }}
+                  label={t("checkout.tabCard") || "Tarjeta"}
                 />
               )}
               {nowpaymentsEnabled && (
@@ -517,51 +491,41 @@ function Checkout() {
             </div>
 
             {/* Pasarela activa */}
-            {activeTab === "paypal" && paypalEnabled && (
+            {activeTab === "card" && cardEnabled && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                  {t("checkout.payWithPayPal") || "Pagar con tarjeta o PayPal"}
+                  {t("checkout.payWithCard") || "Pagar con tarjeta"}
                 </h2>
-                {paypalClientId ? (
-                  <PayPalScriptProvider
-                    options={{
-                      clientId: paypalClientId,
-                      currency: "USD",
-                      intent: "capture",
-                      components: "buttons",
-                      environment: paypalSandbox ? "sandbox" : "production",
-                    }}
-                  >
-                    <div
-                      className={
-                        "dark:bg-white dark:rounded-2xl dark:p-2 dark:border dark:border-gray-200"
-                      }
-                    >
-                    <PayPalButtons
-                      style={{
-                        layout: "vertical",
-                        shape: "rect",
-                        height: 45,
-                      }}
-                      createOrder={onPayPalCreateOrder}
-                      onApprove={onPayPalApprove}
-                      onCancel={() => setPageState("checkout")}
-                      onError={() =>
-                        setError((prev) =>
-                          prev ||
-                          t("checkout.paypalError") ||
-                          "Ocurrió un error con PayPal. Inténtalo de nuevo."
-                        )
-                      }
-                    />
-                    </div>
-                  </PayPalScriptProvider>
-                ) : (
-                  <p className="text-sm text-red-500">
-                    {t("checkout.paypalUnavailable") ||
-                      "PayPal no está disponible en este momento."}
-                  </p>
-                )}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-base">
+                    {effectivePrice !== null ? formatPrice(effectivePrice) : ""}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    USD
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  {t("checkout.cardInfo") ||
+                    "Pago seguro procesado por dLocal. Visa, Mastercard, Amex y métodos locales."}
+                </p>
+                <Button
+                  onClick={startCard}
+                  disabled={pageState === "processing"}
+                  variant="productStore"
+                  className="w-full"
+                >
+                  {pageState === "processing" ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      {processingMsg}
+                    </span>
+                  ) : (
+                    t("checkout.payCardButton") || "Pagar con tarjeta"
+                  )}
+                </Button>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+                  (Powered by dLocal)
+                </p>
               </div>
             )}
 

@@ -663,9 +663,12 @@ export const translations = {
       nameRequired: "Tu nombre es requerido",
       emailRequired: "Tu email es requerido",
       emailInvalid: "Email inválido",
-      tabPaypal: "Tarjeta / PayPal",
+      tabCard: "Tarjeta",
       tabCrypto: "Criptomonedas",
-      payWithPayPal: "Pagar con tarjeta o PayPal",
+      payWithCard: "Pagar con tarjeta (Visa, Mastercard, Amex, PSE)",
+      cardInfo:
+        "Pago seguro procesado por dLocal. Tarjetas de crédito, débito y métodos locales.",
+      payCardButton: "Pagar con tarjeta",
       payWithCrypto: "Pagar con criptomonedas",
       cryptoInfo:
         "Acepto BTC, ETH, USDT y más de 300 criptomonedas. Recibirás un enlace de pago seguro.",
@@ -1346,9 +1349,12 @@ export const translations = {
       nameRequired: "Your name is required",
       emailRequired: "Your email is required",
       emailInvalid: "Invalid email",
-      tabPaypal: "Card / PayPal",
+      tabCard: "Card",
       tabCrypto: "Cryptocurrencies",
-      payWithPayPal: "Pay with card or PayPal",
+      payWithCard: "Pay with card (Visa, Mastercard, Amex, PSE)",
+      cardInfo:
+        "Secure payment processed by dLocal. Credit, debit cards and local methods.",
+      payCardButton: "Pay with card",
       payWithCrypto: "Pay with cryptocurrencies",
       cryptoInfo:
         "I accept BTC, ETH, USDT and 300+ cryptocurrencies. You'll get a secure payment link.",

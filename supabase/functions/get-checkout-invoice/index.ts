@@ -7,6 +7,9 @@ import {
   buildDeliveryPayload,
   deliverCheckoutOrder,
   getNowPaymentsInvoiceStatus,
+  getDLocalGoPaymentStatus,
+  buildDLocalGoPaymentMeta,
+  buildNowPaymentsPaymentMeta,
 } from "../_shared/checkout.ts";
 
 // Devuelve el estado de una factura de checkout y, SOLO si está pagada,
@@ -14,6 +17,8 @@ import {
 // Para NowPayments, si la factura sigue pendiente se consulta el estado a la
 // API de NowPayments: si ya está "finished", se entrega sin depender del IPN
 // (el webhook puede no llegar en sandbox).
+// Igual para dLocal Go: se consulta GET /v1/payments/:id y si está PAID,
+// se entrega; así el checkout hosteado no depende del webhook para el polling.
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsCheckoutHeaders });
@@ -63,8 +68,38 @@ serve(async (req) => {
             transactionId: String(
               npStatus.payment_id || npStatus.id || `NP-${invoice.id}`
             ),
+            paymentMeta: buildNowPaymentsPaymentMeta(npStatus),
           });
           return jsonCheckoutResponse(200, delivery);
+        }
+      }
+    }
+
+    // Fallback dLocal Go: consultar el pago directamente contra la API
+    if (!paid) {
+      const dlocalPaymentId = invoice.custom_fields?.dlocalgo_payment_id;
+      if (dlocalPaymentId) {
+        const dPayment = await getDLocalGoPaymentStatus(
+          String(dlocalPaymentId)
+        );
+        if (
+          dPayment?.status === "PAID" &&
+          (invoice.status === "pending" || invoice.status === "waiting")
+        ) {
+          const incoming = Number(dPayment.amount);
+          if (
+            Number.isFinite(incoming) &&
+            Math.abs(incoming - Number(invoice.amount)) <= 0.01
+          ) {
+            const delivery = await deliverCheckoutOrder(supabase, {
+            invoice,
+            gateway: "dlocalgo",
+            transactionId: String(dPayment.id),
+            paidAt: dPayment.approved_date || undefined,
+            paymentMeta: buildDLocalGoPaymentMeta(dPayment),
+          });
+            return jsonCheckoutResponse(200, delivery);
+          }
         }
       }
     }

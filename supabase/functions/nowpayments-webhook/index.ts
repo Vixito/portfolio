@@ -6,6 +6,7 @@ import {
   getCheckoutInvoiceWithProduct,
   deliverCheckoutOrder,
   getNowPaymentsEnv,
+  buildNowPaymentsPaymentMeta,
 } from "../_shared/checkout.ts";
 
 // Verifica la firma HMAC-SHA512 que NowPayments envía en x-nowpayments-sig.
@@ -125,6 +126,7 @@ serve(async (req) => {
       invoice,
       gateway: "nowpayments",
       transactionId: transactionId || `NP-${invoice.id}`,
+      paymentMeta: buildNowPaymentsPaymentMeta(payload),
     });
 
     return jsonCheckoutResponse(200, {

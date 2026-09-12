@@ -1739,6 +1739,31 @@ export async function createNowPaymentsCheckout(params: {
 }
 
 /**
+ * Crea el pago con tarjeta vía dLocal Go (checkout hosteado).
+ * Devuelve { redirect_url, invoice_id, ... } o lanza error.
+ */
+export async function createDLocalGoCheckout(params: {
+  product_id: string;
+  user_name: string;
+  user_email: string;
+  product_language?: "es" | "en";
+  success_url?: string;
+}) {
+  const { data, error } = await supabase.functions.invoke(
+    "create-dlocalgo-order",
+    { body: params }
+  );
+
+  if (error) {
+    throw new Error(
+      `Error al crear el pago con tarjeta: ${error.message}`
+    );
+  }
+
+  return data;
+}
+
+/**
  * Consulta el estado de una factura del checkout y, si está pagada,
  * recibe la información de entrega (links de acceso).
  */

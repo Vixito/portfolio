@@ -90,6 +90,100 @@ export function getNowPaymentsEnv() {
   return { sandbox, apiKey, ipnSecret };
 }
 
+/**
+ * Configuración de dLocal Go (nueva plataforma api.dlocalgo.com).
+ * Un par de credenciales por entorno, definidos una sola vez:
+ *   - DLOCALGO_API_KEY / DLOCALGO_SECRET_KEY        → live
+ *   - DLOCALGO_SANDBOX_API_KEY / DLOCALGO_SANDBOX_SECRET_KEY → sandbox
+ * DLOCALGO_SANDBOX=true conmuta a sandbox (api-sbx.dlocalgo.com).
+ */
+export function getDLocalGoEnv() {
+  const sandbox = Deno.env.get("DLOCALGO_SANDBOX") === "true";
+  const apiKey = sandbox
+    ? Deno.env.get("DLOCALGO_SANDBOX_API_KEY")
+    : Deno.env.get("DLOCALGO_API_KEY");
+  const secretKey = sandbox
+    ? Deno.env.get("DLOCALGO_SANDBOX_SECRET_KEY")
+    : Deno.env.get("DLOCALGO_SECRET_KEY");
+  const baseUrl = sandbox
+    ? "https://api-sbx.dlocalgo.com"
+    : "https://api.dlocalgo.com";
+  return { apiKey, secretKey, sandbox, baseUrl };
+}
+
+/**
+ * Consulta el estado de un pago en dLocal Go (GET /v1/payments/:id).
+ * Devuelve null si falta credenciales o si la consulta falla.
+ */
+export async function getDLocalGoPaymentStatus(
+  paymentId: string
+): Promise<any | null> {
+  if (!paymentId) return null;
+  const { apiKey, secretKey, baseUrl } = getDLocalGoEnv();
+  if (!apiKey || !secretKey) return null;
+  try {
+    const res = await fetch(
+      `${baseUrl}/v1/payments/${encodeURIComponent(paymentId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}:${secretKey}`,
+        },
+      }
+    );
+    if (!res.ok) {
+      console.error(
+        `Error consultando pago dLocal Go ${paymentId}: ${res.status} ${await res.text()}`
+      );
+      return null;
+    }
+    return await res.json();
+  } catch (err) {
+    console.error("Error getDLocalGoPaymentStatus:", err);
+    return null;
+  }
+}
+
+/**
+ * Datos financieros de un pago dLocal Go para el ledger (payment_meta).
+ */
+export function buildDLocalGoPaymentMeta(payment: any) {
+  if (!payment) return undefined;
+  const meta: Record<string, unknown> = {
+    gateway: "dlocalgo",
+    payment_id: payment.id || null,
+    status: payment.status || null,
+    currency: payment.currency || null,
+    paid_amount: payment.amount ?? null,
+    fee: payment.fee ?? null,
+    net_amount: payment.balance_amount ?? null,
+    method: payment.payment_method_type || null,
+    country: payment.country || null,
+    approved_date: payment.approved_date || null,
+  };
+  if (payment.installments) meta.installments = payment.installments;
+  if (payment.payment_method_id) meta.payment_method_id = payment.payment_method_id;
+  return meta;
+}
+
+/**
+ * Datos financieros de un pago NowPayments (webhook o API) para el ledger.
+ * Acepta el payload del IPN o la respuesta de getNowPaymentsInvoiceStatus.
+ */
+export function buildNowPaymentsPaymentMeta(p: any) {
+  if (!p) return undefined;
+  const meta: Record<string, unknown> = {
+    gateway: "nowpayments",
+    payment_id:
+      p.payment_id || p.id || null,
+    status: p.payment_status || null,
+    price_currency: p.price_currency || p.currency || null,
+    pay_currency: p.pay_currency || p.out_currency || null,
+    pay_amount: p.pay_amount ?? p.out_amount ?? null,
+    actually_paid: p.actually_paid ?? null,
+  };
+  return meta;
+}
+
 export interface CheckoutSettings {
   gateways?: string[];
   access_links?: string[];
@@ -104,7 +198,8 @@ export function normalizeCheckoutSettings(raw: any): CheckoutSettings {
   if (!raw || typeof raw !== "object") return {};
   const gateways = Array.isArray(raw.gateways)
     ? raw.gateways.filter(
-        (g: unknown) => g === "paypal" || g === "nowpayments"
+        (g: unknown) =>
+          g === "paypal" || g === "nowpayments" || g === "dlocalgo"
       )
     : ["paypal", "nowpayments"];
   const accessLinks = Array.isArray(raw.access_links)
@@ -283,7 +378,7 @@ export async function createCheckoutInvoice(
     amount: number;
     user_name: string;
     user_email: string;
-    gateway: "paypal" | "nowpayments";
+    gateway: "paypal" | "nowpayments" | "dlocalgo";
     delivery_time?: string;
     extra_custom_fields?: Record<string, unknown>;
   }
@@ -363,6 +458,34 @@ export async function getCheckoutInvoiceWithProduct(
 }
 
 /**
+ * Busca una factura por un campo del custom_fields (ej. {"custom_fields": {...}}).
+ */
+export async function getCheckoutInvoiceByCustomField(
+  supabase: any,
+  field: string,
+  value: string
+): Promise<any | null> {
+  if (!field || !value) return null;
+  try {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select(
+        `
+      *,
+      products (id, title, title_translations, description, thumbnail_url)
+    `
+      )
+      .eq(`custom_fields->>${field}`, value)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data;
+  } catch (err) {
+    console.error("getCheckoutInvoiceByCustomField error:", err);
+return null;
+  }
+}
+
+/**
  * Envía la notificación a Discord (embed) cuando llega un pago.
  */
 export async function notifyCheckoutDiscord(
@@ -387,7 +510,12 @@ export async function notifyCheckoutDiscord(
     fields: [
       {
         name: "Pasarela",
-        value: payload.gateway === "paypal" ? "PayPal" : "NowPayments (Crypto)",
+        value:
+          payload.gateway === "paypal"
+            ? "PayPal"
+            : payload.gateway === "dlocalgo"
+              ? "DLocal (Tarjeta)"
+              : "NowPayments (Crypto)",
         inline: true,
       },
       {
@@ -458,9 +586,10 @@ export async function deliverCheckoutOrder(
   supabase: any,
   params: {
     invoice: any;
-    gateway: "paypal" | "nowpayments";
+    gateway: "paypal" | "nowpayments" | "dlocalgo";
     transactionId: string;
     paidAt?: string;
+    paymentMeta?: Record<string, unknown>;
   }
 ) {
   const { invoice, gateway, transactionId } = params;
@@ -475,12 +604,20 @@ export async function deliverCheckoutOrder(
 
   const paidAt = params.paidAt || new Date().toISOString();
 
+  // Datos financieros de la pasarela (fee/net/país/método). Base del ledger
+  // del BOS: se muestra en el Admin Panel y se concilia con n8n.
+  const customFields = { ...(invoice.custom_fields || {}) };
+  if (params.paymentMeta && typeof params.paymentMeta === "object") {
+    customFields.payment_meta = params.paymentMeta;
+  }
+
   const { error: updateError } = await supabase
     .from("invoices")
     .update({
       status: "paid",
       transaction_id: String(transactionId),
       paid_at: paidAt,
+      custom_fields: customFields,
       updated_at: new Date().toISOString(),
     })
     .eq("id", invoice.id);
