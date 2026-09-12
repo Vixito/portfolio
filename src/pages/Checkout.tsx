@@ -201,8 +201,10 @@ function Checkout() {
     creatingNowPaymentsRef.current = true;
     setError(null);
 
-    if (!buyerInfo.email.trim()) {
-      setError(t("checkout.emailRequired") || "Tu email es requerido");
+    const validationError = validateBuyer();
+    if (validationError) {
+      setError(validationError);
+      creatingNowPaymentsRef.current = false;
       return;
     }
 

@@ -92,7 +92,7 @@ serve(async (req: Request) => {
       currency: "USD",
       amount,
       order_id: invoice.id,
-      description: `Vixis Store - #${invoice.invoice_number}`.slice(0, 100),
+      description: `Vixis Studio - #${invoice.invoice_number}`.slice(0, 100),
       // Checkout hosteado: dLocal pide país y documento al pagador en SU
       // página. No enviamos country/payer para no obligar al comprador a
       // ingresar datos extra en nuestra tienda.

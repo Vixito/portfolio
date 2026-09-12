@@ -554,7 +554,7 @@ export async function notifyCheckoutDiscord(
 
   const body = {
     embeds: [embed],
-    username: "Vixis Store",
+    username: "Vixis Studio",
   };
 
   try {
