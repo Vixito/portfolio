@@ -669,6 +669,15 @@ export const translations = {
       cardInfo:
         "Pago seguro procesado por dLocal. Tarjetas de crédito, débito y métodos locales.",
       payCardButton: "Pagar con tarjeta",
+      confirmCardButton: "Confirmar pago",
+      documentType: "Tipo de documento",
+      documentNumber: "Número de documento",
+      documentRequired: "El número de documento es requerido",
+      cardTokenError: "No se pudo procesar la tarjeta, verifica los datos",
+      cardUnavailable:
+        "El pago con tarjeta no está disponible en este momento.",
+      secureNote:
+        "Los datos de tu tarjeta se procesan de forma segura por dLocal (PCI DSS).",
       payWithCrypto: "Pagar con criptomonedas",
       cryptoInfo:
         "Acepto BTC, ETH, USDT y más de 300 criptomonedas. Recibirás un enlace de pago seguro.",
@@ -1355,6 +1364,14 @@ export const translations = {
       cardInfo:
         "Secure payment processed by dLocal. Credit, debit cards and local methods.",
       payCardButton: "Pay with card",
+      confirmCardButton: "Confirm payment",
+      documentType: "Document type",
+      documentNumber: "Document number",
+      documentRequired: "Document number is required",
+      cardTokenError: "The card could not be processed, please check the details",
+      cardUnavailable: "Card payments are not available right now.",
+      secureNote:
+        "Your card details are processed securely by dLocal (PCI DSS compliant).",
       payWithCrypto: "Pay with cryptocurrencies",
       cryptoInfo:
         "I accept BTC, ETH, USDT and 300+ cryptocurrencies. You'll get a secure payment link.",

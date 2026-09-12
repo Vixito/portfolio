@@ -106,6 +106,9 @@ serve(async (req: Request) => {
       // 3DS: el flag solo tiene efecto si está habilitado en el Dashboard
       // (Profitability → 3D Secure) para el país del pago.
       allow_3ds: true,
+      // Transparent Checkout (SmartFields): se cobra el token y se confirma
+      // con confirm-dlocalgo-order; el checkout hosteado sigue como fallback.
+      allow_transparent: true,
     };
 
     let dlocalRes: Response;
@@ -159,8 +162,9 @@ serve(async (req: Request) => {
 
     const paymentId = (dlocalData as any)?.id;
     const redirectUrl = (dlocalData as any)?.redirect_url;
+    const checkoutToken = (dlocalData as any)?.merchant_checkout_token;
 
-    if (!paymentId || !redirectUrl) {
+    if (!checkoutToken && !redirectUrl) {
       await supabase
         .from("invoices")
         .update({
@@ -168,9 +172,9 @@ serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         })
         .eq("id", invoice.id);
-      console.error("dLocal Go respuesta sin redirect_url:", dlocalData);
+      console.error("dLocal Go respuesta sin token ni redirect:", dlocalData);
       return jsonCheckoutResponse(502, {
-        error: "dLocal no devolvió una URL de pago",
+        error: "dLocal no devolvió un medio de pago",
       });
     }
 
@@ -179,8 +183,8 @@ serve(async (req: Request) => {
       .update({
         custom_fields: {
           ...(invoice.custom_fields || {}),
-          dlocalgo_payment_id: paymentId,
-          dlocalgo_redirect_url: redirectUrl,
+          dlocalgo_payment_id: paymentId || null,
+          dlocalgo_redirect_url: redirectUrl || null,
         },
         updated_at: new Date().toISOString(),
       })
@@ -188,10 +192,11 @@ serve(async (req: Request) => {
 
     return jsonCheckoutResponse(200, {
       success: true,
-      redirect_url: redirectUrl,
+      redirect_url: redirectUrl || null,
+      merchant_checkout_token: checkoutToken || null,
       invoice_id: invoice.id,
       status: (dlocalData as any)?.status || "PENDING",
-      dlocalgo_payment_id: paymentId,
+      dlocalgo_payment_id: paymentId || null,
       amount,
       currency: "USD",
       product: {

@@ -1739,10 +1739,26 @@ export async function createNowPaymentsCheckout(params: {
 }
 
 /**
- * Crea el pago con tarjeta vía dLocal Go (checkout hosteado).
- * Devuelve { redirect_url, invoice_id, ... } o lanza error.
+ * Config pública de dLocal Go (Transparent Checkout / SmartFields).
+ * Devuelve { sandbox, smartfields_api_key, sdk_url }.
  */
-export async function createDLocalGoCheckout(params: {
+export async function getDLocalGoConfig() {
+  const { data, error } = await supabase.functions.invoke(
+    "get-dlocalgo-config"
+  );
+
+  if (error) {
+    throw new Error(`Error al obtener la config de tarjetas: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Crea el pago con tarjeta vía dLocal Go (modo transparente).
+ * Devuelve { merchant_checkout_token, invoice_id, ... } o lanza error.
+ */
+export async function createDLocalGoToken(params: {
   product_id: string;
   user_name: string;
   user_email: string;
@@ -1756,7 +1772,36 @@ export async function createDLocalGoCheckout(params: {
 
   if (error) {
     throw new Error(
-      `Error al crear el pago con tarjeta: ${error.message}`
+      `Error al iniciar el pago con tarjeta: ${error.message}`
+    );
+  }
+
+  return data;
+}
+
+/**
+ * Confirma el pago del Transparent Checkout con el cardToken.
+ * Devuelve { paid, delivery, redirect_url (3DS), status, ... }.
+ */
+export async function confirmDLocalGoPayment(params: {
+  invoice_id: string;
+  checkout_token: string;
+  card_token: string;
+  client_first_name: string;
+  client_last_name: string;
+  client_document_type?: string;
+  client_document?: string;
+  client_email: string;
+  installments_id?: string;
+}) {
+  const { data, error } = await supabase.functions.invoke(
+    "confirm-dlocalgo-order",
+    { body: params }
+  );
+
+  if (error) {
+    throw new Error(
+      `Error al confirmar el pago con tarjeta: ${error.message}`
     );
   }
 
