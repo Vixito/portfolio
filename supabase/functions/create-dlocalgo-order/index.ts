@@ -33,9 +33,6 @@ serve(async (req: Request) => {
       user_email,
       product_language,
       success_url,
-      country,
-      client_document_type,
-      client_document,
     } = await req.json();
 
     if (!product_id) {
@@ -48,15 +45,6 @@ serve(async (req: Request) => {
         error: "user_name y user_email son requeridos",
       });
     }
-    // dLocal Go (Transparent Checkout) requiere el país del pagador.
-    const payerCountry = String(country || "").trim().toUpperCase();
-    if (!/^[A-Z]{2}$/.test(payerCountry)) {
-      return jsonCheckoutResponse(400, {
-        error: "El país es requerido para el pago con tarjeta",
-      });
-    }
-    const payerDocument = String(client_document || "").trim();
-    const payerDocumentType = String(client_document_type || "").trim();
 
     const product = await resolveCheckoutProduct(supabase, product_id);
     if (!product) {
@@ -105,25 +93,20 @@ serve(async (req: Request) => {
       amount,
       order_id: invoice.id,
       description: `Vixis Store - #${invoice.invoice_number}`.slice(0, 100),
-      country: payerCountry,
+      // Checkout hosteado: dLocal pide país y documento al pagador en SU
+      // página. No enviamos country/payer para no obligar al comprador a
+      // ingresar datos extra en nuestra tienda.
       payer: {
         id: invoice.id,
         name: userName.slice(0, 100),
         email: userEmail.slice(0, 100),
-        document: payerDocument || undefined,
-        document_type: payerDocumentType || undefined,
       },
       success_url: successUrl.toString(),
       back_url: storeUrl,
       notification_url: `${supabaseUrl}/functions/v1/dlocalgo-webhook`,
       expiration_type: "DAYS",
       expiration_value: 3,
-      // 3DS: el flag solo tiene efecto si está habilitado en el Dashboard
-      // (Profitability → 3D Secure) para el país del pago.
       allow_3ds: true,
-      // Transparent Checkout (SmartFields): se cobra el token y se confirma
-      // con confirm-dlocalgo-order; el checkout hosteado sigue como fallback.
-      allow_transparent: true,
     };
 
     let dlocalRes: Response;

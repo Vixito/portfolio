@@ -13,13 +13,11 @@ import CanvasBackground from "../components/features/CanvasBackground";
 import Button from "../components/ui/Button";
 import { getTranslatedText, useTranslation } from "../lib/i18n";
 import {
-  confirmDLocalGoPayment,
   createDLocalGoToken,
   createNowPaymentsCheckout,
   getAppearanceSettings,
   getCheckoutInvoiceStatus,
   getCheckoutProduct,
-  getDLocalGoConfig,
 } from "../lib/supabase-functions";
 import { useThemeStore } from "../stores/useThemeStore";
 import NotFound from "./NotFound";
@@ -52,38 +50,6 @@ interface CheckoutProduct {
   }> | null;
 }
 
-interface DLocalGoConfig {
-  sandbox?: boolean;
-  smartfields_api_key?: string | null;
-  sdk_url?: string | null;
-}
-
-// Tipos de documento válidos por país (dLocal Go). Para países sin lista
-// (EE.UU., España, etc.) solo se ofrece PASS.
-const DOCUMENT_TYPES_BY_COUNTRY: Record<string, string[]> = {
-  AR: ["DNI", "CUIT", "CUIL"],
-  BO: ["CI", "NIT"],
-  BR: ["CPF", "CNPJ"],
-  CL: ["RUN", "RUT"],
-  CO: ["CC", "NIT", "CE", "PASS"],
-  CR: ["CI", "CR", "CJ"],
-  EC: ["CI", "RUC"],
-  GT: ["CUI", "NIT"],
-  MX: ["CURP", "RFC", "IFE", "PASS"],
-  PA: ["CIP", "PASS", "RUC"],
-  PE: ["CE", "DNI", "PASS", "RUC"],
-  PY: ["CI", "RUC"],
-  UY: ["CI", "RUT"],
-};
-const DEFAULT_DOC_TYPES = ["PASS"];
-
-declare global {
-  interface Window {
-    // SDK de dLocal Go (SmartFields): se carga dinámicamente
-    dLocalGo?: any;
-  }
-}
-
 type ActiveTab = "card" | "nowpayments";
 type PageState = "checkout" | "processing" | "success" | "error";
 
@@ -102,31 +68,6 @@ function Checkout() {
   const [error, setError] = useState<string | null>(null);
 
   const [buyerInfo, setBuyerInfo] = useState({ name: "", email: "" });
-
-  // dLocal Go (Transparent Checkout / SmartFields)
-  const [dlocalConfig, setDlocalConfig] = useState<DLocalGoConfig | null>(null);
-  const [cardPhase, setCardPhase] = useState<"idle" | "token_ready">("idle");
-  const [documentInfo, setDocumentInfo] = useState({
-    type: "PASS",
-    number: "",
-    country: "",
-  });
-  const [validDocTypes, setValidDocTypes] = useState<string[]>(
-    DEFAULT_DOC_TYPES
-  );
-
-  // Al cambiar el país, ajusta los tipos de documento válidos.
-  const handleCountryChange = (country: string) => {
-    const types = DOCUMENT_TYPES_BY_COUNTRY[country] || DEFAULT_DOC_TYPES;
-    setValidDocTypes(types);
-    setDocumentInfo((prev) => ({
-      ...prev,
-      country,
-      type: prev.type && types.includes(prev.type) ? prev.type : types[0],
-    }));
-  };
-  const dlocalCheckoutTokenRef = useRef<string | null>(null);
-  const dlocalFieldRef = useRef<any>(null);
 
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState<string | null>(null);
@@ -158,12 +99,10 @@ function Checkout() {
       if (!productId) return;
       try {
         setLoading(true);
-        const [productData, appearance, dlocalConfigData] =
-          await Promise.all([
-            getCheckoutProduct(productId),
-            getAppearanceSettings(),
-            getDLocalGoConfig().catch(() => null),
-          ]);
+        const [productData, appearance] = await Promise.all([
+          getCheckoutProduct(productId),
+          getAppearanceSettings(),
+        ]);
 
         if (!productData) {
           setError(t("checkout.productNotFound") || "Producto no encontrado");
@@ -171,7 +110,6 @@ function Checkout() {
         }
 
         setProduct(productData as CheckoutProduct);
-        setDlocalConfig(dlocalConfigData || null);
 
         const bg =
           appearance?.hero_background === "starry_night" ||
@@ -315,37 +253,6 @@ function Checkout() {
     return null;
   };
 
-  const loadDLocalGoSdk = () =>
-    new Promise<any>((resolve, reject) => {
-      const w = window;
-      if (w.dLocalGo) {
-        resolve(w.dLocalGo);
-        return;
-      }
-      const url = dlocalConfig?.sdk_url;
-      if (!url) {
-        reject(new Error("El SDK de pago no está disponible"));
-        return;
-      }
-      const existing = document.querySelector("script[data-dlocalgo-sf]");
-      if (existing) {
-        existing.addEventListener("load", () => resolve(w.dLocalGo));
-        existing.addEventListener("error", () =>
-          reject(new Error("No se pudo cargar el SDK de pago"))
-        );
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = url;
-      script.setAttribute("data-dlocalgo-sf", "1");
-      script.setAttribute("async", "");
-      script.addEventListener("load", () => resolve(w.dLocalGo));
-      script.addEventListener("error", () =>
-        reject(new Error("No se pudo cargar el SDK de pago"))
-      );
-      document.head.appendChild(script);
-    });
-
   const startCard = async () => {
     if (!product || creatingCardRef.current) return;
     creatingCardRef.current = true;
@@ -358,29 +265,7 @@ function Checkout() {
       return;
     }
 
-    if (!dlocalConfig?.smartfields_api_key) {
-      setError(
-        t("checkout.cardUnavailable") ||
-          "El pago con tarjeta no está disponible en este momento."
-      );
-      creatingCardRef.current = false;
-      return;
-    }
-
-    const docNumber = documentInfo.number.trim();
-    if (!docNumber) {
-      setError(
-        t("checkout.documentRequired") || "El número de documento es requerido"
-      );
-      return;
-    }
-    if (!/^[A-Za-z]{2}$/.test(documentInfo.country.trim())) {
-      setError(
-        t("checkout.countryRequired") || "Selecciona tu país"
-      );
-      return;
-    }
-
+    setPageState("processing");
     setProcessingMsg(t("checkout.creatingPayment") || "Creando pago seguro...");
 
     try {
@@ -390,157 +275,26 @@ function Checkout() {
         user_name: buyerInfo.name.trim(),
         user_email: buyerInfo.email.trim(),
         product_language: language,
-        country: documentInfo.country.trim().toUpperCase(),
-        client_document_type: documentInfo.type,
-        client_document: docNumber,
         success_url: `${window.location.origin}/checkout/${productPublicId}?gateway=card`,
       });
 
-      if (!res?.merchant_checkout_token) {
-        // Sin token (ej. dLocal deshabilitó transparente): fallback hosteado
-        if (res?.redirect_url) {
-          setInvoiceId(res.invoice_id || null);
-          window.location.href = res.redirect_url;
-          return;
-        }
-        throw new Error(
-          t("checkout.noRedirect") || "No se pudo iniciar el pago con tarjeta"
+      if (res?.redirect_url) {
+        window.location.href = res.redirect_url;
+      } else {
+        setError(
+          t("checkout.noRedirect") || "No se pudo obtener el link de pago"
         );
+        creatingCardRef.current = false;
+        setPageState("checkout");
       }
-
-      setInvoiceId(res.invoice_id || null);
-      dlocalCheckoutTokenRef.current = res.merchant_checkout_token;
-      setCardPhase("token_ready");
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Error iniciando el pago con tarjeta"
+          : "Error creando el pago con tarjeta"
       );
-    } finally {
       creatingCardRef.current = false;
-    }
-  };
-
-  // Inicializar SmartFields y montar el campo de tarjeta cuando el contenedor
-  // esté en el DOM (cardPhase === "token_ready").
-  useEffect(() => {
-    if (cardPhase !== "token_ready") return;
-    let active = true;
-
-    (async () => {
-      try {
-        const sdk = await loadDLocalGoSdk();
-        if (!active || !dlocalCheckoutTokenRef.current) return;
-        await sdk.initialize(
-          dlocalConfig?.smartfields_api_key,
-          dlocalCheckoutTokenRef.current
-        );
-        const field = sdk.fields().create("card", {
-          style: {
-            base: {
-              fontSize: "16px",
-              color: "#1f2937",
-              "::placeholder": { color: "#9ca3af" },
-            },
-          },
-        });
-        const container = document.getElementById("dlocal-card-field");
-        if (!container) return;
-        field.mount(container);
-        if (active) dlocalFieldRef.current = field;
-      } catch (err) {
-        if (active) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Error inicializando el pago con tarjeta"
-          );
-          setCardPhase("idle");
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [cardPhase, dlocalConfig]);
-
-  const confirmCard = async () => {
-    if (!product || !dlocalFieldRef.current) return;
-    setError(null);
-
-    const docNumber = documentInfo.number.trim();
-    if (!docNumber) {
-      setError(
-        t("checkout.documentRequired") || "El número de documento es requerido"
-      );
-      return;
-    }
-
-    setPageState("processing");
-    setProcessingMsg(
-      t("checkout.confirmingPayment") || "Confirmando tu pago..."
-    );
-
-    try {
-      const sdk = window.dLocalGo;
-      if (!sdk?.createCardToken) {
-        throw new Error(
-          t("checkout.cardTokenError") || "No se pudo procesar la tarjeta"
-        );
-      }
-      const { token: cardToken } = await sdk.createCardToken(
-        dlocalFieldRef.current,
-        { name: buyerInfo.name.trim() }
-      );
-      if (!cardToken) {
-        throw new Error(
-          t("checkout.cardTokenError") || "No se pudo procesar la tarjeta"
-        );
-      }
-
-      const parts = buyerInfo.name.trim().split(/\s+/);
-      const firstName = parts[0] || "";
-      const lastName = parts.slice(1).join(" ") || "";
-
-      const res = await confirmDLocalGoPayment({
-        invoice_id: invoiceId || "",
-        checkout_token: dlocalCheckoutTokenRef.current || "",
-        card_token: cardToken,
-        client_first_name: firstName,
-        client_last_name: lastName,
-        client_document_type: documentInfo.type,
-        client_document: docNumber,
-        client_country: documentInfo.country.trim().toUpperCase(),
-        client_email: buyerInfo.email.trim(),
-      });
-
-      // 3DS: redirigir; al volver, el polling de get-checkout-invoice entrega
-      if (res?.redirect_url) {
-        window.location.href = res.redirect_url;
-        return;
-      }
-
-      if (res?.paid) {
-        if (res.invoice_number) setInvoiceNumber(res.invoice_number);
-        setDelivery(res.delivery || null);
-        setPageState("success");
-        return;
-      }
-
-      // Pendiente: el webhook/polling confirmará cuando esté PAID
-      setInvoiceId((prev) => prev || (res?.invoice_id as string) || null);
-      setProcessingMsg(
-        t("checkout.waitingConfirmation") ||
-          "Esperando confirmación del pago..."
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error confirmando el pago"
-      );
       setPageState("checkout");
-      setCardPhase("token_ready");
     }
   };
 
@@ -749,146 +503,21 @@ function Checkout() {
                     "Pago seguro procesado por dLocal. Visa, Mastercard, Amex y métodos locales."}
                 </p>
 
-                <div
-                  id="dlocal-card-field"
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 p-3 mb-4"
-                  style={{
-                    display: cardPhase === "token_ready" ? "block" : "none",
-                  }}
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label
-                      htmlFor="checkout-doc-type"
-                      className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1"
-                    >
-                      {t("checkout.documentType") || "Tipo de documento"}
-                    </label>
-                    <select
-                      id="checkout-doc-type"
-                      value={documentInfo.type}
-                      onChange={(e) =>
-                        setDocumentInfo((prev) => ({
-                          ...prev,
-                          type: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      {validDocTypes.map((doc) => (
-                        <option key={doc} value={doc}>
-                          {doc}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="checkout-doc-number"
-                      className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1"
-                    >
-                      {t("checkout.documentNumber") || "Número de documento"}
-                    </label>
-                    <input
-                      id="checkout-doc-number"
-                      type="text"
-                      inputMode="numeric"
-                      value={documentInfo.number}
-                      onChange={(e) =>
-                        setDocumentInfo((prev) => ({
-                          ...prev,
-                          number: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="1234567890"
-                    />
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <label
-                    htmlFor="checkout-doc-country"
-                    className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1"
-                  >
-                    {t("checkout.country") || "País"}
-                  </label>
-                  <select
-                    id="checkout-doc-country"
-                    value={documentInfo.country}
-                    onChange={(e) => handleCountryChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="" disabled>
-                      {t("checkout.selectCountry") || "--"}
-                    </option>
-                    {[
-                      ["US", "Estados Unidos"],
-                      ["BR", "Brasil"],
-                      ["MX", "México"],
-                      ["AR", "Argentina"],
-                      ["CO", "Colombia"],
-                      ["CL", "Chile"],
-                      ["PE", "Perú"],
-                      ["EC", "Ecuador"],
-                      ["UY", "Uruguay"],
-                      ["PY", "Paraguay"],
-                      ["BO", "Bolivia"],
-                      ["VE", "Venezuela"],
-                      ["ES", "España"],
-                      ["FR", "Francia"],
-                      ["DE", "Alemania"],
-                      ["GB", "Reino Unido"],
-                      ["IT", "Italia"],
-                      ["PT", "Portugal"],
-                      ["PL", "Polonia"],
-                      ["CA", "Canadá"],
-                    ].map(([code, label]) => (
-                      <option key={code} value={code}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {cardPhase === "token_ready" ? (
-                  <>
-                    <Button
-                      onClick={confirmCard}
-                      disabled={pageState === "processing"}
-                      variant="productStore"
-                      className="w-full"
-                    >
-                      {pageState === "processing" ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          {processingMsg}
-                        </span>
-                      ) : (
-                        t("checkout.confirmCardButton") || "Confirmar pago"
-                      )}
-                    </Button>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
-                      {t("checkout.secureNote") ||
-                        "Los datos de tu tarjeta se procesan de forma segura por dLocal (PCI DSS)."}
-                    </p>
-                  </>
-                ) : (
-                  <Button
-                    onClick={startCard}
-                    disabled={pageState === "processing"}
-                    variant="productStore"
-                    className="w-full"
-                  >
-                    {pageState === "processing" ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        {processingMsg}
-                      </span>
-                    ) : (
-                      t("checkout.payCardButton") || "Pagar con tarjeta"
-                    )}
-                  </Button>
-                )}
+                <Button
+                  onClick={startCard}
+                  disabled={pageState === "processing"}
+                  variant="productStore"
+                  className="w-full"
+                >
+                  {pageState === "processing" ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      {processingMsg}
+                    </span>
+                  ) : (
+                    t("checkout.payCardButton") || "Pagar con tarjeta"
+                  )}
+                </Button>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
                   (Powered by dLocal)
                 </p>
