@@ -1,5 +1,46 @@
 import { supabase } from "./supabase";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+
+// ========== SESIÓN DEL ADMIN (token server-side, nunca en el bundle) ==========
+
+const ADMIN_TOKEN_KEY = "vixis_admin_token";
+
+export const getAdminToken = (): string | null =>
+  sessionStorage.getItem(ADMIN_TOKEN_KEY);
+
+export const setAdminToken = (token: string): void =>
+  sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+
+export const clearAdminToken = (): void =>
+  sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+
+const adminAuthHeaders = (): Record<string, string> | undefined => {
+  const token = getAdminToken();
+  return token ? { Authorization: `Bearer ${token}` } : undefined;
+};
+
+const handleAdminUnauthorized = (status?: number): void => {
+  if (status === 401) {
+    clearAdminToken();
+    window.location.reload();
+  }
+};
+
+export async function adminLogin(username: string, password: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("admin-login", {
+    body: { username, password },
+  });
+  if (error) {
+    throw new Error(await getEdgeErrorMessage(error));
+  }
+  if (data?.error) {
+    throw new Error(String(data.error));
+  }
+  setAdminToken(String(data.token));
+}
+
+export async function adminLogout(): Promise<void> {
+  clearAdminToken();
+}
 
 /**
  * Calcula el precio adaptativo de un producto
@@ -1282,55 +1323,50 @@ export async function getSectorMultipliers() {
   return data;
 }
 
-// ========== CRUD INVOICES ==========
-export async function getInvoices() {
-  // Usar service_role_key para bypass RLS (solo para Admin)
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-  const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
-  
-  // Si service_role_key no está configurado, usar cliente normal (puede fallar por RLS)
-  const client = supabaseServiceKey
-    ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
-    : supabase;
-  
-  const { data, error } = await client
-    .from("invoices")
-    .select(`
-      *,
-      products (id, title)
-    `)
-    .order("created_at", { ascending: false }); // Ordenar por fecha de creación en lugar de invoice_number para evitar problemas con formato string
+// ========== CRUD INVOICES (vía edge functions; la service role key no sale del servidor) ==========
 
-  if (error) {
-    throw new Error(`Error al obtener facturas: ${error.message}`);
+const getEdgeErrorMessage = async (resError: any): Promise<string> => {
+  try {
+    const response = resError?.context as Response | undefined;
+    if (response) {
+      const body = await response.clone().json();
+      if (body?.error) return String(body.error);
+    }
+  } catch {
+    // el body de error no era JSON
   }
+  return resError instanceof Error ? resError.message : "Error desconocido";
+};
 
+async function invokeAdminInvoices(payload: any): Promise<any> {
+  const { data, error } = await supabase.functions.invoke("admin-invoices", {
+    body: payload,
+    headers: adminAuthHeaders(),
+  });
+  if (error) {
+    handleAdminUnauthorized((error as any)?.context?.status);
+    throw new Error(await getEdgeErrorMessage(error));
+  }
+  if (data?.error) {
+    throw new Error(String(data.error));
+  }
   return data;
 }
 
+export async function getInvoices() {
+  return await invokeAdminInvoices({ action: "list" });
+}
+
 export async function getInvoice(id: string) {
-  // Usar service_role_key para bypass RLS (solo para Admin)
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-  const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
-  
-  // Si service_role_key no está configurado, usar cliente normal (puede fallar por RLS)
-  const client = supabaseServiceKey
-    ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
-    : supabase;
-  
-  const { data, error } = await client
-    .from("invoices")
-    .select(`
-      *,
-      products (id, title, description, full_description)
-    `)
-    .eq("id", id)
-    .single();
-
+  const { data, error } = await supabase.functions.invoke("get-invoice", {
+    body: { id },
+  });
   if (error) {
-    throw new Error(`Error al obtener factura: ${error.message}`);
+    throw new Error(await getEdgeErrorMessage(error));
   }
-
+  if (data?.error) {
+    throw new Error(String(data.error));
+  }
   return data;
 }
 
@@ -1346,102 +1382,7 @@ export async function createInvoice(invoice: {
   pay_now_link?: string;
   status?: "pending" | "paid" | "completed" | "cancelled";
 }) {
-  // Usar service_role_key para bypass RLS (solo para Admin)
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-  const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
-  
-  // Validar que service_role_key esté configurado
-  if (!supabaseServiceKey) {
-    throw new Error(
-      "VITE_SUPABASE_SERVICE_ROLE_KEY no está configurado. " +
-      "Agrega esta variable en Doppler para poder crear facturas desde Admin."
-    );
-  }
-  
-  // Crear cliente con service_role_key (bypass RLS)
-  const adminSupabase = createSupabaseClient(supabaseUrl, supabaseServiceKey);
-  
-  // Función para generar número de factura en formato INV-YYYY-NNNN
-  const generateInvoiceNumber = async (): Promise<string> => {
-    const currentYear = new Date().getFullYear();
-    const yearPrefix = `INV-${currentYear}-`;
-    
-    // Obtener todas las facturas del año actual que sigan el formato INV-YYYY-NNNN
-    const { data: yearInvoices, error: yearInvoicesError } = await adminSupabase
-      .from("invoices")
-      .select("invoice_number")
-      .like("invoice_number", `${yearPrefix}%`)
-      .order("invoice_number", { ascending: false });
-    
-    if (yearInvoicesError && yearInvoicesError.code !== "PGRST116") {
-      throw new Error(`Error al obtener facturas del año: ${yearInvoicesError.message}`);
-    }
-    
-    // Si no hay facturas del año actual, empezar desde 0001
-    if (!yearInvoices || yearInvoices.length === 0) {
-      return `${yearPrefix}0001`;
-    }
-    
-    // Extraer el número secuencial más alto del año actual
-    // Maneja tanto facturas con formato INV-YYYY-NNNN como números simples (para compatibilidad)
-    const lastNumber = yearInvoices
-      .map((inv: any) => {
-        const invNum = typeof inv.invoice_number === 'string' 
-          ? inv.invoice_number 
-          : String(inv.invoice_number);
-        
-        // Si ya tiene el formato INV-YYYY-NNNN
-        if (invNum.startsWith(yearPrefix)) {
-          const numPart = invNum.replace(yearPrefix, '');
-          const parsed = parseInt(numPart, 10);
-          return isNaN(parsed) ? 0 : parsed;
-        }
-        
-        // Si es un número simple y corresponde al año actual (para facturas antiguas)
-        // Solo considerar si es un número puro y muy bajo (probablemente factura antigua)
-        if (/^\d+$/.test(invNum)) {
-          const num = parseInt(invNum, 10);
-          // Si el número es menor a 1000, probablemente es una factura antigua
-          // No lo contamos para el nuevo formato
-          return 0;
-        }
-        
-        return 0;
-      })
-      .reduce((max: number, num: number) => Math.max(max, num), 0);
-    
-    // Generar el siguiente número con padding de 4 dígitos
-    const nextNumber = lastNumber + 1;
-    const paddedNumber = String(nextNumber).padStart(4, '0');
-    
-    return `${yearPrefix}${paddedNumber}`;
-  };
-  
-  const nextInvoiceNumber = await generateInvoiceNumber();
-
-  const { data, error } = await adminSupabase
-    .from("invoices")
-    .insert({
-      ...invoice,
-      invoice_number: nextInvoiceNumber,
-      status: invoice.status || "pending",
-    })
-    .select()
-    .single();
-
-  if (error) {
-    // Mensaje de error más descriptivo
-    if (error.message.includes("users")) {
-      throw new Error(
-        `Error al crear factura: ${error.message}. ` +
-        `Esto puede deberse a un trigger en la base de datos que intenta acceder a la tabla 'users'. ` +
-        `Verifica que el trigger tenga permisos adecuados o que la tabla 'users' tenga RLS configurado correctamente.`
-      );
-    }
-    throw new Error(`Error al crear factura: ${error.message}`);
-  }
-
-  return data;
+  return await invokeAdminInvoices({ action: "create", invoice });
 }
 
 export async function updateInvoice(
@@ -1458,83 +1399,11 @@ export async function updateInvoice(
     status: "pending" | "paid" | "completed" | "cancelled";
   }>
 ) {
-  // Usar service_role_key para bypass RLS (solo para Admin)
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-  const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
-  const adminSupabase = supabaseServiceKey
-    ? createSupabaseClient(supabaseUrl, supabaseServiceKey)
-    : supabase;
-  
-  // Verificar que la factura no esté pagada antes de actualizar
-  const { data: currentInvoice } = await adminSupabase
-    .from("invoices")
-    .select("status")
-    .eq("id", id)
-    .single();
-
-  if (currentInvoice?.status === "paid" || currentInvoice?.status === "completed") {
-    throw new Error("No se puede editar una factura que ya está pagada o completada");
-  }
-
-  // Limpiar updates para eliminar cualquier campo que no exista en la tabla invoices
-  const cleanUpdates: any = {};
-  const allowedFields = [
-    "user_name", "user_email", "request_type", "amount", "currency", 
-    "delivery_time", "custom_fields", "pay_now_link", "status", "product_id"
-  ];
-  
-  for (const key of allowedFields) {
-    if (key in updates) {
-      cleanUpdates[key] = updates[key as keyof typeof updates];
-    }
-  }
-  
-  // Seleccionar solo las columnas de invoices, sin relaciones
-  const { data, error } = await adminSupabase
-    .from("invoices")
-    .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select("id, invoice_number, product_id, user_name, user_email, request_type, amount, currency, delivery_time, custom_fields, pay_now_link, status, created_at, updated_at")
-    .single();
-
-  if (error) {
-    throw new Error(`Error al actualizar factura: ${error.message}`);
-  }
-
-  return data;
+  return await invokeAdminInvoices({ action: "update", id, updates });
 }
 
 export async function deleteInvoice(id: string) {
-  // Usar service_role_key para bypass RLS (solo para Admin)
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-  const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
-  
-  // Validar que service_role_key esté configurado
-  if (!supabaseServiceKey) {
-    throw new Error(
-      "VITE_SUPABASE_SERVICE_ROLE_KEY no está configurado. " +
-      "Agrega esta variable en Doppler para poder eliminar facturas desde Admin."
-    );
-  }
-  
-  const adminSupabase = createSupabaseClient(supabaseUrl, supabaseServiceKey);
-  
-  // Verificar que la factura no esté pagada antes de eliminar
-  const { data: currentInvoice } = await adminSupabase
-    .from("invoices")
-    .select("status")
-    .eq("id", id)
-    .single();
-
-  if (currentInvoice?.status === "paid" || currentInvoice?.status === "completed") {
-    throw new Error("No se puede eliminar una factura que ya está pagada o completada");
-  }
-
-  const { error } = await adminSupabase.from("invoices").delete().eq("id", id);
-
-  if (error) {
-    throw new Error(`Error al eliminar factura: ${error.message}`);
-  }
+  return await invokeAdminInvoices({ action: "delete", id });
 }
 
 export async function markInvoiceAsPaid(id: string, transactionId: string) {
@@ -1793,6 +1662,43 @@ export async function createDLocalGoToken(params: {
     );
   }
 
+  return data;
+}
+
+/**
+ * Consulta el dashboard del BOS (Business Operating System):
+ * ingresos desde invoices + analítica + leads + estado de conectores.
+ */
+export async function getBosDashboard(): Promise<any> {
+  const { data, error } = await supabase.functions.invoke(
+    "get-bos-dashboard",
+    {
+      body: {},
+      headers: adminAuthHeaders(),
+    }
+  );
+  if (error) {
+    handleAdminUnauthorized((error as any)?.context?.status);
+    throw new Error(`Error al cargar el BOS: ${await getEdgeErrorMessage(error)}`);
+  }
+  return data;
+}
+
+/**
+ * Disparar la sincronización on-demand de Plausible.io hacia bos_analytics_daily.
+ */
+export async function syncBosPlausible(): Promise<any> {
+  const { data, error } = await supabase.functions.invoke(
+    "sync-bos-plausible",
+    {
+      body: {},
+      headers: adminAuthHeaders(),
+    }
+  );
+  if (error) {
+    handleAdminUnauthorized((error as any)?.context?.status);
+    throw new Error(`Error al sincronizar analytics: ${await getEdgeErrorMessage(error)}`);
+  }
   return data;
 }
 

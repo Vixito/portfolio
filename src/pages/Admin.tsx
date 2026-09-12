@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { optimizeAndUpload } from "../lib/storage-functions";
-import NotFound from "./NotFound";
 import { useTranslation } from "../lib/i18n";
 import { useStatusStore } from "../stores/useStatusStore";
 import { useLanguageStore } from "../stores/useLanguageStore";
@@ -68,11 +67,15 @@ import {
   createInvoice,
   updateInvoice,
   deleteInvoice,
+  adminLogin,
+  getAdminToken,
+  clearAdminToken,
 } from "../lib/supabase-functions";
 import { supabase } from "../lib/supabase";
 import Invoice from "../components/features/Invoice";
 import RichTextEditor from "../components/ui/RichTextEditor";
 import AdminJobOffers from "../components/admin/AdminJobOffers";
+import BosDashboard from "../components/admin/BosDashboard";
 
 // Componente para selector de productos con tabs por idioma
 function ProductSelectorWithTabs({
@@ -208,11 +211,8 @@ function ProductSelectorWithTabs({
 
 function Admin() {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [hasValidKey, setHasValidKey] = useState(false);
-  const [adminKey, setAdminKey] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -239,6 +239,7 @@ function Admin() {
 
   // Estados para CRUD
   const [activeTab, setActiveTab] = useState<
+    | "bos"
     | "products"
     | "projects"
     | "clients"
@@ -254,7 +255,7 @@ function Admin() {
     | "invoices"
     | "appearance"
     | "job_offers"
-  >("products");
+  >("bos");
   const [products, setProducts] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -604,65 +605,44 @@ function Admin() {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [loadingExchangeRate, setLoadingExchangeRate] = useState(false);
 
-  // Verificar key de autenticación inicial (solo para permitir mostrar el formulario)
+  // El acceso al panel solo está disponible en admin.vixis.dev (o localhost en dev);
+  // la IP pública se restringe en Cloudflare. La sesión se restaura con el token
+  // emitido por admin-login (24h). Nada queda incrustado en el bundle.
   useEffect(() => {
-    // Verificar que esté en admin.vixis.dev y en la ruta raíz
     const hostname = window.location.hostname;
     const pathname = window.location.pathname;
 
-    if (hostname !== "admin.vixis.dev" || pathname !== "/") {
-      setHasValidKey(false);
+    // En desarrollo local (Vite) se permite localhost; en producción solo admin.vixis.dev
+    const isLocalDev =
+      import.meta.env.DEV &&
+      (hostname === "localhost" || hostname === "127.0.0.1");
+
+    if (
+      (hostname !== "admin.vixis.dev" && !isLocalDev) ||
+      pathname !== "/"
+    ) {
       return;
     }
 
-    const key = searchParams.get("key");
-    const validKey = import.meta.env.VITE_ADMIN_KEY; // Variable de entorno desde Doppler
-
-    if (!validKey) {
-      console.error(
-        "VITE_ADMIN_KEY no está configurada en las variables de entorno"
-      );
-      setHasValidKey(false);
-      return;
+    if (getAdminToken()) {
+      setIsAuthenticated(true);
     }
+  }, []);
 
-    // Verificar si la key es válida, pero NO autenticar automáticamente
-    // La key solo permite mostrar el formulario de login
-    if (key === validKey) {
-      setHasValidKey(true);
-    } else {
-      setHasValidKey(false);
-    }
-  }, [searchParams]);
-
-  // Función de login con usuario y contraseña
-  const handleLogin = (e: React.FormEvent) => {
+  // Función de login: valida server-side (edge function admin-login) y guarda el token
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
 
-    const validKey = import.meta.env.VITE_ADMIN_KEY;
-    const validUsername = import.meta.env.VITE_ADMIN_USERNAME;
-    const validPassword = import.meta.env.VITE_ADMIN_PASSWORD;
-
-    if (!validKey || !validUsername || !validPassword) {
-      setLoginError("Error de configuración: Credenciales no configuradas");
-      return;
-    }
-
-    // Verificar key de URL primero
-    const key = searchParams.get("key");
-    if (key !== validKey) {
-      setLoginError("Key de acceso inválida");
-      return;
-    }
-
-    // Verificar usuario y contraseña
-    if (username === validUsername && password === validPassword) {
-      setIsAuthenticated(true);
+    try {
+      await adminLogin(username, password);
       setUsername("");
       setPassword("");
-    } else {
-      setLoginError("Usuario o contraseña incorrectos");
+      setIsAuthenticated(true);
+    } catch (err) {
+      setLoginError(
+        err instanceof Error ? err.message : "Usuario o contraseña incorrectos"
+      );
     }
   };
 
@@ -2861,12 +2841,7 @@ function Admin() {
   };
 
   if (!isAuthenticated) {
-    // Si no hay key válida, mostrar NotFound
-    if (!hasValidKey) {
-      return <NotFound />;
-    }
-
-    // Si hay key válida pero no está autenticado, mostrar formulario de login
+    // Solo visible en admin.vixis.dev (+ IPs permitidas en Cloudflare) o localhost
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 px-4">
         <div className="max-w-md w-full bg-white/10 backdrop-blur-lg rounded-lg p-8 border border-white/20">
@@ -3290,8 +3265,8 @@ function Admin() {
 
             <button
               onClick={() => {
+                clearAdminToken();
                 setIsAuthenticated(false);
-                setHasValidKey(false);
                 // Limpiar cualquier estado relacionado
                 window.location.href = "/";
               }}
@@ -3332,23 +3307,28 @@ function Admin() {
         {/* Sección CRUD */}
         <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20 mt-6 md:mt-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 md:mb-6">
-            <div className="flex-1 w-full">
-              <button
-                onClick={handleCreate}
-                className="w-full sm:w-auto px-3 md:px-4 py-2 text-sm md:text-base bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-white rounded-lg transition-colors cursor-pointer mb-3 md:mb-4"
-              >
-                + {t("admin.createNew")}
-              </button>
-              <h2 className="text-xl md:text-2xl font-bold text-white">
-                {t("admin.contentManagement")}
-              </h2>
-            </div>
+            {activeTab !== "bos" ? (
+              <>
+                <div className="flex-1 w-full">
+                  <button
+                    onClick={handleCreate}
+                    className="w-full sm:w-auto px-3 md:px-4 py-2 text-sm md:text-base bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-white rounded-lg transition-colors cursor-pointer mb-3 md:mb-4"
+                  >
+                    + {t("admin.createNew")}
+                  </button>
+                  <h2 className="text-xl md:text-2xl font-bold text-white">
+                    {t("admin.contentManagement")}
+                  </h2>
+                </div>
+              </>
+            ) : null}
           </div>
 
           {/* Tabs */}
           <div className="flex flex-wrap gap-1 md:gap-2 mb-4 md:mb-6 border-b border-white/20 overflow-x-auto">
             {(
               [
+                "bos",
                 "products",
                 "projects",
                 "clients",
@@ -3380,6 +3360,7 @@ function Admin() {
                     : undefined
                 }
               >
+                {tab === "bos" && "BOS"}
                 {tab === "products" && t("admin.products")}
                 {tab === "projects" && t("admin.projects")}
                 {tab === "clients" && t("admin.clients")}
@@ -3400,7 +3381,9 @@ function Admin() {
           </div>
 
           {/* Lista de items o formulario de radio_settings */}
-          {activeTab === "job_offers" ? (
+          {activeTab === "bos" ? (
+            <BosDashboard />
+          ) : activeTab === "job_offers" ? (
             <AdminJobOffers />
           ) : activeTab === "appearance" ? (
             <div className="bg-[#111111] p-6 rounded-lg shadow-xl text-white">

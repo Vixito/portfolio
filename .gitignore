@@ -30,6 +30,10 @@ supabase/.branches/
 supabase/.config.toml
 supabase/.env.local
 supabase/.env.*.local
+
+# Vite - variables locales de desarrollo (no subir credenciales reales)
+.env.local
+.env.*.local
 # Archivos específicos de Supabase CLI que contienen información privada
 **/.temp/
 **/.temp/**
