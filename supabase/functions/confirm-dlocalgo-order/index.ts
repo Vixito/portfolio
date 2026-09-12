@@ -43,6 +43,7 @@ serve(async (req: Request) => {
       client_last_name,
       client_document_type,
       client_document,
+      client_country,
       client_email,
       installments_id,
     } = body || {};
@@ -83,6 +84,7 @@ serve(async (req: Request) => {
     };
     if (client_document_type) confirmBody.clientDocumentType = client_document_type;
     if (client_document) confirmBody.clientDocument = String(client_document);
+    if (client_country) confirmBody.clientCountry = String(client_country).toUpperCase();
     if (installments_id) confirmBody.installmentsId = installments_id;
 
     let dlocalRes: Response;

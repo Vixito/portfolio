@@ -673,6 +673,9 @@ export const translations = {
       documentType: "Tipo de documento",
       documentNumber: "Número de documento",
       documentRequired: "El número de documento es requerido",
+      country: "País",
+      countryRequired: "Selecciona tu país",
+      selectCountry: "Selecciona tu país",
       cardTokenError: "No se pudo procesar la tarjeta, verifica los datos",
       cardUnavailable:
         "El pago con tarjeta no está disponible en este momento.",
@@ -1368,6 +1371,9 @@ export const translations = {
       documentType: "Document type",
       documentNumber: "Document number",
       documentRequired: "Document number is required",
+      country: "Country",
+      countryRequired: "Select your country",
+      selectCountry: "Select your country",
       cardTokenError: "The card could not be processed, please check the details",
       cardUnavailable: "Card payments are not available right now.",
       secureNote:

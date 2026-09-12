@@ -58,6 +58,25 @@ interface DLocalGoConfig {
   sdk_url?: string | null;
 }
 
+// Tipos de documento válidos por país (dLocal Go). Para países sin lista
+// (EE.UU., España, etc.) solo se ofrece PASS.
+const DOCUMENT_TYPES_BY_COUNTRY: Record<string, string[]> = {
+  AR: ["DNI", "CUIT", "CUIL"],
+  BO: ["CI", "NIT"],
+  BR: ["CPF", "CNPJ"],
+  CL: ["RUN", "RUT"],
+  CO: ["CC", "NIT", "CE", "PASS"],
+  CR: ["CI", "CR", "CJ"],
+  EC: ["CI", "RUC"],
+  GT: ["CUI", "NIT"],
+  MX: ["CURP", "RFC", "IFE", "PASS"],
+  PA: ["CIP", "PASS", "RUC"],
+  PE: ["CE", "DNI", "PASS", "RUC"],
+  PY: ["CI", "RUC"],
+  UY: ["CI", "RUT"],
+};
+const DEFAULT_DOC_TYPES = ["PASS"];
+
 declare global {
   interface Window {
     // SDK de dLocal Go (SmartFields): se carga dinámicamente
@@ -88,9 +107,24 @@ function Checkout() {
   const [dlocalConfig, setDlocalConfig] = useState<DLocalGoConfig | null>(null);
   const [cardPhase, setCardPhase] = useState<"idle" | "token_ready">("idle");
   const [documentInfo, setDocumentInfo] = useState({
-    type: "CC",
+    type: "PASS",
     number: "",
+    country: "",
   });
+  const [validDocTypes, setValidDocTypes] = useState<string[]>(
+    DEFAULT_DOC_TYPES
+  );
+
+  // Al cambiar el país, ajusta los tipos de documento válidos.
+  const handleCountryChange = (country: string) => {
+    const types = DOCUMENT_TYPES_BY_COUNTRY[country] || DEFAULT_DOC_TYPES;
+    setValidDocTypes(types);
+    setDocumentInfo((prev) => ({
+      ...prev,
+      country,
+      type: prev.type && types.includes(prev.type) ? prev.type : types[0],
+    }));
+  };
   const dlocalCheckoutTokenRef = useRef<string | null>(null);
   const dlocalFieldRef = useRef<any>(null);
 
@@ -333,6 +367,20 @@ function Checkout() {
       return;
     }
 
+    const docNumber = documentInfo.number.trim();
+    if (!docNumber) {
+      setError(
+        t("checkout.documentRequired") || "El número de documento es requerido"
+      );
+      return;
+    }
+    if (!/^[A-Za-z]{2}$/.test(documentInfo.country.trim())) {
+      setError(
+        t("checkout.countryRequired") || "Selecciona tu país"
+      );
+      return;
+    }
+
     setProcessingMsg(t("checkout.creatingPayment") || "Creando pago seguro...");
 
     try {
@@ -342,6 +390,9 @@ function Checkout() {
         user_name: buyerInfo.name.trim(),
         user_email: buyerInfo.email.trim(),
         product_language: language,
+        country: documentInfo.country.trim().toUpperCase(),
+        client_document_type: documentInfo.type,
+        client_document: docNumber,
         success_url: `${window.location.origin}/checkout/${productPublicId}?gateway=card`,
       });
 
@@ -461,6 +512,7 @@ function Checkout() {
         client_last_name: lastName,
         client_document_type: documentInfo.type,
         client_document: docNumber,
+        client_country: documentInfo.country.trim().toUpperCase(),
         client_email: buyerInfo.email.trim(),
       });
 
@@ -692,76 +744,114 @@ function Checkout() {
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
                   {t("checkout.payWithCard") || "Pagar con tarjeta"}
                 </h2>
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-base">
-                    {effectivePrice !== null ? formatPrice(effectivePrice) : ""}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    USD
-                  </span>
-                </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                   {t("checkout.cardInfo") ||
                     "Pago seguro procesado por dLocal. Visa, Mastercard, Amex y métodos locales."}
                 </p>
 
+                <div
+                  id="dlocal-card-field"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 p-3 mb-4"
+                  style={{
+                    display: cardPhase === "token_ready" ? "block" : "none",
+                  }}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label
+                      htmlFor="checkout-doc-type"
+                      className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1"
+                    >
+                      {t("checkout.documentType") || "Tipo de documento"}
+                    </label>
+                    <select
+                      id="checkout-doc-type"
+                      value={documentInfo.type}
+                      onChange={(e) =>
+                        setDocumentInfo((prev) => ({
+                          ...prev,
+                          type: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      {validDocTypes.map((doc) => (
+                        <option key={doc} value={doc}>
+                          {doc}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="checkout-doc-number"
+                      className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1"
+                    >
+                      {t("checkout.documentNumber") || "Número de documento"}
+                    </label>
+                    <input
+                      id="checkout-doc-number"
+                      type="text"
+                      inputMode="numeric"
+                      value={documentInfo.number}
+                      onChange={(e) =>
+                        setDocumentInfo((prev) => ({
+                          ...prev,
+                          number: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="1234567890"
+                    />
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label
+                    htmlFor="checkout-doc-country"
+                    className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1"
+                  >
+                    {t("checkout.country") || "País"}
+                  </label>
+                  <select
+                    id="checkout-doc-country"
+                    value={documentInfo.country}
+                    onChange={(e) => handleCountryChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="" disabled>
+                      {t("checkout.selectCountry") || "--"}
+                    </option>
+                    {[
+                      ["US", "Estados Unidos"],
+                      ["BR", "Brasil"],
+                      ["MX", "México"],
+                      ["AR", "Argentina"],
+                      ["CO", "Colombia"],
+                      ["CL", "Chile"],
+                      ["PE", "Perú"],
+                      ["EC", "Ecuador"],
+                      ["UY", "Uruguay"],
+                      ["PY", "Paraguay"],
+                      ["BO", "Bolivia"],
+                      ["VE", "Venezuela"],
+                      ["ES", "España"],
+                      ["FR", "Francia"],
+                      ["DE", "Alemania"],
+                      ["GB", "Reino Unido"],
+                      ["IT", "Italia"],
+                      ["PT", "Portugal"],
+                      ["PL", "Polonia"],
+                      ["CA", "Canadá"],
+                    ].map(([code, label]) => (
+                      <option key={code} value={code}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {cardPhase === "token_ready" ? (
                   <>
-                    <div
-                      id="dlocal-card-field"
-                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 p-3 mb-4"
-                    />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label
-                          htmlFor="checkout-doc-type"
-                          className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1"
-                        >
-                          {t("checkout.documentType") || "Tipo de documento"}
-                        </label>
-                        <select
-                          id="checkout-doc-type"
-                          value={documentInfo.type}
-                          onChange={(e) =>
-                            setDocumentInfo((prev) => ({
-                              ...prev,
-                              type: e.target.value,
-                            }))
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        >
-                          {["CC", "DNI", "CE", "CI", "RUT", "NIT", "CPF", "PASS", "CURP", "RFC"].map(
-                            (doc) => (
-                              <option key={doc} value={doc}>
-                                {doc}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="checkout-doc-number"
-                          className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1"
-                        >
-                          {t("checkout.documentNumber") || "Número de documento"}
-                        </label>
-                        <input
-                          id="checkout-doc-number"
-                          type="text"
-                          inputMode="numeric"
-                          value={documentInfo.number}
-                          onChange={(e) =>
-                            setDocumentInfo((prev) => ({
-                              ...prev,
-                              number: e.target.value,
-                            }))
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          placeholder="1234567890"
-                        />
-                      </div>
-                    </div>
                     <Button
                       onClick={confirmCard}
                       disabled={pageState === "processing"}

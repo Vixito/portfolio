@@ -33,6 +33,9 @@ serve(async (req: Request) => {
       user_email,
       product_language,
       success_url,
+      country,
+      client_document_type,
+      client_document,
     } = await req.json();
 
     if (!product_id) {
@@ -45,6 +48,15 @@ serve(async (req: Request) => {
         error: "user_name y user_email son requeridos",
       });
     }
+    // dLocal Go (Transparent Checkout) requiere el país del pagador.
+    const payerCountry = String(country || "").trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(payerCountry)) {
+      return jsonCheckoutResponse(400, {
+        error: "El país es requerido para el pago con tarjeta",
+      });
+    }
+    const payerDocument = String(client_document || "").trim();
+    const payerDocumentType = String(client_document_type || "").trim();
 
     const product = await resolveCheckoutProduct(supabase, product_id);
     if (!product) {
@@ -88,15 +100,18 @@ serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 
-    const dlocalBody = {
+    const dlocalBody: Record<string, unknown> = {
       currency: "USD",
       amount,
       order_id: invoice.id,
       description: `Vixis Store - #${invoice.invoice_number}`.slice(0, 100),
+      country: payerCountry,
       payer: {
         id: invoice.id,
         name: userName.slice(0, 100),
         email: userEmail.slice(0, 100),
+        document: payerDocument || undefined,
+        document_type: payerDocumentType || undefined,
       },
       success_url: successUrl.toString(),
       back_url: storeUrl,

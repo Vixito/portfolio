@@ -1763,6 +1763,9 @@ export async function createDLocalGoToken(params: {
   user_name: string;
   user_email: string;
   product_language?: "es" | "en";
+  country?: string;
+  client_document_type?: string;
+  client_document?: string;
   success_url?: string;
 }) {
   const { data, error } = await supabase.functions.invoke(
@@ -1791,6 +1794,7 @@ export async function confirmDLocalGoPayment(params: {
   client_last_name: string;
   client_document_type?: string;
   client_document?: string;
+  client_country?: string;
   client_email: string;
   installments_id?: string;
 }) {
