@@ -55,7 +55,11 @@ function RootRoute() {
   const hostname =
     typeof window !== "undefined" ? window.location.hostname : "";
 
-  if (hostname === "admin.vixis.dev") {
+  if (
+    hostname === "admin.vixis.dev" ||
+    (import.meta.env.DEV &&
+      (hostname === "localhost" || hostname === "127.0.0.1"))
+  ) {
     return <Admin />;
   }
 

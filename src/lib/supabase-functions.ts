@@ -20,8 +20,12 @@ const adminAuthHeaders = (): Record<string, string> | undefined => {
 
 const handleAdminUnauthorized = (status?: number): void => {
   if (status === 401) {
-    clearAdminToken();
-    window.location.reload();
+    // No forzar logout ni recargar: la sesión JWT custom puede ser rechazada
+    // por el gateway de una función (verify_jwt) sin que la sesión esté expirada.
+    // Se deja el error en pantalla; el usuario decide si cerrar sesión manualmente.
+    console.warn(
+      `[admin] 401 en llamada admin (sin logout automático). Revisa verify-jwt de la función: ${status}`
+    );
   }
 };
 

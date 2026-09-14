@@ -6,6 +6,8 @@ export default {
   theme: {
     extend: {
       colors: {
+        primary: "#2093c4",
+        accent: "#331d83",
         purple: {
           DEFAULT: "#331d83",
           50: "#f5f3ff",

@@ -119,23 +119,6 @@ export default function AdminJobOffers() {
     setIsProcessingUrl(false);
   };
 
-  const exportToCSV = () => {
-    const headers = ["Empresa", "Puesto", "Match Score", "URL", "Fecha"];
-    const csvContent = [
-      headers.join(","),
-      ...offers.map(o => 
-        [o.empresa, o.puesto, o.match_score, o.url_oferta, new Date(o.fecha_creacion || (o as any).created_at).toLocaleDateString()].join(",")
-      )
-    ].join("\\n");
-    
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `job_offers_${new Date().getTime()}.csv`;
-    a.click();
-  };
-
   const paginatedOffers = offers.slice((page - 1) * itemsPerPage, page * itemsPerPage);
   const totalPages = Math.ceil(offers.length / itemsPerPage);
 
@@ -163,13 +146,6 @@ export default function AdminJobOffers() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-white/10 hover:bg-white/5 text-gray-300 hover:text-white"
           >
             <span className="mr-1">🔄</span> Recargar
-          </button>
-          
-          <button 
-            onClick={exportToCSV}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-white/10 hover:bg-white/5 text-gray-300 hover:text-white"
-          >
-            <span className="mr-1">⬇️</span> CSV
           </button>
         </div>
       </div>

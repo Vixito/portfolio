@@ -5,6 +5,8 @@ import { optimizeAndUpload } from "../lib/storage-functions";
 import { useTranslation } from "../lib/i18n";
 import { useStatusStore } from "../stores/useStatusStore";
 import { useLanguageStore } from "../stores/useLanguageStore";
+import { useThemeStore } from "../stores/useThemeStore";
+import Aurora from "../components/backgrounds/Aurora";
 import {
   getProducts,
   getProductsWithPricing,
@@ -76,6 +78,7 @@ import Invoice from "../components/features/Invoice";
 import RichTextEditor from "../components/ui/RichTextEditor";
 import AdminJobOffers from "../components/admin/AdminJobOffers";
 import BosDashboard from "../components/admin/BosDashboard";
+import AdminShell from "../components/admin/AdminShell";
 
 // Componente para selector de productos con tabs por idioma
 function ProductSelectorWithTabs({
@@ -209,9 +212,76 @@ function ProductSelectorWithTabs({
   );
 }
 
+const EXTERNAL_TOOLS = [
+  { name: "Plausible", url: "https://plausible.io" },
+  { name: "Search Console", url: "https://search.google.com/" },
+  { name: "Bing Webmasters", url: "https://www.bing.com/webmasters/" },
+  { name: "Logtail", url: "https://logtail.com" },
+  { name: "Hotjar", url: "https://insights.hotjar.com/" },
+  { name: "Better Uptime", url: "https://betteruptime.com" },
+];
+
+const AURORA_COLORS = ["#2093c4", "#331d83", "#1e1b4b"];
+
+const AuroraBackdrop = () => {
+  const { theme } = useThemeStore();
+  return (
+    <div className="fixed inset-0 z-0" aria-hidden="true">
+      <Aurora colorStops={AURORA_COLORS} lightMode={theme === "light"} />
+    </div>
+  );
+};
+
+// Lista de herramientas externas (solo en el tab BOS)
+function ExternalToolsCard() {
+  const { t } = useTranslation();
+  return (
+    <div className="admin-card rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 mb-6">
+      <h2 className="text-lg font-bold text-white mb-4">
+        {t("admin.externalTools")}
+      </h2>
+      <ul className="divide-y divide-white/10 rounded-xl border border-white/10 bg-white/5">
+        {EXTERNAL_TOOLS.map((tool) => (
+          <li key={tool.name}>
+            <a
+              href={tool.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl hover:bg-white/5"
+            >
+              <span className="font-medium text-slate-200 group-hover:text-white">
+                {tool.name}
+              </span>
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="hidden truncate text-xs text-slate-500 group-hover:text-slate-400 sm:inline">
+                  {tool.url.replace(/^https?:\/\//, "").replace(/\/+$/, "")}
+                </span>
+                <svg
+                  className="h-4 w-4 shrink-0 text-slate-500 transition-transform group-hover:translate-x-0.5 group-hover:text-[#5fc1e4]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Admin() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { theme } = useThemeStore();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -276,6 +346,7 @@ function Admin() {
   const [isSavingAppearance, setIsSavingAppearance] = useState(false);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loadingCRUD, setLoadingCRUD] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
   
   // Función para descargar factura como PDF (usando window.print)
   const downloadInvoicePDF = async (invoice: any) => {
@@ -767,6 +838,7 @@ function Admin() {
 
   const loadCRUDData = async () => {
     setLoadingCRUD(true);
+    setDataError(null);
     try {
       switch (activeTab) {
         case "products":
@@ -836,6 +908,7 @@ function Admin() {
     } catch (error) {
       // Solo loggear el error, no mostrar alerta
       console.error(`Error al cargar ${activeTab}:`, error);
+      setDataError(error instanceof Error ? error.message : "Error al cargar datos");
       // Inicializar arrays vacíos si hay error
       switch (activeTab) {
         case "products":
@@ -2840,11 +2913,35 @@ function Admin() {
     }
   };
 
+  const handleLogout = () => {
+    clearAdminToken();
+    setIsAuthenticated(false);
+    window.location.href = "/";
+  };
+
+  const handleStatusSelect = async (status: "available" | "away" | "busy") => {
+    try {
+      await updateUserStatus(status);
+      setStatus(status);
+      setShowStatusSelector(false);
+      useStatusStore.getState().setStatus(status);
+      window.dispatchEvent(new CustomEvent("statusChanged", { detail: status }));
+    } catch (error) {
+      console.error("Error al actualizar status:", error);
+      alert(
+        `Error al actualizar status: ${
+          error instanceof Error ? error.message : "Error desconocido"
+        }`
+      );
+    }
+  };
+
   if (!isAuthenticated) {
     // Solo visible en admin.vixis.dev (+ IPs permitidas en Cloudflare) o localhost
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 px-4">
-        <div className="max-w-md w-full bg-white/10 backdrop-blur-lg rounded-lg p-8 border border-white/20">
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 px-4">
+        <AuroraBackdrop />
+        <div className="relative z-10 w-full max-w-md rounded-lg border border-white/20 bg-white/10 p-8 backdrop-blur-lg">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">
             {t("admin.login") || "Iniciar Sesión"}
           </h2>
@@ -2957,428 +3054,47 @@ function Admin() {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 py-12 md:py-20 px-2 md:px-4"
+      className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900"
       style={{ "--blue-color": "#2093c4" } as React.CSSProperties}
     >
-      <div className="max-w-7xl mx-auto">
-        {/* Header estilo Jarvis */}
-        <div className="text-center mb-8 md:mb-12">
-          <h1
-            className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-3 md:mb-4"
-            style={{
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "#28e3da",
-              textShadow: "0 0 40px rgba(32, 147, 196, 0.5)",
-            }}
-          >
-            JARVIS
-          </h1>
-          <p className="text-gray-300 text-base md:text-lg font-bold">
-            {t("admin.title")} - Vixis Portfolio
-          </p>
-          <div className="mt-3 md:mt-4 flex items-center justify-center gap-2">
-            <div className="w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-green-400 text-xs md:text-sm">
-              Sistema Operativo
-            </span>
-          </div>
-        </div>
-
-        {/* Plataformas externas */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-          {/* Analíticas */}
-          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20">
-            <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">
-              Analíticas
-            </h2>
-            <div className="space-y-3">
-              <a
-                href="https://plausible.io"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full px-6 py-3 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-white rounded-lg transition-all duration-300 cursor-pointer text-center font-semibold hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20"
-                style={{
-                  backgroundColor: "rgba(139, 92, 246, 0.2)",
-                  borderColor: "rgba(139, 92, 246, 0.3)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(139, 92, 246, 0.3)";
-                  e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.5)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(139, 92, 246, 0.2)";
-                  e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)";
-                }}
-              >
-                Plausible.io →
-              </a>
-              <a
-                href="https://search.google.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full px-6 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-white rounded-lg transition-all duration-300 cursor-pointer text-center font-semibold hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20"
-                style={{
-                  backgroundColor: "rgba(59, 130, 246, 0.2)",
-                  borderColor: "rgba(59, 130, 246, 0.3)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(59, 130, 246, 0.3)";
-                  e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.5)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(59, 130, 246, 0.2)";
-                  e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.3)";
-                }}
-              >
-                Google Search Console →
-              </a>
-              <a
-                href="https://www.bing.com/webmasters/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full px-6 py-3 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-white rounded-lg transition-all duration-300 cursor-pointer text-center font-semibold hover:scale-105 hover:shadow-lg hover:shadow-yellow-500/20"
-                style={{
-                  backgroundColor: "rgba(234, 179, 8, 0.2)",
-                  borderColor: "rgba(234, 179, 8, 0.3)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(234, 179, 8, 0.3)";
-                  e.currentTarget.style.borderColor = "rgba(234, 179, 8, 0.5)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(234, 179, 8, 0.2)";
-                  e.currentTarget.style.borderColor = "rgba(234, 179, 8, 0.3)";
-                }}
-              >
-                Bing Webmasters →
-              </a>
-            </div>
-          </div>
-
-          {/* Logs - Logtail */}
-          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20">
-            <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">
-              Logs
-            </h2>
-            <a
-              href="https://logtail.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full px-6 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-white rounded-lg transition-all duration-300 cursor-pointer text-center font-semibold hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20"
-              style={{
-                backgroundColor: "rgba(59, 130, 246, 0.2)",
-                borderColor: "rgba(59, 130, 246, 0.3)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  "rgba(59, 130, 246, 0.3)";
-                e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.5)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  "rgba(59, 130, 246, 0.2)";
-                e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.3)";
-              }}
-            >
-              Ver en Logtail →
-            </a>
-          </div>
-
-          {/* UX Research - Hotjar */}
-          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20">
-            <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">
-              UX Research
-            </h2>
-            <a
-              href="https://insights.hotjar.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full px-6 py-3 bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/30 text-white rounded-lg transition-all duration-300 cursor-pointer text-center font-semibold hover:scale-105 hover:shadow-lg hover:shadow-pink-500/20"
-              style={{
-                backgroundColor: "rgba(236, 72, 153, 0.2)",
-                borderColor: "rgba(236, 72, 153, 0.3)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  "rgba(236, 72, 153, 0.3)";
-                e.currentTarget.style.borderColor = "rgba(236, 72, 153, 0.5)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  "rgba(236, 72, 153, 0.2)";
-                e.currentTarget.style.borderColor = "rgba(236, 72, 153, 0.3)";
-              }}
-            >
-              Ver en Hotjar →
-            </a>
-          </div>
-
-          {/* Estado del Proyecto - Better Uptime */}
-          <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20">
-            <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">
-              Estado del Proyecto
-            </h2>
-            <a
-              href="https://betteruptime.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full px-6 py-3 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-white rounded-lg transition-all duration-300 cursor-pointer text-center font-semibold hover:scale-105 hover:shadow-lg hover:shadow-green-500/20"
-              style={{
-                backgroundColor: "rgba(34, 197, 94, 0.2)",
-                borderColor: "rgba(34, 197, 94, 0.3)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  "rgba(34, 197, 94, 0.3)";
-                e.currentTarget.style.borderColor = "rgba(34, 197, 94, 0.5)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  "rgba(34, 197, 94, 0.2)";
-                e.currentTarget.style.borderColor = "rgba(34, 197, 94, 0.3)";
-              }}
-            >
-              Ver en Better Uptime →
-            </a>
-          </div>
-        </div>
-
-        {/* Botones de Recursos Multimedia y Estado */}
-        <div className="mb-8 flex flex-wrap gap-4">
-          <button
-            onClick={() => setShowMediaManager(!showMediaManager)}
-            className="px-6 py-3 bg-cyan/20 hover:bg-cyan/30 rounded-lg border border-cyan/30 text-white transition-colors cursor-pointer font-semibold"
-          >
-            {showMediaManager ? t("admin.hide") : t("admin.show")}{" "}
-            {t("admin.mediaResources")}
-          </button>
-
-          {/* Selector de Estado y Botón de Cerrar Sesión */}
-          <div className="flex items-center gap-3">
-            <div className="relative" ref={statusSelectorRef}>
-              <button
-                onClick={() => setShowStatusSelector(!showStatusSelector)}
-                className="px-6 py-3 rounded-lg border text-white transition-colors cursor-pointer font-semibold flex items-center gap-2"
-                style={{
-                  backgroundColor: "rgba(51, 29, 131, 0.3)",
-                  borderColor: "rgba(51, 29, 131, 0.5)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(51, 29, 131, 0.4)";
-                  e.currentTarget.style.borderColor = "rgba(51, 29, 131, 0.6)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(51, 29, 131, 0.3)";
-                  e.currentTarget.style.borderColor = "rgba(51, 29, 131, 0.5)";
-                }}
-              >
-                {t("admin.changeStatus")}: {t(`statusBadge.${currentStatus}`)}
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showStatusSelector ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-
-              <div
-                ref={statusDropdownRef}
-                style={{
-                  display: "none",
-                  borderColor: "rgba(51, 29, 131, 0.5)",
-                }}
-                className="absolute top-full left-0 mt-2 bg-black/90 backdrop-blur-lg rounded-lg border shadow-lg z-50 min-w-[200px]"
-              >
-                {(["available", "away", "busy"] as const).map((status) => (
-                  <button
-                    key={status}
-                    onClick={async () => {
-                      try {
-                        // Guardar en base de datos (como loadCRUDData)
-                        await updateUserStatus(status);
-
-                        // Actualizar el store inmediatamente
-                        setStatus(status);
-                        setShowStatusSelector(false);
-
-                        // Forzar actualización inmediata del store
-                        const { setStatus: updateStatus } =
-                          useStatusStore.getState();
-                        updateStatus(status);
-
-                        // Disparar evento para notificar a todos los componentes
-                        window.dispatchEvent(
-                          new CustomEvent("statusChanged", { detail: status })
-                        );
-                      } catch (error) {
-                        console.error("Error al actualizar status:", error);
-                        alert(
-                          `Error al actualizar status: ${
-                            error instanceof Error
-                              ? error.message
-                              : "Error desconocido"
-                          }`
-                        );
-                      }
-                    }}
-                    className={`w-full px-4 py-2 text-left text-white transition-colors cursor-pointer first:rounded-t-lg last:rounded-b-lg`}
-                    style={{
-                      backgroundColor:
-                        currentStatus === status
-                          ? "rgba(51, 29, 131, 0.4)"
-                          : "transparent",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (currentStatus !== status) {
-                        e.currentTarget.style.backgroundColor =
-                          "rgba(51, 29, 131, 0.2)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (currentStatus !== status) {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                      }
-                    }}
-                  >
-                    {t(`statusBadge.${status}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                clearAdminToken();
-                setIsAuthenticated(false);
-                // Limpiar cualquier estado relacionado
-                window.location.href = "/";
-              }}
-              className="px-6 py-3 rounded-lg border text-white transition-colors cursor-pointer font-semibold flex items-center gap-2"
-              style={{
-                backgroundColor: "rgba(220, 38, 38, 0.3)",
-                borderColor: "rgba(220, 38, 38, 0.5)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  "rgba(220, 38, 38, 0.4)";
-                e.currentTarget.style.borderColor = "rgba(220, 38, 38, 0.6)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  "rgba(220, 38, 38, 0.3)";
-                e.currentTarget.style.borderColor = "rgba(220, 38, 38, 0.5)";
-              }}
-            >
-              {t("admin.logout") || "Cerrar Sesión"}
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
+      <AuroraBackdrop />
+      <div className={theme === "light" ? "relative z-10 admin-light" : "relative z-10"}>
+      <AdminShell
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab)}
+        currentStatus={currentStatus}
+        onStatusSelect={handleStatusSelect}
+        statusSelectorRef={statusSelectorRef}
+        statusDropdownRef={statusDropdownRef}
+        showStatusSelector={showStatusSelector}
+        setShowStatusSelector={setShowStatusSelector}
+        mediaOpen={showMediaManager}
+        onToggleMedia={() => setShowMediaManager(!showMediaManager)}
+        onLogout={handleLogout}
+      >
+        {activeTab === "bos" && <ExternalToolsCard />}
 
         {/* Sección CRUD */}
-        <div className="admin-card bg-white/10 backdrop-blur-lg rounded-lg p-4 md:p-6 border border-white/20 mt-6 md:mt-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 md:mb-6">
-            {activeTab !== "bos" ? (
-              <>
-                <div className="flex-1 w-full">
-                  <button
-                    onClick={handleCreate}
-                    className="w-full sm:w-auto px-3 md:px-4 py-2 text-sm md:text-base bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-white rounded-lg transition-colors cursor-pointer mb-3 md:mb-4"
-                  >
-                    + {t("admin.createNew")}
-                  </button>
-                  <h2 className="text-xl md:text-2xl font-bold text-white">
-                    {t("admin.contentManagement")}
-                  </h2>
-                </div>
-              </>
-            ) : null}
-          </div>
-
-          {/* Tabs */}
-          <div className="flex flex-wrap gap-1 md:gap-2 mb-4 md:mb-6 border-b border-white/20 overflow-x-auto">
-            {(
-              [
-                "bos",
-                "products",
-                "projects",
-                "clients",
-                "testimonials",
-                "socials",
-                "events",
-                "work_experiences",
-                "technologies",
-                "studies",
-                "blog_posts",
-                "home_content",
-                "radio_settings",
-                "invoices",
-                "appearance",
-                "job_offers",
-              ] as const
-            ).map((tab) => (
+        <div className="admin-card flex-1 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4 md:p-6">
+          {dataError && (
+            <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              <span className="font-semibold">Error:</span>
+              <span className="break-words">{dataError}</span>
+            </div>
+          )}
+          {activeTab !== "bos" && (
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+              <h2 className="text-xl md:text-2xl font-bold text-white">
+                {t("admin.contentManagement")}
+              </h2>
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-2 md:px-4 py-1 md:py-2 text-xs md:text-base font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                  activeTab === tab
-                    ? "text-white border-b-2"
-                    : "text-gray-400 hover:text-white"
-                }`}
-                style={
-                  activeTab === tab
-                    ? { borderBottomColor: "#2093c4" }
-                    : undefined
-                }
+                onClick={handleCreate}
+                className="px-4 py-2.5 text-sm bg-[#2093c4]/20 hover:bg-[#2093c4]/40 border border-[#2093c4]/40 text-white rounded-lg font-semibold transition-colors cursor-pointer"
               >
-                {tab === "bos" && "BOS"}
-                {tab === "products" && t("admin.products")}
-                {tab === "projects" && t("admin.projects")}
-                {tab === "clients" && t("admin.clients")}
-                {tab === "testimonials" && t("admin.testimonials")}
-                {tab === "socials" && t("admin.socials")}
-                {tab === "events" && t("admin.events")}
-                {tab === "work_experiences" && t("admin.workExperiences")}
-                {tab === "technologies" && t("admin.technologies")}
-                {tab === "studies" && t("admin.studies")}
-                {tab === "blog_posts" && "Blog Posts"}
-                {tab === "home_content" && "Home Content"}
-                {tab === "radio_settings" && "Radio Settings"}
-                {tab === "invoices" && "Invoices"}
-                {tab === "appearance" && "Apariencia"}
-                {tab === "job_offers" && "Ofertas de Trabajo"}
+                + {t("admin.createNew")}
               </button>
-            ))}
-          </div>
+            </div>
+          )}
 
           {/* Lista de items o formulario de radio_settings */}
           {activeTab === "bos" ? (
@@ -3394,7 +3110,7 @@ function Admin() {
                   <select
                     value={appearanceSettings.hero_background || "default"}
                     onChange={(e) => setAppearanceSettings({...appearanceSettings, hero_background: e.target.value})}
-                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
+                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
                   >
                     <option value="default">Por defecto</option>
                     <option value="starry_night">Starry Night (Canvas Animado)</option>
@@ -3405,7 +3121,7 @@ function Admin() {
                   <select
                     value={appearanceSettings.radio_background || "default"}
                     onChange={(e) => setAppearanceSettings({...appearanceSettings, radio_background: e.target.value})}
-                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
+                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
                   >
                     <option value="default">Por defecto</option>
                     <option value="starry_night">Starry Night (Canvas Animado)</option>
@@ -3416,7 +3132,7 @@ function Admin() {
                   <select
                     value={appearanceSettings.home_scroll_transition || "default"}
                     onChange={(e) => setAppearanceSettings({...appearanceSettings, home_scroll_transition: e.target.value})}
-                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
+                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
                   >
                     <option value="default">Por defecto (Ninguna)</option>
                     <option value="horizontal_blinds">Horizontal Blinds</option>
@@ -3579,7 +3295,7 @@ function Admin() {
               {t("common.loading")}
             </div>
           ) : (
-            <div className="space-y-2 md:space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-2 md:space-y-3">
               {(activeTab === "products"
                 ? products
                 : activeTab === "projects"
@@ -3687,11 +3403,7 @@ function Admin() {
                         })
                       : item.passline_url || t("admin.noDate")
                     : activeTab === "testimonials"
-                    ? item.testimonial_content
-                      ? item.testimonial_content.length > 50
-                        ? item.testimonial_content.substring(0, 50) + "..."
-                        : item.testimonial_content
-                      : t("admin.noTestimonial")
+                    ? item.testimonial_content || t("admin.noTestimonial")
                     : activeTab === "home_content"
                     ? item.content_type || t("admin.noDescription")
                     : activeTab === "invoices"
@@ -3738,9 +3450,7 @@ function Admin() {
                           </span>
                         )}
                       </div>
-                      <p className="text-gray-400 text-xs md:text-sm line-clamp-2">
-                        {displayDescription}
-                      </p>
+                      <p className="text-gray-400 text-xs md:text-sm">{displayDescription}</p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto items-center">
                     {/* Toggle is_active (ocultar para invoices) */}
@@ -8652,6 +8362,7 @@ NOTA: company_logo es la URL de la imagen del logo que se mostrará en la Home. 
             </div>
           </div>
         )}
+      </AdminShell>
       </div>
     </div>
   );

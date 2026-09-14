@@ -228,3 +228,187 @@ select option:hover {
   color: #331d83 !important;
 }
 
+/* =========================================================
+   TEMA CLARO DEL ADMIN
+   El CRUD del admin está estilizado DARK (text-white, bg-gray-*
+   glass, bordes white/*). En tema claro (clase .admin-light en la
+   raíz autenticada) remapeamos esas utilidades a superficies
+   claras y texto oscuro. El nav del portfolio (.site-nav-zone)
+   queda excluido para conservar su propio tema.
+   ========================================================= */
+
+/* Texto principal */
+.admin-light .text-white,
+.admin-light .text-slate-100,
+.admin-light .text-slate-200,
+.admin-light .text-gray-100 {
+  color: #0f172a;
+}
+.admin-light .text-gray-300,
+.admin-light .text-slate-300 {
+  color: #334155;
+}
+.admin-light .text-gray-400,
+.admin-light .text-gray-500,
+.admin-light .text-gray-600,
+.admin-light .text-slate-400,
+.admin-light .text-slate-500 {
+  color: #64748b;
+}
+.admin-light .text-blue-300 {
+  color: #1d4ed8;
+}
+.admin-light .text-amber-200 {
+  color: #b45309;
+}
+.admin-light .text-green-300,
+.admin-light .text-green-400 {
+  color: #15803d;
+}
+.admin-light .text-red-300,
+.admin-light .text-red-400 {
+  color: #b91c1c;
+}
+.admin-light .hover\:text-white:hover,
+.admin-light .group:hover .group-hover\:text-white {
+  color: #0f172a;
+}
+
+/* Superficies */
+.admin-light .bg-gray-900,
+.admin-light .bg-gray-900\/40 {
+  background-color: rgba(255, 255, 255, 0.66);
+}
+.admin-light .bg-gray-800,
+.admin-light .bg-\[\#1A1A1A\] {
+  background-color: #ffffff;
+}
+.admin-light .bg-gray-700 {
+  background-color: #f1f5f9;
+}
+.admin-light .bg-gray-700\/50 {
+  background-color: rgba(100, 116, 139, 0.15);
+}
+.admin-light .bg-gray-600 {
+  background-color: #e2e8f0;
+}
+.admin-light .bg-gray-500\/20,
+.admin-light .bg-gray-500\/30 {
+  background-color: rgba(100, 116, 139, 0.15);
+}
+.admin-light .bg-white\/5,
+.admin-light .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+.admin-light .bg-black\/20 {
+  background-color: rgba(255, 255, 255, 0.55);
+}
+.admin-light .bg-black\/90 {
+  background-color: rgba(255, 255, 255, 0.97);
+}
+.admin-light .bg-\[\#111111\] {
+  background-color: #ffffff;
+}
+.admin-light .hover\:bg-gray-600:hover {
+  background-color: #d1d5db;
+}
+.admin-light .hover\:bg-gray-700:hover {
+  background-color: #e2e8f0;
+}
+.admin-light .hover\:bg-gray-800:hover {
+  background-color: #f8fafc;
+}
+
+/* Bordes y divisores */
+.admin-light .border-gray-700,
+.admin-light .divide-gray-700 {
+  border-color: #e2e8f0;
+}
+.admin-light .border-gray-600,
+.admin-light .border-gray-600\/30,
+.admin-light .border-gray-600\/50 {
+  border-color: #cbd5e1;
+}
+.admin-light .border-gray-500,
+.admin-light .border-gray-500\/30 {
+  border-color: #94a3b8;
+}
+.admin-light .border-white\/10,
+.admin-light .border-white\/20,
+.admin-light .border-white\/30 {
+  border-color: #cbd5e1;
+}
+.admin-light .divide-white\/10 {
+  border-color: #e2e8f0;
+}
+
+/* Placeholders */
+.admin-light input::placeholder,
+.admin-light textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* Botones con color sólido conservan texto blanco */
+.admin-light .bg-blue-500.text-white,
+.admin-light .bg-green-500.text-white,
+.admin-light .bg-red-500.text-white {
+  color: #ffffff;
+}
+
+/* Componentes extra: Ofertas de Trabajo (AdminJobOffers) y BOS (BosDashboard)
+   usan superficies sólidas arbitrarias → en claro pasan a blanco igual que el resto */
+.admin-light .bg-\[\#121212\],
+.admin-light .bg-\[\#09090b\],
+.admin-light .bg-\[\#18181b\],
+.admin-light .bg-\[\#27272a\],
+.admin-light .bg-\[\#3f3f46\],
+.admin-light .bg-\[\#15171a\],
+.admin-light .bg-\[\#0f1113\] {
+  background-color: #ffffff;
+}
+.admin-light .hover\:bg-\[\#3f3f46\]:hover {
+  background-color: #e2e8f0;
+}
+
+/* Texto que faltaba en esos componentes */
+.admin-light .text-gray-100,
+.admin-light .text-gray-200 {
+  color: #0f172a;
+}
+.admin-light .text-blue-400 {
+  color: #2563eb;
+}
+.admin-light .text-yellow-400 {
+  color: #ca8a04;
+}
+.admin-light .text-red-200 {
+  color: #dc2626;
+}
+
+/* Botones sólidos de marca conservan texto blanco */
+.admin-light .bg-\[\#2093c4\].text-white,
+.admin-light .bg-\[\#1a7a9e\].text-white,
+.admin-light .bg-\[\#10b981\].text-white,
+.admin-light .bg-\[\#059669\].text-white {
+  color: #ffffff;
+}
+
+/* Hover en claro: en vez de "más blanco" (invisible), un tinte gris sutil */
+.admin-light .hover\:bg-white\/5:hover {
+  background-color: rgba(100, 116, 139, 0.09);
+}
+.admin-light .hover\:bg-white\/10:hover {
+  background-color: rgba(100, 116, 139, 0.13);
+}
+.admin-light .hover\:bg-white\/\[0\.02\]:hover {
+  background-color: rgba(100, 116, 139, 0.05);
+}
+.admin-light .hover\:border-white\/20:hover {
+  border-color: #94a3b8;
+}
+
+/* El nav del portfolio conserva su propio tema (blanco sobre sus cubos) */
+.admin-light .site-nav-zone .text-white {
+  color: #ffffff !important;
+}
+
