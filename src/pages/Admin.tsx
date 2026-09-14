@@ -7,6 +7,7 @@ import { useStatusStore } from "../stores/useStatusStore";
 import { useLanguageStore } from "../stores/useLanguageStore";
 import { useThemeStore } from "../stores/useThemeStore";
 import Aurora from "../components/backgrounds/Aurora";
+import Navigation from "../components/layout/Navigation";
 import {
   getProducts,
   getProductsWithPricing,
@@ -2939,7 +2940,13 @@ function Admin() {
   if (!isAuthenticated) {
     // Solo visible en admin.vixis.dev (+ IPs permitidas en Cloudflare) o localhost
     return (
-      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 px-4">
+      <div
+        className={`relative min-h-screen flex items-center justify-center overflow-hidden px-4 pb-16 ${
+          theme === "light"
+            ? "bg-gradient-to-br from-slate-100 via-blue-100 to-slate-100 admin-light"
+            : "bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900"
+        }`}
+      >
         <AuroraBackdrop />
         <div className="relative z-10 w-full max-w-md rounded-lg border border-white/20 bg-white/10 p-8 backdrop-blur-lg">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">
@@ -3027,7 +3034,7 @@ function Admin() {
             )}
             <button
               type="submit"
-              className="w-full px-6 py-3 font-semibold rounded-lg transition-all duration-300 cursor-pointer text-white"
+              className="w-full px-6 py-3 font-semibold rounded-lg transition-all duration-300 cursor-pointer text-white bg-[#10b981]"
               style={{
                 backgroundColor: "#10b981",
                 boxShadow: "0 0 20px rgba(16, 185, 129, 0.5)",
@@ -3046,6 +3053,11 @@ function Admin() {
               {t("admin.login") || "Iniciar Sesión"}
             </button>
           </form>
+        </div>
+
+        {/* Nav de siempre (idioma + tema), excluido del remapeo admin-light */}
+        <div className="site-nav-zone">
+          <Navigation />
         </div>
       </div>
     );
