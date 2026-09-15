@@ -107,7 +107,7 @@ const runReport = async (
           { name: "screenPageViews" },
           { name: "bounceRate" },
           { name: "averageSessionDuration" },
-          { name: "viewsPerSession" },
+          { name: "screenPageViewsPerSession" },
         ],
       }),
     }
