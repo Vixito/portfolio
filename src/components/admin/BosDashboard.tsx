@@ -6,6 +6,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   Bar,
   BarChart,
@@ -395,6 +396,15 @@ export default function BosDashboard() {
                         fmtNum(value),
                         name === "visits" ? "Visitas" : "Pageviews",
                       ]}
+                    />
+                    <Legend
+                      align="center"
+                      verticalAlign="bottom"
+                      iconType="circle"
+                      formatter={(value: any) =>
+                        value === "visits" ? "Visitas" : "Pageviews"
+                      }
+                      wrapperStyle={{ fontSize: 12, color: "#9ca3af" }}
                     />
                     <Bar dataKey="visits" fill="#8c52ff" radius={[3, 3, 0, 0]} />
                     <Bar dataKey="pageviews" fill="#2093c4" radius={[3, 3, 0, 0]} />
