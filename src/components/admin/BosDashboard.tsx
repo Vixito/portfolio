@@ -337,7 +337,10 @@ export default function BosDashboard() {
                         border: "1px solid rgba(255,255,255,0.15)",
                         borderRadius: 8,
                         fontSize: 12,
+                        color: "#e5e7eb",
                       }}
+                      labelStyle={{ color: "#e5e7eb" }}
+                      itemStyle={{ color: "#e5e7eb" }}
                       labelFormatter={(d: any) => fmtDate(d)}
                       formatter={(value: any, _name: any) => [
                         fmtUSD(value),
@@ -383,7 +386,10 @@ export default function BosDashboard() {
                         border: "1px solid rgba(255,255,255,0.15)",
                         borderRadius: 8,
                         fontSize: 12,
+                        color: "#e5e7eb",
                       }}
+                      labelStyle={{ color: "#e5e7eb" }}
+                      itemStyle={{ color: "#e5e7eb" }}
                       labelFormatter={(d: any) => fmtDate(d)}
                       formatter={(value: any, name: any) => [
                         fmtNum(value),
