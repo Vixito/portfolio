@@ -4,6 +4,12 @@ project_id = "rshlpiottljwhyxmcxjn"
 [functions.sync-ga4]
 verify_jwt = false
 
+[functions.sync-tally]
+verify_jwt = false
+
+[functions.sync-blog]
+verify_jwt = false
+
 [functions.get-bos-dashboard]
 verify_jwt = false
 

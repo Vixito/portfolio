@@ -186,6 +186,7 @@ serve(async (req: Request) => {
     }
 
     const analyticsSources = ["ga4"];
+    const paymentSources = ["nowpayments", "dlocalgo", "dlocal"];
 
     const isAnalyticsSource = (source: string) => analyticsSources.includes(source);
 
@@ -204,12 +205,12 @@ serve(async (req: Request) => {
         last_error: c.last_error,
         configured: isAnalyticsSource(c.source)
           ? analyticsConfigured(c.source)
-          : c.source === "nowpayments" || c.source === "dlocalgo"
+          : paymentSources.includes(c.source)
             ? true
             : !!(c.last_sync_at || c.config?.configured),
         has_data: isAnalyticsSource(c.source)
           ? hasTraffic
-          : c.source === "nowpayments" || c.source === "dlocalgo"
+          : paymentSources.includes(c.source)
             ? true
             : !!c.last_sync_at,
       };

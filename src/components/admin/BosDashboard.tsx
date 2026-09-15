@@ -10,7 +10,12 @@ import {
   Bar,
   BarChart,
 } from "recharts";
-import { getBosDashboard, syncBosAnalytics } from "../../lib/supabase-functions";
+import {
+  getBosDashboard,
+  syncBosAnalytics,
+  syncTallyLeads,
+  syncBlogSources,
+} from "../../lib/supabase-functions";
 import { useTranslation } from "../../lib/i18n";
 
 interface RecentSale {
@@ -98,7 +103,8 @@ const fmtDateTime = (iso?: string | null) => {
 
 const gatewayLabel = (g?: string | null) => {
   if (g === "nowpayments") return "Crypto (NP)";
-  if (g === "dlocalgo") return "Tarjeta (dLocal)";
+  if (g === "dlocalgo") return "Tarjeta (dLocal Go)";
+  if (g === "dlocal") return "Tarjeta (dLocal)";
   if (g === "paypal") return "PayPal";
   return g || "—";
 };
@@ -178,14 +184,23 @@ export default function BosDashboard() {
   const onSync = async () => {
     setSyncing(true);
     try {
+      const errors: string[] = [];
+
       const res = await syncBosAnalytics();
       if (res?.reason) {
-        setError(
-          `Analítica no sincronizada: ${res.reason}. Verifica GA4_SERVICE_ACCOUNT_JSON y GA4_PROPERTY_ID en los secrets.`
+        errors.push(
+          `Analítica (GA4): ${res.reason}. Verifica GA4_SERVICE_ACCOUNT_JSON y GA4_PROPERTY_ID en los secrets.`
         );
-      } else {
-        setError(null);
       }
+
+      const tally = await syncTallyLeads();
+      if (tally?.reason) errors.push(`Tally (Leads): ${tally.reason}`);
+
+      const blog = await syncBlogSources();
+      if (blog?.devto?.error) errors.push(`Dev.to: ${blog.devto.error}`);
+      if (blog?.medium?.error) errors.push(`Medium: ${blog.medium.error}`);
+
+      setError(errors.length ? errors.join(" ") : null);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al sincronizar");

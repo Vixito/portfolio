@@ -1708,6 +1708,36 @@ export async function syncBosAnalytics(): Promise<any> {
 }
 
 /**
+ * Sincroniza las respuestas de Tally.so hacia bos_leads.
+ */
+export async function syncTallyLeads(): Promise<any> {
+  const { data, error } = await supabase.functions.invoke(
+    "sync-tally",
+    { body: {}, headers: adminAuthHeaders() }
+  );
+  if (error) {
+    handleAdminUnauthorized((error as any)?.context?.status);
+    throw new Error(`Error al sincronizar Tally: ${await getEdgeErrorMessage(error)}`);
+  }
+  return data;
+}
+
+/**
+ * Sincroniza el estado de los conectores de blog (Dev.to + Medium).
+ */
+export async function syncBlogSources(): Promise<any> {
+  const { data, error } = await supabase.functions.invoke(
+    "sync-blog",
+    { body: {}, headers: adminAuthHeaders() }
+  );
+  if (error) {
+    handleAdminUnauthorized((error as any)?.context?.status);
+    throw new Error(`Error al sincronizar blog: ${await getEdgeErrorMessage(error)}`);
+  }
+  return data;
+}
+
+/**
  * Confirma el pago del Transparent Checkout con el cardToken.
  * Devuelve { paid, delivery, redirect_url (3DS), status, ... }.
  */
