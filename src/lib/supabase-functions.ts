@@ -1737,6 +1737,70 @@ export async function syncBlogSources(): Promise<any> {
   return data;
 }
 
+// ========== CRM (Business Operating System) ==========
+
+async function invokeCRM(payload: any): Promise<any> {
+  const { data, error } = await supabase.functions.invoke("crm", {
+    body: payload,
+    headers: adminAuthHeaders(),
+  });
+  if (error) {
+    handleAdminUnauthorized((error as any)?.context?.status);
+    throw new Error(await getEdgeErrorMessage(error));
+  }
+  if (data?.error) {
+    throw new Error(String(data.error));
+  }
+  return data;
+}
+
+// --- Empresas ---
+export function getCrmCompanies() {
+  return invokeCRM({ action: "companies-list" });
+}
+export function createCrmCompany(company: Record<string, unknown>) {
+  return invokeCRM({ action: "companies-create", company });
+}
+export function updateCrmCompany(id: string, updates: Record<string, unknown>) {
+  return invokeCRM({ action: "companies-update", id, updates });
+}
+
+// --- Contactos ---
+export function getCrmContacts(params: { company_id?: string; search?: string } = {}) {
+  return invokeCRM({ action: "contacts-list", ...params });
+}
+export function createCrmContact(contact: Record<string, unknown>) {
+  return invokeCRM({ action: "contacts-create", contact });
+}
+export function updateCrmContact(id: string, updates: Record<string, unknown>) {
+  return invokeCRM({ action: "contacts-update", id, updates });
+}
+
+// --- Etapas y Deals ---
+export function getCrmStages() {
+  return invokeCRM({ action: "stages-list" });
+}
+export function getCrmDeals(params: { stage_id?: string; contact_id?: string } = {}) {
+  return invokeCRM({ action: "deals-list", ...params });
+}
+export function createCrmDeal(deal: Record<string, unknown>) {
+  return invokeCRM({ action: "deals-create", deal });
+}
+export function updateCrmDeal(id: string, updates: Record<string, unknown>) {
+  return invokeCRM({ action: "deals-update", id, updates });
+}
+
+// --- Actividades ---
+export function getCrmActivities(params: { contact_id?: string; deal_id?: string } = {}) {
+  return invokeCRM({ action: "activities-list", ...params });
+}
+export function createCrmActivity(activity: Record<string, unknown>) {
+  return invokeCRM({ action: "activities-create", activity });
+}
+export function updateCrmActivity(id: string, updates: Record<string, unknown>) {
+  return invokeCRM({ action: "activities-update", id, updates });
+}
+
 /**
  * Confirma el pago del Transparent Checkout con el cardToken.
  * Devuelve { paid, delivery, redirect_url (3DS), status, ... }.

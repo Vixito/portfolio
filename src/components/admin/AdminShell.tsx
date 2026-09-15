@@ -11,6 +11,7 @@ import Navigation from "../layout/Navigation";
 
 export type AdminTab =
   | "bos"
+  | "crm"
   | "products"
   | "projects"
   | "clients"
@@ -31,6 +32,7 @@ type StatusKey = "available" | "away" | "busy";
 
 type IconName =
   | "dashboard"
+  | "crm"
   | "products"
   | "projects"
   | "clients"
@@ -77,6 +79,14 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
       <rect x="14" y="3" width="7" height="5" rx="1" />
       <rect x="14" y="12" width="7" height="9" rx="1" />
       <rect x="3" y="16" width="7" height="5" rx="1" />
+    </>
+  ),
+  crm: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      <path d="M21 21v-2a4 4 0 0 0-3-3.87" />
     </>
   ),
   products: (
@@ -238,7 +248,10 @@ function AdminShell(props: AdminShellProps) {
   const sectionGroups: { group: string; items: Section[] }[] = [
     {
       group: t("admin.groups.dashboard"),
-      items: [{ id: "bos", label: "BOS", icon: "dashboard" }],
+      items: [
+        { id: "bos", label: "BOS", icon: "dashboard" },
+        { id: "crm", label: t("admin.crm"), icon: "crm" },
+      ],
     },
     {
       group: t("admin.groups.content"),

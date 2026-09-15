@@ -30,6 +30,7 @@
     "npm:iceberg-js@~0.8.1": "0.8.1",
     "npm:motion-dom@11.18.1": "11.18.1",
     "npm:motion-utils@11.18.1": "11.18.1",
+    "npm:ogl@1.0.11": "1.0.11",
     "npm:openai@*": "7.4.0_zod@3.25.76",
     "npm:pdf-lib@*": "1.17.1",
     "npm:quill@^1.3.7": "1.3.7",
@@ -1713,6 +1714,9 @@
     "object-keys@1.1.1": {
       "integrity": "sha512-NuAESUOUMrlIXOfHKzD6bpPu3tYt3xvjNdRIQ+FeT0lNb4K8WR70CaDxhuNguS2XG+GjkyMwOzsN5ZktImfhLA=="
     },
+    "ogl@1.0.11": {
+      "integrity": "sha512-kUpC154AFfxi16pmZUK4jk3J+8zxwTWGPo03EoYA8QPbzikHoaC82n6pNTbd+oEaJonaE8aPWBlX7ad9zrqLsA=="
+    },
     "openai@7.4.0_zod@3.25.76": {
       "integrity": "sha512-+C9Muit5x8j9R8ej8ZzVgKcrVDtqFqTy9gxFdov0EItLgU68zrJtF9ZeT0cyqJQW9S3PCJkdFgADtRGquRBtew==",
       "dependencies": [
@@ -2280,7 +2284,8 @@
     }
   },
   "redirects": {
-    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.115.0"
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.115.0",
+    "https://esm.sh/@types/bcryptjs@~2.4.6/index.d.ts": "https://esm.sh/@types/bcryptjs@2.4.6/index.d.ts"
   },
   "remote": {
     "https://deno.land/std@0.168.0/async/abortable.ts": "80b2ac399f142cc528f95a037a7d0e653296352d95c681e284533765961de409",
@@ -2294,7 +2299,8 @@
     "https://deno.land/std@0.168.0/async/retry.ts": "e8e5173623915bbc0ddc537698fa418cf875456c347eda1ed453528645b42e67",
     "https://deno.land/std@0.168.0/async/tee.ts": "3a47cc4e9a940904fd4341f0224907e199121c80b831faa5ec2b054c6d2eff5e",
     "https://deno.land/std@0.168.0/http/server.ts": "e99c1bee8a3f6571ee4cdeb2966efad465b8f6fe62bec1bdb59c1f007cc4d155",
-    "https://esm.sh/@supabase/supabase-js@2.115.0": "f4e488ef8059a64be766b58feb4d6a18aa812038fdcf9c7c916efbdf26ab9585"
+    "https://esm.sh/@supabase/supabase-js@2.115.0": "f4e488ef8059a64be766b58feb4d6a18aa812038fdcf9c7c916efbdf26ab9585",
+    "https://esm.sh/bcryptjs@2.4.3": "49851f367e562ad6e108c851ced8948944ea392fd46e576f7fdb1eb9e1ffddf0"
   },
   "workspace": {
     "dependencies": [
@@ -2349,6 +2355,7 @@
         "npm:iceberg-js@~0.8.1",
         "npm:motion-dom@11.18.1",
         "npm:motion-utils@11.18.1",
+        "npm:ogl@1.0.11",
         "npm:quill@^1.3.7",
         "npm:react-dom@^18.3.1",
         "npm:react-hook-form@^7.51.0",

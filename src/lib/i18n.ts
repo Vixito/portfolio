@@ -492,6 +492,7 @@ export const translations = {
       invoices: "Facturas",
       appearance: "Apariencia",
       jobOffers: "Ofertas de Trabajo",
+      crm: "CRM",
       bos: {
         subtitle: "Rendimiento integral del negocio",
         revenue30: "Ingresos 30 días",
@@ -1234,6 +1235,7 @@ export const translations = {
       invoices: "Invoices",
       appearance: "Appearance",
       jobOffers: "Job Offers",
+      crm: "CRM",
       bos: {
         subtitle: "Business-wide performance",
         revenue30: "Revenue 30 days",

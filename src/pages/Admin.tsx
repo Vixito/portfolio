@@ -79,6 +79,7 @@ import Invoice from "../components/features/Invoice";
 import RichTextEditor from "../components/ui/RichTextEditor";
 import AdminJobOffers from "../components/admin/AdminJobOffers";
 import BosDashboard from "../components/admin/BosDashboard";
+import CrmPanel from "../components/admin/CrmPanel";
 import AdminShell from "../components/admin/AdminShell";
 
 // Componente para selector de productos con tabs por idioma
@@ -314,6 +315,7 @@ function Admin() {
   // Estados para CRUD
   const [activeTab, setActiveTab] = useState<
     | "bos"
+    | "crm"
     | "products"
     | "projects"
     | "clients"
@@ -3097,7 +3099,7 @@ function Admin() {
               <span className="break-words">{dataError}</span>
             </div>
           )}
-          {activeTab !== "bos" && (
+          {activeTab !== "bos" && activeTab !== "crm" && (
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-white">
                 {t("admin.contentManagement")}
@@ -3114,6 +3116,8 @@ function Admin() {
           {/* Lista de items o formulario de radio_settings */}
           {activeTab === "bos" ? (
             <BosDashboard />
+          ) : activeTab === "crm" ? (
+            <CrmPanel />
           ) : activeTab === "job_offers" ? (
             <AdminJobOffers />
           ) : activeTab === "appearance" ? (
