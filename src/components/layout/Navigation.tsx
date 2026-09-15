@@ -371,6 +371,14 @@ function Navigation() {
               >
                 {language === "es" ? "Repositorio" : "Repository"}
               </a>
+              <a
+                href="https://status.vixis.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="dropdown-item block px-4 py-2 text-left hover:bg-blue/10 dark:hover:bg-blue/80 transition-colors text-black dark:text-white cursor-pointer"
+              >
+                {language === "es" ? "Estado del servicio" : "Service status"}
+              </a>
             </div>
           </div>
         </li>
