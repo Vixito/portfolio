@@ -3818,19 +3818,7 @@ function Admin() {
                   }
                 }}
                 disabled={!selectedFile || uploading}
-                className="w-full text-white py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold cursor-pointer"
-                style={{
-                  backgroundColor: "rgba(32, 147, 196, 0.2)",
-                  borderColor: "rgba(32, 147, 196, 0.3)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(32, 147, 196, 0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(32, 147, 196, 0.2)";
-                }}
+                className="w-full py-3 px-4 rounded-lg font-semibold transition-colors cursor-pointer bg-[#2093c4] hover:bg-[#1a7a9e] text-white disabled:bg-[#2093c4]/15 disabled:hover:bg-[#2093c4]/15 disabled:!text-gray-400 disabled:cursor-not-allowed"
               >
                 {uploading
                   ? `Subiendo... ${uploadProgress}%`
