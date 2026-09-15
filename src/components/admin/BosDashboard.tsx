@@ -214,8 +214,6 @@ export default function BosDashboard() {
   const r90 = rev?.periods?.["90d"];
   const r7 = rev?.periods?.["7d"];
 
-  const lastSyncGA4 = conn?.find((c) => c.source === "ga4")?.last_sync_at;
-
   return (
     <div className="space-y-4">
       {/* Header ejecutivo */}
@@ -496,15 +494,12 @@ export default function BosDashboard() {
 
           {/* Conectores */}
           <Section
-            title={
-              (t("admin.bos.connectors") || "Conectores") +
-              (lastSyncGA4
-                ? ` · GA4 ${fmtDateTime(lastSyncGA4)}`
-                : "")
-            }
+            title={t("admin.bos.connectors") || "Conectores"}
           >
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {conn?.map((c) => {
+              {conn
+                ?.filter((c) => c.enabled)
+                ?.map((c) => {
                 const ok = c.enabled && c.configured && c.has_data;
                 const partial = c.enabled && c.configured && !c.has_data;
                 return (

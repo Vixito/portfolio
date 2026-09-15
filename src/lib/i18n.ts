@@ -477,8 +477,6 @@ export const translations = {
       viewSite: "Ver el sitio",
       externalTools: "Herramientas Externas",
       tools: {
-        gtm: "Google Tag Manager (GTM-NQPZT62J)",
-        gtmDesc: "Gestor de etiquetas: centraliza todos los trackers del sitio.",
         ga4: "Google Analytics 4",
         ga4Desc: "Analítica de tráfico del portfolio; alimenta el BOS con su Data API gratuita.",
         console: "Google Search Console",
@@ -1221,8 +1219,6 @@ export const translations = {
       viewSite: "View Site",
       externalTools: "External Tools",
       tools: {
-        gtm: "Google Tag Manager (GTM-NQPZT62J)",
-        gtmDesc: "Tag manager that centralizes all site trackers.",
         ga4: "Google Analytics 4",
         ga4Desc: "Portfolio traffic analytics; feeds the BOS through its free Data API.",
         console: "Google Search Console",

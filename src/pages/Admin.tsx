@@ -214,7 +214,6 @@ function ProductSelectorWithTabs({
 }
 
 const EXTERNAL_TOOLS = [
-  { nameKey: "tools.gtm", url: "https://tagmanager.google.com", descKey: "tools.gtmDesc" },
   { nameKey: "tools.ga4", url: "https://analytics.google.com", descKey: "tools.ga4Desc" },
   { nameKey: "tools.console", url: "https://search.google.com/", descKey: "tools.consoleDesc" },
   { nameKey: "tools.bing", url: "https://www.bing.com/webmasters/", descKey: "tools.bingDesc" },
