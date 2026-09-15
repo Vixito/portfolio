@@ -10,7 +10,7 @@ import {
   Bar,
   BarChart,
 } from "recharts";
-import { getBosDashboard, syncBosPlausible } from "../../lib/supabase-functions";
+import { getBosDashboard, syncBosAnalytics } from "../../lib/supabase-functions";
 import { useTranslation } from "../../lib/i18n";
 
 interface RecentSale {
@@ -175,13 +175,13 @@ export default function BosDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onSyncPlausible = async () => {
+  const onSync = async () => {
     setSyncing(true);
     try {
-      const res = await syncBosPlausible();
+      const res = await syncBosAnalytics();
       if (res?.reason) {
         setError(
-          `Plausible no sincronizado: ${res.reason}. Agrega PLAUSIBLE_API_KEY y PLAUSIBLE_SITE_ID en los secrets.`
+          `Analítica no sincronizada: ${res.reason}. Verifica GA4_SERVICE_ACCOUNT_JSON y GA4_PROPERTY_ID en los secrets.`
         );
       } else {
         setError(null);
@@ -214,7 +214,7 @@ export default function BosDashboard() {
   const r90 = rev?.periods?.["90d"];
   const r7 = rev?.periods?.["7d"];
 
-  const lastSyncPlausible = conn?.find((c) => c.source === "plausible")?.last_sync_at;
+  const lastSyncGA4 = conn?.find((c) => c.source === "ga4")?.last_sync_at;
 
   return (
     <div className="space-y-4">
@@ -233,7 +233,7 @@ export default function BosDashboard() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={onSyncPlausible}
+            onClick={onSync}
             disabled={syncing}
             className="px-3 py-2 text-xs rounded-lg border border-white/20 text-gray-300 hover:text-white hover:border-white/40 transition-colors cursor-pointer disabled:opacity-50"
           >
@@ -498,8 +498,8 @@ export default function BosDashboard() {
           <Section
             title={
               (t("admin.bos.connectors") || "Conectores") +
-              (lastSyncPlausible
-                ? ` · Plausible ${fmtDateTime(lastSyncPlausible)}`
+              (lastSyncGA4
+                ? ` · GA4 ${fmtDateTime(lastSyncGA4)}`
                 : "")
             }
           >

@@ -214,12 +214,11 @@ function ProductSelectorWithTabs({
 }
 
 const EXTERNAL_TOOLS = [
-  { name: "Plausible", url: "https://plausible.io" },
-  { name: "Search Console", url: "https://search.google.com/" },
-  { name: "Bing Webmasters", url: "https://www.bing.com/webmasters/" },
-  { name: "Logtail", url: "https://logtail.com" },
-  { name: "Hotjar", url: "https://insights.hotjar.com/" },
-  { name: "Better Uptime", url: "https://betteruptime.com" },
+  { nameKey: "tools.gtm", url: "https://tagmanager.google.com", descKey: "tools.gtmDesc" },
+  { nameKey: "tools.ga4", url: "https://analytics.google.com", descKey: "tools.ga4Desc" },
+  { nameKey: "tools.console", url: "https://search.google.com/", descKey: "tools.consoleDesc" },
+  { nameKey: "tools.bing", url: "https://www.bing.com/webmasters/", descKey: "tools.bingDesc" },
+  { nameKey: "tools.betterstack", url: "https://betterstack.com", descKey: "tools.betterstackDesc" },
 ];
 
 const AURORA_COLORS = ["#2093c4", "#331d83", "#1e1b4b"];
@@ -243,18 +242,23 @@ function ExternalToolsCard() {
       </h2>
       <ul className="divide-y divide-white/10 rounded-xl border border-white/10 bg-white/5">
         {EXTERNAL_TOOLS.map((tool) => (
-          <li key={tool.name}>
+          <li key={tool.nameKey}>
             <a
               href={tool.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl hover:bg-white/5"
+              className="group flex items-start justify-between gap-3 px-4 py-3 text-sm transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl hover:bg-white/5"
             >
-              <span className="font-medium text-slate-200 group-hover:text-white">
-                {tool.name}
+              <span className="min-w-0">
+                <span className="block font-medium text-slate-200 group-hover:text-white">
+                  {t(`admin.${tool.nameKey}`)}
+                </span>
+                <span className="block text-xs text-slate-400 group-hover:text-slate-300 leading-snug mt-0.5">
+                  {t(`admin.${tool.descKey}`)}
+                </span>
               </span>
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="hidden truncate text-xs text-slate-500 group-hover:text-slate-400 sm:inline">
+              <span className="flex shrink-0 items-center gap-2 pt-0.5">
+                <span className="hidden break-all text-xs text-slate-500 group-hover:text-slate-400 sm:inline">
                   {tool.url.replace(/^https?:\/\//, "").replace(/\/+$/, "")}
                 </span>
                 <svg

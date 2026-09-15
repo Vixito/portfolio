@@ -318,6 +318,9 @@ select option:hover {
 .admin-light .hover\:bg-gray-800:hover {
   background-color: #f8fafc;
 }
+.admin-light .hover\:bg-white\/5:hover {
+  background-color: rgba(100, 116, 139, 0.12);
+}
 
 /* Bordes y divisores */
 .admin-light .border-gray-700,

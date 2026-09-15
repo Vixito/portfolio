@@ -1689,11 +1689,12 @@ export async function getBosDashboard(): Promise<any> {
 }
 
 /**
- * Disparar la sincronización on-demand de Plausible.io hacia bos_analytics_daily.
+ * Disparar la sincronización on-demand de Google Analytics 4
+ * hacia bos_analytics_daily.
  */
-export async function syncBosPlausible(): Promise<any> {
+export async function syncBosAnalytics(): Promise<any> {
   const { data, error } = await supabase.functions.invoke(
-    "sync-bos-plausible",
+    "sync-ga4",
     {
       body: {},
       headers: adminAuthHeaders(),

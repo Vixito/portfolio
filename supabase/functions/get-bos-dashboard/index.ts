@@ -185,14 +185,14 @@ serve(async (req: Request) => {
       console.error("get-bos-dashboard connectors error:", connError);
     }
 
-    const analyticsSources = ["plausible", "seentics"];
+    const analyticsSources = ["ga4"];
 
     const isAnalyticsSource = (source: string) => analyticsSources.includes(source);
 
     const analyticsConfigured = (source: string) =>
-      source === "plausible" ? !!Deno.env.get("PLAUSIBLE_API_KEY") && !!Deno.env.get("PLAUSIBLE_SITE_ID")
-      : source === "seentics" ? !!Deno.env.get("SEENTICS_URL")
-      : false;
+      source === "ga4"
+        ? !!Deno.env.get("GA4_SERVICE_ACCOUNT_JSON") && !!Deno.env.get("GA4_PROPERTY_ID")
+        : false;
 
     const connectorStatus = (connectors || []).map((c: any) => {
       const hasTraffic = trafficDaily.some((t) => t.source === c.source);
