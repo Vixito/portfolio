@@ -28,6 +28,7 @@ import {
   Checkout,
 } from "./pages";
 import Layout from "./components/layout/Layout";
+import TrackVisitor from "./components/TrackVisitor";
 import { useEffect } from "react";
 
 // Componente interno que maneja el scroll (debe estar dentro del Router)
@@ -74,6 +75,7 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <TrackVisitor />
       <Routes>
         <Route
           path="/contact"

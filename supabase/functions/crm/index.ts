@@ -376,6 +376,86 @@ serve(async (req: Request) => {
         return json(200, data);
       }
 
+// ============ LEADS Y CONVERSIÓN ============
+      case "leads-list": {
+        const { data, error } = await supabase
+          .from("bos_leads")
+          .select("id, source, name, email, phone, topic, converted_at, created_at")
+          .order("created_at", { ascending: false })
+          .limit(200);
+        if (error) return json(500, { error: error.message });
+        const total = (data || []).length;
+        const converted = (data || []).filter((l: any) => !!l.converted_at).length;
+        return json(200, { total, converted, items: data || [] });
+      }
+
+      case "contacts-convert-lead": {
+        const leadId = payload?.lead_id;
+        if (!leadId) return json(400, { error: "lead_id es requerido" });
+        const { data: lead, error: leadErr } = await supabase
+          .from("bos_leads")
+          .select("*")
+          .eq("id", leadId)
+          .single();
+        if (leadErr || !lead) return json(404, { error: "Lead no encontrado" });
+        if (lead.converted_at) {
+          const { data: existing } = await supabase
+            .from("crm_contacts")
+            .select(contactSelect)
+            .eq("lead_id", leadId)
+            .single();
+          return json(200, { already: true, contact: existing });
+        }
+        const parts = (lead.name || "").split(/\s+/);
+        const firstName = parts[0] || "Sin nombre";
+        const lastName = parts.slice(1).join(" ") || null;
+        const { data: contact, error: cErr } = await supabase
+          .from("crm_contacts")
+          .insert({
+            first_name: firstName,
+            last_name: lastName,
+            email: lead.email || null,
+            phone: lead.phone || null,
+            photo_url: gravatarUrl(lead.email || null),
+            source: lead.source || "manual",
+            lead_id: leadId,
+            tags: [lead.source || "unknown"],
+            notes: lead.topic || null,
+          })
+          .select(contactSelect)
+          .single();
+        if (cErr) return json(500, { error: cErr.message });
+        await supabase
+          .from("bos_leads")
+          .update({ converted_at: now() })
+          .eq("id", leadId);
+        return json(200, { already: false, contact });
+      }
+
+      // ============ VISITANTES ============
+      case "visitors-list": {
+        const { data, error } = await supabase
+          .from("portfolio_visitors")
+          .select("id, session_id, page, referrer, created_at")
+          .order("created_at", { ascending: false })
+          .limit(100);
+        if (error) return json(500, { error: error.message });
+        const { count: total } = await supabase
+          .from("portfolio_visitors")
+          .select("id", { count: "exact", head: true });
+        const startOfDay = new Date();
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const { count: today } = await supabase
+          .from("portfolio_visitors")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", startOfDay.toISOString());
+        return json(200, {
+          total: total || 0,
+          today: today || 0,
+          recent: data || [],
+        });
+      }
+
       default:
         return json(400, { error: `Acción desconocida: ${action}` });
     }

@@ -16,6 +16,9 @@ verify_jwt = false
 [functions.crm]
 verify_jwt = false
 
+[functions.track-visitor]
+verify_jwt = false
+
 [functions.whatsapp-bot]
 enabled = true
 verify_jwt = true

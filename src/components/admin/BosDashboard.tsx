@@ -16,6 +16,7 @@ import {
   syncBosAnalytics,
   syncTallyLeads,
   syncBlogSources,
+  convertLeadToContact,
 } from "../../lib/supabase-functions";
 import { useTranslation } from "../../lib/i18n";
 
@@ -64,8 +65,29 @@ interface BosPayload {
   };
   leads?: {
     total?: number;
+    converted?: number;
+    pending?: number;
     by_source?: { source: string; count: number }[];
-    recent?: { id: string; source: string; name?: string | null; email?: string | null; topic?: string | null; created_at?: string }[];
+    recent?: {
+      id: string;
+      source: string;
+      name?: string | null;
+      email?: string | null;
+      topic?: string | null;
+      converted?: boolean;
+      converted_at?: string | null;
+      created_at?: string;
+    }[];
+  };
+  visitors?: {
+    total?: number;
+    today?: number;
+    recent?: {
+      session_id?: string;
+      page?: string;
+      referrer?: string;
+      created_at?: string;
+    }[];
   };
   connectors?: Connector[];
 }
@@ -214,6 +236,20 @@ export default function BosDashboard() {
   const traf = data?.traffic;
   const leads = data?.leads;
   const conn = data?.connectors;
+  const visitors = data?.visitors;
+
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+  const handleConvertLead = async (leadId: string) => {
+    setConvertingId(leadId);
+    try {
+      await convertLeadToContact(leadId);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al convertir el lead");
+    } finally {
+      setConvertingId(null);
+    }
+  };
 
   const trafficSeries = useMemo(() => {
     const map = new Map<string, { date: string; visits: number; pageviews: number }>();
@@ -499,7 +535,7 @@ export default function BosDashboard() {
                     {fmtNum(leads?.total)}
                   </span>
                   <span className="text-xs text-gray-500">
-                    {t("admin.bos.total") || "en total"}
+                    {fmtNum(leads?.converted)} convertidos · {fmtNum(leads?.pending)} por tratar
                   </span>
                 </div>
                 {(leads?.by_source || [])?.length === 0 ? (
@@ -515,6 +551,61 @@ export default function BosDashboard() {
                       >
                         <span className="text-gray-300 capitalize">{l.source}</span>
                         <span className="text-white tabular-nums">{l.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(leads?.recent || [])?.length > 0 && (
+                  <div className="mt-3 border-t border-white/10 pt-2 space-y-1.5">
+                    {(leads?.recent || []).slice(0, 5).map((l) => (
+                      <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
+                        <div className="min-w-0">
+                          <p className="truncate text-gray-200">
+                            <span className="text-gray-500 capitalize">{l.source}:</span>{" "}
+                            {l.name || l.email || l.topic || "Lead sin datos"}
+                          </p>
+                          <p className="text-[11px] text-gray-500 truncate">{fmtDateTime(l.created_at)}</p>
+                        </div>
+                        {l.converted ? (
+                          <span className="px-2 py-1 text-[11px] rounded bg-green-500/10 text-green-400 border border-green-500/30 shrink-0">
+                            En CRM
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleConvertLead(l.id)}
+                            disabled={convertingId === l.id}
+                            className="px-2 py-1 text-[11px] rounded bg-[#8c52ff]/20 text-[#c4b5fd] border border-[#8c52ff]/40 hover:bg-[#8c52ff]/30 cursor-pointer disabled:opacity-50 shrink-0"
+                          >
+                            {convertingId === l.id ? "…" : "→ CRM"}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Section>
+
+              <Section title="Visitantes del portfolio">
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="bg-[#0f1113] border border-white/10 rounded-lg p-3">
+                    <p className="text-2xl font-bold text-white tabular-nums">{fmtNum(visitors?.today)}</p>
+                    <p className="text-[11px] text-gray-400">hoy</p>
+                  </div>
+                  <div className="bg-[#0f1113] border border-white/10 rounded-lg p-3">
+                    <p className="text-2xl font-bold text-white tabular-nums">{fmtNum(visitors?.total)}</p>
+                    <p className="text-[11px] text-gray-400">total registrados</p>
+                  </div>
+                </div>
+                {(visitors?.recent || [])?.length === 0 ? (
+                  <p className="text-sm text-gray-500 py-2 text-center">
+                    Aún sin visitas registradas
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {visitors?.recent?.map((v, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs">
+                        <span className="font-mono text-gray-400">{v.page || "—"}</span>
+                        <span className="text-gray-500 shrink-0 ml-2">{fmtDateTime(v.created_at)}</span>
                       </div>
                     ))}
                   </div>

@@ -1801,6 +1801,17 @@ export function updateCrmActivity(id: string, updates: Record<string, unknown>) 
   return invokeCRM({ action: "activities-update", id, updates });
 }
 
+// --- Leads y conversión ---
+export function getCrmLeads() {
+  return invokeCRM({ action: "leads-list" });
+}
+export function convertLeadToContact(lead_id: string) {
+  return invokeCRM({ action: "contacts-convert-lead", lead_id });
+}
+export function getCrmVisitors() {
+  return invokeCRM({ action: "visitors-list" });
+}
+
 /**
  * Confirma el pago del Transparent Checkout con el cardToken.
  * Devuelve { paid, delivery, redirect_url (3DS), status, ... }.

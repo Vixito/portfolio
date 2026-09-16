@@ -13,6 +13,9 @@ import {
   getCrmActivities,
   createCrmActivity,
   updateCrmActivity,
+  getCrmLeads,
+  convertLeadToContact,
+  getCrmVisitors,
 } from "../../lib/supabase-functions";
 
 // ============ helpers de UI ============
@@ -152,7 +155,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 // ============ panel principal ============
 
-type SubTab = "contacts" | "companies" | "pipeline" | "activities";
+type SubTab = "contacts" | "companies" | "pipeline" | "activities" | "leads";
 
 export default function CrmPanel() {
   const [subtab, setSubtab] = useState<SubTab>("contacts");
@@ -164,6 +167,9 @@ export default function CrmPanel() {
   const [stages, setStages] = useState<any[]>([]);
   const [deals, setDeals] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [leadsData, setLeadsData] = useState<any>({ total: 0, converted: 0, items: [] });
+  const [visitorsData, setVisitorsData] = useState<any>({ total: 0, today: 0, recent: [] });
+  const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
   const [actFilterContact, setActFilterContact] = useState("");
@@ -181,18 +187,22 @@ export default function CrmPanel() {
     setLoading(true);
     setError(null);
     try {
-      const [comps, cons, stgs, dls, acts] = await Promise.all([
+      const [comps, cons, stgs, dls, acts, lds, vst] = await Promise.all([
         getCrmCompanies(),
         getCrmContacts(),
         getCrmStages(),
         getCrmDeals(),
         getCrmActivities(),
+        getCrmLeads(),
+        getCrmVisitors(),
       ]);
       setCompanies(comps || []);
       setContacts(cons || []);
       setStages(stgs || []);
       setDeals(dls || []);
       setActivities(acts || []);
+      setLeadsData(lds || { total: 0, converted: 0, items: [] });
+      setVisitorsData(vst || { total: 0, today: 0, recent: [] });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar el CRM");
     } finally {
@@ -368,11 +378,24 @@ export default function CrmPanel() {
     }
   };
 
+  const handleConvertLead = async (leadId: string) => {
+    setConvertingLeadId(leadId);
+    try {
+      await convertLeadToContact(leadId);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al convertir el lead");
+    } finally {
+      setConvertingLeadId(null);
+    }
+  };
+
   const subTabs: { id: SubTab; label: string }[] = [
     { id: "contacts", label: "Contactos" },
     { id: "companies", label: "Empresas" },
     { id: "pipeline", label: "Pipeline" },
     { id: "activities", label: "Actividades" },
+    { id: "leads", label: "Leads y visitas" },
   ];
 
   return (
@@ -735,7 +758,78 @@ export default function CrmPanel() {
         </>
       )}
 
-      {/* ============ MODAL CONTACTO ============ */}
+      {/* ============ LEADS Y VISITANTES ============ */}
+          {subtab === "leads" && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="rounded-lg border border-white/10 bg-[#0f1113]">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                    <h3 className="font-semibold text-sm">Leads</h3>
+                    <span className="text-xs text-gray-400">
+                      {leadsData.converted} convertidos · {leadsData.items?.length - (leadsData.converted || 0)} por tratar
+                    </span>
+                  </div>
+                  <div className="divide-y divide-white/5 max-h-[420px] overflow-y-auto">
+                    {(leadsData.items || []).map((l: any) => (
+                      <div key={l.id} className="flex items-center justify-between gap-2 px-4 py-2.5 hover:bg-white/5">
+                        <div className="min-w-0 mr-2">
+                          <p className="text-sm text-gray-200 truncate">
+                            <span className="px-1.5 py-0.5 text-[10px] rounded bg-white/10 mr-1.5 capitalize">{l.source}</span>
+                            {l.name || l.email || l.topic || "Lead sin datos"}
+                          </p>
+                          {l.email && <p className="text-[11px] text-gray-500 truncate">{l.email}</p>}
+                          {l.topic && !l.name && !l.email && <p className="text-[11px] text-gray-500 truncate">{l.topic}</p>}
+                          <p className="text-[10px] text-gray-600">{fmtDate(l.created_at)}</p>
+                        </div>
+                        {l.converted_at ? (
+                          <span className="px-2 py-1 text-[11px] rounded bg-green-500/10 text-green-400 border border-green-500/30 shrink-0">En CRM</span>
+                        ) : (
+                          <button
+                            onClick={() => handleConvertLead(l.id)}
+                            disabled={convertingLeadId === l.id}
+                            className="px-3 py-1.5 text-[11px] rounded bg-[#8c52ff]/20 text-[#c4b5fd] border border-[#8c52ff]/40 hover:bg-[#8c52ff]/30 cursor-pointer disabled:opacity-50 shrink-0 font-semibold"
+                          >
+                            {convertingLeadId === l.id ? "Convirtiendo…" : "+ Contacto"}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {(leadsData.items || []).length === 0 && (
+                      <p className="px-4 py-8 text-center text-gray-500 text-sm">Sin leads todavía</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-white/10 bg-[#0f1113]">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                    <h3 className="font-semibold text-sm">Visitantes del portfolio</h3>
+                    <span className="text-xs text-gray-400">
+                      <span className="text-white font-semibold">{visitorsData.today}</span> hoy · {visitorsData.total} total
+                    </span>
+                  </div>
+                  <div className="divide-y divide-white/5 max-h-[420px] overflow-y-auto">
+                    {(visitorsData.recent || []).map((v: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between gap-2 px-4 py-2.5">
+                        <div className="min-w-0">
+                          <p className="text-sm text-gray-200 font-mono truncate">{v.page || "—"}</p>
+                          {v.referrer && <p className="text-[11px] text-gray-500 truncate">desde {v.referrer}</p>}
+                        </div>
+                        <span className="text-[11px] text-gray-500 shrink-0">{fmtDateTime(v.created_at)}</span>
+                      </div>
+                    ))}
+                    {(visitorsData.recent || []).length === 0 && (
+                      <p className="px-4 py-8 text-center text-gray-500 text-sm">Sin visitas registradas</p>
+                    )}
+                  </div>
+                  <p className="px-4 py-2 text-[10px] text-gray-600 border-t border-white/10">
+                    Una visita por sesión + página + día (dedupe automático).
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ============ MODAL CONTACTO ============ */}
       <Modal
         open={!!contactModal}
         title={contactModal?.edit ? "Editar contacto" : "Nuevo contacto"}

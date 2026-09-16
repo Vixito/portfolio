@@ -162,7 +162,7 @@ serve(async (req: Request) => {
     // ---------- LEADS (bos_leads) ----------
     const { data: leads, error: leadsError } = await supabase
       .from("bos_leads")
-      .select("id, source, name, email, topic, created_at")
+      .select("id, source, name, email, topic, converted_at, created_at")
       .order("created_at", { ascending: false })
       .limit(100);
 
@@ -171,9 +171,24 @@ serve(async (req: Request) => {
     }
 
     const leadBySource = new Map<string, number>();
+    const convertedCount = (leads || []).filter((l: any) => !!l.converted_at).length;
     for (const l of leads || []) {
       leadBySource.set(l.source, (leadBySource.get(l.source) || 0) + 1);
     }
+
+    // ---------- VISITANTES (portfolio_visitors) ----------
+    const { data: visitors, count: visitorsTotal } = await supabase
+      .from("portfolio_visitors")
+      .select("id, session_id, page, referrer, created_at", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const { count: visitorsToday } = await supabase
+      .from("portfolio_visitors")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", startOfDay.toISOString());
 
     // ---------- CONECTORES ----------
     const { data: connectors, error: connError } = await supabase
@@ -241,11 +256,34 @@ serve(async (req: Request) => {
       },
       leads: {
         total: (leads || []).length,
+        converted: convertedCount,
+        pending: (leads || []).length - convertedCount,
         by_source: Array.from(leadBySource.entries()).map(([source, count]) => ({
           source,
           count,
         })),
-        recent: (leads || []).slice(0, 8),
+        recent: (leads || [])
+          .slice(0, 8)
+          .map((l: any) => ({
+            id: l.id,
+            source: l.source,
+            name: l.name,
+            email: l.email,
+            topic: l.topic,
+            converted: !!l.converted_at,
+            converted_at: l.converted_at,
+            created_at: l.created_at,
+          })),
+      },
+      visitors: {
+        total: visitorsTotal || 0,
+        today: visitorsToday || 0,
+        recent: (visitors || []).map((v: any) => ({
+          session_id: v.session_id,
+          page: v.page,
+          referrer: v.referrer,
+          created_at: v.created_at,
+        })),
       },
       connectors: connectorStatus,
     });
