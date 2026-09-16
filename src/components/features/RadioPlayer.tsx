@@ -247,7 +247,9 @@ function RadioPlayer() {
         </Link>
       </div>
       {/* Audio element oculto */}
-      <audio ref={audioRef} preload="none" />
+      {/* crossOrigin="anonymous": sin esto Firefox bloquea el stream por
+          OpaqueResponseBlocking (Icecast sirve application/ogg, no audio/*) */}
+      <audio ref={audioRef} preload="none" crossOrigin="anonymous" />
     </div>
   );
 }
