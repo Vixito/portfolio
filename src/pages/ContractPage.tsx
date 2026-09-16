@@ -205,7 +205,6 @@ export default function ContractPage() {
       <div className="w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#15171a] p-6 md:p-8 text-gray-900 dark:text-white relative z-10 shadow-xl">
         <div className="mb-5 text-center">
           <h1 className="text-2xl font-bold mb-1">{t("contracts.title")}</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-500">{t("contracts.subtitle")}</p>
         </div>
 
         {error && (

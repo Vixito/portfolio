@@ -426,10 +426,22 @@ select option:hover {
 .admin-light .text-amber-400 {
   color: #b45309;
 }
+.admin-light .text-emerald-400 {
+  color: #047857;
+}
+.admin-light .text-fuchsia-400 {
+  color: #a21caf;
+}
 .admin-light .divide-white\/5 {
   border-color: #e2e8f0;
 }
 .admin-light .hover\:bg-white\/20:hover {
   background-color: rgba(100, 116, 139, 0.18);
+}
+.admin-light .hover\:bg-white\/15:hover {
+  background-color: rgba(100, 116, 139, 0.14);
+}
+.admin-light .hover\:border-white\/40:hover {
+  border-color: #64748b;
 }
 

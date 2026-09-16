@@ -30,6 +30,10 @@ import {
   signContractProvider,
   importCrmContacts,
   importCrmCompanies,
+  deleteCrmContact,
+  deleteCrmCompany,
+  deleteCrmDeal,
+  deleteCrmActivity,
 } from "../../lib/supabase-functions";
 
 // ============ helpers de UI ============
@@ -199,6 +203,9 @@ export default function CrmPanel() {
 
   const [search, setSearch] = useState("");
   const [actFilterContact, setActFilterContact] = useState("");
+  const [contactSort, setContactSort] = useState("name");
+  const [contactSourceFilter, setContactSourceFilter] = useState("");
+  const [companySort, setCompanySort] = useState("name");
 
   // modales
   const [contactModal, setContactModal] = useState<any>(null); // {edit?: any} | null
@@ -257,14 +264,42 @@ export default function CrmPanel() {
 
   const filteredContacts = useMemo(() => {
     const s = search.trim().toLowerCase();
-    if (!s) return contacts;
-    return contacts.filter((c) =>
-      [c.first_name, c.last_name, c.email, c.phone, (c.tags || []).join(" ")]
-        .join(" ")
-        .toLowerCase()
-        .includes(s)
-    );
-  }, [contacts, search]);
+    let rows = contacts;
+    if (contactSourceFilter) {
+      rows = rows.filter((c) => (c.source || "manual") === contactSourceFilter);
+    }
+    if (s) {
+      rows = rows.filter((c) =>
+        [c.first_name, c.last_name, c.email, c.phone, c.job_title, c.owner, (c.tags || []).join(" ")]
+          .join(" ")
+          .toLowerCase()
+          .includes(s)
+      );
+    }
+    const sorted = [...rows];
+    const nameOf = (c: any) => `${c.first_name || ""} ${c.last_name || ""}`.trim().toLowerCase();
+    if (contactSort === "name") sorted.sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+    else if (contactSort === "company") {
+      sorted.sort((a, b) =>
+        String(a.company?.name || "zzz").toLowerCase().localeCompare(String(b.company?.name || "zzz").toLowerCase()) ||
+        nameOf(a).localeCompare(nameOf(b))
+      );
+    } else if (contactSort === "recent") sorted.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+    else if (contactSort === "oldest") sorted.sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
+    return sorted;
+  }, [contacts, search, contactSort, contactSourceFilter]);
+
+  const sortedCompanies = useMemo(() => {
+    const rows = [...companies];
+    if (companySort === "contacts") rows.sort((a: any, b: any) => (b.contact_count ?? 0) - (a.contact_count ?? 0));
+    else rows.sort((a: any, b: any) => String(a.name || "").toLowerCase().localeCompare(String(b.name || "").toLowerCase()));
+    return rows;
+  }, [companies, companySort]);
+
+  const contactSources = useMemo(() => {
+    const set = new Set((contacts || []).map((c: any) => c.source || "manual"));
+    return [...set].sort();
+  }, [contacts]);
 
   const filteredActivities = useMemo(() => {
     if (!actFilterContact) return activities;
@@ -284,18 +319,42 @@ export default function CrmPanel() {
 
   // ============ acciones ============
 
+  const str = (fd: FormData, k: string) => {
+    const v = String(fd.get(k) || "").trim();
+    return v || null;
+  };
+  const strArr = (fd: FormData, k: string) =>
+    String(fd.get(k) || "")
+      .split(/[;,|]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
   const handleSaveContact = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const form = new FormData(e.target as HTMLFormElement);
+      const expRaw = String(form.get("experience_years") || "").trim();
       const payload = {
         company_id: (form.get("company_id") as string) || null,
         first_name: form.get("first_name") as string,
         last_name: (form.get("last_name") as string) || null,
         email: (form.get("email") as string) || null,
         phone: (form.get("phone") as string) || null,
+        phone2: str(form, "phone2"),
         source: (form.get("source") as string) || "manual",
+        job_title: str(form, "job_title"),
+        birthdate: str(form, "birthdate"),
+        gender: str(form, "gender"),
+        linkedin: str(form, "linkedin"),
+        github: str(form, "github"),
+        x_handle: str(form, "x_handle"),
+        website: str(form, "website"),
+        address: str(form, "address"),
+        experience_years: expRaw === "" ? null : Number(expRaw) || null,
+        owner: str(form, "owner"),
+        tags: strArr(form, "tags"),
+        notes: str(form, "notes"),
       };
       if (contactModal?.edit) {
         await updateCrmContact(contactModal.edit.id, payload);
@@ -311,16 +370,39 @@ export default function CrmPanel() {
     }
   };
 
+  const handleDeleteContact = async (id: string) => {
+    if (!window.confirm(t("admin.crm.confirmDeleteContact"))) return;
+    try {
+      await deleteCrmContact(id);
+      setDetailContact(null);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t("admin.crm.errDelete"));
+    }
+  };
+
   const handleSaveCompany = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const form = new FormData(e.target as HTMLFormElement);
+      const foundedRaw = String(form.get("founded_year") || "").trim();
       const payload = {
         name: form.get("name") as string,
         domain: (form.get("domain") as string) || null,
         industry: (form.get("industry") as string) || null,
-        notes: (form.get("notes") as string) || null,
+        notes: str(form, "notes"),
+        tags: strArr(form, "tags"),
+        founded_year: foundedRaw === "" ? null : Number(foundedRaw) || null,
+        employee_range: str(form, "employee_range"),
+        nit: str(form, "nit"),
+        address: str(form, "address"),
+        phone: str(form, "phone"),
+        linkedin: str(form, "linkedin"),
+        github: str(form, "github"),
+        x_handle: str(form, "x_handle"),
+        website: str(form, "website"),
+        owner: str(form, "owner"),
       };
       if (companyModal?.edit) {
         await updateCrmCompany(companyModal.edit.id, payload);
@@ -333,6 +415,37 @@ export default function CrmPanel() {
       alert(err instanceof Error ? err.message : t("admin.crm.errSaveCompany"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteCompany = async (id: string) => {
+    if (!window.confirm(t("admin.crm.confirmDeleteCompany"))) return;
+    try {
+      await deleteCrmCompany(id);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t("admin.crm.errDelete"));
+    }
+  };
+
+  const handleDeleteDeal = async (id: string) => {
+    if (!window.confirm(t("admin.crm.confirmDeleteDeal"))) return;
+    try {
+      await deleteCrmDeal(id);
+      setDealModal(null);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t("admin.crm.errDelete"));
+    }
+  };
+
+  const handleDeleteActivity = async (id: string) => {
+    if (!window.confirm(t("admin.crm.confirmDeleteActivity"))) return;
+    try {
+      await deleteCrmActivity(id);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t("admin.crm.errDelete"));
     }
   };
 
@@ -845,6 +958,22 @@ export default function CrmPanel() {
                   placeholder={t("admin.crm.contactsTab.searchPh")}
                   className={inputCls + " sm:max-w-sm"}
                 />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label className="text-[11px] text-gray-500">{t("admin.crm.contactsTab.filterSource")}:</label>
+                  <select value={contactSourceFilter} onChange={(e) => setContactSourceFilter(e.target.value)} className="text-[11px] rounded bg-white/10 px-2 py-1.5 cursor-pointer">
+                    <option value="">{t("admin.crm.contactsTab.allSources")}</option>
+                    {contactSources.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <label className="text-[11px] text-gray-500">{t("admin.crm.contactsTab.sortBy")}:</label>
+                  <select value={contactSort} onChange={(e) => setContactSort(e.target.value)} className="text-[11px] rounded bg-white/10 px-2 py-1.5 cursor-pointer">
+                    <option value="name">{t("admin.crm.contactsTab.sortName")}</option>
+                    <option value="company">{t("admin.crm.contactsTab.sortCompany")}</option>
+                    <option value="recent">{t("admin.crm.contactsTab.sortRecent")}</option>
+                    <option value="oldest">{t("admin.crm.contactsTab.sortOldest")}</option>
+                  </select>
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400">{filteredContacts.length} {t("admin.crm.contacts")}</span>
                   <button onClick={handleExportContacts} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
@@ -946,7 +1075,14 @@ export default function CrmPanel() {
           {subtab === "companies" && (
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <span className="text-xs text-gray-400">{companies.length} {t("admin.crm.companiesTab.count")}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">{companies.length} {t("admin.crm.companiesTab.count")}</span>
+                  <label className="text-[11px] text-gray-500">{t("admin.crm.companiesTab.sortBy")}:</label>
+                  <select value={companySort} onChange={(e) => setCompanySort(e.target.value)} className="text-[11px] rounded bg-white/10 px-2 py-1.5 cursor-pointer">
+                    <option value="name">{t("admin.crm.companiesTab.sortName")}</option>
+                    <option value="contacts">{t("admin.crm.companiesTab.sortContacts")}</option>
+                  </select>
+                </div>
                 <div className="flex items-center gap-2">
                   <button onClick={handleExportCompanies} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
                     {t("admin.crm.exportCsv")}
@@ -976,11 +1112,11 @@ export default function CrmPanel() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {companies.map((c: any) => (
-                    <tr key={c.id} className="hover:bg-white/5 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <Avatar url={c.logo_url} name={c.name} />
+{sortedCompanies.map((c: any) => (
+                      <tr key={c.id} className="hover:bg-white/5 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Avatar url={c.logo_url} name={c.name} />
                           <div className="min-w-0">
                             <p className="font-semibold truncate">{c.name}</p>
                             {c.notes && <p className="text-[11px] text-gray-500 truncate max-w-[240px]">{c.notes}</p>}
@@ -998,12 +1134,20 @@ export default function CrmPanel() {
                         ) : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => setCompanyModal({ edit: c })}
-                          className="px-2 py-1 text-[11px] rounded border border-white/10 text-gray-300 hover:bg-white/5 cursor-pointer"
-                        >
-                          Editar
-                        </button>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => setCompanyModal({ edit: c })}
+                            className="px-2 py-1 text-[11px] rounded border border-white/10 text-gray-300 hover:bg-white/5 cursor-pointer"
+                          >
+                            {t("admin.crm.edit")}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCompany(c.id)}
+                            className="px-2 py-1 text-[11px] rounded border border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer"
+                          >
+                            {t("admin.crm.delete")}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1125,6 +1269,7 @@ export default function CrmPanel() {
                       <th className="px-4 py-3 font-medium">{t("admin.crm.activitiesTab.thPerson")}</th>
                       <th className="px-4 py-3 font-medium">{t("admin.crm.activitiesTab.thDue")}</th>
                       <th className="px-4 py-3 font-medium text-center">{t("admin.crm.activitiesTab.thDone")}</th>
+                      <th className="px-4 py-3 font-medium"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -1166,12 +1311,21 @@ export default function CrmPanel() {
                             className="w-4 h-4 accent-[#2093c4] cursor-pointer"
                           />
                         </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => handleDeleteActivity(a.id)}
+                            className="text-gray-500 hover:text-red-400 px-1.5 py-0.5 rounded hover:bg-white/10 cursor-pointer"
+                            title={t("admin.crm.delete")}
+                          >
+                            ✕
+                          </button>
+                        </td>
                       </tr>
                     ))}
                     {filteredActivities.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                          No hay actividades. Crea una con "+ Actividad".
+                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                          {t("admin.crm.activitiesTab.empty")}
                         </td>
                       </tr>
                     )}
@@ -1462,6 +1616,60 @@ export default function CrmPanel() {
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin.crm.contactModal.phone2")}>
+              <input name="phone2" defaultValue={contactModal?.edit?.phone2 || ""} className={inputCls} placeholder={t("admin.crm.contactModal.phonePh")} />
+            </Field>
+            <Field label={t("admin.crm.contactModal.jobTitle")}>
+              <input name="job_title" defaultValue={contactModal?.edit?.job_title || ""} className={inputCls} placeholder={t("admin.crm.contactModal.jobTitlePh")} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label={t("admin.crm.contactModal.birthdate")}>
+              <input name="birthdate" type="date" defaultValue={contactModal?.edit?.birthdate || ""} className={inputCls} />
+            </Field>
+            <Field label={t("admin.crm.contactModal.gender")}>
+              <select name="gender" defaultValue={contactModal?.edit?.gender || ""} className={inputCls}>
+                <option value="">{t("admin.crm.contactModal.genderUnspecified")}</option>
+                <option value="female">{t("admin.crm.contactModal.genderFemale")}</option>
+                <option value="male">{t("admin.crm.contactModal.genderMale")}</option>
+                <option value="other">{t("admin.crm.contactModal.genderOther")}</option>
+              </select>
+            </Field>
+            <Field label={t("admin.crm.contactModal.experienceYears")}>
+              <input name="experience_years" type="number" min="0" max="80" defaultValue={contactModal?.edit?.experience_years ?? ""} className={inputCls} placeholder="5" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin.crm.contactModal.linkedin")}>
+              <input name="linkedin" defaultValue={contactModal?.edit?.linkedin || ""} className={inputCls} placeholder="https://linkedin.com/in/…" />
+            </Field>
+            <Field label={t("admin.crm.contactModal.github")}>
+              <input name="github" defaultValue={contactModal?.edit?.github || ""} className={inputCls} placeholder="https://github.com/…" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin.crm.contactModal.xHandle")}>
+              <input name="x_handle" defaultValue={contactModal?.edit?.x_handle || ""} className={inputCls} placeholder="@usuario" />
+            </Field>
+            <Field label={t("admin.crm.contactModal.website")}>
+              <input name="website" defaultValue={contactModal?.edit?.website || ""} className={inputCls} placeholder="https://…" />
+            </Field>
+          </div>
+          <Field label={t("admin.crm.contactModal.address")}>
+            <input name="address" defaultValue={contactModal?.edit?.address || ""} className={inputCls} placeholder="Calle 123, Bogotá" />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin.crm.contactModal.owner")}>
+              <input name="owner" defaultValue={contactModal?.edit?.owner || ""} className={inputCls} placeholder="Carlos Vicioso" />
+            </Field>
+            <Field label={t("admin.crm.contactModal.tags")}>
+              <input name="tags" defaultValue={(contactModal?.edit?.tags || []).join(", ")} className={inputCls} placeholder={t("admin.crm.contactModal.tagsPh")} />
+            </Field>
+          </div>
+          <Field label={t("admin.crm.contactModal.notes")}>
+            <textarea name="notes" rows={2} defaultValue={contactModal?.edit?.notes || ""} className={inputCls} placeholder={t("admin.crm.contactModal.notesPh")} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
             <Field label={t("admin.crm.contactModal.company")}>
               <select name="company_id" defaultValue={contactModal?.edit?.company_id || ""} className={inputCls}>
                 <option value="">{t("admin.crm.contactModal.noCompany")}</option>
@@ -1507,6 +1715,56 @@ export default function CrmPanel() {
           <Field label={t("admin.crm.companyModal.notes")}>
             <textarea name="notes" rows={3} defaultValue={companyModal?.edit?.notes || ""} className={inputCls} placeholder={t("admin.crm.companyModal.notesPh")} />
           </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin.crm.companyModal.tags")}>
+              <input name="tags" defaultValue={(companyModal?.edit?.tags || []).join(", ")} className={inputCls} placeholder={t("admin.crm.companyModal.tagsPh")} />
+            </Field>
+            <Field label={t("admin.crm.companyModal.owner")}>
+              <input name="owner" defaultValue={companyModal?.edit?.owner || ""} className={inputCls} placeholder="Carlos Vicioso" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label={t("admin.crm.companyModal.foundedYear")}>
+              <input name="founded_year" type="number" min="1800" max="2100" defaultValue={companyModal?.edit?.founded_year ?? ""} className={inputCls} placeholder="2019" />
+            </Field>
+            <Field label={t("admin.crm.companyModal.employeeRange")}>
+              <select name="employee_range" defaultValue={companyModal?.edit?.employee_range || ""} className={inputCls}>
+                <option value="">—</option>
+                <option value="1-10">{t("admin.crm.companyModal.empRange1")}</option>
+                <option value="11-50">{t("admin.crm.companyModal.empRange2")}</option>
+                <option value="51-200">{t("admin.crm.companyModal.empRange3")}</option>
+                <option value="201-1000">{t("admin.crm.companyModal.empRange4")}</option>
+                <option value="1000+">{t("admin.crm.companyModal.empRange5")}</option>
+              </select>
+            </Field>
+            <Field label={t("admin.crm.companyModal.nit")}>
+              <input name="nit" defaultValue={companyModal?.edit?.nit || ""} className={inputCls} placeholder={t("admin.crm.companyModal.nitPh")} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin.crm.companyModal.address")}>
+              <input name="address" defaultValue={companyModal?.edit?.address || ""} className={inputCls} placeholder="Calle 123, Bogotá" />
+            </Field>
+            <Field label={t("admin.crm.companyModal.phone")}>
+              <input name="phone" defaultValue={companyModal?.edit?.phone || ""} className={inputCls} placeholder="+57 …" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin.crm.companyModal.linkedin")}>
+              <input name="linkedin" defaultValue={companyModal?.edit?.linkedin || ""} className={inputCls} placeholder="https://linkedin.com/company/…" />
+            </Field>
+            <Field label={t("admin.crm.companyModal.github")}>
+              <input name="github" defaultValue={companyModal?.edit?.github || ""} className={inputCls} placeholder="https://github.com/…" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin.crm.companyModal.xHandle")}>
+              <input name="x_handle" defaultValue={companyModal?.edit?.x_handle || ""} className={inputCls} placeholder="@empresa" />
+            </Field>
+            <Field label={t("admin.crm.companyModal.website")}>
+              <input name="website" defaultValue={companyModal?.edit?.website || ""} className={inputCls} placeholder="https://…" />
+            </Field>
+          </div>
           {companyModal?.edit?.logo_url && (
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <Avatar url={companyModal.edit.logo_url} name={companyModal.edit.name} className="h-6 w-6 text-[10px]" />
@@ -1576,6 +1834,9 @@ export default function CrmPanel() {
           </Field>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => setDealModal(null)} className={btnGhost}>{t("admin.crm.cancel")}</button>
+            {dealModal?.edit && (
+              <button type="button" onClick={() => handleDeleteDeal(dealModal.edit.id)} className={btnDanger}>{t("admin.crm.delete")}</button>
+            )}
             <button type="submit" disabled={saving} className={btnPrimary}>{saving ? t("admin.crm.saving") : t("admin.crm.save")}</button>
           </div>
         </form>
@@ -1660,6 +1921,55 @@ export default function CrmPanel() {
             {detailContact.notes && (
               <p className="text-sm text-gray-300 whitespace-pre-line border-t border-white/10 pt-3">{detailContact.notes}</p>
             )}
+            {(detailContact.job_title || detailContact.birthdate || detailContact.gender || detailContact.experience_years != null || detailContact.created_at) && (
+              <div className="border-t border-white/10 pt-3">
+                <h4 className="text-sm font-semibold mb-2">{t("admin.crm.contactDetail.profile")}</h4>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                  {detailContact.job_title && (
+                    <div><dt className="text-[11px] text-gray-500">{t("admin.crm.contactModal.jobTitle").replace(" *", "")}</dt><dd className="text-gray-200">{detailContact.job_title}</dd></div>
+                  )}
+                  {detailContact.birthdate && (
+                    <div><dt className="text-[11px] text-gray-500">{t("admin.crm.contactModal.birthdate")}</dt><dd className="text-gray-200">{fmtDate(detailContact.birthdate)}</dd></div>
+                  )}
+                  {detailContact.gender && (
+                    <div><dt className="text-[11px] text-gray-500">{t("admin.crm.contactModal.gender")}</dt><dd className="text-gray-200 capitalize">{detailContact.gender}</dd></div>
+                  )}
+                  {detailContact.experience_years != null && (
+                    <div><dt className="text-[11px] text-gray-500">{t("admin.crm.contactModal.experienceYears")}</dt><dd className="text-gray-200">{detailContact.experience_years}</dd></div>
+                  )}
+                  {detailContact.phone2 && (
+                    <div><dt className="text-[11px] text-gray-500">{t("admin.crm.contactModal.phone2")}</dt><dd className="text-gray-200">{detailContact.phone2}</dd></div>
+                  )}
+                  {detailContact.created_at && (
+                    <div><dt className="text-[11px] text-gray-500">{t("admin.crm.contactDetail.memberSince")}</dt><dd className="text-gray-200">{fmtDate(detailContact.created_at)}</dd></div>
+                  )}
+                </dl>
+              </div>
+            )}
+            {(detailContact.linkedin || detailContact.github || detailContact.x_handle || detailContact.website) && (
+              <div className="border-t border-white/10 pt-3">
+                <h4 className="text-sm font-semibold mb-2">{t("admin.crm.contactDetail.social")}</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {detailContact.linkedin && <a href={detailContact.linkedin} target="_blank" rel="noreferrer" className="px-2 py-1 text-[11px] rounded bg-white/10 hover:bg-white/20">LinkedIn</a>}
+                  {detailContact.github && <a href={detailContact.github} target="_blank" rel="noreferrer" className="px-2 py-1 text-[11px] rounded bg-white/10 hover:bg-white/20">GitHub</a>}
+                  {detailContact.x_handle && <a href={detailContact.x_handle.startsWith("http") ? detailContact.x_handle : `https://x.com/${detailContact.x_handle.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="px-2 py-1 text-[11px] rounded bg-white/10 hover:bg-white/20">X</a>}
+                  {detailContact.website && <a href={detailContact.website} target="_blank" rel="noreferrer" className="px-2 py-1 text-[11px] rounded bg-white/10 hover:bg-white/20">{t("admin.crm.contactModal.website")}</a>}
+                </div>
+              </div>
+            )}
+            {(detailContact.address || detailContact.owner) && (
+              <div className="border-t border-white/10 pt-3">
+                <h4 className="text-sm font-semibold mb-2">{t("admin.crm.contactDetail.extra")}</h4>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                  {detailContact.address && (
+                    <div><dt className="text-[11px] text-gray-500">{t("admin.crm.contactModal.address")}</dt><dd className="text-gray-200">{detailContact.address}</dd></div>
+                  )}
+                  {detailContact.owner && (
+                    <div><dt className="text-[11px] text-gray-500">{t("admin.crm.contactModal.owner")}</dt><dd className="text-gray-200">{detailContact.owner}</dd></div>
+                  )}
+                </dl>
+              </div>
+            )}
             <div className="border-t border-white/10 pt-3">
               <h4 className="text-sm font-semibold mb-2">{t("admin.crm.contactDetail.deals")}</h4>
               {deals.filter((d: any) => d.contact_id === detailContact.id).map((d: any) => (
@@ -1694,6 +2004,7 @@ export default function CrmPanel() {
               <button onClick={() => setContactModal({ edit: detailContact })} className={btnPrimary}>{t("admin.crm.edit")}</button>
               <button onClick={() => setActivityModal({ contact_id: detailContact.id })} className={btnPrimary}>{t("admin.crm.contactDetail.addActivity")}</button>
               <button onClick={() => setSendModal({ contact_id: detailContact.id })} className={btnPrimary}>{t("admin.crm.contactDetail.sendEmail")}</button>
+              <button onClick={() => handleDeleteContact(detailContact.id)} className={btnDanger}>{t("admin.crm.delete")}</button>
             </div>
           </div>
         )}

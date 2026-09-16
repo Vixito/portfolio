@@ -202,7 +202,24 @@ serve(async (req: Request) => {
           (await fetchCompanyLogo(company.domain || null));
         const { data, error } = await supabase
           .from("crm_companies")
-          .insert({ name: company.name, domain: company.domain || null, industry: company.industry || null, notes: company.notes || null, logo_url })
+          .insert({
+            name: company.name,
+            domain: company.domain || null,
+            industry: company.industry || null,
+            notes: company.notes || null,
+            logo_url,
+            tags: Array.isArray(company.tags) ? company.tags : (company.tags ? [String(company.tags)] : []),
+            founded_year: company.founded_year != null && company.founded_year !== "" ? Number(company.founded_year) : null,
+            employee_range: company.employee_range || null,
+            nit: company.nit || null,
+            address: company.address || null,
+            phone: company.phone || null,
+            linkedin: company.linkedin || null,
+            github: company.github || null,
+            x_handle: company.x_handle || null,
+            website: company.website || null,
+            owner: company.owner || null,
+          })
           .select()
           .single();
         if (error) return json(500, { error: error.message });
@@ -214,7 +231,7 @@ serve(async (req: Request) => {
         const updates = payload?.updates || {};
         if (!id) return json(400, { error: "id es requerido" });
         const clean: any = {};
-        for (const k of ["name", "domain", "industry", "notes"]) {
+        for (const k of ["name", "domain", "industry", "notes", "tags", "founded_year", "employee_range", "nit", "address", "phone", "linkedin", "github", "x_handle", "website", "owner"]) {
           if (k in updates) clean[k] = updates[k];
         }
         if ("logo_url" in updates) clean.logo_url = updates.logo_url;
@@ -229,6 +246,14 @@ serve(async (req: Request) => {
           .single();
         if (error) return json(500, { error: error.message });
         return json(200, data);
+      }
+
+      case "companies-delete": {
+        const id = String(payload?.id || "");
+        if (!id) return json(400, { error: "id es requerido" });
+        const { error } = await supabase.from("crm_companies").delete().eq("id", id);
+        if (error) return json(500, { error: error.message });
+        return json(200, { ok: true });
       }
 
       // ============ CONTACTOS ============
@@ -257,11 +282,22 @@ serve(async (req: Request) => {
             last_name: c.last_name || null,
             email: c.email || null,
             phone: c.phone || null,
+            phone2: c.phone2 || null,
             photo_url,
             source: c.source || "manual",
             lead_id,
             tags: Array.isArray(c.tags) ? c.tags : (c.tags ? [String(c.tags)] : []),
             notes: c.notes || null,
+            job_title: c.job_title || null,
+            birthdate: c.birthdate || null,
+            gender: c.gender || null,
+            linkedin: c.linkedin || null,
+            github: c.github || null,
+            x_handle: c.x_handle || null,
+            website: c.website || null,
+            address: c.address || null,
+            experience_years: c.experience_years != null && c.experience_years !== "" ? Number(c.experience_years) : null,
+            owner: c.owner || null,
           })
           .select(contactSelect)
           .single();
@@ -274,7 +310,7 @@ serve(async (req: Request) => {
         const updates = payload?.updates || {};
         if (!id) return json(400, { error: "id es requerido" });
         const clean: any = {};
-        for (const k of ["company_id", "first_name", "last_name", "email", "phone", "source", "lead_id", "tags", "notes"]) {
+        for (const k of ["company_id", "first_name", "last_name", "email", "phone", "phone2", "source", "lead_id", "tags", "notes", "job_title", "birthdate", "gender", "linkedin", "github", "x_handle", "website", "address", "experience_years", "owner"]) {
           if (k in updates) clean[k] = updates[k];
         }
         if ("photo_url" in updates) clean.photo_url = updates.photo_url;
@@ -287,6 +323,14 @@ serve(async (req: Request) => {
           .single();
         if (error) return json(500, { error: error.message });
         return json(200, data);
+      }
+
+      case "contacts-delete": {
+        const id = String(payload?.id || "");
+        if (!id) return json(400, { error: "id es requerido" });
+        const { error } = await supabase.from("crm_contacts").delete().eq("id", id);
+        if (error) return json(500, { error: error.message });
+        return json(200, { ok: true });
       }
 
       // ============ ETAPAS ============
@@ -359,6 +403,14 @@ serve(async (req: Request) => {
         return json(200, data);
       }
 
+      case "deals-delete": {
+        const id = String(payload?.id || "");
+        if (!id) return json(400, { error: "id es requerido" });
+        const { error } = await supabase.from("crm_deals").delete().eq("id", id);
+        if (error) return json(500, { error: error.message });
+        return json(200, { ok: true });
+      }
+
       // ============ ACTIVIDADES ============
       case "activities-list": {
         let query = supabase.from("crm_activities").select(activitySelect).order("created_at", { ascending: false });
@@ -405,6 +457,14 @@ serve(async (req: Request) => {
           .single();
         if (error) return json(500, { error: error.message });
         return json(200, data);
+      }
+
+      case "activities-delete": {
+        const id = String(payload?.id || "");
+        if (!id) return json(400, { error: "id es requerido" });
+        const { error } = await supabase.from("crm_activities").delete().eq("id", id);
+        if (error) return json(500, { error: error.message });
+        return json(200, { ok: true });
       }
 
 // ============ LEADS Y CONVERSIÓN ============
@@ -636,6 +696,17 @@ serve(async (req: Request) => {
             lead_id: c.lead_id || null,
             tags: Array.isArray(c.tags) ? c.tags.map(String).slice(0, 20) : [],
             notes: c.notes ? String(c.notes).slice(0, 2000) : null,
+            job_title: c.job_title ? String(c.job_title).slice(0, 150) : null,
+            phone2: c.phone2 ? String(c.phone2).slice(0, 60) : null,
+            birthdate: c.birthdate || null,
+            gender: c.gender ? String(c.gender).slice(0, 30) : null,
+            linkedin: c.linkedin ? String(c.linkedin).slice(0, 300) : null,
+            github: c.github ? String(c.github).slice(0, 300) : null,
+            x_handle: c.x_handle ? String(c.x_handle).slice(0, 120) : null,
+            website: c.website ? String(c.website).slice(0, 300) : null,
+            address: c.address ? String(c.address).slice(0, 300) : null,
+            experience_years: c.experience_years != null && c.experience_years !== "" ? Number(c.experience_years) : null,
+            owner: c.owner ? String(c.owner).slice(0, 150) : null,
           });
         }
         let inserted = 0;
@@ -666,6 +737,17 @@ serve(async (req: Request) => {
             industry: c.industry ? String(c.industry).slice(0, 120) : null,
             logo_url: null,
             notes: c.notes ? String(c.notes).slice(0, 2000) : null,
+            tags: Array.isArray(c.tags) ? c.tags.map(String).slice(0, 20) : [],
+            founded_year: c.founded_year != null && c.founded_year !== "" ? Number(c.founded_year) : null,
+            employee_range: c.employee_range ? String(c.employee_range).slice(0, 60) : null,
+            nit: c.nit ? String(c.nit).slice(0, 60) : null,
+            address: c.address ? String(c.address).slice(0, 300) : null,
+            phone: c.phone ? String(c.phone).slice(0, 60) : null,
+            linkedin: c.linkedin ? String(c.linkedin).slice(0, 300) : null,
+            github: c.github ? String(c.github).slice(0, 300) : null,
+            x_handle: c.x_handle ? String(c.x_handle).slice(0, 120) : null,
+            website: c.website ? String(c.website).slice(0, 300) : null,
+            owner: c.owner ? String(c.owner).slice(0, 150) : null,
           });
         }
         let inserted = 0;

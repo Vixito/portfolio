@@ -1764,6 +1764,9 @@ export function createCrmCompany(company: Record<string, unknown>) {
 export function updateCrmCompany(id: string, updates: Record<string, unknown>) {
   return invokeCRM({ action: "companies-update", id, updates });
 }
+export function deleteCrmCompany(id: string) {
+  return invokeCRM({ action: "companies-delete", id });
+}
 
 // --- Contactos ---
 export function getCrmContacts(params: { company_id?: string; search?: string } = {}) {
@@ -1774,6 +1777,9 @@ export function createCrmContact(contact: Record<string, unknown>) {
 }
 export function updateCrmContact(id: string, updates: Record<string, unknown>) {
   return invokeCRM({ action: "contacts-update", id, updates });
+}
+export function deleteCrmContact(id: string) {
+  return invokeCRM({ action: "contacts-delete", id });
 }
 
 // --- Etapas y Deals ---
@@ -1789,6 +1795,9 @@ export function createCrmDeal(deal: Record<string, unknown>) {
 export function updateCrmDeal(id: string, updates: Record<string, unknown>) {
   return invokeCRM({ action: "deals-update", id, updates });
 }
+export function deleteCrmDeal(id: string) {
+  return invokeCRM({ action: "deals-delete", id });
+}
 
 // --- Actividades ---
 export function getCrmActivities(params: { contact_id?: string; deal_id?: string } = {}) {
@@ -1799,6 +1808,9 @@ export function createCrmActivity(activity: Record<string, unknown>) {
 }
 export function updateCrmActivity(id: string, updates: Record<string, unknown>) {
   return invokeCRM({ action: "activities-update", id, updates });
+}
+export function deleteCrmActivity(id: string) {
+  return invokeCRM({ action: "activities-delete", id });
 }
 
 // --- Leads y conversión ---
