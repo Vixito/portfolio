@@ -1014,10 +1014,10 @@ export default function CrmPanel() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-xs text-gray-400">
                   Plantillas con placeholders —{" "}
-                  <code className="text-[#7cc7e0]">{{"{{"}}contact.first_name{{"}}"}}</code>,{" "}
-                  <code className="text-[#7cc7e0]">{{"{{"}}company.name{{"}}"}}</code>,{" "}
-                  <code className="text-[#7cc7e0]">{{"{{"}}deal.title{{"}}"}}</code>,{" "}
-                  <code className="text-[#7cc7e0]">{{"{{"}}deal.value{{"}}"}}</code>…
+                  <code className="text-[#7cc7e0]">{"{{contact.first_name}}"}</code>,{" "}
+                  <code className="text-[#7cc7e0]">{"{{company.name}}"}</code>,{" "}
+                  <code className="text-[#7cc7e0]">{"{{deal.title}}"}</code>,{" "}
+                  <code className="text-[#7cc7e0]">{"{{deal.value}}"}</code>…
                 </p>
                 <button className={btnPrimary} onClick={() => setTemplateModal({})}>+ Plantilla</button>
               </div>
@@ -1474,7 +1474,8 @@ export default function CrmPanel() {
             <textarea name="body" rows={6} defaultValue={templateModal?.edit?.body || ""} className={inputCls + " font-mono text-xs"} placeholder={"Hola {{contact.first_name}},\n\n…" } />
           </Field>
           <p className="text-[10px] text-gray-500">
-            Placeholders disponibles: {"{{"}}contact.first_name{{"}}"}, {"{{"}}contact.full_name{{"}}"}, {"{{"}}company.name{{"}}"}, {"{{"}}deal.title{{"}}"}, {"{{"}}deal.value{{"}}"}
+            Placeholders disponibles:{" "}
+              {"{{contact.first_name}}, {{contact.full_name}}, {{company.name}}, {{deal.title}}, {{deal.value}}"}
           </p>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => setTemplateModal(null)} className={btnGhost}>Cancelar</button>
