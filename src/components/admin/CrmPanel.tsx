@@ -781,13 +781,13 @@ export default function CrmPanel() {
   ];
 
   return (
-    <div className="bg-[#15171a] border border-white/10 rounded-xl p-4 md:p-5 text-white">
+    <div className="text-white">
       {/* Encabezado */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="text-xl font-bold">CRM</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Contactos, empresas, pipeline de ventas y actividades
+            Contactos, empresas, pipeline de ventas, actividades, leads, emails y contratos
           </p>
         </div>
         <div className="flex gap-1.5 flex-wrap">
