@@ -22,6 +22,11 @@ import {
   deleteCrmEmailTemplate,
   getCrmEmails,
   sendCrmEmail,
+  getCrmContracts,
+  createCrmContract,
+  updateCrmContract,
+  deleteCrmContract,
+  signContractProvider,
 } from "../../lib/supabase-functions";
 
 // ============ helpers de UI ============
@@ -161,7 +166,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 // ============ panel principal ============
 
-type SubTab = "contacts" | "companies" | "pipeline" | "activities" | "leads" | "emails";
+type SubTab = "contacts" | "companies" | "pipeline" | "activities" | "leads" | "emails" | "contracts";
 
 export default function CrmPanel() {
   const [subtab, setSubtab] = useState<SubTab>("contacts");
@@ -181,6 +186,9 @@ export default function CrmPanel() {
   const [templateModal, setTemplateModal] = useState<any>(null);
   const [sendModal, setSendModal] = useState<any>(null);
   const [sending, setSending] = useState(false);
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [contractModal, setContractModal] = useState<any>(null);
+  const [contractPassword, setContractPassword] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
   const [actFilterContact, setActFilterContact] = useState("");
@@ -198,7 +206,7 @@ export default function CrmPanel() {
     setLoading(true);
     setError(null);
     try {
-      const [comps, cons, stgs, dls, acts, lds, vst, tmps, emls] = await Promise.all([
+      const [comps, cons, stgs, dls, acts, lds, vst, tmps, emls, ctrs] = await Promise.all([
         getCrmCompanies(),
         getCrmContacts(),
         getCrmStages(),
@@ -208,6 +216,7 @@ export default function CrmPanel() {
         getCrmVisitors(),
         getCrmEmailTemplates(),
         getCrmEmails(),
+        getCrmContracts(),
       ]);
       setCompanies(comps || []);
       setContacts(cons || []);
@@ -218,6 +227,7 @@ export default function CrmPanel() {
       setVisitorsData(vst || { total: 0, today: 0, recent: [] });
       setEmailTemplates(tmps?.items || []);
       setEmailLog(emls?.items || []);
+      setContracts(ctrs || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar el CRM");
     } finally {
@@ -483,6 +493,79 @@ export default function CrmPanel() {
       ? { label: "Enviado", cls: "bg-green-500/10 text-green-400 border-green-500/30" }
       : { label: s === "pending" ? "Pendiente" : "Error", cls: "bg-red-500/10 text-red-400 border-red-500/30" };
 
+  const randomPassword = () => {
+    const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    let out = "";
+    for (const b of bytes) out += chars[b % chars.length];
+    return out;
+  };
+
+  const handleSaveContract = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const fd = new FormData(e.currentTarget as HTMLFormElement);
+      const payload = {
+        title: String(fd.get("title") || "").trim(),
+        contact_id: String(fd.get("contact_id") || "") || undefined,
+        company_id: String(fd.get("company_id") || "") || undefined,
+        currency: String(fd.get("currency") || "EUR"),
+        value: fd.get("value") ? Number(fd.get("value")) || null : null,
+        terms: String(fd.get("terms") || ""),
+      };
+      if (contractModal?.edit) {
+        const upd: Record<string, unknown> = { ...payload };
+        await updateCrmContract(contractModal.edit.id, upd);
+        setContractModal(null);
+        await load();
+      } else {
+        const res: any = await createCrmContract(payload);
+        if (!res?.contract) throw new Error(res?.error || "Error al crear contrato");
+        setContractModal(null);
+        await load();
+        setContractPassword(res.password);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al guardar contrato");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteContract = async (id: string) => {
+    if (!window.confirm("¿Eliminar contrato? Esta acción es irreversible.")) return;
+    try {
+      await deleteCrmContract(id);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al eliminar");
+    }
+  };
+
+  const handleSignProvider = async (c: any) => {
+    const name = window.prompt("Nombre del firmante (proveedor):", "Carlos Vicioso");
+    if (!name) return;
+    try {
+      await signContractProvider(c.id, name.trim());
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al firmar");
+    }
+  };
+
+  const handleRegenPassword = async (c: any) => {
+    const pwd = randomPassword();
+    if (!window.confirm("Regenerar contraseña del contrato. La anterior dejará de funcionar. ¿Continuar?")) return;
+    try {
+      await updateCrmContract(c.id, { password: pwd });
+      setContractPassword(pwd);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al regenerar");
+    }
+  };
+
   const subTabs: { id: SubTab; label: string }[] = [
     { id: "contacts", label: "Contactos" },
     { id: "companies", label: "Empresas" },
@@ -490,6 +573,7 @@ export default function CrmPanel() {
     { id: "activities", label: "Actividades" },
     { id: "leads", label: "Leads y visitas" },
     { id: "emails", label: "Emails" },
+    { id: "contracts", label: "Contratos" },
   ];
 
   return (
@@ -506,6 +590,7 @@ export default function CrmPanel() {
           <button className={btnPrimary} onClick={() => setCompanyModal({})}>+ Empresa</button>
           <button className={btnPrimary} onClick={() => setContactModal({})}>+ Contacto</button>
           <button className={btnPrimary} onClick={() => setDealModal({})}>+ Deal</button>
+          <button className={btnPrimary} onClick={() => setContractModal({})}>+ Contrato</button>
         </div>
       </div>
 
@@ -1002,6 +1087,107 @@ export default function CrmPanel() {
             </div>
           )}
 
+          {/* ============ CONTRATOS ============ */}
+          {subtab === "contracts" && (
+            <div className="space-y-4">
+              <p className="text-xs text-gray-400">
+                Contratos con link público protegido por contraseña. Al firmarlo ambas
+                partes queda descargable en PDF.
+              </p>
+              {contractPassword && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+                  <span className="text-gray-300">
+                    Contraseña de acceso:{" "}
+                    <span className="font-mono font-bold text-white select-all tracking-widest">{contractPassword}</span>
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(contractPassword);
+                      setContractPassword(null);
+                    }}
+                    className="px-3 py-1 text-[11px] rounded bg-white/10 hover:bg-white/20 cursor-pointer"
+                  >
+                    Copiada — cerrar
+                  </button>
+                </div>
+              )}
+              <div className="overflow-x-auto rounded-lg border border-white/10">
+                <table className="w-full min-w-[900px] text-left text-sm">
+                  <thead className="bg-[#18181b] text-gray-400 border-b border-white/10">
+                    <tr>
+                      <th className="px-4 py-2.5 font-semibold">Contrato</th>
+                      <th className="px-4 py-2.5 font-semibold">Cliente</th>
+                      <th className="px-4 py-2.5 font-semibold">Importe</th>
+                      <th className="px-4 py-2.5 font-semibold">Estado</th>
+                      <th className="px-4 py-2.5 font-semibold">Enlace</th>
+                      <th className="px-4 py-2.5 font-semibold">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {(contracts || []).map((c) => (
+                      <tr key={c.id} className="hover:bg-white/5">
+                        <td className="px-4 py-2.5">
+                          <span className="font-medium">{c.title}</span>
+                          <span className="block text-[10px] text-gray-500">Creado {fmtDate(c.created_at)}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-gray-300">
+                          {c.client_name || c.contact?.first_name || "—"}
+                          {c.company?.name && (
+                            <span className="block text-[11px] text-gray-500">{c.company.name}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 tabular-nums">
+                          {c.value != null ? fmtMoney(Number(c.value), c.currency) : "—"}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {c.signed_at ? (
+                            <span className="px-2 py-0.5 text-[11px] rounded bg-green-500/10 text-green-400 border border-green-500/30">Firmado ✓</span>
+                          ) : c.client_signed_at || c.provider_signed_at ? (
+                            <span className="px-2 py-0.5 text-[11px] rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                              Firma parcial
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 text-[11px] rounded bg-white/10 text-gray-300 border border-white/10">Enviado</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard?.writeText(`${window.location.origin}/contracts/${c.slug}`);
+                              alert("Enlace copiado");
+                            }}
+                            className="text-[11px] px-2 py-1 rounded bg-[#8c52ff]/20 border border-[#8c52ff]/40 text-[#c4b5fd] hover:bg-[#8c52ff]/30 cursor-pointer"
+                          >
+                            Copiar link
+                          </button>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex gap-1.5 flex-wrap">
+                            <button onClick={() => handleSignProvider(c)} disabled={!!c.provider_signed_at} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer disabled:opacity-40">
+                              {c.provider_signed_at ? "Firmado" : "Firmar"}
+                            </button>
+                            <button onClick={() => handleRegenPassword(c)} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">Clave</button>
+                            <button onClick={() => setContractModal({ edit: c })} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">Editar</button>
+                            <button onClick={() => handleDeleteContract(c.id)} disabled={!!c.signed_at} className="text-[11px] px-2 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer disabled:opacity-40">
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {(contracts || []).length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                          Sin contratos.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* ============ MODAL CONTACTO ============ */}
       <Modal
         open={!!contactModal}
@@ -1311,6 +1497,65 @@ export default function CrmPanel() {
             renderBody={renderBody}
           />
         )}
+      </Modal>
+
+      {/* ============ MODAL CONTRATO ============ */}
+      <Modal
+        open={!!contractModal}
+        title={contractModal?.edit ? "Editar contrato" : "Nuevo contrato"}
+        onClose={() => setContractModal(null)}
+      >
+        <form onSubmit={handleSaveContract} className="space-y-3">
+          <Field label="Título *">
+            <input name="title" required defaultValue={contractModal?.edit?.title || ""} className={inputCls} placeholder="Proyecto web — alcance inicial" />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Contacto">
+              <select name="contact_id" defaultValue={contractModal?.edit?.contact_id || contractModal?.edit?.contact?.id || ""} className={inputCls}>
+                <option value="">Sin contacto</option>
+                {contacts.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.first_name} {c.last_name || ""}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Empresa">
+              <select name="company_id" defaultValue={contractModal?.edit?.company_id || contractModal?.edit?.company?.id || ""} className={inputCls}>
+                <option value="">Sin empresa</option>
+                {companies.map((co: any) => (
+                  <option key={co.id} value={co.id}>{co.name}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Moneda">
+              <select name="currency" defaultValue={contractModal?.edit?.currency || "EUR"} className={inputCls}>
+                <option value="EUR">EUR — €</option>
+                <option value="USD">USD — $</option>
+                <option value="COP">COP — $</option>
+              </select>
+            </Field>
+            <Field label="Importe">
+              <input name="value" type="number" step="0.01" defaultValue={contractModal?.edit?.value ?? ""} className={inputCls} placeholder="0.00" />
+            </Field>
+          </div>
+          <Field label="Condiciones *">
+            <textarea name="terms" required rows={6} defaultValue={contractModal?.edit?.terms || ""} className={inputCls + " font-mono text-xs"} placeholder={"1. Alcance del proyecto\n2. Plazos\n3. Pagos\n…"} />
+          </Field>
+          {contractModal?.edit ? (
+            <p className="text-[10px] text-gray-500">
+              Editar no cambia la contraseña actual. La firma se gestiona desde la tabla.
+            </p>
+          ) : (
+            <p className="text-[10px] text-gray-500">
+              Al crear el contrato se genera la contraseña y el enlace público automáticamente.
+            </p>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={() => setContractModal(null)} className={btnGhost}>Cancelar</button>
+            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Guardando…" : "Guardar"}</button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

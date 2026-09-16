@@ -26,6 +26,7 @@ import {
   NotFound,
   DevButtons,
   Checkout,
+  ContractPage,
 } from "./pages";
 import Layout from "./components/layout/Layout";
 import TrackVisitor from "./components/TrackVisitor";
@@ -215,6 +216,14 @@ function App() {
           element={
             <Layout>
               <DevButtons />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/contracts/:slug"
+          element={
+            <Layout>
+              <ContractPage />
             </Layout>
           }
         ></Route>

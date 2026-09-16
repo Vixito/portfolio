@@ -17,6 +17,7 @@ import Checkout from "./Checkout";
 import WorkExperience from "./Work-experience";
 import PayInvoice from "./PayInvoice";
 import DevButtons from "./DevButtons";
+import ContractPage from "./ContractPage";
 
 export {
   About,
@@ -38,4 +39,5 @@ export {
   WorkExperience,
   PayInvoice,
   DevButtons,
+  ContractPage,
 };

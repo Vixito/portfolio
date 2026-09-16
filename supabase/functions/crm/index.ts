@@ -107,6 +107,37 @@ const fetchCompanyLogo = async (domain?: string | null): Promise<string | null> 
 
 const now = () => new Date().toISOString();
 
+const slugify = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "contrato";
+
+const uniqueSlug = async (base: string, supabase: any) => {
+  const { data: existing } = await supabase.from("crm_contracts").select("slug");
+  const slugs = new Set((existing || []).map((r: any) => r.slug));
+  if (!slugs.has(base)) return base;
+  let i = 2;
+  while (slugs.has(`${base}-${i}`)) i++;
+  return `${base}-${i}`;
+};
+
+const randomPassword = () => {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (const b of bytes) out += chars[b % chars.length];
+  return out;
+};
+
+const sha256hex = async (s: string) => {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+};
+
 const contactSelect = `
   *, company:crm_companies(id, name, domain, logo_url)
 `;
@@ -454,6 +485,118 @@ serve(async (req: Request) => {
           today: today || 0,
           recent: data || [],
         });
+      }
+
+      // ============ CONTRATOS ============
+      case "contracts-list": {
+        const { data, error } = await supabase
+          .from("crm_contracts")
+          .select(
+            "*, contact:crm_contacts(id, first_name, last_name, email), company:crm_companies(id, name)"
+          )
+          .order("created_at", { ascending: false });
+        if (error) return json(500, { error: error.message });
+        const body = (data || []).map((c: any) => ({
+          ...c,
+          password_hash: undefined,
+        }));
+        return json(200, body);
+      }
+
+      case "contracts-create": {
+        const c = payload?.contract;
+        if (!c?.title || !c?.terms) {
+          return json(400, { error: "contract.title y contract.terms son requeridos" });
+        }
+        const title = String(c.title).trim();
+        const baseSlug = slugify(title);
+        const slug = await uniqueSlug(baseSlug, supabase);
+        const password = randomPassword();
+        const contactsRes = await supabase
+          .from("crm_contacts")
+          .select("first_name, last_name, email")
+          .eq("id", String(c.contact_id || ""))
+          .maybeSingle();
+        const info = contactsRes.data as any;
+        const { data, error } = await supabase
+          .from("crm_contracts")
+          .insert({
+            title,
+            slug,
+            contact_id: c.contact_id || null,
+            company_id: c.company_id || null,
+            currency: c.currency || "EUR",
+            value: c.value != null ? c.value : null,
+            terms: String(c.terms),
+            password_hash: await sha256hex(password),
+            status: "sent",
+            client_name: c.client_name || (info ? `${info.first_name || ""} ${info.last_name || ""}`.trim() : null) || null,
+            client_email: c.client_email || info?.email || null,
+          })
+          .select()
+          .single();
+        if (error) return json(500, { error: error.message });
+        return json(200, { contract: data, password });
+      }
+
+      case "contracts-update": {
+        const id = String(payload?.id || "");
+        if (!id) return json(400, { error: "id es requerido" });
+        const u = payload?.updates || {};
+        const clean: Record<string, unknown> = { updated_at: now() };
+        for (const k of ["title", "terms", "currency", "status"]) {
+          if (k in u) clean[k] = String(u[k]);
+        }
+        if ("value" in u && u.value != null) clean.value = u.value;
+        if ("contact_id" in u) clean.contact_id = u.contact_id || null;
+        if ("company_id" in u) clean.company_id = u.company_id || null;
+        if ("client_name" in u) clean.client_name = u.client_name || null;
+        if ("client_email" in u) clean.client_email = u.client_email || null;
+        if ("password" in u && u.password) clean.password_hash = await sha256hex(String(u.password));
+        const { data, error } = await supabase
+          .from("crm_contracts")
+          .update(clean)
+          .eq("id", id)
+          .select("*, contact:crm_contacts(id, first_name, last_name, email), company:crm_companies(id, name)")
+          .single();
+        if (error) return json(500, { error: error.message });
+        return json(200, { ...data, password_hash: undefined });
+      }
+
+      case "contracts-delete": {
+        const id = String(payload?.id || "");
+        const { error } = await supabase.from("crm_contracts").delete().eq("id", id);
+        if (error) return json(500, { error: error.message });
+        return json(200, { ok: true });
+      }
+
+      case "contracts-sign-provider": {
+        const id = String(payload?.id || "");
+        const name = String(payload?.signer_name || "").trim();
+        if (!id || !name) return json(400, { error: "id y signer_name son requeridos" });
+        const { data: cur } = await supabase
+          .from("crm_contracts")
+          .select("provider_signed_at, client_signed_at")
+          .eq("id", id)
+          .maybeSingle();
+        if (!cur) return json(404, { error: "Contrato no encontrado" });
+        const patch: Record<string, unknown> = {
+          provider_signer_name: name,
+          provider_signed_at: now(),
+          updated_at: now(),
+        };
+        if (cur.client_signed_at) {
+          patch.status = "signed";
+          patch.signed_at = now();
+        }
+        const { data, error } = await supabase
+          .from("crm_contracts")
+          .update(patch)
+          .eq("id", id)
+          .select("*, contact:crm_contacts(id, first_name, last_name, email), company:crm_companies(id, name)")
+          .single();
+        if (error) return json(500, { error: error.message });
+        return json(200, { ...data, password_hash: undefined });
       }
 
       // ============ PLANTILLAS DE EMAIL ============

@@ -1840,6 +1840,61 @@ export function sendCrmEmail(params: {
   return invokeCRM({ action: "emails-send", ...params });
 }
 
+export function getCrmContracts() {
+  return invokeCRM({ action: "contracts-list" });
+}
+export function createCrmContract(contract: {
+  title: string;
+  terms: string;
+  contact_id?: string;
+  company_id?: string;
+  currency?: string;
+  value?: number | null;
+}) {
+  return invokeCRM({ action: "contracts-create", contract });
+}
+export function updateCrmContract(
+  id: string,
+  updates: Record<string, unknown>
+) {
+  return invokeCRM({ action: "contracts-update", id, updates });
+}
+export function deleteCrmContract(id: string) {
+  return invokeCRM({ action: "contracts-delete", id });
+}
+export function signContractProvider(id: string, signer_name: string) {
+  return invokeCRM({ action: "contracts-sign-provider", id, signer_name });
+}
+
+export function contractStatus(slug: string) {
+  return supabase.functions.invoke("contracts-public", {
+    body: { action: "status", slug },
+  });
+}
+export function contractUnlock(slug: string, password: string) {
+  return supabase.functions.invoke("contracts-public", {
+    body: { action: "unlock", slug, password },
+  });
+}
+export function contractSign(
+  slug: string,
+  password: string,
+  signer_name: string,
+  client_email?: string
+) {
+  return supabase.functions.invoke("contracts-public", {
+    body: { action: "sign", slug, password, signer_name, client_email },
+  });
+}
+export async function contractDownloadPdf(slug: string, password: string) {
+  const res = await supabase.functions.invoke("contracts-pdf", {
+    body: { slug, password },
+    response: true,
+  });
+  if (res.error) throw new Error(res.error.message || "Error al generar PDF");
+  return res.data as Response;
+}
+
 /**
  * Confirma el pago del Transparent Checkout con el cardToken.
  * Devuelve { paid, delivery, redirect_url (3DS), status, ... }.

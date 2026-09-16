@@ -19,6 +19,12 @@ verify_jwt = false
 [functions.track-visitor]
 verify_jwt = false
 
+[functions.contracts-public]
+verify_jwt = false
+
+[functions.contracts-pdf]
+verify_jwt = false
+
 [functions.whatsapp-bot]
 enabled = true
 verify_jwt = true
