@@ -1427,23 +1427,23 @@ export default function CrmPanel() {
                   <h3 className="font-semibold text-sm">{t("admin.crm.emailsTab.templates")}</h3>
                 </div>
                 <div className="divide-y divide-white/5">
-                  {(emailTemplates || []).map((t: any) => (
-                    <div key={t.id} className="flex items-center justify-between gap-2 px-4 py-2.5 hover:bg-white/5">
+                  {(emailTemplates || []).map((tpl: any) => (
+                    <div key={tpl.id} className="flex items-center justify-between gap-2 px-4 py-2.5 hover:bg-white/5">
                       <div className="min-w-0 mr-2">
                         <p className="text-sm text-gray-200 truncate">
-                          <span className="px-1.5 py-0.5 text-[10px] rounded bg-white/10 mr-1.5">{t.is_active ? t("admin.crm.emailsTab.active") : t("admin.crm.emailsTab.paused")}</span>
-                          {t.name}
+                          <span className="px-1.5 py-0.5 text-[10px] rounded bg-white/10 mr-1.5">{tpl.is_active ? t("admin.crm.emailsTab.active") : t("admin.crm.emailsTab.paused")}</span>
+                          {tpl.name}
                         </p>
-                        <p className="text-[11px] text-gray-500 truncate">{t.subject}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{tpl.subject}</p>
                       </div>
                       <div className="flex gap-1.5 shrink-0">
-                        <button onClick={() => setTemplateModal({ edit: t })} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
+                        <button onClick={() => setTemplateModal({ edit: tpl })} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
                           {t("admin.crm.edit")}
                         </button>
                         <button onClick={() => setSendModal({ contact_id: "" })} className="text-[11px] px-2 py-1 rounded bg-[#8c52ff]/20 border border-[#8c52ff]/40 text-[#c4b5fd] hover:bg-[#8c52ff]/30 cursor-pointer">
                           {t("admin.crm.send")}
                         </button>
-                        <button onClick={() => handleDeleteTemplate(t.id)} className="text-[11px] px-2 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer">
+                        <button onClick={() => handleDeleteTemplate(tpl.id)} className="text-[11px] px-2 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer">
                           {t("admin.crm.delete")}
                         </button>
                       </div>
