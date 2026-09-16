@@ -415,3 +415,21 @@ select option:hover {
   color: #ffffff !important;
 }
 
+/* CRM: acentos lavanda/cian/ámbar ilegibles sobre blanco en tema claro */
+.admin-light .text-\[\#c4b5fd\] {
+  color: #6d28d9;
+}
+.admin-light .text-\[\#7cc7e0\],
+.admin-light .text-\[\#2093c4\] {
+  color: #0369a1;
+}
+.admin-light .text-amber-400 {
+  color: #b45309;
+}
+.admin-light .divide-white\/5 {
+  border-color: #e2e8f0;
+}
+.admin-light .hover\:bg-white\/20:hover {
+  background-color: rgba(100, 116, 139, 0.18);
+}
+

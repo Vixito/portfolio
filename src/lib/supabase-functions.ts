@@ -1821,13 +1821,13 @@ export function getCrmEmailTemplates() {
   return invokeCRM({ action: "email-templates-list" });
 }
 export function createCrmEmailTemplate(
-  data: { name: string; subject: string; body: string; is_active?: boolean }
+  data: { name: string; subject: string; subject_en?: string; body: string; body_en?: string; is_active?: boolean }
 ) {
   return invokeCRM({ action: "email-templates-create", ...data });
 }
 export function updateCrmEmailTemplate(
   id: string,
-  data: { name?: string; subject?: string; body?: string; is_active?: boolean }
+  data: { name?: string; subject?: string; subject_en?: string; body?: string; body_en?: string; is_active?: boolean }
 ) {
   return invokeCRM({ action: "email-templates-update", id, ...data });
 }
@@ -1841,6 +1841,7 @@ export function sendCrmEmail(params: {
   contact_id: string;
   template_id: string;
   deal_id?: string;
+  lang?: "es" | "en";
   extra?: Record<string, string>;
 }) {
   return invokeCRM({ action: "emails-send", ...params });
@@ -1851,7 +1852,9 @@ export function getCrmContracts() {
 }
 export function createCrmContract(contract: {
   title: string;
+  title_en?: string;
   terms: string;
+  terms_en?: string;
   contact_id?: string;
   company_id?: string;
   currency?: string;
@@ -1886,15 +1889,26 @@ export function contractSign(
   slug: string,
   password: string,
   signer_name: string,
-  client_email?: string
+  client_email?: string,
+  sign_token?: string
 ) {
   return supabase.functions.invoke("contracts-public", {
-    body: { action: "sign", slug, password, signer_name, client_email },
+    body: { action: "sign", slug, password, signer_name, client_email, sign_token },
   });
 }
-export async function contractDownloadPdf(slug: string, password: string) {
+export function contractSendCode(slug: string, password: string) {
+  return supabase.functions.invoke("contracts-public", {
+    body: { action: "send-code", slug, password },
+  });
+}
+export function contractVerifyCode(slug: string, password: string, code: string) {
+  return supabase.functions.invoke("contracts-public", {
+    body: { action: "verify-code", slug, password, code },
+  });
+}
+export async function contractDownloadPdf(slug: string, password: string, lang?: "es" | "en") {
   const res = await supabase.functions.invoke("contracts-pdf", {
-    body: { slug, password },
+    body: { slug, password, lang },
     response: true,
   });
   if (res.error) throw new Error(res.error.message || "Error al generar PDF");
@@ -2308,6 +2322,7 @@ export async function getAppearanceSettings() {
       return {
         hero_background: "default",
         radio_background: "default",
+        contracts_background: "default",
         home_scroll_transition: "default"
       };
     }
@@ -2315,6 +2330,7 @@ export async function getAppearanceSettings() {
     return {
       hero_background: data.project_data?.hero_background || "default",
       radio_background: data.project_data?.radio_background || "default",
+      contracts_background: data.project_data?.contracts_background || "default",
       home_scroll_transition: data.project_data?.home_scroll_transition || "default"
     };
   } catch (error) {
@@ -2322,6 +2338,7 @@ export async function getAppearanceSettings() {
     return {
       hero_background: "default",
       radio_background: "default",
+      contracts_background: "default",
       home_scroll_transition: "default"
     };
   }

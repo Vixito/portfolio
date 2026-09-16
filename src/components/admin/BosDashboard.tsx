@@ -535,7 +535,7 @@ export default function BosDashboard() {
                     {fmtNum(leads?.total)}
                   </span>
                   <span className="text-xs text-gray-500">
-                    {fmtNum(leads?.converted)} convertidos · {fmtNum(leads?.pending)} por tratar
+                    {fmtNum(leads?.converted)} {t("admin.bos.converted") || "convertidos"} · {fmtNum(leads?.pending)} {t("admin.bos.pending") || "por tratar"}
                   </span>
                 </div>
                 {(leads?.by_source || [])?.length === 0 ? (
@@ -562,13 +562,13 @@ export default function BosDashboard() {
                         <div className="min-w-0">
                           <p className="truncate text-gray-200">
                             <span className="text-gray-500 capitalize">{l.source}:</span>{" "}
-                            {l.name || l.email || l.topic || "Lead sin datos"}
+                            {l.name || l.email || l.topic || t("admin.bos.noName") || "Lead sin datos"}
                           </p>
                           <p className="text-[11px] text-gray-500 truncate">{fmtDateTime(l.created_at)}</p>
                         </div>
                         {l.converted ? (
                           <span className="px-2 py-1 text-[11px] rounded bg-green-500/10 text-green-400 border border-green-500/30 shrink-0">
-                            En CRM
+                            {t("admin.bos.inCrm") || "En CRM"}
                           </span>
                         ) : (
                           <button
@@ -576,7 +576,7 @@ export default function BosDashboard() {
                             disabled={convertingId === l.id}
                             className="px-2 py-1 text-[11px] rounded bg-[#8c52ff]/20 text-[#c4b5fd] border border-[#8c52ff]/40 hover:bg-[#8c52ff]/30 cursor-pointer disabled:opacity-50 shrink-0"
                           >
-                            {convertingId === l.id ? "…" : "→ CRM"}
+                            {convertingId === l.id ? "…" : t("admin.bos.toCrm") || "→ CRM"}
                           </button>
                         )}
                       </div>
@@ -585,20 +585,20 @@ export default function BosDashboard() {
                 )}
               </Section>
 
-              <Section title="Visitantes del portfolio">
+              <Section title={t("admin.bos.visitors") || "Visitantes del portfolio"}>
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div className="bg-[#0f1113] border border-white/10 rounded-lg p-3">
                     <p className="text-2xl font-bold text-white tabular-nums">{fmtNum(visitors?.today)}</p>
-                    <p className="text-[11px] text-gray-400">hoy</p>
+                    <p className="text-[11px] text-gray-400">{t("admin.bos.today") || "hoy"}</p>
                   </div>
                   <div className="bg-[#0f1113] border border-white/10 rounded-lg p-3">
                     <p className="text-2xl font-bold text-white tabular-nums">{fmtNum(visitors?.total)}</p>
-                    <p className="text-[11px] text-gray-400">total registrados</p>
+                    <p className="text-[11px] text-gray-400">{t("admin.bos.totalVisitors") || "total registrados"}</p>
                   </div>
                 </div>
                 {(visitors?.recent || [])?.length === 0 ? (
                   <p className="text-sm text-gray-500 py-2 text-center">
-                    Aún sin visitas registradas
+                    {t("admin.bos.noVisits") || "Aún sin visitas registradas"}
                   </p>
                 ) : (
                   <div className="space-y-1.5">

@@ -3147,6 +3147,17 @@ function Admin() {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">{t("admin.appearanceContractsBg")}</label>
+                  <select
+                    value={appearanceSettings.contracts_background || "default"}
+                    onChange={(e) => setAppearanceSettings({...appearanceSettings, contracts_background: e.target.value})}
+                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
+                  >
+                    <option value="default">{t("admin.appearanceDefault")}</option>
+                    <option value="starry_night">{t("admin.appearanceStarry")}</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Transición de Scroll (Página de Inicio)</label>
                   <select
                     value={appearanceSettings.home_scroll_transition || "default"}

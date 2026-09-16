@@ -125,8 +125,8 @@ const uniqueSlug = async (base: string, supabase: any) => {
 };
 
 const randomPassword = () => {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  const bytes = new Uint8Array(8);
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint8Array(12);
   crypto.getRandomValues(bytes);
   let out = "";
   for (const b of bytes) out += chars[b % chars.length];
@@ -496,9 +496,21 @@ serve(async (req: Request) => {
           )
           .order("created_at", { ascending: false });
         if (error) return json(500, { error: error.message });
+        // Intentos fallidos últimas 24h (seguridad del link público).
+        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: fails } = await supabase
+          .from("crm_contract_events")
+          .select("slug")
+          .in("event", ["unlock_fail", "code_fail", "sign_fail", "pdf_denied"])
+          .gte("created_at", dayAgo);
+        const failCount: Record<string, number> = {};
+        for (const f of fails || []) {
+          failCount[f.slug] = (failCount[f.slug] || 0) + 1;
+        }
         const body = (data || []).map((c: any) => ({
           ...c,
           password_hash: undefined,
+          failed_24h: failCount[c.slug] || 0,
         }));
         return json(200, body);
       }
@@ -522,12 +534,14 @@ serve(async (req: Request) => {
           .from("crm_contracts")
           .insert({
             title,
+            title_en: c.title_en ? String(c.title_en).trim().slice(0, 300) : null,
             slug,
             contact_id: c.contact_id || null,
             company_id: c.company_id || null,
             currency: c.currency || "EUR",
             value: c.value != null ? c.value : null,
             terms: String(c.terms),
+            terms_en: c.terms_en ? String(c.terms_en) : null,
             password_hash: await sha256hex(password),
             status: "sent",
             client_name: c.client_name || (info ? `${info.first_name || ""} ${info.last_name || ""}`.trim() : null) || null,
@@ -544,8 +558,8 @@ serve(async (req: Request) => {
         if (!id) return json(400, { error: "id es requerido" });
         const u = payload?.updates || {};
         const clean: Record<string, unknown> = { updated_at: now() };
-        for (const k of ["title", "terms", "currency", "status"]) {
-          if (k in u) clean[k] = String(u[k]);
+        for (const k of ["title", "terms", "currency", "status", "title_en", "terms_en"]) {
+          if (k in u) clean[k] = u[k] == null ? null : String(u[k]);
         }
         if ("value" in u && u.value != null) clean.value = u.value;
         if ("contact_id" in u) clean.contact_id = u.contact_id || null;
@@ -685,7 +699,9 @@ serve(async (req: Request) => {
           .insert({
             name,
             subject,
+            subject_en: payload.subject_en ? String(payload.subject_en).trim() : null,
             body: tplBody,
+            body_en: payload.body_en ? String(payload.body_en) : null,
             is_active: payload.is_active !== false,
           })
           .select()
@@ -700,7 +716,9 @@ serve(async (req: Request) => {
         const patch: Record<string, unknown> = {};
         if (payload.name !== undefined) patch.name = String(payload.name).trim();
         if (payload.subject !== undefined) patch.subject = String(payload.subject).trim();
+        if (payload.subject_en !== undefined) patch.subject_en = payload.subject_en ? String(payload.subject_en).trim() : null;
         if (payload.body !== undefined) patch.body = String(payload.body);
+        if (payload.body_en !== undefined) patch.body_en = payload.body_en ? String(payload.body_en) : null;
         if (payload.is_active !== undefined) patch.is_active = !!payload.is_active;
         patch.updated_at = now();
         const { data, error } = await supabase
@@ -798,8 +816,11 @@ serve(async (req: Request) => {
             vars[k] !== undefined ? vars[k] : `{{${k}}}`
           );
 
-        const subject = render(template.subject);
-        const text = render(template.body);
+        const lang = String(payload.lang || "es").toLowerCase() === "en" ? "en" : "es";
+        const subjectSrc = lang === "en" && template.subject_en ? template.subject_en : template.subject;
+        const bodySrc = lang === "en" && template.body_en ? template.body_en : template.body;
+        const subject = render(subjectSrc);
+        const text = render(bodySrc);
         const esc = (s: string) =>
           s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const html = text

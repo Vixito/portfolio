@@ -250,7 +250,7 @@ function AdminShell(props: AdminShellProps) {
       group: t("admin.groups.dashboard"),
       items: [
         { id: "bos", label: "BOS", icon: "dashboard" },
-        { id: "crm", label: t("admin.crm"), icon: "crm" },
+        { id: "crm", label: t("admin.crm.label"), icon: "crm" },
       ],
     },
     {

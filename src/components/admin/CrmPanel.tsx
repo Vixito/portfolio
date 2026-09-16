@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useTranslation } from "../../lib/i18n";
 import {
   getCrmCompanies,
   createCrmCompany,
@@ -158,19 +159,20 @@ const btnGhost =
 const btnDanger =
   "px-3 py-1.5 text-xs font-medium rounded-md border border-red-900/50 bg-red-950/30 text-red-400 hover:bg-red-900/50 cursor-pointer";
 
-const TYPE_LABEL: Record<string, string> = {
-  email: "Email",
-  call: "Llamada",
-  note: "Nota",
-  task: "Tarea",
-  meeting: "Reunión",
-};
-
 // ============ panel principal ============
 
 type SubTab = "contacts" | "companies" | "pipeline" | "activities" | "leads" | "emails" | "contracts";
 
 export default function CrmPanel() {
+  const { t } = useTranslation();
+  const typeLabel = (ty: string) =>
+    ({
+      email: t("admin.crm.activityModal.typeEmail"),
+      call: t("admin.crm.activityModal.typeCall"),
+      note: t("admin.crm.activityModal.typeNote"),
+      task: t("admin.crm.activityModal.typeTask"),
+      meeting: t("admin.crm.activityModal.typeMeeting"),
+    } as Record<string, string>)[ty] || ty;
   const [subtab, setSubtab] = useState<SubTab>("contacts");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -303,7 +305,7 @@ export default function CrmPanel() {
       setContactModal(null);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al guardar contacto");
+      alert(err instanceof Error ? err.message : t("admin.crm.errSaveContact"));
     } finally {
       setSaving(false);
     }
@@ -328,7 +330,7 @@ export default function CrmPanel() {
       setCompanyModal(null);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al guardar empresa");
+      alert(err instanceof Error ? err.message : t("admin.crm.errSaveCompany"));
     } finally {
       setSaving(false);
     }
@@ -357,7 +359,7 @@ export default function CrmPanel() {
       setDealModal(null);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al guardar deal");
+      alert(err instanceof Error ? err.message : t("admin.crm.errSaveDeal"));
     } finally {
       setSaving(false);
     }
@@ -368,7 +370,7 @@ export default function CrmPanel() {
       await updateCrmDeal(dealId, { stage_id: stageId });
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al mover el deal");
+      alert(err instanceof Error ? err.message : t("admin.crm.errMoveDeal"));
     }
   };
 
@@ -393,7 +395,7 @@ export default function CrmPanel() {
       setActivityModal(null);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al guardar actividad");
+      alert(err instanceof Error ? err.message : t("admin.crm.errSaveActivity"));
     } finally {
       setSaving(false);
     }
@@ -404,7 +406,7 @@ export default function CrmPanel() {
       await updateCrmActivity(act.id, { done: !act.done });
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al actualizar actividad");
+      alert(err instanceof Error ? err.message : t("admin.crm.errUpdateActivity"));
     }
   };
 
@@ -414,7 +416,7 @@ export default function CrmPanel() {
       await convertLeadToContact(leadId);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al convertir el lead");
+      alert(err instanceof Error ? err.message : t("admin.crm.errConvertLead"));
     } finally {
       setConvertingLeadId(null);
     }
@@ -428,7 +430,9 @@ export default function CrmPanel() {
       const payload = {
         name: String(fd.get("name") || "").trim(),
         subject: String(fd.get("subject") || "").trim(),
+        subject_en: String(fd.get("subject_en") || "").trim() || undefined,
         body: String(fd.get("body") || ""),
+        body_en: String(fd.get("body_en") || "") || undefined,
         is_active: (fd.get("is_active") as string) !== "false",
       };
       if (templateModal?.edit) {
@@ -439,19 +443,19 @@ export default function CrmPanel() {
       setTemplateModal(null);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al guardar plantilla");
+      alert(err instanceof Error ? err.message : t("admin.crm.errSaveTemplate"));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    if (!window.confirm("¿Eliminar plantilla? Los envíos previos se conservan.")) return;
+    if (!window.confirm(t("admin.crm.confirmDeleteTemplate"))) return;
     try {
       await deleteCrmEmailTemplate(id);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al eliminar");
+      alert(err instanceof Error ? err.message : t("admin.crm.errDelete"));
     }
   };
 
@@ -462,16 +466,17 @@ export default function CrmPanel() {
     const contactId = String(fd.get("contact_id") || "");
     const templateId = String(fd.get("template_id") || "");
     const dealId = String(fd.get("deal_id") || "") || undefined;
+    const lang = String(fd.get("lang") || "es") === "en" ? "en" : "es";
     if (!contactId || !templateId) return;
     setSending(true);
     try {
-      const res: any = await sendCrmEmail({ contact_id: contactId, template_id: templateId, deal_id: dealId });
+      const res: any = await sendCrmEmail({ contact_id: contactId, template_id: templateId, deal_id: dealId, lang });
       if (!res?.ok) throw new Error(res?.error || "Error al enviar");
       setSendModal(null);
       await load();
-      alert("Email enviado correctamente");
+      alert(t("admin.crm.sentOk"));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al enviar email");
+      alert(err instanceof Error ? err.message : t("admin.crm.errSendEmail"));
     } finally {
       setSending(false);
     }
@@ -495,12 +500,12 @@ export default function CrmPanel() {
   };
   const sendStatus = (s: string) =>
     s === "sent"
-      ? { label: "Enviado", cls: "bg-green-500/10 text-green-400 border-green-500/30" }
-      : { label: s === "pending" ? "Pendiente" : "Error", cls: "bg-red-500/10 text-red-400 border-red-500/30" };
+      ? { label: t("admin.crm.emailsTab.sent"), cls: "bg-green-500/10 text-green-400 border-green-500/30" }
+      : { label: s === "pending" ? t("admin.crm.emailsTab.pending") : t("admin.crm.emailsTab.failed"), cls: "bg-red-500/10 text-red-400 border-red-500/30" };
 
   const randomPassword = () => {
-    const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-    const bytes = new Uint8Array(8);
+    const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    const bytes = new Uint8Array(12);
     crypto.getRandomValues(bytes);
     let out = "";
     for (const b of bytes) out += chars[b % chars.length];
@@ -514,11 +519,13 @@ export default function CrmPanel() {
       const fd = new FormData(e.currentTarget as HTMLFormElement);
       const payload = {
         title: String(fd.get("title") || "").trim(),
+        title_en: String(fd.get("title_en") || "").trim() || undefined,
         contact_id: String(fd.get("contact_id") || "") || undefined,
         company_id: String(fd.get("company_id") || "") || undefined,
         currency: String(fd.get("currency") || "EUR"),
         value: fd.get("value") ? Number(fd.get("value")) || null : null,
         terms: String(fd.get("terms") || ""),
+        terms_en: String(fd.get("terms_en") || "") || undefined,
       };
       if (contractModal?.edit) {
         const upd: Record<string, unknown> = { ...payload };
@@ -533,41 +540,41 @@ export default function CrmPanel() {
         setContractPassword(res.password);
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al guardar contrato");
+      alert(err instanceof Error ? err.message : t("admin.crm.errSaveContract"));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteContract = async (id: string) => {
-    if (!window.confirm("¿Eliminar contrato? Esta acción es irreversible.")) return;
+    if (!window.confirm(t("admin.crm.confirmDeleteContract"))) return;
     try {
       await deleteCrmContract(id);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al eliminar");
+      alert(err instanceof Error ? err.message : t("admin.crm.errDelete"));
     }
   };
 
   const handleSignProvider = async (c: any) => {
-    const name = window.prompt("Nombre del firmante (proveedor):", "Carlos Vicioso");
+    const name = window.prompt(t("admin.crm.signPrompt"), "Carlos Vicioso");
     if (!name) return;
     try {
       await signContractProvider(c.id, name.trim());
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al firmar");
+      alert(err instanceof Error ? err.message : t("admin.crm.errSign"));
     }
   };
 
   const handleRegenPassword = async (c: any) => {
     const pwd = randomPassword();
-    if (!window.confirm("Regenerar contraseña del contrato. La anterior dejará de funcionar. ¿Continuar?")) return;
+    if (!window.confirm(t("admin.crm.confirmRegenPwd"))) return;
     try {
       await updateCrmContract(c.id, { password: pwd });
       setContractPassword(pwd);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al regenerar");
+      alert(err instanceof Error ? err.message : t("admin.crm.errRegen"));
     }
   };
 
@@ -579,7 +586,7 @@ export default function CrmPanel() {
 
   const downloadCsv = (filename: string, rows: Record<string, any>[]) => {
     if (rows.length === 0) {
-      alert("No hay datos para exportar");
+      alert(t("admin.crm.noDataExport"));
       return;
     }
     const headers = Object.keys(rows[0]);
@@ -679,7 +686,7 @@ export default function CrmPanel() {
     setImporting(true);
     try {
       const grid = parseCsv(await file.text());
-      if (grid.length < 2) throw new Error("CSV vacío o sin cabecera");
+      if (grid.length < 2) throw new Error(t("admin.crm.emptyCsv"));
       const headers = grid[0].map(normHeader);
       const idx = (names: string[]) => {
         for (const n of names) {
@@ -699,7 +706,7 @@ export default function CrmPanel() {
         const iSource = idx(["source", "origen"]);
         const iTags = idx(["tags", "etiquetas"]);
         const iNotes = idx(["notes", "notas"]);
-        if (iFirst < 0) throw new Error("Falta la columna first_name / nombre");
+        if (iFirst < 0) throw new Error(`${t("admin.crm.missingColumn")} first_name / nombre`);
         const mapped = grid.slice(1).map((row) => ({
           first_name: cell(row, iFirst),
           last_name: cell(row, iLast),
@@ -740,16 +747,16 @@ export default function CrmPanel() {
         const res: any = await importCrmContacts(payload);
         await load();
         alert(
-          `Importados ${res?.inserted ?? 0} contactos` +
-            (createdCompanies ? ` (+${createdCompanies} empresas creadas)` : "") +
-            (res?.skipped ? ` (${res.skipped} filas sin nombre omitidas)` : "")
+          `${t("admin.crm.imported")} ${res?.inserted ?? 0} ${t("admin.crm.contacts")}` +
+            (createdCompanies ? ` (+${createdCompanies} ${t("admin.crm.createdCompanies")})` : "") +
+            (res?.skipped ? ` (${res.skipped} ${t("admin.crm.rowsSkipped")})` : "")
         );
       } else {
         const iName = idx(["name", "nombre", "empresa"]);
         const iDomain = idx(["domain", "dominio"]);
         const iIndustry = idx(["industry", "industria", "sector"]);
         const iNotes = idx(["notes", "notas"]);
-        if (iName < 0) throw new Error("Falta la columna name / nombre");
+        if (iName < 0) throw new Error(`${t("admin.crm.missingColumn")} name / nombre`);
         const payload = grid.slice(1).map((row) => ({
           name: cell(row, iName),
           domain: cell(row, iDomain),
@@ -759,25 +766,25 @@ export default function CrmPanel() {
         const res: any = await importCrmCompanies(payload);
         await load();
         alert(
-          `Importadas ${res?.inserted ?? 0} empresas` +
-            (res?.skipped ? ` (${res.skipped} filas sin nombre omitidas)` : "")
+          `${t("admin.crm.importedF")} ${res?.inserted ?? 0} ${t("admin.crm.companies")}` +
+            (res?.skipped ? ` (${res.skipped} ${t("admin.crm.rowsSkipped")})` : "")
         );
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al importar CSV");
+      alert(err instanceof Error ? err.message : t("admin.crm.errImport"));
     } finally {
       setImporting(false);
     }
   };
 
   const subTabs: { id: SubTab; label: string }[] = [
-    { id: "contacts", label: "Contactos" },
-    { id: "companies", label: "Empresas" },
-    { id: "pipeline", label: "Pipeline" },
-    { id: "activities", label: "Actividades" },
-    { id: "leads", label: "Leads y visitas" },
-    { id: "emails", label: "Emails" },
-    { id: "contracts", label: "Contratos" },
+    { id: "contacts", label: t("admin.crm.tabs.contacts") },
+    { id: "companies", label: t("admin.crm.tabs.companies") },
+    { id: "pipeline", label: t("admin.crm.tabs.pipeline") },
+    { id: "activities", label: t("admin.crm.tabs.activities") },
+    { id: "leads", label: t("admin.crm.tabs.leads") },
+    { id: "emails", label: t("admin.crm.tabs.emails") },
+    { id: "contracts", label: t("admin.crm.tabs.contracts") },
   ];
 
   return (
@@ -785,16 +792,16 @@ export default function CrmPanel() {
       {/* Encabezado */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
-          <h2 className="text-xl font-bold">CRM</h2>
+          <h2 className="text-xl font-bold">{t("admin.crm.label")}</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Contactos, empresas, pipeline de ventas, actividades, leads, emails y contratos
+            {t("admin.crm.subtitle")}
           </p>
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          <button className={btnPrimary} onClick={() => setCompanyModal({})}>+ Empresa</button>
-          <button className={btnPrimary} onClick={() => setContactModal({})}>+ Contacto</button>
-          <button className={btnPrimary} onClick={() => setDealModal({})}>+ Deal</button>
-          <button className={btnPrimary} onClick={() => setContractModal({})}>+ Contrato</button>
+          <button className={btnPrimary} onClick={() => setCompanyModal({})}>{t("admin.crm.newCompany")}</button>
+          <button className={btnPrimary} onClick={() => setContactModal({})}>{t("admin.crm.newContact")}</button>
+          <button className={btnPrimary} onClick={() => setDealModal({})}>{t("admin.crm.newDeal")}</button>
+          <button className={btnPrimary} onClick={() => setContractModal({})}>{t("admin.crm.newContract")}</button>
         </div>
       </div>
 
@@ -817,14 +824,14 @@ export default function CrmPanel() {
 
       {error && (
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          <span className="font-semibold">Error:</span>
+          <span className="font-semibold">{t("admin.crm.error")}</span>
           <span className="break-words">{error}</span>
         </div>
       )}
 
       {loading ? (
         <div className="flex justify-center py-10">
-          <span className="text-[#2093c4] font-bold">Cargando CRM…</span>
+          <span className="text-[#2093c4] font-bold">{t("admin.crm.loading")}</span>
         </div>
       ) : (
         <>
@@ -835,16 +842,16 @@ export default function CrmPanel() {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar por nombre, email, teléfono o etiqueta…"
+                  placeholder={t("admin.crm.contactsTab.searchPh")}
                   className={inputCls + " sm:max-w-sm"}
                 />
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">{filteredContacts.length} contactos</span>
+                  <span className="text-xs text-gray-400">{filteredContacts.length} {t("admin.crm.contacts")}</span>
                   <button onClick={handleExportContacts} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
-                    Exportar CSV
+                    {t("admin.crm.exportCsv")}
                   </button>
                   <button onClick={() => contactsFileRef.current?.click()} disabled={importing} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer disabled:opacity-50">
-                    {importing ? "Importando…" : "Importar CSV"}
+                    {importing ? t("admin.crm.importing") : t("admin.crm.importCsv")}
                   </button>
                   <input
                     ref={contactsFileRef}
@@ -859,11 +866,11 @@ export default function CrmPanel() {
                 <table className="w-full min-w-[720px] text-left text-sm">
                   <thead className="bg-[#18181b] text-gray-400 border-b border-white/10">
                     <tr>
-                      <th className="px-4 py-3 font-medium">Contacto</th>
-                      <th className="px-4 py-3 font-medium">Empresa</th>
-                      <th className="px-4 py-3 font-medium">Email / Teléfono</th>
-                      <th className="px-4 py-3 font-medium">Etiquetas</th>
-                      <th className="px-4 py-3 font-medium">Origen</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.contactsTab.thContact")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.contactsTab.thCompany")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.contactsTab.thEmailPhone")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.contactsTab.thTags")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.contactsTab.thOrigin")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -939,13 +946,13 @@ export default function CrmPanel() {
           {subtab === "companies" && (
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <span className="text-xs text-gray-400">{companies.length} empresas</span>
+                <span className="text-xs text-gray-400">{companies.length} {t("admin.crm.companiesTab.count")}</span>
                 <div className="flex items-center gap-2">
                   <button onClick={handleExportCompanies} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
-                    Exportar CSV
+                    {t("admin.crm.exportCsv")}
                   </button>
                   <button onClick={() => companiesFileRef.current?.click()} disabled={importing} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer disabled:opacity-50">
-                    {importing ? "Importando…" : "Importar CSV"}
+                    {importing ? t("admin.crm.importing") : t("admin.crm.importCsv")}
                   </button>
                   <input
                     ref={companiesFileRef}
@@ -960,11 +967,11 @@ export default function CrmPanel() {
               <table className="w-full min-w-[680px] text-left text-sm">
                 <thead className="bg-[#18181b] text-gray-400 border-b border-white/10">
                   <tr>
-                    <th className="px-4 py-3 font-medium">Empresa</th>
-                    <th className="px-4 py-3 font-medium">Industria</th>
-                    <th className="px-4 py-3 font-medium">Contactos</th>
-                    <th className="px-4 py-3 font-medium">Deals</th>
-                    <th className="px-4 py-3 font-medium">Dominio</th>
+<th className="px-4 py-3 font-medium">{t("admin.crm.companiesTab.thCompany")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.companiesTab.thIndustry")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.companiesTab.thContacts")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.companiesTab.thDeals")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.companiesTab.thDomain")}</th>
                     <th className="px-4 py-3 font-medium"></th>
                   </tr>
                 </thead>
@@ -1003,7 +1010,7 @@ export default function CrmPanel() {
                   {companies.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                        No hay empresas. Crea una con "+ Empresa" (el logo se obtiene del dominio automáticamente).
+                        {t("admin.crm.companiesTab.empty")}
                       </td>
                     </tr>
                   )}
@@ -1027,7 +1034,7 @@ export default function CrmPanel() {
                     <button
                       onClick={() => setDealModal({ stage_id: st.id })}
                       className="text-gray-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-white/10 cursor-pointer text-sm"
-                      title="Nuevo deal en esta etapa"
+                      title={t("admin.crm.pipeline.newHere")}
                     >
                       +
                     </button>
@@ -1064,31 +1071,31 @@ export default function CrmPanel() {
                             </span>
                           </div>
                           {d.expected_close_date && (
-                            <p className="text-[10px] text-gray-500">Cierre: {fmtDate(d.expected_close_date)}</p>
+                            <p className="text-[10px] text-gray-500">{t("admin.crm.pipeline.close")} {fmtDate(d.expected_close_date)}</p>
                           )}
                         </div>
                         <div className="mt-2 flex gap-1">
                           {stages
                             .filter((s2: any) => s2.position === st.position - 1)
                             .map((s2: any) => (
-                              <button key={s2.id} onClick={(e) => { e.stopPropagation(); handleMoveStage(d.id, s2.id); }} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-300 hover:bg-white/15 cursor-pointer" title={`Mover a ${s2.name}`}>←</button>
+                              <button key={s2.id} onClick={(e) => { e.stopPropagation(); handleMoveStage(d.id, s2.id); }} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-300 hover:bg-white/15 cursor-pointer" title={`${t("admin.crm.pipeline.moveTo")} ${s2.name}`}>←</button>
                             ))}
                           {stages
                             .filter((s2: any) => s2.position === st.position + 1)
                             .map((s2: any) => (
-                              <button key={s2.id} onClick={(e) => { e.stopPropagation(); handleMoveStage(d.id, s2.id); }} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-300 hover:bg-white/15 cursor-pointer" title={`Mover a ${s2.name}`}>→</button>
+                              <button key={s2.id} onClick={(e) => { e.stopPropagation(); handleMoveStage(d.id, s2.id); }} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-300 hover:bg-white/15 cursor-pointer" title={`${t("admin.crm.pipeline.moveTo")} ${s2.name}`}>→</button>
                             ))}
                         </div>
                       </div>
                     ))}
                     {(dealsByStage[st.id] || []).length === 0 && (
-                      <p className="text-center text-[11px] text-gray-600 py-3">Sin deals</p>
+                      <p className="text-center text-[11px] text-gray-600 py-3">{t("admin.crm.pipeline.noDeals")}</p>
                     )}
                   </div>
                 </div>
               ))}
               {stages.length === 0 && (
-                <div className="w-full text-center py-8 text-gray-500">No hay etapas configuradas.</div>
+                <div className="w-full text-center py-8 text-gray-500">{t("admin.crm.pipeline.noStages")}</div>
               )}
             </div>
           )}
@@ -1102,22 +1109,22 @@ export default function CrmPanel() {
                   onChange={(e) => setActFilterContact(e.target.value)}
                   className={inputCls + " sm:max-w-xs"}
                 >
-                  <option value="">Todas las personas</option>
+                  <option value="">{t("admin.crm.activitiesTab.allPeople")}</option>
                   {contacts.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.first_name} {c.last_name || ""}</option>
                   ))}
                 </select>
-                <button className={btnPrimary} onClick={() => setActivityModal({})}>+ Actividad</button>
+                <button className={btnPrimary} onClick={() => setActivityModal({})}>{t("admin.crm.activitiesTab.addActivity")}</button>
               </div>
               <div className="overflow-x-auto rounded-lg border border-white/10">
                 <table className="w-full min-w-[700px] text-left text-sm">
                   <thead className="bg-[#18181b] text-gray-400 border-b border-white/10">
                     <tr>
-                      <th className="px-4 py-3 font-medium">Tipo</th>
-                      <th className="px-4 py-3 font-medium">Asunto</th>
-                      <th className="px-4 py-3 font-medium">Persona</th>
-                      <th className="px-4 py-3 font-medium">Fecha límite</th>
-                      <th className="px-4 py-3 font-medium text-center">Hecho</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.activitiesTab.thType")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.activitiesTab.thSubject")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.activitiesTab.thPerson")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.crm.activitiesTab.thDue")}</th>
+                      <th className="px-4 py-3 font-medium text-center">{t("admin.crm.activitiesTab.thDone")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -1131,7 +1138,7 @@ export default function CrmPanel() {
                             : a.type === "meeting" ? "bg-fuchsia-500/15 text-fuchsia-400"
                             : "bg-white/5 text-gray-300"
                           }`}>
-                            {TYPE_LABEL[a.type] || a.type}
+                            {typeLabel(a.type)}
                           </span>
                         </td>
                         <td className="px-4 py-3 min-w-[220px]">
@@ -1182,9 +1189,9 @@ export default function CrmPanel() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="rounded-lg border border-white/10 bg-[#0f1113]">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                    <h3 className="font-semibold text-sm">Leads</h3>
+                    <h3 className="font-semibold text-sm">{t("admin.crm.leadsTab.title")}</h3>
                     <span className="text-xs text-gray-400">
-                      {leadsData.converted} convertidos · {leadsData.items?.length - (leadsData.converted || 0)} por tratar
+                      {leadsData.converted} {t("admin.crm.leadsTab.converted")} · {leadsData.items?.length - (leadsData.converted || 0)} {t("admin.crm.leadsTab.pending")}
                     </span>
                   </div>
                   <div className="divide-y divide-white/5 max-h-[420px] overflow-y-auto">
@@ -1193,36 +1200,36 @@ export default function CrmPanel() {
                         <div className="min-w-0 mr-2">
                           <p className="text-sm text-gray-200 truncate">
                             <span className="px-1.5 py-0.5 text-[10px] rounded bg-white/10 mr-1.5 capitalize">{l.source}</span>
-                            {l.name || l.email || l.topic || "Lead sin datos"}
+                            {l.name || l.email || l.topic || t("admin.crm.leadsTab.noName")}
                           </p>
                           {l.email && <p className="text-[11px] text-gray-500 truncate">{l.email}</p>}
                           {l.topic && !l.name && !l.email && <p className="text-[11px] text-gray-500 truncate">{l.topic}</p>}
                           <p className="text-[10px] text-gray-600">{fmtDate(l.created_at)}</p>
                         </div>
                         {l.converted_at ? (
-                          <span className="px-2 py-1 text-[11px] rounded bg-green-500/10 text-green-400 border border-green-500/30 shrink-0">En CRM</span>
+                          <span className="px-2 py-1 text-[11px] rounded bg-green-500/10 text-green-400 border border-green-500/30 shrink-0">{t("admin.crm.leadsTab.inCrm")}</span>
                         ) : (
                           <button
                             onClick={() => handleConvertLead(l.id)}
                             disabled={convertingLeadId === l.id}
                             className="px-3 py-1.5 text-[11px] rounded bg-[#8c52ff]/20 text-[#c4b5fd] border border-[#8c52ff]/40 hover:bg-[#8c52ff]/30 cursor-pointer disabled:opacity-50 shrink-0 font-semibold"
                           >
-                            {convertingLeadId === l.id ? "Convirtiendo…" : "+ Contacto"}
+                            {convertingLeadId === l.id ? t("admin.crm.leadsTab.converting") : t("admin.crm.leadsTab.toContact")}
                           </button>
                         )}
                       </div>
                     ))}
                     {(leadsData.items || []).length === 0 && (
-                      <p className="px-4 py-8 text-center text-gray-500 text-sm">Sin leads todavía</p>
+                      <p className="px-4 py-8 text-center text-gray-500 text-sm">{t("admin.crm.leadsTab.noLeads")}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="rounded-lg border border-white/10 bg-[#0f1113]">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                    <h3 className="font-semibold text-sm">Visitantes del portfolio</h3>
+                    <h3 className="font-semibold text-sm">{t("admin.crm.leadsTab.visitorsTitle")}</h3>
                     <span className="text-xs text-gray-400">
-                      <span className="text-white font-semibold">{visitorsData.today}</span> hoy · {visitorsData.total} total
+                      <span className="text-white font-semibold">{visitorsData.today}</span> {t("admin.crm.leadsTab.today")} · {visitorsData.total} {t("admin.crm.leadsTab.total")}
                     </span>
                   </div>
                   <div className="divide-y divide-white/5 max-h-[420px] overflow-y-auto">
@@ -1230,17 +1237,17 @@ export default function CrmPanel() {
                       <div key={i} className="flex items-center justify-between gap-2 px-4 py-2.5">
                         <div className="min-w-0">
                           <p className="text-sm text-gray-200 font-mono truncate">{v.page || "—"}</p>
-                          {v.referrer && <p className="text-[11px] text-gray-500 truncate">desde {v.referrer}</p>}
+                          {v.referrer && <p className="text-[11px] text-gray-500 truncate">{t("admin.crm.leadsTab.from")} {v.referrer}</p>}
                         </div>
                         <span className="text-[11px] text-gray-500 shrink-0">{fmtDateTime(v.created_at)}</span>
                       </div>
                     ))}
                     {(visitorsData.recent || []).length === 0 && (
-                      <p className="px-4 py-8 text-center text-gray-500 text-sm">Sin visitas registradas</p>
+                      <p className="px-4 py-8 text-center text-gray-500 text-sm">{t("admin.crm.leadsTab.noVisits")}</p>
                     )}
                   </div>
                   <p className="px-4 py-2 text-[10px] text-gray-600 border-t border-white/10">
-                    Una visita por sesión + página + día (dedupe automático).
+                    {t("admin.crm.leadsTab.dedupeNote")}
                   </p>
                 </div>
               </div>
@@ -1252,51 +1259,51 @@ export default function CrmPanel() {
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-xs text-gray-400">
-                  Plantillas con placeholders —{" "}
+                  {t("admin.crm.emailsTab.hint")}{" "}
                   <code className="text-[#7cc7e0]">{"{{contact.first_name}}"}</code>,{" "}
                   <code className="text-[#7cc7e0]">{"{{company.name}}"}</code>,{" "}
                   <code className="text-[#7cc7e0]">{"{{deal.title}}"}</code>,{" "}
                   <code className="text-[#7cc7e0]">{"{{deal.value}}"}</code>…
                 </p>
-                <button className={btnPrimary} onClick={() => setTemplateModal({})}>+ Plantilla</button>
+                <button className={btnPrimary} onClick={() => setTemplateModal({})}>{t("admin.crm.emailsTab.newTemplate")}</button>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-[#0f1113]">
                 <div className="px-4 py-3 border-b border-white/10">
-                  <h3 className="font-semibold text-sm">Plantillas</h3>
+                  <h3 className="font-semibold text-sm">{t("admin.crm.emailsTab.templates")}</h3>
                 </div>
                 <div className="divide-y divide-white/5">
                   {(emailTemplates || []).map((t: any) => (
                     <div key={t.id} className="flex items-center justify-between gap-2 px-4 py-2.5 hover:bg-white/5">
                       <div className="min-w-0 mr-2">
                         <p className="text-sm text-gray-200 truncate">
-                          <span className="px-1.5 py-0.5 text-[10px] rounded bg-white/10 mr-1.5">{t.is_active ? "activa" : "pausada"}</span>
+                          <span className="px-1.5 py-0.5 text-[10px] rounded bg-white/10 mr-1.5">{t.is_active ? t("admin.crm.emailsTab.active") : t("admin.crm.emailsTab.paused")}</span>
                           {t.name}
                         </p>
                         <p className="text-[11px] text-gray-500 truncate">{t.subject}</p>
                       </div>
                       <div className="flex gap-1.5 shrink-0">
                         <button onClick={() => setTemplateModal({ edit: t })} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
-                          Editar
+                          {t("admin.crm.edit")}
                         </button>
                         <button onClick={() => setSendModal({ contact_id: "" })} className="text-[11px] px-2 py-1 rounded bg-[#8c52ff]/20 border border-[#8c52ff]/40 text-[#c4b5fd] hover:bg-[#8c52ff]/30 cursor-pointer">
-                          Enviar
+                          {t("admin.crm.send")}
                         </button>
                         <button onClick={() => handleDeleteTemplate(t.id)} className="text-[11px] px-2 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer">
-                          Eliminar
+                          {t("admin.crm.delete")}
                         </button>
                       </div>
                     </div>
                   ))}
                   {(emailTemplates || []).length === 0 && (
-                    <p className="px-4 py-8 text-center text-gray-500 text-sm">Sin plantillas. Crea una para poder enviar emails.</p>
+                    <p className="px-4 py-8 text-center text-gray-500 text-sm">{t("admin.crm.emailsTab.noTemplates")}</p>
                   )}
                 </div>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-[#0f1113]">
                 <div className="px-4 py-3 border-b border-white/10">
-                  <h3 className="font-semibold text-sm">Envíos recientes</h3>
+                  <h3 className="font-semibold text-sm">{t("admin.crm.emailsTab.recent")}</h3>
                 </div>
                 <div className="divide-y divide-white/5">
                   {(emailLog || []).map((e: any) => {
@@ -1305,7 +1312,7 @@ export default function CrmPanel() {
                       <div key={e.id} className="flex items-center justify-between gap-2 px-4 py-2.5">
                         <div className="min-w-0 mr-2">
                           <p className="text-sm text-gray-200 truncate">
-                            {e.subject || "(sin asunto)"}
+                            {e.subject || `(${t("admin.crm.emailsTab.noSubject")})`}
                           </p>
                           <p className="text-[11px] text-gray-500 truncate">
                             → {e.to_email}
@@ -1319,7 +1326,7 @@ export default function CrmPanel() {
                     );
                   })}
                   {(emailLog || []).length === 0 && (
-                    <p className="px-4 py-8 text-center text-gray-500 text-sm">Sin envíos todavía.</p>
+                    <p className="px-4 py-8 text-center text-gray-500 text-sm">{t("admin.crm.emailsTab.noSends")}</p>
                   )}
                 </div>
               </div>
@@ -1330,13 +1337,12 @@ export default function CrmPanel() {
           {subtab === "contracts" && (
             <div className="space-y-4">
               <p className="text-xs text-gray-400">
-                Contratos con link público protegido por contraseña. Al firmarlo ambas
-                partes queda descargable en PDF.
+                {t("admin.crm.contractsTab.desc")}
               </p>
               {contractPassword && (
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
                   <span className="text-gray-300">
-                    Contraseña de acceso:{" "}
+                    {t("admin.crm.contractsTab.pwdLabel")}{" "}
                     <span className="font-mono font-bold text-white select-all tracking-widest">{contractPassword}</span>
                   </span>
                   <button
@@ -1346,7 +1352,7 @@ export default function CrmPanel() {
                     }}
                     className="px-3 py-1 text-[11px] rounded bg-white/10 hover:bg-white/20 cursor-pointer"
                   >
-                    Copiada — cerrar
+                    {t("admin.crm.contractsTab.copiedClose")}
                   </button>
                 </div>
               )}
@@ -1354,12 +1360,12 @@ export default function CrmPanel() {
                 <table className="w-full min-w-[900px] text-left text-sm">
                   <thead className="bg-[#18181b] text-gray-400 border-b border-white/10">
                     <tr>
-                      <th className="px-4 py-2.5 font-semibold">Contrato</th>
-                      <th className="px-4 py-2.5 font-semibold">Cliente</th>
-                      <th className="px-4 py-2.5 font-semibold">Importe</th>
-                      <th className="px-4 py-2.5 font-semibold">Estado</th>
-                      <th className="px-4 py-2.5 font-semibold">Enlace</th>
-                      <th className="px-4 py-2.5 font-semibold">Acciones</th>
+                      <th className="px-4 py-2.5 font-semibold">{t("admin.crm.contractsTab.thContract")}</th>
+                      <th className="px-4 py-2.5 font-semibold">{t("admin.crm.contractsTab.thClient")}</th>
+                      <th className="px-4 py-2.5 font-semibold">{t("admin.crm.contractsTab.thAmount")}</th>
+                      <th className="px-4 py-2.5 font-semibold">{t("admin.crm.contractsTab.thStatus")}</th>
+                      <th className="px-4 py-2.5 font-semibold">{t("admin.crm.contractsTab.thLink")}</th>
+                      <th className="px-4 py-2.5 font-semibold">{t("admin.crm.contractsTab.thActions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -1367,7 +1373,12 @@ export default function CrmPanel() {
                       <tr key={c.id} className="hover:bg-white/5">
                         <td className="px-4 py-2.5">
                           <span className="font-medium">{c.title}</span>
-                          <span className="block text-[10px] text-gray-500">Creado {fmtDate(c.created_at)}</span>
+                          <span className="block text-[10px] text-gray-500">{t("admin.crm.contractsTab.created")} {fmtDate(c.created_at)}</span>
+                          {(c.failed_24h || 0) > 0 && (
+                            <span className="block text-[10px] text-red-400" title={t("admin.crm.contractsTab.failedTip")}>
+                              ⚠ {c.failed_24h} {t("admin.crm.contractsTab.failedTip")}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-2.5 text-gray-300">
                           {c.client_name || c.contact?.first_name || "—"}
@@ -1380,35 +1391,35 @@ export default function CrmPanel() {
                         </td>
                         <td className="px-4 py-2.5">
                           {c.signed_at ? (
-                            <span className="px-2 py-0.5 text-[11px] rounded bg-green-500/10 text-green-400 border border-green-500/30">Firmado ✓</span>
+                            <span className="px-2 py-0.5 text-[11px] rounded bg-green-500/10 text-green-400 border border-green-500/30">{t("admin.crm.contractsTab.signed")}</span>
                           ) : c.client_signed_at || c.provider_signed_at ? (
                             <span className="px-2 py-0.5 text-[11px] rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                              Firma parcial
+                              {t("admin.crm.contractsTab.partial")}
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 text-[11px] rounded bg-white/10 text-gray-300 border border-white/10">Enviado</span>
+                            <span className="px-2 py-0.5 text-[11px] rounded bg-white/10 text-gray-300 border border-white/10">{t("admin.crm.contractsTab.sent")}</span>
                           )}
                         </td>
                         <td className="px-4 py-2.5">
                           <button
                             onClick={() => {
                               navigator.clipboard?.writeText(`${window.location.origin}/contracts/${c.slug}`);
-                              alert("Enlace copiado");
+                              alert(t("admin.crm.linkCopied"));
                             }}
                             className="text-[11px] px-2 py-1 rounded bg-[#8c52ff]/20 border border-[#8c52ff]/40 text-[#c4b5fd] hover:bg-[#8c52ff]/30 cursor-pointer"
                           >
-                            Copiar link
+                            {t("admin.crm.contractsTab.copyLink")}
                           </button>
                         </td>
                         <td className="px-4 py-2.5">
                           <div className="flex gap-1.5 flex-wrap">
                             <button onClick={() => handleSignProvider(c)} disabled={!!c.provider_signed_at} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer disabled:opacity-40">
-                              {c.provider_signed_at ? "Firmado" : "Firmar"}
+                              {c.provider_signed_at ? t("admin.crm.contractsTab.signedBtn") : t("admin.crm.contractsTab.sign")}
                             </button>
-                            <button onClick={() => handleRegenPassword(c)} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">Clave</button>
-                            <button onClick={() => setContractModal({ edit: c })} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">Editar</button>
+                            <button onClick={() => handleRegenPassword(c)} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">{t("admin.crm.contractsTab.key")}</button>
+                            <button onClick={() => setContractModal({ edit: c })} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">{t("admin.crm.edit")}</button>
                             <button onClick={() => handleDeleteContract(c.id)} disabled={!!c.signed_at} className="text-[11px] px-2 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer disabled:opacity-40">
-                              Eliminar
+                              {t("admin.crm.delete")}
                             </button>
                           </div>
                         </td>
@@ -1417,7 +1428,7 @@ export default function CrmPanel() {
                     {(contracts || []).length === 0 && (
                       <tr>
                         <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                          Sin contratos.
+                          {t("admin.crm.contractsTab.noContracts")}
                         </td>
                       </tr>
                     )}
@@ -1430,47 +1441,47 @@ export default function CrmPanel() {
           {/* ============ MODAL CONTACTO ============ */}
       <Modal
         open={!!contactModal}
-        title={contactModal?.edit ? "Editar contacto" : "Nuevo contacto"}
+        title={contactModal?.edit ? t("admin.crm.contactModal.edit") : t("admin.crm.contactModal.new")}
         onClose={() => setContactModal(null)}
       >
         <form onSubmit={handleSaveContact} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Nombre *">
-              <input name="first_name" required defaultValue={contactModal?.edit?.first_name || ""} className={inputCls} placeholder="Nombre" />
+            <Field label={t("admin.crm.contactModal.firstName")}>
+              <input name="first_name" required defaultValue={contactModal?.edit?.first_name || ""} className={inputCls} placeholder={t("admin.crm.contactModal.firstNamePh")} />
             </Field>
-            <Field label="Apellido">
-              <input name="last_name" defaultValue={contactModal?.edit?.last_name || ""} className={inputCls} placeholder="Apellido" />
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Email">
-              <input name="email" type="email" defaultValue={contactModal?.edit?.email || ""} className={inputCls} placeholder="correo@dominio.com" />
-            </Field>
-            <Field label="Teléfono">
-              <input name="phone" defaultValue={contactModal?.edit?.phone || ""} className={inputCls} placeholder="+57 …" />
+            <Field label={t("admin.crm.contactModal.lastName")}>
+              <input name="last_name" defaultValue={contactModal?.edit?.last_name || ""} className={inputCls} placeholder={t("admin.crm.contactModal.lastNamePh")} />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Empresa">
+            <Field label={t("admin.crm.contactModal.email")}>
+              <input name="email" type="email" defaultValue={contactModal?.edit?.email || ""} className={inputCls} placeholder={t("admin.crm.contactModal.emailPh")} />
+            </Field>
+            <Field label={t("admin.crm.contactModal.phone")}>
+              <input name="phone" defaultValue={contactModal?.edit?.phone || ""} className={inputCls} placeholder={t("admin.crm.contactModal.phonePh")} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("admin.crm.contactModal.company")}>
               <select name="company_id" defaultValue={contactModal?.edit?.company_id || ""} className={inputCls}>
-                <option value="">Sin empresa</option>
+                <option value="">{t("admin.crm.contactModal.noCompany")}</option>
                 {companies.map((c: any) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Origen">
+            <Field label={t("admin.crm.contactModal.origin")}>
               <select name="source" defaultValue={contactModal?.edit?.source || "manual"} className={inputCls}>
-                <option value="manual">Manual</option>
-                <option value="tally">Tally</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="portfolio">Portfolio</option>
+                <option value="manual">{t("admin.crm.contactModal.srcManual")}</option>
+                <option value="tally">{t("admin.crm.contactModal.srcTally")}</option>
+                <option value="whatsapp">{t("admin.crm.contactModal.srcWhatsapp")}</option>
+                <option value="portfolio">{t("admin.crm.contactModal.srcPortfolio")}</option>
               </select>
             </Field>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setContactModal(null)} className={btnGhost}>Cancelar</button>
-            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Guardando…" : "Guardar"}</button>
+            <button type="button" onClick={() => setContactModal(null)} className={btnGhost}>{t("admin.crm.cancel")}</button>
+            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? t("admin.crm.saving") : t("admin.crm.save")}</button>
           </div>
         </form>
       </Modal>
@@ -1478,33 +1489,33 @@ export default function CrmPanel() {
       {/* ============ MODAL EMPRESA ============ */}
       <Modal
         open={!!companyModal}
-        title={companyModal?.edit ? "Editar empresa" : "Nueva empresa"}
+        title={companyModal?.edit ? t("admin.crm.companyModal.edit") : t("admin.crm.companyModal.new")}
         onClose={() => setCompanyModal(null)}
       >
         <form onSubmit={handleSaveCompany} className="space-y-3">
-          <Field label="Nombre *">
-            <input name="name" required defaultValue={companyModal?.edit?.name || ""} className={inputCls} placeholder="Nombre de la empresa" />
+          <Field label={t("admin.crm.companyModal.name")}>
+            <input name="name" required defaultValue={companyModal?.edit?.name || ""} className={inputCls} placeholder={t("admin.crm.companyModal.namePh")} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Dominio (obtiene el logo)">
-              <input name="domain" defaultValue={companyModal?.edit?.domain || ""} className={inputCls} placeholder="dominio.com" />
+            <Field label={t("admin.crm.companyModal.domain")}>
+              <input name="domain" defaultValue={companyModal?.edit?.domain || ""} className={inputCls} placeholder={t("admin.crm.companyModal.domainPh")} />
             </Field>
-            <Field label="Industria">
-              <input name="industry" defaultValue={companyModal?.edit?.industry || ""} className={inputCls} placeholder="Ej: SaaS, Desarrollo…" />
+            <Field label={t("admin.crm.companyModal.industry")}>
+              <input name="industry" defaultValue={companyModal?.edit?.industry || ""} className={inputCls} placeholder={t("admin.crm.companyModal.industryPh")} />
             </Field>
           </div>
-          <Field label="Notas">
-            <textarea name="notes" rows={3} defaultValue={companyModal?.edit?.notes || ""} className={inputCls} placeholder="Detalles/contexto" />
+          <Field label={t("admin.crm.companyModal.notes")}>
+            <textarea name="notes" rows={3} defaultValue={companyModal?.edit?.notes || ""} className={inputCls} placeholder={t("admin.crm.companyModal.notesPh")} />
           </Field>
           {companyModal?.edit?.logo_url && (
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <Avatar url={companyModal.edit.logo_url} name={companyModal.edit.name} className="h-6 w-6 text-[10px]" />
-              Logo actual (se actualiza automáticamente al cambiar el dominio)
+              {t("admin.crm.companyModal.logoNote")}
             </div>
           )}
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setCompanyModal(null)} className={btnGhost}>Cancelar</button>
-            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Guardando…" : "Guardar"}</button>
+            <button type="button" onClick={() => setCompanyModal(null)} className={btnGhost}>{t("admin.crm.cancel")}</button>
+            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? t("admin.crm.saving") : t("admin.crm.save")}</button>
           </div>
         </form>
       </Modal>
@@ -1512,32 +1523,32 @@ export default function CrmPanel() {
       {/* ============ MODAL DEAL ============ */}
       <Modal
         open={!!dealModal}
-        title={dealModal?.edit ? "Editar deal" : "Nuevo deal"}
+        title={dealModal?.edit ? t("admin.crm.dealModal.edit") : t("admin.crm.dealModal.new")}
         onClose={() => setDealModal(null)}
       >
         <form onSubmit={handleSaveDeal} className="space-y-3">
-          <Field label="Título *">
-            <input name="title" required defaultValue={dealModal?.edit?.title || ""} className={inputCls} placeholder="Ej: Web corporativa" />
+          <Field label={t("admin.crm.dealModal.title")}>
+            <input name="title" required defaultValue={dealModal?.edit?.title || ""} className={inputCls} placeholder={t("admin.crm.dealModal.titlePh")} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Contacto">
+            <Field label={t("admin.crm.dealModal.contact")}>
               <select name="contact_id" defaultValue={dealModal?.edit?.contact_id || ""} className={inputCls}>
-                <option value="">Sin contacto</option>
+                <option value="">{t("admin.crm.dealModal.noContact")}</option>
                 {contacts.map((c: any) => (
                   <option key={c.id} value={c.id}>{c.first_name} {c.last_name || ""}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Empresa">
+            <Field label={t("admin.crm.dealModal.company")}>
               <select name="company_id" defaultValue={dealModal?.edit?.company_id || ""} className={inputCls}>
-                <option value="">Sin empresa</option>
+                <option value="">{t("admin.crm.dealModal.noCompany")}</option>
                 {companies.map((c: any) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </Field>
           </div>
-          <Field label="Etapa">
+          <Field label={t("admin.crm.dealModal.stage")}>
             <select name="stage_id" defaultValue={dealModal?.edit?.stage_id || dealModal?.stage_id || ""} className={inputCls}>
               {(stages || []).map((sg: any) => (
                 <option key={sg.id} value={sg.id}>{sg.name}</option>
@@ -1545,10 +1556,10 @@ export default function CrmPanel() {
             </select>
           </Field>
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Valor">
+            <Field label={t("admin.crm.dealModal.value")}>
               <input name="value" type="number" step="0.01" defaultValue={dealModal?.edit?.value ?? 0} className={inputCls} />
             </Field>
-            <Field label="Moneda">
+            <Field label={t("admin.crm.dealModal.currency")}>
               <select name="currency" defaultValue={dealModal?.edit?.currency || "COP"} className={inputCls}>
                 <option>COP</option>
                 <option>USD</option>
@@ -1556,16 +1567,16 @@ export default function CrmPanel() {
                 <option>MXN</option>
               </select>
             </Field>
-            <Field label="Prob. %">
+            <Field label={t("admin.crm.dealModal.prob")}>
               <input name="probability" type="number" min="0" max="100" defaultValue={dealModal?.edit?.probability ?? 10} className={inputCls} />
             </Field>
           </div>
-          <Field label="Cierre esperado">
+          <Field label={t("admin.crm.dealModal.closeDate")}>
             <input name="expected_close_date" type="date" defaultValue={dealModal?.edit?.expected_close_date || ""} className={inputCls} />
           </Field>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setDealModal(null)} className={btnGhost}>Cancelar</button>
-            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Guardando…" : "Guardar"}</button>
+            <button type="button" onClick={() => setDealModal(null)} className={btnGhost}>{t("admin.crm.cancel")}</button>
+            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? t("admin.crm.saving") : t("admin.crm.save")}</button>
           </div>
         </form>
       </Modal>
@@ -1573,51 +1584,51 @@ export default function CrmPanel() {
       {/* ============ MODAL ACTIVIDAD ============ */}
       <Modal
         open={!!activityModal}
-        title={activityModal?.edit ? "Editar actividad" : "Nueva actividad"}
+        title={activityModal?.edit ? t("admin.crm.activityModal.edit") : t("admin.crm.activityModal.new")}
         onClose={() => setActivityModal(null)}
       >
         <form onSubmit={handleSaveActivity} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Tipo">
+            <Field label={t("admin.crm.activityModal.type")}>
               <select name="type" defaultValue={activityModal?.edit?.type || "note"} className={inputCls}>
-                <option value="note">Nota</option>
-                <option value="email">Email</option>
-                <option value="call">Llamada</option>
-                <option value="task">Tarea</option>
-                <option value="meeting">Reunión</option>
+                <option value="note">{t("admin.crm.activityModal.typeNote")}</option>
+                <option value="email">{t("admin.crm.activityModal.typeEmail")}</option>
+                <option value="call">{t("admin.crm.activityModal.typeCall")}</option>
+                <option value="task">{t("admin.crm.activityModal.typeTask")}</option>
+                <option value="meeting">{t("admin.crm.activityModal.typeMeeting")}</option>
               </select>
             </Field>
-            <Field label="Fecha límite">
+            <Field label={t("admin.crm.activityModal.due")}>
               <input name="due_date" type="date" defaultValue={activityModal?.edit?.due_date || ""} className={inputCls} />
             </Field>
           </div>
-          <Field label="Asunto *">
-            <input name="subject" required defaultValue={activityModal?.edit?.subject || ""} className={inputCls} placeholder="Asunto" />
+          <Field label={t("admin.crm.activityModal.subject")}>
+            <input name="subject" required defaultValue={activityModal?.edit?.subject || ""} className={inputCls} placeholder={t("admin.crm.activityModal.subjectPh")} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Persona">
+            <Field label={t("admin.crm.activityModal.person")}>
               <select name="contact_id" defaultValue={activityModal?.edit?.contact_id || ""} className={inputCls}>
-                <option value="">Sin persona</option>
+                <option value="">{t("admin.crm.activityModal.noPerson")}</option>
                 {contacts.map((c: any) => (
                   <option key={c.id} value={c.id}>{c.first_name} {c.last_name || ""}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Deal">
+            <Field label={t("admin.crm.activityModal.deal")}>
               <select name="deal_id" defaultValue={activityModal?.edit?.deal_id || ""} className={inputCls}>
-                <option value="">Sin deal</option>
+                <option value="">{t("admin.crm.activityModal.noDeal")}</option>
                 {deals.map((d: any) => (
                   <option key={d.id} value={d.id}>{d.title}</option>
                 ))}
               </select>
             </Field>
           </div>
-          <Field label="Detalle">
-            <textarea name="body" rows={3} defaultValue={activityModal?.edit?.body || ""} className={inputCls} placeholder="Notas / seguimiento" />
+          <Field label={t("admin.crm.activityModal.detail")}>
+            <textarea name="body" rows={3} defaultValue={activityModal?.edit?.body || ""} className={inputCls} placeholder={t("admin.crm.activityModal.detailPh")} />
           </Field>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setActivityModal(null)} className={btnGhost}>Cancelar</button>
-            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Guardando…" : "Guardar"}</button>
+            <button type="button" onClick={() => setActivityModal(null)} className={btnGhost}>{t("admin.crm.cancel")}</button>
+            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? t("admin.crm.saving") : t("admin.crm.save")}</button>
           </div>
         </form>
       </Modal>
@@ -1629,8 +1640,8 @@ export default function CrmPanel() {
             <div className="flex items-center gap-3">
               <Avatar url={detailContact.photo_url} name={`${detailContact.first_name} ${detailContact.last_name || ""}`} className="h-14 w-14 text-xl" />
               <div className="min-w-0">
-                <p className="text-sm text-gray-400 break-all">{detailContact.email || "Sin email"}</p>
-                <p className="text-sm text-gray-400">{detailContact.phone || "Sin teléfono"}</p>
+                <p className="text-sm text-gray-400 break-all">{detailContact.email || t("admin.crm.contactDetail.noEmail")}</p>
+                <p className="text-sm text-gray-400">{detailContact.phone || t("admin.crm.contactDetail.noPhone")}</p>
                 {detailContact.company && (
                   <div className="flex items-center gap-1.5 mt-1">
                     <Avatar url={detailContact.company.logo_url} name={detailContact.company.name} className="h-5 w-5 text-[9px]" />
@@ -1650,7 +1661,7 @@ export default function CrmPanel() {
               <p className="text-sm text-gray-300 whitespace-pre-line border-t border-white/10 pt-3">{detailContact.notes}</p>
             )}
             <div className="border-t border-white/10 pt-3">
-              <h4 className="text-sm font-semibold mb-2">Deals</h4>
+              <h4 className="text-sm font-semibold mb-2">{t("admin.crm.contactDetail.deals")}</h4>
               {deals.filter((d: any) => d.contact_id === detailContact.id).map((d: any) => (
                 <div key={d.id} className="flex items-center justify-between text-sm py-1.5">
                   <span className="flex items-center gap-2">
@@ -1661,28 +1672,28 @@ export default function CrmPanel() {
                 </div>
               ))}
               {deals.filter((d: any) => d.contact_id === detailContact.id).length === 0 && (
-                <p className="text-xs text-gray-500">Sin deals asociados.</p>
+                <p className="text-xs text-gray-500">{t("admin.crm.contactDetail.noDeals")}</p>
               )}
             </div>
             <div className="border-t border-white/10 pt-3">
-              <h4 className="text-sm font-semibold mb-2">Actividades</h4>
+              <h4 className="text-sm font-semibold mb-2">{t("admin.crm.contactDetail.activities")}</h4>
               <div className="space-y-2 max-h-52 overflow-y-auto">
                 {activities.filter((a: any) => a.contact_id === detailContact.id).map((a: any) => (
                   <div key={a.id} className="text-sm bg-white/5 rounded-md p-2">
-                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-white/10 text-gray-300 mr-1.5">{TYPE_LABEL[a.type] || a.type}</span>
+                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-white/10 text-gray-300 mr-1.5">{typeLabel(a.type)}</span>
                     <span className={a.done ? "line-through text-gray-500" : ""}>{a.subject}</span>
                     <p className="text-[11px] text-gray-500 mt-0.5">{fmtDateTime(a.created_at)}</p>
                   </div>
                 ))}
                 {activities.filter((a: any) => a.contact_id === detailContact.id).length === 0 && (
-                  <p className="text-xs text-gray-500">Sin actividades.</p>
+                  <p className="text-xs text-gray-500">{t("admin.crm.contactDetail.noActivities")}</p>
                 )}
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setContactModal({ edit: detailContact })} className={btnPrimary}>Editar</button>
-              <button onClick={() => setActivityModal({ contact_id: detailContact.id })} className={btnPrimary}>+ Actividad</button>
-              <button onClick={() => setSendModal({ contact_id: detailContact.id })} className={btnPrimary}>Enviar email</button>
+              <button onClick={() => setContactModal({ edit: detailContact })} className={btnPrimary}>{t("admin.crm.edit")}</button>
+              <button onClick={() => setActivityModal({ contact_id: detailContact.id })} className={btnPrimary}>{t("admin.crm.contactDetail.addActivity")}</button>
+              <button onClick={() => setSendModal({ contact_id: detailContact.id })} className={btnPrimary}>{t("admin.crm.contactDetail.sendEmail")}</button>
             </div>
           </div>
         )}
@@ -1691,40 +1702,46 @@ export default function CrmPanel() {
       {/* ============ MODAL PLANTILLA ============ */}
       <Modal
         open={!!templateModal}
-        title={templateModal?.edit ? "Editar plantilla" : "Nueva plantilla"}
+        title={templateModal?.edit ? t("admin.crm.templateModal.edit") : t("admin.crm.templateModal.new")}
         onClose={() => setTemplateModal(null)}
       >
         <form onSubmit={handleSaveTemplate} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Nombre *">
-              <input name="name" required defaultValue={templateModal?.edit?.name || ""} className={inputCls} placeholder="Oferta inicial" />
+            <Field label={t("admin.crm.templateModal.name")}>
+              <input name="name" required defaultValue={templateModal?.edit?.name || ""} className={inputCls} placeholder={t("admin.crm.templateModal.namePh")} />
             </Field>
-            <Field label="Estado">
+            <Field label={t("admin.crm.templateModal.status")}>
               <select name="is_active" defaultValue={templateModal?.edit ? (templateModal.edit.is_active ? "true" : "false") : "true"} className={inputCls}>
-                <option value="true">Activa</option>
-                <option value="false">Pausada</option>
+                <option value="true">{t("admin.crm.emailsTab.active")}</option>
+                <option value="false">{t("admin.crm.emailsTab.paused")}</option>
               </select>
             </Field>
           </div>
-          <Field label="Asunto *">
+          <Field label={t("admin.crm.templateModal.subject")}>
             <input name="subject" required defaultValue={templateModal?.edit?.subject || ""} className={inputCls} placeholder="Propuesta de alcance para {{contact.first_name}}" />
           </Field>
-          <Field label="Cuerpo (texto plano, con placeholders)">
+          <Field label={t("admin.crm.templateModal.subjectEn")}>
+            <input name="subject_en" defaultValue={templateModal?.edit?.subject_en || ""} className={inputCls} placeholder="Scope proposal for {{contact.first_name}}" />
+          </Field>
+          <Field label={t("admin.crm.templateModal.body")}>
             <textarea name="body" rows={6} defaultValue={templateModal?.edit?.body || ""} className={inputCls + " font-mono text-xs"} placeholder={"Hola {{contact.first_name}},\n\n…" } />
           </Field>
+          <Field label={t("admin.crm.templateModal.bodyEn")}>
+            <textarea name="body_en" rows={6} defaultValue={templateModal?.edit?.body_en || ""} className={inputCls + " font-mono text-xs"} placeholder={"Hi {{contact.first_name}},\n\n…"} />
+          </Field>
           <p className="text-[10px] text-gray-500">
-            Placeholders disponibles:{" "}
+            {t("admin.crm.templateModal.placeholdersNote")}{" "}
               {"{{contact.first_name}}, {{contact.full_name}}, {{company.name}}, {{deal.title}}, {{deal.value}}"}
           </p>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setTemplateModal(null)} className={btnGhost}>Cancelar</button>
-            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Guardando…" : "Guardar"}</button>
+            <button type="button" onClick={() => setTemplateModal(null)} className={btnGhost}>{t("admin.crm.cancel")}</button>
+            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? t("admin.crm.saving") : t("admin.crm.save")}</button>
           </div>
         </form>
       </Modal>
 
       {/* ============ MODAL ENVÍO DE EMAIL ============ */}
-      <Modal open={!!sendModal} title="Enviar email" onClose={() => setSendModal(null)}>
+      <Modal open={!!sendModal} title={t("admin.crm.sendModal.title")} onClose={() => setSendModal(null)}>
         {sendModal && (
           <SendEmailForm
             contacts={contacts}
@@ -1742,25 +1759,28 @@ export default function CrmPanel() {
       {/* ============ MODAL CONTRATO ============ */}
       <Modal
         open={!!contractModal}
-        title={contractModal?.edit ? "Editar contrato" : "Nuevo contrato"}
+        title={contractModal?.edit ? t("admin.crm.contractModal.edit") : t("admin.crm.contractModal.new")}
         onClose={() => setContractModal(null)}
       >
         <form onSubmit={handleSaveContract} className="space-y-3">
-          <Field label="Título *">
-            <input name="title" required defaultValue={contractModal?.edit?.title || ""} className={inputCls} placeholder="Proyecto web — alcance inicial" />
+          <Field label={t("admin.crm.contractModal.title")}>
+            <input name="title" required defaultValue={contractModal?.edit?.title || ""} className={inputCls} placeholder={t("admin.crm.contractModal.titlePh")} />
+          </Field>
+          <Field label={t("admin.crm.contractModal.titleEn")}>
+            <input name="title_en" defaultValue={contractModal?.edit?.title_en || ""} className={inputCls} placeholder="Website project — initial scope" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Contacto">
+            <Field label={t("admin.crm.contractModal.contact")}>
               <select name="contact_id" defaultValue={contractModal?.edit?.contact_id || contractModal?.edit?.contact?.id || ""} className={inputCls}>
-                <option value="">Sin contacto</option>
+                <option value="">{t("admin.crm.contractModal.noContact")}</option>
                 {contacts.map((c: any) => (
                   <option key={c.id} value={c.id}>{c.first_name} {c.last_name || ""}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Empresa">
+            <Field label={t("admin.crm.contractModal.company")}>
               <select name="company_id" defaultValue={contractModal?.edit?.company_id || contractModal?.edit?.company?.id || ""} className={inputCls}>
-                <option value="">Sin empresa</option>
+                <option value="">{t("admin.crm.contractModal.noCompany")}</option>
                 {companies.map((co: any) => (
                   <option key={co.id} value={co.id}>{co.name}</option>
                 ))}
@@ -1768,32 +1788,35 @@ export default function CrmPanel() {
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Moneda">
+            <Field label={t("admin.crm.contractModal.currency")}>
               <select name="currency" defaultValue={contractModal?.edit?.currency || "EUR"} className={inputCls}>
                 <option value="EUR">EUR — €</option>
                 <option value="USD">USD — $</option>
                 <option value="COP">COP — $</option>
               </select>
             </Field>
-            <Field label="Importe">
+            <Field label={t("admin.crm.contractModal.amount")}>
               <input name="value" type="number" step="0.01" defaultValue={contractModal?.edit?.value ?? ""} className={inputCls} placeholder="0.00" />
             </Field>
           </div>
-          <Field label="Condiciones *">
-            <textarea name="terms" required rows={6} defaultValue={contractModal?.edit?.terms || ""} className={inputCls + " font-mono text-xs"} placeholder={"1. Alcance del proyecto\n2. Plazos\n3. Pagos\n…"} />
+          <Field label={t("admin.crm.contractModal.terms")}>
+            <textarea name="terms" required rows={6} defaultValue={contractModal?.edit?.terms || ""} className={inputCls + " font-mono text-xs"} placeholder={t("admin.crm.contractModal.termsPh")} />
+          </Field>
+          <Field label={t("admin.crm.contractModal.termsEn")}>
+            <textarea name="terms_en" rows={6} defaultValue={contractModal?.edit?.terms_en || ""} className={inputCls + " font-mono text-xs"} placeholder={"1. Scope\n2. Timeline\n3. Payments\n…"} />
           </Field>
           {contractModal?.edit ? (
             <p className="text-[10px] text-gray-500">
-              Editar no cambia la contraseña actual. La firma se gestiona desde la tabla.
+              {t("admin.crm.contractModal.editNote")}
             </p>
           ) : (
             <p className="text-[10px] text-gray-500">
-              Al crear el contrato se genera la contraseña y el enlace público automáticamente.
+              {t("admin.crm.contractModal.createNote")}
             </p>
           )}
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setContractModal(null)} className={btnGhost}>Cancelar</button>
-            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Guardando…" : "Guardar"}</button>
+            <button type="button" onClick={() => setContractModal(null)} className={btnGhost}>{t("admin.crm.cancel")}</button>
+            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? t("admin.crm.saving") : t("admin.crm.save")}</button>
           </div>
         </form>
       </Modal>
@@ -1820,58 +1843,83 @@ function SendEmailForm({
   onClose: () => void;
   renderBody: (t: string | undefined, c?: any, d?: any) => string;
 }) {
+  const { t } = useTranslation();
   const [selContact, setSelContact] = useState(contactId || "");
   const [selTemplate, setSelTemplate] = useState("");
   const [selDeal, setSelDeal] = useState("");
+  const [lang, setLang] = useState<"es" | "en">("es");
 
   const contact = contacts.find((c) => c.id === selContact);
   const deal = deals.find((d) => d.id === selDeal);
-  const template = templates.find((t) => t.id === selTemplate);
+  const template = templates.find((tm) => tm.id === selTemplate);
+  const subjSrc = lang === "en" && template?.subject_en ? template.subject_en : template?.subject;
+  const bodySrc = lang === "en" && template?.body_en ? template.body_en : template?.body;
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <Field label="Contacto *">
+      <Field label={t("admin.crm.sendModal.contact")}>
         <select name="contact_id" required className={inputCls} value={selContact} onChange={(e) => setSelContact(e.target.value)}>
-          <option value="">Selecciona…</option>
+          <option value="">{t("admin.crm.sendModal.select")}</option>
           {contacts.map((c: any) => (
             <option key={c.id} value={c.id}>
-              {c.first_name} {c.last_name || ""} — {c.email || "sin email"}
+              {c.first_name} {c.last_name || ""} — {c.email || t("admin.crm.sendModal.noEmailOpt")}
             </option>
           ))}
         </select>
       </Field>
-      <Field label="Plantilla *">
+      <Field label={t("admin.crm.sendModal.template")}>
         <select name="template_id" required className={inputCls} value={selTemplate} onChange={(e) => setSelTemplate(e.target.value)}>
-          <option value="">Selecciona…</option>
-          {templates.map((t: any) => (
-            <option key={t.id} value={t.id}>{t.is_active ? "" : "[pausada] "}{t.name}</option>
+          <option value="">{t("admin.crm.sendModal.select")}</option>
+          {templates.map((tm: any) => (
+            <option key={tm.id} value={tm.id}>{tm.is_active ? "" : t("admin.crm.sendModal.pausedOpt")}{tm.name}</option>
           ))}
         </select>
       </Field>
-      <Field label="Deal (opcional)">
-        <select name="deal_id" className={inputCls} value={selDeal} onChange={(e) => setSelDeal(e.target.value)}>
-          <option value="">Sin deal</option>
-          {(deals || []).map((d: any) => (
-            <option key={d.id} value={d.id}>{d.title}</option>
-          ))}
-        </select>
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t("admin.crm.sendModal.deal")}>
+          <select name="deal_id" className={inputCls} value={selDeal} onChange={(e) => setSelDeal(e.target.value)}>
+            <option value="">{t("admin.crm.sendModal.noDeal")}</option>
+            {(deals || []).map((d: any) => (
+              <option key={d.id} value={d.id}>{d.title}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("admin.crm.sendModal.lang")}>
+          <div className="flex gap-1.5">
+            {(["es", "en"] as const).map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLang(l)}
+                className={`flex-1 px-2 py-2 text-xs font-semibold rounded-md border cursor-pointer transition-colors ${
+                  lang === l
+                    ? "border-[#8c52ff] bg-[#8c52ff]/20 text-white"
+                    : "border-white/10 bg-white/5 text-gray-400 hover:text-white"
+                }`}
+              >
+                {l === "es" ? "Español" : "English"}
+              </button>
+            ))}
+          </div>
+        </Field>
+      </div>
+      <input type="hidden" name="lang" value={lang} />
       {template && contact?.email && (
         <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-2">
-          <p className="text-xs text-gray-400">Vista previa (con datos del contacto):</p>
-          <p className="text-sm font-semibold break-words">{renderBody(template.subject, contact, deal)}</p>
+          <p className="text-xs text-gray-400">{t("admin.crm.sendModal.preview")}</p>
+          <p className="text-sm font-semibold break-words">{renderBody(subjSrc, contact, deal)}</p>
           <div className="text-[13px] text-gray-300 whitespace-pre-line break-words border-t border-white/10 pt-2">
-            {renderBody(template.body, contact, deal)}
+            {renderBody(bodySrc, contact, deal)}
           </div>
         </div>
       )}
       {template && !contact?.email && (
-        <p className="text-xs text-red-400">El contacto seleccionado no tiene email. Añádelo antes de enviar.</p>
+        <p className="text-xs text-red-400">{t("admin.crm.sendModal.noEmailWarn")}</p>
       )}
       <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
+        <button type="button" onClick={onClose} className={btnGhost}>{t("admin.crm.cancel")}</button>
         <button type="submit" disabled={sending || !template || !contact?.email} className={btnPrimary}>
-          {sending ? "Enviando…" : "Enviar"}
+          {sending ? t("admin.crm.sending") : t("admin.crm.send")}
         </button>
       </div>
     </form>
