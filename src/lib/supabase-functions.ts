@@ -1811,6 +1811,34 @@ export function convertLeadToContact(lead_id: string) {
 export function getCrmVisitors() {
   return invokeCRM({ action: "visitors-list" });
 }
+export function getCrmEmailTemplates() {
+  return invokeCRM({ action: "email-templates-list" });
+}
+export function createCrmEmailTemplate(
+  data: { name: string; subject: string; body: string; is_active?: boolean }
+) {
+  return invokeCRM({ action: "email-templates-create", ...data });
+}
+export function updateCrmEmailTemplate(
+  id: string,
+  data: { name?: string; subject?: string; body?: string; is_active?: boolean }
+) {
+  return invokeCRM({ action: "email-templates-update", id, ...data });
+}
+export function deleteCrmEmailTemplate(id: string) {
+  return invokeCRM({ action: "email-templates-delete", id });
+}
+export function getCrmEmails() {
+  return invokeCRM({ action: "emails-list" });
+}
+export function sendCrmEmail(params: {
+  contact_id: string;
+  template_id: string;
+  deal_id?: string;
+  extra?: Record<string, string>;
+}) {
+  return invokeCRM({ action: "emails-send", ...params });
+}
 
 /**
  * Confirma el pago del Transparent Checkout con el cardToken.

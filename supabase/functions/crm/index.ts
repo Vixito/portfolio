@@ -456,6 +456,204 @@ serve(async (req: Request) => {
         });
       }
 
+      // ============ PLANTILLAS DE EMAIL ============
+      case "email-templates-list": {
+        const { data, error } = await supabase
+          .from("crm_email_templates")
+          .select("*")
+          .order("created_at", { ascending: true });
+        if (error) return json(500, { error: error.message });
+        return json(200, { items: data || [] });
+      }
+
+      case "email-templates-create": {
+        const name = String(payload.name || "").trim();
+        const subject = String(payload.subject || "").trim();
+        const tplBody = String(payload.body || "");
+        if (!name || !subject || !tplBody) {
+          return json(400, { error: "name, subject y body son obligatorios" });
+        }
+        const { data, error } = await supabase
+          .from("crm_email_templates")
+          .insert({
+            name,
+            subject,
+            body: tplBody,
+            is_active: payload.is_active !== false,
+          })
+          .select()
+          .single();
+        if (error) return json(500, { error: error.message });
+        return json(200, { template: data });
+      }
+
+      case "email-templates-update": {
+        const id = String(payload.id || "");
+        if (!id) return json(400, { error: "id es obligatorio" });
+        const patch: Record<string, unknown> = {};
+        if (payload.name !== undefined) patch.name = String(payload.name).trim();
+        if (payload.subject !== undefined) patch.subject = String(payload.subject).trim();
+        if (payload.body !== undefined) patch.body = String(payload.body);
+        if (payload.is_active !== undefined) patch.is_active = !!payload.is_active;
+        patch.updated_at = now();
+        const { data, error } = await supabase
+          .from("crm_email_templates")
+          .update(patch)
+          .eq("id", id)
+          .select()
+          .single();
+        if (error) return json(500, { error: error.message });
+        return json(200, { template: data });
+      }
+
+      case "email-templates-delete": {
+        const id = String(payload.id || "");
+        const { error } = await supabase
+          .from("crm_email_templates")
+          .delete()
+          .eq("id", id);
+        if (error) return json(500, { error: error.message });
+        return json(200, { ok: true });
+      }
+
+      // ============ LOG DE EMAILS ============
+      case "emails-list": {
+        const { data, error } = await supabase
+          .from("crm_email_log")
+          .select("*, contact:crm_contacts ( first_name, last_name, email )")
+          .order("created_at", { ascending: false })
+          .limit(100);
+        if (error) return json(500, { error: error.message });
+        return json(200, { items: data || [] });
+      }
+
+      // ============ ENVÍO DE EMAIL ============
+      case "emails-send": {
+        const contactId = String(payload.contact_id || "");
+        const templateId = String(payload.template_id || "");
+        if (!contactId || !templateId) {
+          return json(400, {
+            error: "contact_id y template_id son obligatorios",
+          });
+        }
+
+        const { data: contact, error: cErr } = await supabase
+          .from("crm_contacts")
+          .select("*, company:crm_companies(name)")
+          .eq("id", contactId)
+          .maybeSingle();
+        if (cErr) return json(500, { error: cErr.message });
+        if (!contact) return json(404, { error: "Contacto no encontrado" });
+
+        const { data: template, error: tErr } = await supabase
+          .from("crm_email_templates")
+          .select("*")
+          .eq("id", templateId)
+          .maybeSingle();
+        if (tErr) return json(500, { error: tErr.message });
+        if (!template) return json(404, { error: "Plantilla no encontrada" });
+
+        let deal: Record<string, unknown> | null = null;
+        if (payload.deal_id) {
+          const { data: d } = await supabase
+            .from("crm_deals")
+            .select("*")
+            .eq("id", String(payload.deal_id))
+            .maybeSingle();
+          deal = d;
+        }
+
+        const vars: Record<string, string> = {
+          "contact.first_name": contact.first_name || "",
+          "contact.last_name": contact.last_name || "",
+          "contact.full_name":
+            `${contact.first_name || ""} ${contact.last_name || ""}`.trim(),
+          "contact.email": contact.email || "",
+          "company.name": (contact?.company as any)?.name || "",
+          "deal.title": (deal?.title as string) || "",
+          "deal.value":
+            deal?.value != null
+              ? new Intl.NumberFormat("es-ES", {
+                  style: "currency",
+                  currency: String(deal.currency || "EUR"),
+                }).format(Number(deal.value))
+              : "",
+          "template.name": template.name,
+        };
+        if (payload.extra && typeof payload.extra === "object") {
+          for (const [k, v] of Object.entries(payload.extra)) {
+            vars[String(k)] = String(v ?? "");
+          }
+        }
+
+        const render = (tplText: string) =>
+          tplText.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, k: string) =>
+            vars[k] !== undefined ? vars[k] : `{{${k}}}`
+          );
+
+        const subject = render(template.subject);
+        const text = render(template.body);
+        const esc = (s: string) =>
+          s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const html = text
+          .split(/\n{2,}/)
+          .map((p) => `<p style="margin:0 0 12px;">${esc(p).replace(/\n/g, "<br>")}</p>`)
+          .join("");
+
+        const resendKey = Deno.env.get("RESEND_API_KEY");
+        const from = Deno.env.get("EMAIL_FROM");
+        const toEmail = contact.email;
+        let status = "error";
+        let errorMsg = "";
+        let sentAt: string | null = null;
+
+        if (!resendKey || !from || !toEmail) {
+          errorMsg = !resendKey || !from
+            ? "Falta configurar RESEND_API_KEY / EMAIL_FROM"
+            : "El contacto no tiene email";
+        } else {
+          const res = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ from, to: [toEmail], subject, text, html }),
+          });
+          if (res.ok) {
+            status = "sent";
+            sentAt = now();
+          } else {
+            errorMsg = `${res.status} ${(await res.text()).slice(0, 300)}`;
+          }
+        }
+
+        const { data: logRow, error: logErr } = await supabase
+          .from("crm_email_log")
+          .insert({
+            contact_id: contactId,
+            deal_id: payload.deal_id || null,
+            template_id: templateId,
+            from_email: from || null,
+            to_email: toEmail,
+            subject,
+            body: text,
+            placeholders: vars,
+            provider: "resend",
+            status,
+            error: errorMsg || null,
+            sent_at: sentAt,
+          })
+          .select()
+          .single();
+        if (logErr) return json(500, { error: logErr.message });
+
+        if (status !== "sent") {
+          return json(400, { error: errorMsg, log: logRow });
+        }
+        return json(200, { ok: true, sent_at: sentAt, email: logRow });
+      }
+
       default:
         return json(400, { error: `Acción desconocida: ${action}` });
     }

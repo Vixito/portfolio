@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   getCrmCompanies,
   createCrmCompany,
@@ -16,6 +16,12 @@ import {
   getCrmLeads,
   convertLeadToContact,
   getCrmVisitors,
+  getCrmEmailTemplates,
+  createCrmEmailTemplate,
+  updateCrmEmailTemplate,
+  deleteCrmEmailTemplate,
+  getCrmEmails,
+  sendCrmEmail,
 } from "../../lib/supabase-functions";
 
 // ============ helpers de UI ============
@@ -155,7 +161,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 // ============ panel principal ============
 
-type SubTab = "contacts" | "companies" | "pipeline" | "activities" | "leads";
+type SubTab = "contacts" | "companies" | "pipeline" | "activities" | "leads" | "emails";
 
 export default function CrmPanel() {
   const [subtab, setSubtab] = useState<SubTab>("contacts");
@@ -170,6 +176,11 @@ export default function CrmPanel() {
   const [leadsData, setLeadsData] = useState<any>({ total: 0, converted: 0, items: [] });
   const [visitorsData, setVisitorsData] = useState<any>({ total: 0, today: 0, recent: [] });
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
+  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
+  const [emailLog, setEmailLog] = useState<any[]>([]);
+  const [templateModal, setTemplateModal] = useState<any>(null);
+  const [sendModal, setSendModal] = useState<any>(null);
+  const [sending, setSending] = useState(false);
 
   const [search, setSearch] = useState("");
   const [actFilterContact, setActFilterContact] = useState("");
@@ -187,7 +198,7 @@ export default function CrmPanel() {
     setLoading(true);
     setError(null);
     try {
-      const [comps, cons, stgs, dls, acts, lds, vst] = await Promise.all([
+      const [comps, cons, stgs, dls, acts, lds, vst, tmps, emls] = await Promise.all([
         getCrmCompanies(),
         getCrmContacts(),
         getCrmStages(),
@@ -195,6 +206,8 @@ export default function CrmPanel() {
         getCrmActivities(),
         getCrmLeads(),
         getCrmVisitors(),
+        getCrmEmailTemplates(),
+        getCrmEmails(),
       ]);
       setCompanies(comps || []);
       setContacts(cons || []);
@@ -203,6 +216,8 @@ export default function CrmPanel() {
       setActivities(acts || []);
       setLeadsData(lds || { total: 0, converted: 0, items: [] });
       setVisitorsData(vst || { total: 0, today: 0, recent: [] });
+      setEmailTemplates(tmps?.items || []);
+      setEmailLog(emls?.items || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar el CRM");
     } finally {
@@ -252,7 +267,7 @@ export default function CrmPanel() {
 
   // ============ acciones ============
 
-  const handleSaveContact = async (e: React.FormEvent) => {
+  const handleSaveContact = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -279,7 +294,7 @@ export default function CrmPanel() {
     }
   };
 
-  const handleSaveCompany = async (e: React.FormEvent) => {
+  const handleSaveCompany = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -304,7 +319,7 @@ export default function CrmPanel() {
     }
   };
 
-  const handleSaveDeal = async (e: React.FormEvent) => {
+  const handleSaveDeal = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -342,7 +357,7 @@ export default function CrmPanel() {
     }
   };
 
-  const handleSaveActivity = async (e: React.FormEvent) => {
+  const handleSaveActivity = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -390,12 +405,91 @@ export default function CrmPanel() {
     }
   };
 
+  const handleSaveTemplate = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const fd = new FormData(e.currentTarget as HTMLFormElement);
+      const payload = {
+        name: String(fd.get("name") || "").trim(),
+        subject: String(fd.get("subject") || "").trim(),
+        body: String(fd.get("body") || ""),
+        is_active: (fd.get("is_active") as string) !== "false",
+      };
+      if (templateModal?.edit) {
+        await updateCrmEmailTemplate(templateModal.edit.id, payload);
+      } else {
+        await createCrmEmailTemplate(payload);
+      }
+      setTemplateModal(null);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al guardar plantilla");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (!window.confirm("¿Eliminar plantilla? Los envíos previos se conservan.")) return;
+    try {
+      await deleteCrmEmailTemplate(id);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al eliminar");
+    }
+  };
+
+  const doSendEmail = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!sendModal) return;
+    const fd = new FormData(e.currentTarget as HTMLFormElement);
+    const contactId = String(fd.get("contact_id") || "");
+    const templateId = String(fd.get("template_id") || "");
+    const dealId = String(fd.get("deal_id") || "") || undefined;
+    if (!contactId || !templateId) return;
+    setSending(true);
+    try {
+      const res: any = await sendCrmEmail({ contact_id: contactId, template_id: templateId, deal_id: dealId });
+      if (!res?.ok) throw new Error(res?.error || "Error al enviar");
+      setSendModal(null);
+      await load();
+      alert("Email enviado correctamente");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al enviar email");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const renderBody = (tmpl: string | undefined, contact?: any, deal?: any) => {
+    if (!tmpl) return "";
+    const vars: Record<string, string> = {
+      "contact.first_name": contact?.first_name || "",
+      "contact.last_name": contact?.last_name || "",
+      "contact.full_name": `${contact?.first_name || ""} ${contact?.last_name || ""}`.trim(),
+      "contact.email": contact?.email || "",
+      "company.name": contact?.company?.name || "",
+      "deal.title": deal?.title || "",
+      "deal.value": deal?.value != null ? fmtMoney(Number(deal.value), deal.currency) : "",
+      "template.name": "",
+    };
+    return tmpl.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, k: string) =>
+      vars[k] !== undefined ? vars[k] : `{{${k}}}`
+    );
+  };
+  const sendStatus = (s: string) =>
+    s === "sent"
+      ? { label: "Enviado", cls: "bg-green-500/10 text-green-400 border-green-500/30" }
+      : { label: s === "pending" ? "Pendiente" : "Error", cls: "bg-red-500/10 text-red-400 border-red-500/30" };
+
   const subTabs: { id: SubTab; label: string }[] = [
     { id: "contacts", label: "Contactos" },
     { id: "companies", label: "Empresas" },
     { id: "pipeline", label: "Pipeline" },
     { id: "activities", label: "Actividades" },
     { id: "leads", label: "Leads y visitas" },
+    { id: "emails", label: "Emails" },
   ];
 
   return (
@@ -829,6 +923,85 @@ export default function CrmPanel() {
             </div>
           )}
 
+          {/* ============ EMAILS ============ */}
+          {subtab === "emails" && (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-gray-400">
+                  Plantillas con placeholders —{" "}
+                  <code className="text-[#7cc7e0]">{{"{{"}}contact.first_name{{"}}"}}</code>,{" "}
+                  <code className="text-[#7cc7e0]">{{"{{"}}company.name{{"}}"}}</code>,{" "}
+                  <code className="text-[#7cc7e0]">{{"{{"}}deal.title{{"}}"}}</code>,{" "}
+                  <code className="text-[#7cc7e0]">{{"{{"}}deal.value{{"}}"}}</code>…
+                </p>
+                <button className={btnPrimary} onClick={() => setTemplateModal({})}>+ Plantilla</button>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-[#0f1113]">
+                <div className="px-4 py-3 border-b border-white/10">
+                  <h3 className="font-semibold text-sm">Plantillas</h3>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {(emailTemplates || []).map((t: any) => (
+                    <div key={t.id} className="flex items-center justify-between gap-2 px-4 py-2.5 hover:bg-white/5">
+                      <div className="min-w-0 mr-2">
+                        <p className="text-sm text-gray-200 truncate">
+                          <span className="px-1.5 py-0.5 text-[10px] rounded bg-white/10 mr-1.5">{t.is_active ? "activa" : "pausada"}</span>
+                          {t.name}
+                        </p>
+                        <p className="text-[11px] text-gray-500 truncate">{t.subject}</p>
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                        <button onClick={() => setTemplateModal({ edit: t })} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
+                          Editar
+                        </button>
+                        <button onClick={() => setSendModal({ contact_id: "" })} className="text-[11px] px-2 py-1 rounded bg-[#8c52ff]/20 border border-[#8c52ff]/40 text-[#c4b5fd] hover:bg-[#8c52ff]/30 cursor-pointer">
+                          Enviar
+                        </button>
+                        <button onClick={() => handleDeleteTemplate(t.id)} className="text-[11px] px-2 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer">
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {(emailTemplates || []).length === 0 && (
+                    <p className="px-4 py-8 text-center text-gray-500 text-sm">Sin plantillas. Crea una para poder enviar emails.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-[#0f1113]">
+                <div className="px-4 py-3 border-b border-white/10">
+                  <h3 className="font-semibold text-sm">Envíos recientes</h3>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {(emailLog || []).map((e: any) => {
+                    const st = sendStatus(e.status);
+                    return (
+                      <div key={e.id} className="flex items-center justify-between gap-2 px-4 py-2.5">
+                        <div className="min-w-0 mr-2">
+                          <p className="text-sm text-gray-200 truncate">
+                            {e.subject || "(sin asunto)"}
+                          </p>
+                          <p className="text-[11px] text-gray-500 truncate">
+                            → {e.to_email}
+                            {e.contact?.email && <span> · {e.contact.first_name || ""} {e.contact.last_name || ""}</span>}
+                          </p>
+                          {e.error && <p className="text-[11px] text-red-400 truncate" title={e.error}>{e.error}</p>}
+                        </div>
+                        <span className="text-[11px] text-gray-500 shrink-0">{fmtDateTime(e.created_at)}</span>
+                        <span className={`px-2 py-0.5 text-[10px] rounded border shrink-0 ${st.cls}`}>{st.label}</span>
+                      </div>
+                    );
+                  })}
+                  {(emailLog || []).length === 0 && (
+                    <p className="px-4 py-8 text-center text-gray-500 text-sm">Sin envíos todavía.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ============ MODAL CONTACTO ============ */}
       <Modal
         open={!!contactModal}
@@ -1084,10 +1257,138 @@ export default function CrmPanel() {
             <div className="flex justify-end gap-2 pt-1">
               <button onClick={() => setContactModal({ edit: detailContact })} className={btnPrimary}>Editar</button>
               <button onClick={() => setActivityModal({ contact_id: detailContact.id })} className={btnPrimary}>+ Actividad</button>
+              <button onClick={() => setSendModal({ contact_id: detailContact.id })} className={btnPrimary}>Enviar email</button>
             </div>
           </div>
         )}
       </Modal>
+
+      {/* ============ MODAL PLANTILLA ============ */}
+      <Modal
+        open={!!templateModal}
+        title={templateModal?.edit ? "Editar plantilla" : "Nueva plantilla"}
+        onClose={() => setTemplateModal(null)}
+      >
+        <form onSubmit={handleSaveTemplate} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nombre *">
+              <input name="name" required defaultValue={templateModal?.edit?.name || ""} className={inputCls} placeholder="Oferta inicial" />
+            </Field>
+            <Field label="Estado">
+              <select name="is_active" defaultValue={templateModal?.edit ? (templateModal.edit.is_active ? "true" : "false") : "true"} className={inputCls}>
+                <option value="true">Activa</option>
+                <option value="false">Pausada</option>
+              </select>
+            </Field>
+          </div>
+          <Field label="Asunto *">
+            <input name="subject" required defaultValue={templateModal?.edit?.subject || ""} className={inputCls} placeholder="Propuesta de alcance para {{contact.first_name}}" />
+          </Field>
+          <Field label="Cuerpo (texto plano, con placeholders)">
+            <textarea name="body" rows={6} defaultValue={templateModal?.edit?.body || ""} className={inputCls + " font-mono text-xs"} placeholder={"Hola {{contact.first_name}},\n\n…" } />
+          </Field>
+          <p className="text-[10px] text-gray-500">
+            Placeholders disponibles: {"{{"}}contact.first_name{{"}}"}, {"{{"}}contact.full_name{{"}}"}, {"{{"}}company.name{{"}}"}, {"{{"}}deal.title{{"}}"}, {"{{"}}deal.value{{"}}"}
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={() => setTemplateModal(null)} className={btnGhost}>Cancelar</button>
+            <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Guardando…" : "Guardar"}</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ============ MODAL ENVÍO DE EMAIL ============ */}
+      <Modal open={!!sendModal} title="Enviar email" onClose={() => setSendModal(null)}>
+        {sendModal && (
+          <SendEmailForm
+            contacts={contacts}
+            deals={deals}
+            templates={emailTemplates}
+            contactId={sendModal.contact_id}
+            sending={sending}
+            onSubmit={doSendEmail}
+            onClose={() => setSendModal(null)}
+            renderBody={renderBody}
+          />
+        )}
+      </Modal>
     </div>
+  );
+}
+
+function SendEmailForm({
+  contacts,
+  deals,
+  templates,
+  contactId,
+  sending,
+  onSubmit,
+  onClose,
+  renderBody,
+}: {
+  contacts: any[];
+  deals: any[];
+  templates: any[];
+  contactId?: string;
+  sending: boolean;
+  onSubmit: (e: FormEvent) => void;
+  onClose: () => void;
+  renderBody: (t: string | undefined, c?: any, d?: any) => string;
+}) {
+  const [selContact, setSelContact] = useState(contactId || "");
+  const [selTemplate, setSelTemplate] = useState("");
+  const [selDeal, setSelDeal] = useState("");
+
+  const contact = contacts.find((c) => c.id === selContact);
+  const deal = deals.find((d) => d.id === selDeal);
+  const template = templates.find((t) => t.id === selTemplate);
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      <Field label="Contacto *">
+        <select name="contact_id" required className={inputCls} value={selContact} onChange={(e) => setSelContact(e.target.value)}>
+          <option value="">Selecciona…</option>
+          {contacts.map((c: any) => (
+            <option key={c.id} value={c.id}>
+              {c.first_name} {c.last_name || ""} — {c.email || "sin email"}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Plantilla *">
+        <select name="template_id" required className={inputCls} value={selTemplate} onChange={(e) => setSelTemplate(e.target.value)}>
+          <option value="">Selecciona…</option>
+          {templates.map((t: any) => (
+            <option key={t.id} value={t.id}>{t.is_active ? "" : "[pausada] "}{t.name}</option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Deal (opcional)">
+        <select name="deal_id" className={inputCls} value={selDeal} onChange={(e) => setSelDeal(e.target.value)}>
+          <option value="">Sin deal</option>
+          {(deals || []).map((d: any) => (
+            <option key={d.id} value={d.id}>{d.title}</option>
+          ))}
+        </select>
+      </Field>
+      {template && contact?.email && (
+        <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-2">
+          <p className="text-xs text-gray-400">Vista previa (con datos del contacto):</p>
+          <p className="text-sm font-semibold break-words">{renderBody(template.subject, contact, deal)}</p>
+          <div className="text-[13px] text-gray-300 whitespace-pre-line break-words border-t border-white/10 pt-2">
+            {renderBody(template.body, contact, deal)}
+          </div>
+        </div>
+      )}
+      {template && !contact?.email && (
+        <p className="text-xs text-red-400">El contacto seleccionado no tiene email. Añádelo antes de enviar.</p>
+      )}
+      <div className="flex justify-end gap-2 pt-2">
+        <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
+        <button type="submit" disabled={sending || !template || !contact?.email} className={btnPrimary}>
+          {sending ? "Enviando…" : "Enviar"}
+        </button>
+      </div>
+    </form>
   );
 }
