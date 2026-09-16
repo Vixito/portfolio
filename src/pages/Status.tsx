@@ -8,7 +8,7 @@ import { useLanguageStore } from "../stores/useLanguageStore";
 import StatusBadge from "../components/features/StatusBadge";
 import AnimatedInput from "../components/ui/AnimatedInput";
 import Textarea from "../components/ui/Textarea";
-import { createRequest, sendScheduleRequest } from "../lib/supabase-functions";
+import { createRequest, sendScheduleRequest, trackInterest } from "../lib/supabase-functions";
 import { useTranslation } from "../lib/i18n";
 import BasicToast from "../components/ui/BasicToast";
 import { useSEO } from "../hooks/useSEO";
@@ -211,6 +211,15 @@ function Status() {
         investmentRange: data.investmentRange,
       });
 
+      // Persona interesada → BOS/CRM (best-effort, no bloquea el toast)
+      trackInterest({
+        source: "status_form",
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        topic: `${data.requestType} · ${data.currency} ${data.investmentRange} · ${data.message.slice(0, 200)}`,
+      });
+
       setShowToast(true);
       reset();
     } catch (error) {
@@ -366,6 +375,7 @@ function Status() {
                 </div>
                 <a
                   href="mailto:carlosvicioso@vixis.dev"
+                  onClick={() => trackInterest({ source: "email_click" })}
                   className="text-sm hover:underline"
                   style={{ color: "#2093c4" }}
                 >
@@ -396,6 +406,7 @@ function Status() {
                   href="https://wa.me/16573465912"
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackInterest({ source: "whatsapp_click" })}
                   className="text-sm hover:underline"
                   style={{ color: "#2093c4" }}
                 >
@@ -470,6 +481,14 @@ function Status() {
                         } catch (e) {
                           console.error("Error al notificar agenda:", e);
                         }
+                        // Persona interesada → BOS/CRM
+                        trackInterest({
+                          source: "schedule_click",
+                          name: formName || undefined,
+                          email: formEmail || undefined,
+                          phone: formPhone || undefined,
+                          topic: "Solicitud de agenda (Cal.com)",
+                        });
                       }
 
                       // Redirigir a Cal.com

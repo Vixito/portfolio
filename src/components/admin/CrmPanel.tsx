@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   getCrmCompanies,
   createCrmCompany,
@@ -27,6 +27,8 @@ import {
   updateCrmContract,
   deleteCrmContract,
   signContractProvider,
+  importCrmContacts,
+  importCrmCompanies,
 } from "../../lib/supabase-functions";
 
 // ============ helpers de UI ============
@@ -189,6 +191,9 @@ export default function CrmPanel() {
   const [contracts, setContracts] = useState<any[]>([]);
   const [contractModal, setContractModal] = useState<any>(null);
   const [contractPassword, setContractPassword] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const contactsFileRef = useRef<HTMLInputElement>(null);
+  const companiesFileRef = useRef<HTMLInputElement>(null);
 
   const [search, setSearch] = useState("");
   const [actFilterContact, setActFilterContact] = useState("");
@@ -566,6 +571,205 @@ export default function CrmPanel() {
     }
   };
 
+  // ============ CSV: exportar / importar ============
+  const csvCell = (v: any) => {
+    const s = v == null ? "" : String(v);
+    return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const downloadCsv = (filename: string, rows: Record<string, any>[]) => {
+    if (rows.length === 0) {
+      alert("No hay datos para exportar");
+      return;
+    }
+    const headers = Object.keys(rows[0]);
+    const lines = [
+      headers.map(csvCell).join(","),
+      ...rows.map((r) => headers.map((h) => csvCell(r[h])).join(",")),
+    ];
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const parseCsv = (text: string): string[][] => {
+    const t = text.replace(/^\uFEFF/, "");
+    const firstLine = t.split(/\r?\n/)[0] || "";
+    const delim = [",", ";", "\t"].sort(
+      (a, b) => firstLine.split(b).length - firstLine.split(a).length
+    )[0];
+    const rows: string[][] = [];
+    let row: string[] = [];
+    let cur = "";
+    let inQ = false;
+    for (let i = 0; i < t.length; i++) {
+      const ch = t[i];
+      if (inQ) {
+        if (ch === '"') {
+          if (t[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQ = false;
+          }
+        } else {
+          cur += ch;
+        }
+      } else if (ch === '"') {
+        inQ = true;
+      } else if (ch === delim) {
+        row.push(cur);
+        cur = "";
+      } else if (ch === "\n") {
+        row.push(cur);
+        rows.push(row);
+        row = [];
+        cur = "";
+      } else if (ch === "\r") {
+        /* ignorar */
+      } else {
+        cur += ch;
+      }
+    }
+    if (cur !== "" || row.length > 0) {
+      row.push(cur);
+      rows.push(row);
+    }
+    return rows.filter((r) => r.some((c) => c.trim() !== ""));
+  };
+
+  const normHeader = (h: string) => h.trim().toLowerCase();
+
+  const handleExportContacts = () => {
+    downloadCsv(
+      "crm-contactos.csv",
+      contacts.map((c: any) => ({
+        first_name: c.first_name || "",
+        last_name: c.last_name || "",
+        email: c.email || "",
+        phone: c.phone || "",
+        company: c.company?.name || "",
+        source: c.source || "",
+        tags: (c.tags || []).join(";"),
+        notes: c.notes || "",
+      }))
+    );
+  };
+
+  const handleExportCompanies = () => {
+    downloadCsv(
+      "crm-empresas.csv",
+      companies.map((c: any) => ({
+        name: c.name || "",
+        domain: c.domain || "",
+        industry: c.industry || "",
+        notes: c.notes || "",
+      }))
+    );
+  };
+
+  const handleImportFile = async (e: ChangeEvent<HTMLInputElement>, kind: "contacts" | "companies") => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    try {
+      const grid = parseCsv(await file.text());
+      if (grid.length < 2) throw new Error("CSV vacío o sin cabecera");
+      const headers = grid[0].map(normHeader);
+      const idx = (names: string[]) => {
+        for (const n of names) {
+          const i = headers.indexOf(n);
+          if (i >= 0) return i;
+        }
+        return -1;
+      };
+      const cell = (row: string[], i: number) => (i >= 0 ? (row[i] || "").trim() : "");
+
+      if (kind === "contacts") {
+        const iFirst = idx(["first_name", "nombre", "name", "firstname"]);
+        const iLast = idx(["last_name", "apellido", "lastname"]);
+        const iEmail = idx(["email", "correo", "e-mail"]);
+        const iPhone = idx(["phone", "telefono", "teléfono", "tel"]);
+        const iCompany = idx(["company", "empresa", "compania", "compañía"]);
+        const iSource = idx(["source", "origen"]);
+        const iTags = idx(["tags", "etiquetas"]);
+        const iNotes = idx(["notes", "notas"]);
+        if (iFirst < 0) throw new Error("Falta la columna first_name / nombre");
+        const mapped = grid.slice(1).map((row) => ({
+          first_name: cell(row, iFirst),
+          last_name: cell(row, iLast),
+          email: cell(row, iEmail),
+          phone: cell(row, iPhone),
+          company: cell(row, iCompany),
+          source: cell(row, iSource) || "import",
+          tags: cell(row, iTags)
+            .split(/[;|]/)
+            .map((s) => s.trim())
+            .filter(Boolean),
+          notes: cell(row, iNotes),
+        }));
+        // Resolver/crear empresas por nombre
+        const byName = new Map(
+          (companies || []).map((c: any) => [String(c.name || "").toLowerCase(), c.id])
+        );
+        let createdCompanies = 0;
+        for (const m of mapped) {
+          const nm = (m.company || "").trim();
+          if (nm && !byName.has(nm.toLowerCase())) {
+            try {
+              const nc: any = await createCrmCompany({ name: nm });
+              const id = nc?.id ?? nc?.company?.id;
+              if (id) {
+                byName.set(nm.toLowerCase(), id);
+                createdCompanies++;
+              }
+            } catch {
+              /* si falla, el contacto queda sin empresa */
+            }
+          }
+        }
+        const payload = mapped.map((m) => ({
+          ...m,
+          company_id: byName.get((m.company || "").trim().toLowerCase()) || undefined,
+        }));
+        const res: any = await importCrmContacts(payload);
+        await load();
+        alert(
+          `Importados ${res?.inserted ?? 0} contactos` +
+            (createdCompanies ? ` (+${createdCompanies} empresas creadas)` : "") +
+            (res?.skipped ? ` (${res.skipped} filas sin nombre omitidas)` : "")
+        );
+      } else {
+        const iName = idx(["name", "nombre", "empresa"]);
+        const iDomain = idx(["domain", "dominio"]);
+        const iIndustry = idx(["industry", "industria", "sector"]);
+        const iNotes = idx(["notes", "notas"]);
+        if (iName < 0) throw new Error("Falta la columna name / nombre");
+        const payload = grid.slice(1).map((row) => ({
+          name: cell(row, iName),
+          domain: cell(row, iDomain),
+          industry: cell(row, iIndustry),
+          notes: cell(row, iNotes),
+        }));
+        const res: any = await importCrmCompanies(payload);
+        await load();
+        alert(
+          `Importadas ${res?.inserted ?? 0} empresas` +
+            (res?.skipped ? ` (${res.skipped} filas sin nombre omitidas)` : "")
+        );
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al importar CSV");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const subTabs: { id: SubTab; label: string }[] = [
     { id: "contacts", label: "Contactos" },
     { id: "companies", label: "Empresas" },
@@ -634,7 +838,22 @@ export default function CrmPanel() {
                   placeholder="Buscar por nombre, email, teléfono o etiqueta…"
                   className={inputCls + " sm:max-w-sm"}
                 />
-                <span className="text-xs text-gray-400">{filteredContacts.length} contactos</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">{filteredContacts.length} contactos</span>
+                  <button onClick={handleExportContacts} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
+                    Exportar CSV
+                  </button>
+                  <button onClick={() => contactsFileRef.current?.click()} disabled={importing} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer disabled:opacity-50">
+                    {importing ? "Importando…" : "Importar CSV"}
+                  </button>
+                  <input
+                    ref={contactsFileRef}
+                    type="file"
+                    accept=".csv,text/csv,text/plain"
+                    className="hidden"
+                    onChange={(e) => handleImportFile(e, "contacts")}
+                  />
+                </div>
               </div>
               <div className="overflow-x-auto rounded-lg border border-white/10">
                 <table className="w-full min-w-[720px] text-left text-sm">
@@ -718,7 +937,26 @@ export default function CrmPanel() {
 
           {/* ============ EMPRESAS ============ */}
           {subtab === "companies" && (
-            <div className="overflow-x-auto rounded-lg border border-white/10">
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <span className="text-xs text-gray-400">{companies.length} empresas</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={handleExportCompanies} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
+                    Exportar CSV
+                  </button>
+                  <button onClick={() => companiesFileRef.current?.click()} disabled={importing} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer disabled:opacity-50">
+                    {importing ? "Importando…" : "Importar CSV"}
+                  </button>
+                  <input
+                    ref={companiesFileRef}
+                    type="file"
+                    accept=".csv,text/csv,text/plain"
+                    className="hidden"
+                    onChange={(e) => handleImportFile(e, "companies")}
+                  />
+                </div>
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-white/10">
               <table className="w-full min-w-[680px] text-left text-sm">
                 <thead className="bg-[#18181b] text-gray-400 border-b border-white/10">
                   <tr>
@@ -771,6 +1009,7 @@ export default function CrmPanel() {
                   )}
                 </tbody>
               </table>
+            </div>
             </div>
           )}
 

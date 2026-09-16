@@ -599,6 +599,70 @@ serve(async (req: Request) => {
         return json(200, { ...data, password_hash: undefined });
       }
 
+      // ============ IMPORTACIÓN MASIVA (CSV) ============
+      case "contacts-import": {
+        const rows = Array.isArray(payload?.contacts) ? payload.contacts : [];
+        if (rows.length === 0) return json(400, { error: "contacts vacío" });
+        if (rows.length > 500) return json(400, { error: "máximo 500 filas por importación" });
+        const clean = [];
+        let skipped = 0;
+        for (const c of rows) {
+          if (!c || !String(c.first_name || "").trim()) {
+            skipped++;
+            continue;
+          }
+          clean.push({
+            company_id: c.company_id || null,
+            first_name: String(c.first_name).trim().slice(0, 120),
+            last_name: c.last_name ? String(c.last_name).trim().slice(0, 120) : null,
+            email: c.email ? String(c.email).trim().toLowerCase().slice(0, 200) : null,
+            phone: c.phone ? String(c.phone).trim().slice(0, 60) : null,
+            photo_url: c.photo_url || gravatarUrl(c.email || null),
+            source: c.source ? String(c.source).slice(0, 40) : "import",
+            lead_id: c.lead_id || null,
+            tags: Array.isArray(c.tags) ? c.tags.map(String).slice(0, 20) : [],
+            notes: c.notes ? String(c.notes).slice(0, 2000) : null,
+          });
+        }
+        let inserted = 0;
+        if (clean.length > 0) {
+          const { error } = await supabase.from("crm_contacts").insert(clean);
+          if (error) return json(500, { error: error.message });
+          inserted = clean.length;
+        }
+        return json(200, { inserted, skipped });
+      }
+
+      case "companies-import": {
+        const rows = Array.isArray(payload?.companies) ? payload.companies : [];
+        if (rows.length === 0) return json(400, { error: "companies vacío" });
+        if (rows.length > 500) return json(400, { error: "máximo 500 filas por importación" });
+        const clean = [];
+        let skipped = 0;
+        for (const c of rows) {
+          if (!c || !String(c.name || "").trim()) {
+            skipped++;
+            continue;
+          }
+          clean.push({
+            name: String(c.name).trim().slice(0, 200),
+            domain: c.domain
+              ? String(c.domain).replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase().trim().slice(0, 200) || null
+              : null,
+            industry: c.industry ? String(c.industry).slice(0, 120) : null,
+            logo_url: null,
+            notes: c.notes ? String(c.notes).slice(0, 2000) : null,
+          });
+        }
+        let inserted = 0;
+        if (clean.length > 0) {
+          const { error } = await supabase.from("crm_companies").insert(clean);
+          if (error) return json(500, { error: error.message });
+          inserted = clean.length;
+        }
+        return json(200, { inserted, skipped });
+      }
+
       // ============ PLANTILLAS DE EMAIL ============
       case "email-templates-list": {
         const { data, error } = await supabase

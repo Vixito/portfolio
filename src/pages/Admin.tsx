@@ -3062,7 +3062,7 @@ function Admin() {
 
         {/* Nav de siempre (idioma + tema), excluido del remapeo admin-light */}
         <div className="site-nav-zone">
-          <Navigation />
+          <Navigation externalBase="https://vixis.dev" />
         </div>
       </div>
     );

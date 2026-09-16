@@ -1,5 +1,7 @@
 // Beacon público de visitantes del portfolio (sin auth).
 // El sitio envía { session_id, page, referrer }; el server añade IP + user-agent.
+// Además registra "interesados": { type: "interest", source, name?, email?, phone?, topic? }
+// que se guardan en bos_leads (form de /status, clics en whatsapp/email).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -36,13 +38,6 @@ serve(async (req: Request) => {
   }
 
   const page = String(payload?.page || "").slice(0, 200);
-  if (!page || page === "/track-visitor") {
-    return json(200, { ok: true, skipped: "sin página" });
-  }
-  // No registrar el propio admin.
-  if (DENY_TARGETS.some((t) => page.startsWith(`/${t}`)) || (payload?.host || "").includes("admin.")) {
-    return json(200, { ok: true, skipped: "admin" });
-  }
 
   const ip = getClientIp(req);
   const ua = (req.headers.get("user-agent") || "").slice(0, 300);
@@ -57,6 +52,72 @@ serve(async (req: Request) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
+
+  // No registrar el propio admin.
+  if (DENY_TARGETS.some((t) => page.startsWith(`/${t}`)) || (payload?.host || "").includes("admin.")) {
+    return json(200, { ok: true, skipped: "admin" });
+  }
+
+  // ============ INTERESADOS (leads calientes) ============
+  if (payload?.type === "interest") {
+    const source = String(payload?.source || "").slice(0, 60);
+    const allowed = ["status_form", "whatsapp_click", "email_click", "schedule_click"];
+    if (!allowed.includes(source)) {
+      return json(400, { error: "source no permitido" });
+    }
+    const name = String(payload?.name || "").slice(0, 200) || null;
+    const email = String(payload?.email || "").slice(0, 200).toLowerCase() || null;
+    const phone = String(payload?.phone || "").slice(0, 60) || null;
+    const topic = String(payload?.topic || "").slice(0, 500) || null;
+
+    try {
+      const startOfDay = new Date();
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      let dupQuery = supabase
+        .from("bos_leads")
+        .select("id")
+        .eq("source", source)
+        .gte("created_at", startOfDay.toISOString())
+        .limit(1);
+      dupQuery = email
+        ? dupQuery.eq("email", email)
+        : dupQuery.eq("session_id", session_id);
+      const { data: dup } = await dupQuery;
+      if (dup && dup.length > 0) {
+        return json(200, { ok: true, deduped: true });
+      }
+
+      const { error } = await supabase.from("bos_leads").insert({
+        source,
+        name,
+        email,
+        phone,
+        topic,
+        session_id,
+        payload: {
+          page: page || null,
+          referrer: referrer || null,
+          ip,
+          user_agent: ua,
+        },
+      });
+      if (error) {
+        console.error("track-visitor interest error:", error);
+        return json(500, { error: error.message });
+      }
+      return json(200, { ok: true });
+    } catch (err) {
+      console.error("track-visitor interest error:", err);
+      return json(500, {
+        error: err instanceof Error ? err.message : "Error desconocido",
+      });
+    }
+  }
+
+  // El beacon de visitas sí exige página.
+  if (!page || page === "/track-visitor") {
+    return json(200, { ok: true, skipped: "sin página" });
+  }
 
   try {
     // Dedupe: la misma sesión + misma página + mismo día.

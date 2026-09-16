@@ -1811,6 +1811,12 @@ export function convertLeadToContact(lead_id: string) {
 export function getCrmVisitors() {
   return invokeCRM({ action: "visitors-list" });
 }
+export function importCrmContacts(contacts: Record<string, unknown>[]) {
+  return invokeCRM({ action: "contacts-import", contacts });
+}
+export function importCrmCompanies(companies: Record<string, unknown>[]) {
+  return invokeCRM({ action: "companies-import", companies });
+}
 export function getCrmEmailTemplates() {
   return invokeCRM({ action: "email-templates-list" });
 }
@@ -1893,6 +1899,49 @@ export async function contractDownloadPdf(slug: string, password: string) {
   });
   if (res.error) throw new Error(res.error.message || "Error al generar PDF");
   return res.data as Response;
+}
+
+const VISITOR_SID_KEY = "vixis_visitor_sid";
+
+/**
+ * Registra una persona interesada en bos_leads (best-effort, nunca revienta la UI).
+ * source: status_form | whatsapp_click | email_click | schedule_click
+ */
+export function trackInterest(params: {
+  source: "status_form" | "whatsapp_click" | "email_click" | "schedule_click";
+  name?: string;
+  email?: string;
+  phone?: string;
+  topic?: string;
+}) {
+  try {
+    let sid = "anon";
+    try {
+      sid =
+        localStorage.getItem(VISITOR_SID_KEY) ||
+        (typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : Date.now().toString(36) + Math.random().toString(36).slice(2));
+      localStorage.setItem(VISITOR_SID_KEY, sid);
+    } catch {
+      /* sin localStorage */
+    }
+    supabase.functions
+      .invoke("track-visitor", {
+        body: {
+          type: "interest",
+          session_id: sid,
+          page:
+            typeof window !== "undefined" ? window.location.pathname : "/status",
+          ...params,
+        },
+      })
+      .catch(() => {
+        /* best-effort */
+      });
+  } catch {
+    /* best-effort */
+  }
 }
 
 /**

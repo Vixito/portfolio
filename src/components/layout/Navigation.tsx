@@ -5,7 +5,7 @@ import { useLanguageStore } from "../../stores/useLanguageStore";
 import { useThemeStore } from "../../stores/useThemeStore";
 import { setGlobalDropdown } from "../features/LanguageSelector";
 
-function Navigation() {
+function Navigation({ externalBase }: { externalBase?: string }) {
   const location = useLocation();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -162,6 +162,27 @@ function Navigation() {
     );
   };
 
+  // En el Admin Panel (dominio admin.*) los links internos deben apuntar al
+  // sitio público https://vixis.dev en vez de resolver en el dominio admin.
+  const InternalLink = ({
+    path,
+    children,
+    ...rest
+  }: {
+    path: string;
+    children?: React.ReactNode;
+    [key: string]: any;
+  }) =>
+    externalBase ? (
+      <a href={`${externalBase}${path}`} {...rest}>
+        {children}
+      </a>
+    ) : (
+      <Link to={path} {...rest}>
+        {children}
+      </Link>
+    );
+
   const isStudioPage = location.pathname === "/studio";
 
   return (
@@ -178,8 +199,8 @@ function Navigation() {
       <ul className="links">
         {simpleItems.map((item) => (
           <li key={item.path}>
-            <Link
-              to={item.path}
+            <InternalLink
+              path={item.path}
               title={item.label}
               data-icon={item.icon}
               {...(item.iconImage
@@ -219,9 +240,9 @@ function Navigation() {
             onMouseLeave={() => handleMouseLeave("trabajo")}
           >
             {trabajoItems.map((item) => (
-              <Link
+              <InternalLink
                 key={item.path}
-                to={item.path}
+                path={item.path}
                 className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors cursor-pointer text-black dark:text-white whitespace-nowrap ${
                   isActive(item.path)
                     ? "bg-purple/20 dark:bg-purple/30 text-purple font-semibold"
@@ -229,15 +250,15 @@ function Navigation() {
                 }`}
               >
                 {item.label}
-              </Link>
+              </InternalLink>
             ))}
           </div>
         </li>
 
         {/* Estudios */}
         <li>
-          <Link
-            to="/studies"
+          <InternalLink
+            path="/studies"
             title={language === "es" ? "Estudios" : "Studies"}
             data-icon="🎓"
           />
@@ -245,7 +266,7 @@ function Navigation() {
 
         {afterDividerItems.map((item) => (
           <li key={item.path}>
-            <Link to={item.path} title={item.label} data-icon={item.icon} />
+            <InternalLink path={item.path} title={item.label} data-icon={item.icon} />
           </li>
         ))}
 

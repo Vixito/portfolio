@@ -525,7 +525,7 @@ function AdminShell(props: AdminShellProps) {
       {/* Nav del portfolio: fuera del sidebar (móvil = ancho completo; lg+ = solo sobre el contenido) */}
       <div className="pointer-events-none fixed inset-0 z-40 transform-gpu lg:left-72 site-nav-zone">
         <div className="pointer-events-auto">
-          <Navigation />
+          <Navigation externalBase="https://vixis.dev" />
         </div>
       </div>
     </div>
