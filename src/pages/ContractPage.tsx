@@ -44,6 +44,7 @@ export default function ContractPage() {
   const [verified, setVerified] = useState(false);
   const [signToken, setSignToken] = useState<string | null>(null);
   const [gone, setGone] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     getAppearanceSettings()
@@ -55,6 +56,7 @@ export default function ContractPage() {
   useEffect(() => {
     if (!slug) {
       setGone(true);
+      setChecking(false);
       return;
     }
     let alive = true;
@@ -62,9 +64,10 @@ export default function ContractPage() {
       .then((res: any) => {
         if (!alive) return;
         if (res.data && res.data.exists === false) setGone(true);
+        setChecking(false);
       })
       .catch(() => {
-        /* error de red: se deja el formulario */
+        if (alive) setChecking(false);
       });
     return () => {
       alive = false;
@@ -246,7 +249,13 @@ export default function ContractPage() {
           </div>
         )}
 
-        {!contract ? (
+        {checking ? (
+          <div className="py-12 text-center">
+            <span className="text-sm text-gray-500 dark:text-gray-400 animate-pulse">
+              {t("common.loading")}
+            </span>
+          </div>
+        ) : !contract ? (
           <form onSubmit={handleUnlock} className="space-y-3">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {t("contracts.lockedDesc")}
