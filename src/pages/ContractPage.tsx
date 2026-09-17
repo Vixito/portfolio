@@ -222,6 +222,8 @@ export default function ContractPage() {
 
   // Link eliminado: 404 estándar de siempre.
   if (gone) return <NotFound />;
+  // Mientras se verifica el slug no se pinta nada: ni formulario ni avisos.
+  if (checking) return null;
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4 py-12 relative overflow-hidden">
@@ -249,13 +251,7 @@ export default function ContractPage() {
           </div>
         )}
 
-        {checking ? (
-          <div className="py-12 text-center">
-            <span className="text-sm text-gray-500 dark:text-gray-400 animate-pulse">
-              {t("common.loading")}
-            </span>
-          </div>
-        ) : !contract ? (
+        {!contract ? (
           <form onSubmit={handleUnlock} className="space-y-3">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {t("contracts.lockedDesc")}
