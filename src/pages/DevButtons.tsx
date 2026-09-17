@@ -1,43 +1,7 @@
-import { useState } from "react";
 import Button from "../components/ui/Button";
-import VixisLogo, { type VixisLogoAnimation } from "../components/brand/VixisLogo";
 
 function DevButtons() {
   const variants = ["primary", "secondary", "outline", "outlineDark"] as const;
-  const [replayAssembly, setReplayAssembly] = useState(0);
-  const [replayDraw, setReplayDraw] = useState(0);
-
-  const logoDemos: {
-    id: Exclude<VixisLogoAnimation, "static">;
-    name: string;
-    desc: string;
-    replay?: () => void;
-    hint?: string;
-  }[] = [
-    {
-      id: "assembly",
-      name: "Assembly",
-      desc: "Tiles fades in, then both triangles slide in from opposite sides and click together.",
-      replay: () => setReplayAssembly((n) => n + 1),
-    },
-    {
-      id: "draw",
-      name: "Draw (Lasso concept)",
-      desc: "Each triangle outline draws itself like the Lasso reference, then fills fade in.",
-      replay: () => setReplayDraw((n) => n + 1),
-    },
-    {
-      id: "hover",
-      name: "Hover / Play",
-      desc: "The bottom triangle nudges forward like a play button. Move the mouse over it (or tap).",
-      hint: "Interactive — hover me",
-    },
-    {
-      id: "ambient",
-      name: "Ambient loop",
-      desc: "Gentle breathing of both triangles, flowing gradient and a shine sweep every few seconds.",
-    },
-  ];
   
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 py-16 px-4 transition-colors duration-300">
@@ -119,50 +83,6 @@ function DevButtons() {
             </div>
           </div>
 
-        </div>
-
-        {/* Vixis Studio logo animation demos */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-8 shadow-md">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-zinc-100 mb-2">
-            Vixis Studio — Logo Animation Demos
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-zinc-400 mb-6">
-            Vectorial recreation of the logo with its 3 parts addressable (tile + 2 triangles).
-            Animations respect <code className="bg-purple-100 dark:bg-purple-950/50 px-1.5 py-0.5 rounded text-xs">prefers-reduced-motion</code>.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="p-5 bg-slate-50 dark:bg-zinc-950 rounded-xl space-y-3 text-center border border-transparent">
-              <VixisLogo size={120} animation="static" />
-              <p className="text-sm font-mono font-bold text-gray-500 dark:text-zinc-500">static</p>
-              <p className="text-xs text-gray-500 dark:text-zinc-400">Faithful reference, no motion.</p>
-            </div>
-            {logoDemos.map((demo) => (
-              <div
-                key={demo.id}
-                className="p-5 bg-slate-50 dark:bg-zinc-950 rounded-xl space-y-3 text-center border border-transparent"
-              >
-                <VixisLogo
-                  key={demo.id === "assembly" ? replayAssembly : demo.id === "draw" ? replayDraw : demo.id}
-                  size={120}
-                  animation={demo.id}
-                />
-                <p className="text-sm font-mono font-bold text-gray-500 dark:text-zinc-500">{demo.id}</p>
-                <p className="text-xs text-gray-500 dark:text-zinc-400 min-h-10">{demo.desc}</p>
-                {demo.replay ? (
-                  <button
-                    onClick={demo.replay}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-colors cursor-pointer"
-                  >
-                    ↻ Replay {demo.name}
-                  </button>
-                ) : (
-                  <p className="text-[11px] text-purple-600 dark:text-purple-400 font-semibold">
-                    {demo.hint || "∞ loops forever"}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* Styling Reference Card */}
