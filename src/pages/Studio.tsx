@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useTranslation } from "../lib/i18n";
 import { useSEO } from "../hooks/useSEO";
-import VixisLogo from "../components/brand/VixisLogo";
+import VixisStudioLogo from "../components/brand/VixisStudioLogo";
 
 function Studio() {
   const { t } = useTranslation();
@@ -13,6 +13,7 @@ function Studio() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [studioLogoAnim, setStudioLogoAnim] = useState<"draw-flash" | "draw">("draw-flash");
   const [studioLogoKey, setStudioLogoKey] = useState(0);
+  const [studioLogoReady, setStudioLogoReady] = useState(false);
   const logoRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState<number | null>(0); // Misión abierta por defecto
@@ -93,6 +94,15 @@ function Studio() {
         "-=0.3"
       );
     }
+
+    // El logo se anima cuando TERMINA la entrada (evento real, sin timeouts).
+    let alive = true;
+    tl.eventCallback("onComplete", () => {
+      if (alive) setStudioLogoReady(true);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // Datos de redes sociales
@@ -253,10 +263,10 @@ function Studio() {
                     setStudioLogoKey((k) => k + 1);
                   }}
                 >
-                  <VixisLogo
-                    key={studioLogoKey}
+                  <VixisStudioLogo
+                    key={studioLogoReady ? `go-${studioLogoKey}` : "waiting"}
                     size={112}
-                    animation={studioLogoAnim}
+                    animation={studioLogoReady ? studioLogoAnim : "static"}
                     className="h-full w-full block"
                   />
                 </div>

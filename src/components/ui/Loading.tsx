@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { gsap } from "gsap";
 
 function Loading() {
@@ -368,7 +369,7 @@ function Loading() {
     };
   }, []);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 flex items-center justify-center bg-[#242428] z-50">
       <div ref={loadingRef} className="loading">
         <div className="skate">
@@ -629,7 +630,8 @@ function Loading() {
           --color: #fff;
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }
 

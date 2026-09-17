@@ -11,9 +11,10 @@ import {
   getAppearanceSettings,
 } from "../lib/supabase-functions";
 import { useTranslation } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 import { useThemeStore } from "../stores/useThemeStore";
 import CanvasBackground from "../components/features/CanvasBackground";
-import VixisLogo from "../components/brand/VixisLogo";
+import Loading from "../components/ui/Loading";
 import NotFound from "./NotFound";
 
 const inputCls =
@@ -46,30 +47,27 @@ export default function ContractPage() {
   const [signToken, setSignToken] = useState<string | null>(null);
   const [gone, setGone] = useState(false);
   const [checking, setChecking] = useState(true);
+  useSEO({ title: contract?.title || undefined });
 
+  // Fondo + existencia en paralelo: sin carrera (el loader y el contenido
+  // comparten el mismo fondo) y sin pintar nada hasta saber si existe.
   useEffect(() => {
-    getAppearanceSettings()
-      .then((s) => setContractBg(s?.contracts_background || "default"))
-      .catch(() => setContractBg("default"));
-  }, []);
-
-  // Si el contrato fue eliminado, el link muere: mostrarlo sin pedir contraseña.
-  useEffect(() => {
-    if (!slug) {
-      setGone(true);
-      setChecking(false);
-      return;
-    }
     let alive = true;
-    contractStatus(slug)
-      .then((res: any) => {
-        if (!alive) return;
-        if (res.data && res.data.exists === false) setGone(true);
-        setChecking(false);
-      })
-      .catch(() => {
-        if (alive) setChecking(false);
-      });
+    Promise.all([
+      getAppearanceSettings()
+        .then((s) => (s?.contracts_background || "default"))
+        .catch(() => "default"),
+      !slug
+        ? Promise.resolve("missing")
+        : contractStatus(slug)
+            .then((res: any) => (res.data && res.data.exists === false ? "missing" : "exists"))
+            .catch(() => "unknown"),
+    ]).then(([bg, st]) => {
+      if (!alive) return;
+      setContractBg(bg);
+      if (st === "missing") setGone(true);
+      setChecking(false);
+    });
     return () => {
       alive = false;
     };
@@ -241,16 +239,9 @@ export default function ContractPage() {
   );
 
   // Verificando el slug: fondo + nav normales, draw-loop y texto localizado.
+  // Verificando el slug: skater a pantalla completa hasta saber si existe.
   if (checking) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 px-4 py-12 relative overflow-hidden">
-        {bgLayer}
-        <div className="relative z-10 flex flex-col items-center gap-4">
-          <VixisLogo size={110} animation="draw-loop" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t("common.loading")}</p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (

@@ -1,7 +1,9 @@
 import Button from "../components/ui/Button";
+import { useSEO } from "../hooks/useSEO";
 import "./DevButtons.css";
 
 function DevButtons() {
+  useSEO({ title: "Buttons" });
   const variants = ["primary", "secondary", "outline", "outlineDark"] as const;
 
   return (

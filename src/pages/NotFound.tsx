@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 
 function NotFound() {
+  const { t } = useTranslation();
+  useSEO({ title: t("notFound.fileNotFound") });
   const playerRef = useRef<HTMLDivElement>(null);
   const skyboxRef = useRef<HTMLDivElement>(null);
 

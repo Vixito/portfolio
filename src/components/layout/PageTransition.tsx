@@ -25,6 +25,10 @@ function PageTransition({ children }: PageTransitionProps) {
           y: 0,
           duration: 0.5,
           ease: "power2.out",
+          // Limpiar estilos inline al terminar: un transform residual
+          // convierte este div en containing block y rompe los `fixed`
+          // (overlays como Loading o modales no cubrirían el viewport).
+          clearProps: "transform,opacity",
         }
       );
     }

@@ -12,6 +12,7 @@ import {
 import CanvasBackground from "../components/features/CanvasBackground";
 import Button from "../components/ui/Button";
 import { getTranslatedText, useTranslation } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 import {
   createDLocalGoToken,
   createNowPaymentsCheckout,
@@ -58,6 +59,7 @@ function Checkout() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { t, language } = useTranslation();
+  useSEO({ title: t("checkout.title") });
   const { theme } = useThemeStore();
 
   const [product, setProduct] = useState<CheckoutProduct | null>(null);

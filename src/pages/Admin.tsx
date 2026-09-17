@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { optimizeAndUpload } from "../lib/storage-functions";
 import { useTranslation } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 import { useStatusStore } from "../stores/useStatusStore";
 import { useLanguageStore } from "../stores/useLanguageStore";
 import { useThemeStore } from "../stores/useThemeStore";
@@ -285,6 +286,7 @@ function ExternalToolsCard() {
 
 function Admin() {
   const { t } = useTranslation();
+  useSEO({ title: t("admin.title") });
   const navigate = useNavigate();
   const { theme } = useThemeStore();
   const [isAuthenticated, setIsAuthenticated] = useState(false);

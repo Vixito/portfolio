@@ -5,12 +5,16 @@ import { createDlocalPayment } from "../lib/supabase-functions";
 import Button from "../components/ui/Button";
 import Loading from "../components/ui/Loading";
 import { useTranslation } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
+import NotFound from "./NotFound";
 
 export default function PayInvoice() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [invoice, setInvoice] = useState<any>(null);
+  useSEO({ title: invoice?.invoice_number ? `#${invoice.invoice_number}` : undefined });
+  const [gone, setGone] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +27,7 @@ export default function PayInvoice() {
 
   useEffect(() => {
     if (!id) {
-      setError("Invoice ID is required");
+      setGone(true);
       setLoading(false);
       return;
     }
@@ -31,6 +35,9 @@ export default function PayInvoice() {
     const fetchInvoice = async () => {
       try {
         const data = await getInvoice(id);
+        if (!data || !data.id) {
+          throw new Error(t("checkout.invoiceNotFound"));
+        }
         setInvoice(data);
         // Pre-llenar email si está disponible
         if (data.user_email) {
@@ -40,10 +47,13 @@ export default function PayInvoice() {
           setPayerInfo((prev) => ({ ...prev, name: data.user_name }));
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error loading invoice");
-      } finally {
+        console.error("Error loading invoice:", err);
+        // Recurso inexistente: al 404 en cuanto se sabe, sin demoras fingidas.
+        setGone(true);
         setLoading(false);
+        return;
       }
+      setLoading(false);
     };
 
     fetchInvoice();
@@ -89,6 +99,8 @@ export default function PayInvoice() {
     }
   };
 
+  if (gone) return <NotFound />;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -99,12 +111,21 @@ export default function PayInvoice() {
 
   if (error && !invoice) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
-          <p className="text-gray-600 dark:text-gray-400">{error}</p>
-          <Button onClick={() => navigate("/")} className="mt-4">
-            Go Home
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <p className="text-6xl mb-4">🧾</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            {t("checkout.invoiceNotFound")}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {t("checkout.invoiceNotFoundHint")}
+          </p>
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/")}
+            className="mt-2"
+          >
+            {t("checkout.goHome")}
           </Button>
         </div>
       </div>
@@ -112,7 +133,23 @@ export default function PayInvoice() {
   }
 
   if (!invoice) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <p className="text-6xl mb-4">🧾</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            {t("checkout.invoiceNotFound")}
+          </h1>
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/")}
+            className="mt-2"
+          >
+            {t("checkout.goHome")}
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const formatPrice = (amount: number, currency: string) => {

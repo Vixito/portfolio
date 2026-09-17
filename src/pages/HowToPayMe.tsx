@@ -1,8 +1,10 @@
 import React from "react";
 import { useTranslation } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 
 export default function HowToPayMe() {
   const { t } = useTranslation();
+  useSEO({ title: t("howToPay.title") });
 
   return (
     <div className="max-w-4xl mx-auto px-5 py-10 pb-20 font-['Poppins',sans-serif]">

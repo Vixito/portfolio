@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { getStudies } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 
 interface Study {
   id: string;
@@ -21,6 +22,7 @@ interface Study {
 
 function Studies() {
   const { t } = useTranslation();
+  useSEO({ title: t("studies.title") });
   const [studies, setStudies] = useState<Study[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({

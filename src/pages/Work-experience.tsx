@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import Button from "../components/ui/Button";
 import { getWorkExperiences } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 import { useLanguageStore } from "../stores/useLanguageStore";
 
 interface WorkExperience {
@@ -27,6 +28,7 @@ interface WorkExperience {
 
 function WorkExperience() {
   const { t } = useTranslation();
+  useSEO({ title: t("workExperience.title") });
   const { language } = useLanguageStore();
   const [experiences, setExperiences] = useState<WorkExperience[]>([]);
   const [loading, setLoading] = useState(true);

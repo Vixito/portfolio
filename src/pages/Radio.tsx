@@ -10,6 +10,7 @@ import {
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 import AdSpace from "../components/features/AdSpace";
 import { sanitizeUserInput } from "../lib/security";
 import { emitRadioState } from "../hooks/useRadioState";
@@ -26,6 +27,7 @@ interface Song {
 
 function Radio() {
   const { t, language } = useTranslation();
+  useSEO({ title: t("radio.title") });
   const { theme } = useThemeStore();
   const [radioBg, setRadioBg] = useState("default");
 

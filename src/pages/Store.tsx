@@ -5,6 +5,7 @@ import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
 import { getProductsWithPricing, getExchangeRate } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 
 interface ProductPricing {
   id: string;
@@ -87,6 +88,7 @@ interface StoreItem {
 
 function Store() {
   const { t } = useTranslation();
+  useSEO({ title: t("store.title") });
   const navigate = useNavigate();
   const { productId } = useParams();
   const [searchParams] = useSearchParams();

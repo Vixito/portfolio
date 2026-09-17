@@ -1,18 +1,18 @@
 import { useId } from "react";
-import "./VixisLogo.css";
+import "./VixisStudioLogo.css";
 
-export type VixisLogoAnimation =
+export type VixisStudioLogoAnimation =
   | "static"
   | "draw"
   | "draw-loop"
   | "draw-full"
   | "draw-flash";
 
-interface VixisLogoProps {
+interface VixisStudioLogoProps {
   /** px del lado (el SVG es cuadrado) */
   size?: number;
   /** variante de animación por partes */
-  animation?: VixisLogoAnimation;
+  animation?: VixisStudioLogoAnimation;
   /** título accesible */
   title?: string;
   className?: string;
@@ -28,12 +28,12 @@ const TRI_BOTTOM = "182,113 182,194 68,156";
  * Logo de Vixis Studio recreado en vectorial, con las 3 piezas
  * direccionables (tile + 2 triángulos) para animarlas por separado.
  */
-export default function VixisLogo({
+export default function VixisStudioLogo({
   size = 120,
   animation = "static",
   title = "Vixis Studio",
   className = "",
-}: VixisLogoProps) {
+}: VixisStudioLogoProps) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const gradId = `vixis-teal-${uid}`;
 
@@ -42,7 +42,7 @@ export default function VixisLogo({
       viewBox="0 0 250 250"
       width={size}
       height={size}
-      className={`vixis-logo vixis-logo--${animation} ${className}`}
+      className={`vixis-studio-logo vixis-studio-logo--${animation} ${className}`}
       role="img"
       aria-label={title}
     >

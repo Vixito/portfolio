@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import Pagination from "../components/ui/Pagination";
 import { getClients } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
+import { useSEO } from "../hooks/useSEO";
 
 interface Client {
   id: string;
@@ -33,6 +34,7 @@ interface Testimonial {
 
 function Clients() {
   const { t, language } = useTranslation();
+  useSEO({ title: t("clients.title") });
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);

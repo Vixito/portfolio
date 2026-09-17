@@ -1082,9 +1082,13 @@ export const translations = {
     },
     // Checkout Propio
     checkout: {
+      title: "Finalizar compra",
       backToProduct: "Volver al producto",
       backToStore: "Volver a la tienda",
       productNotFound: "Producto no encontrado",
+      invoiceNotFound: "Factura no encontrada",
+      invoiceNotFoundHint: "El enlace es inválido o la factura ya no existe.",
+      goHome: "Volver al inicio",
       error: "Error",
       buyerInfo: "Información del comprador",
       fullName: "Nombre completo",
@@ -2211,9 +2215,13 @@ export const translations = {
     },
     // Custom Checkout
     checkout: {
+      title: "Checkout",
       backToProduct: "Back to product",
       backToStore: "Back to store",
       productNotFound: "Product not found",
+      invoiceNotFound: "Invoice not found",
+      invoiceNotFoundHint: "The link is invalid or the invoice no longer exists.",
+      goHome: "Go home",
       error: "Error",
       buyerInfo: "Buyer information",
       fullName: "Full name",

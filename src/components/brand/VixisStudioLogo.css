@@ -4,18 +4,18 @@
    oculto. Con `prefers-reduced-motion` todo queda estático.
    ============================================================ */
 
-.vixis-logo {
+.vixis-studio-logo {
   display: inline-block;
   vertical-align: middle;
 }
 
-.vixis-logo .vixis-tri {
+.vixis-studio-logo .vixis-tri {
   transform-box: fill-box;
   transform-origin: center;
 }
 
 /* ---------- DRAW-FULL: hasta la baldosa se dibuja ---------- */
-.vixis-logo--draw-full .vixis-tile {
+.vixis-studio-logo--draw-full .vixis-tile {
   fill-opacity: 1;
   stroke: #2a2a2a;
   stroke-width: 3;
@@ -26,7 +26,7 @@
     vixis-tile-draw 0.9s ease-in-out backwards,
     vixis-tile-fill 0.5s ease-out 0.7s backwards;
 }
-.vixis-logo--draw-full .vixis-tri {
+.vixis-studio-logo--draw-full .vixis-tri {
   fill-opacity: 1;
   stroke: #46e8e4;
   stroke-width: 4;
@@ -36,10 +36,10 @@
   stroke-opacity: 0;
   animation: vixis-draw 1.3s ease-in-out backwards;
 }
-.vixis-logo--draw-full .vixis-tri-top {
+.vixis-studio-logo--draw-full .vixis-tri-top {
   animation-delay: 0.7s;
 }
-.vixis-logo--draw-full .vixis-tri-bottom {
+.vixis-studio-logo--draw-full .vixis-tri-bottom {
   animation-delay: 1.05s;
 }
 
@@ -68,11 +68,11 @@
 }
 
 /* ---------- DRAW: el trazo se dibuja estilo Lasso ---------- */
-.vixis-logo--draw .vixis-tile,
-.vixis-logo--draw-full .vixis-tile {
+.vixis-studio-logo--draw .vixis-tile,
+.vixis-studio-logo--draw-full .vixis-tile {
   animation: vixis-fade-in 0.4s ease-out backwards;
 }
-.vixis-logo--draw .vixis-tri {
+.vixis-studio-logo--draw .vixis-tri {
   fill-opacity: 1;
   stroke: #46e8e4;
   stroke-width: 4;
@@ -82,7 +82,7 @@
   stroke-opacity: 0;
   animation: vixis-draw 1.4s ease-in-out backwards;
 }
-.vixis-logo--draw .vixis-tri-bottom {
+.vixis-studio-logo--draw .vixis-tri-bottom {
   animation-delay: 0.4s;
 }
 
@@ -111,10 +111,10 @@
 }
 
 /* ---------- DRAW-FLASH: draw + un solo destello de luz ---------- */
-.vixis-logo--draw-flash .vixis-tile {
+.vixis-studio-logo--draw-flash .vixis-tile {
   animation: vixis-fade-in 0.4s ease-out backwards;
 }
-.vixis-logo--draw-flash .vixis-tri {
+.vixis-studio-logo--draw-flash .vixis-tri {
   fill-opacity: 1;
   stroke: #46e8e4;
   stroke-width: 4;
@@ -124,10 +124,10 @@
   stroke-opacity: 0;
   animation: vixis-draw 1.4s ease-in-out backwards;
 }
-.vixis-logo--draw-flash .vixis-tri-bottom {
+.vixis-studio-logo--draw-flash .vixis-tri-bottom {
   animation-delay: 0.4s;
 }
-.vixis-logo--draw-flash {
+.vixis-studio-logo--draw-flash {
   animation: vixis-flash 2.6s ease-out backwards;
   transform-origin: center;
 }
@@ -147,10 +147,10 @@
 }
 
 /* ---------- DRAW-LOOP: el draw exacto, en loop de loading ---------- */
-.vixis-logo--draw-loop .vixis-tile {
+.vixis-studio-logo--draw-loop .vixis-tile {
   animation: vixis-fade-in 0.4s ease-out backwards;
 }
-.vixis-logo--draw-loop .vixis-tri {
+.vixis-studio-logo--draw-loop .vixis-tri {
   fill-opacity: 1;
   stroke: #46e8e4;
   stroke-width: 4;
@@ -158,9 +158,9 @@
   stroke-dasharray: 100;
   stroke-dashoffset: 0;
   stroke-opacity: 0;
-  animation: vixis-draw-loading 4.2s linear infinite;
+  animation: vixis-draw-loading 2.6s linear infinite;
 }
-.vixis-logo--draw-loop .vixis-tri-bottom {
+.vixis-studio-logo--draw-loop .vixis-tri-bottom {
   animation-delay: -0.4s;
 }
 
@@ -171,23 +171,23 @@
     fill-opacity: 0;
     animation-timing-function: ease-in-out;
   }
-  33.3% {
+  53.8% {
     stroke-dashoffset: 0;
     stroke-opacity: 1;
     fill-opacity: 0.12;
   }
-  45%,
-  60% {
+  65%,
+  73% {
     stroke-dashoffset: 0;
     stroke-opacity: 0;
     fill-opacity: 1;
   }
-  72% {
+  84% {
     stroke-dashoffset: 0;
     stroke-opacity: 0;
     fill-opacity: 0;
   }
-  82%,
+  90%,
   100% {
     stroke-dashoffset: 100;
     stroke-opacity: 0;
@@ -197,8 +197,8 @@
 
 /* ---------- Movimiento reducido: todo estático ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .vixis-logo *,
-  .vixis-logo {
+  .vixis-studio-logo *,
+  .vixis-studio-logo {
     animation: none !important;
     transition: none !important;
   }
