@@ -127,7 +127,7 @@ serve(async (req: Request) => {
       if (!slug) return json(400, { error: "slug es requerido" });
       const { data, error } = await supabase
         .from("crm_contracts")
-        .select("title, status, signed_at, client_signed_at, provider_signed_at, client_email")
+        .select("title, status, signed_at, client_signed_at, provider_signed_at, client_email, contract_type")
         .eq("slug", slug)
         .maybeSingle();
       if (error) return json(500, { error: error.message });
@@ -139,6 +139,7 @@ serve(async (req: Request) => {
         signed: !!data.signed_at,
         client_signed: !!data.client_signed_at,
         otp: !!data.client_email,
+        contract_type: data.contract_type || "servicios",
       });
     }
 
@@ -171,6 +172,7 @@ serve(async (req: Request) => {
         id: contract.id,
         title: contract.title,
         title_en: contract.title_en || null,
+        contract_type: contract.contract_type || "servicios",
         terms: contract.terms,
         terms_en: contract.terms_en || null,
         currency: contract.currency,

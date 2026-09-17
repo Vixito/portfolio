@@ -133,6 +133,8 @@ const randomPassword = () => {
   return out;
 };
 
+const CONTRACT_TYPES = ["servicios", "consultoria", "nda", "oferta", "soporte", "licencia", "otro"];
+
 const sha256hex = async (s: string) => {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -471,7 +473,7 @@ serve(async (req: Request) => {
       case "leads-list": {
         const { data, error } = await supabase
           .from("bos_leads")
-          .select("id, source, name, email, phone, topic, converted_at, created_at")
+          .select("id, source, name, email, phone, topic, converted_at, created_at, country, device, browser, os, page_url, referrer_domain, utm_source, utm_medium, utm_campaign")
           .order("created_at", { ascending: false })
           .limit(200);
         if (error) return json(500, { error: error.message });
@@ -500,6 +502,17 @@ serve(async (req: Request) => {
         const parts = (lead.name || "").split(/\s+/);
         const firstName = parts[0] || "Sin nombre";
         const lastName = parts.slice(1).join(" ") || null;
+        const enrichBits = [
+          lead.source || null,
+          lead.country || null,
+          [lead.device, lead.browser].filter(Boolean).join("/") || null,
+          lead.page_url || null,
+          lead.utm_source ? `utm:${lead.utm_source}` : null,
+        ].filter(Boolean);
+        const enrichedNotes = [
+          lead.topic || null,
+          enrichBits.length > 0 ? `[${enrichBits.join(" · ")}]` : null,
+        ].filter(Boolean).join("\n");
         const { data: contact, error: cErr } = await supabase
           .from("crm_contacts")
           .insert({
@@ -511,7 +524,7 @@ serve(async (req: Request) => {
             source: lead.source || "manual",
             lead_id: leadId,
             tags: [lead.source || "unknown"],
-            notes: lead.topic || null,
+            notes: enrichedNotes || null,
           })
           .select(contactSelect)
           .single();
@@ -596,6 +609,7 @@ serve(async (req: Request) => {
             title,
             title_en: c.title_en ? String(c.title_en).trim().slice(0, 300) : null,
             slug,
+            contract_type: CONTRACT_TYPES.includes(String(c.contract_type || "")) ? String(c.contract_type) : "servicios",
             contact_id: c.contact_id || null,
             company_id: c.company_id || null,
             currency: c.currency || "EUR",
@@ -620,6 +634,9 @@ serve(async (req: Request) => {
         const clean: Record<string, unknown> = { updated_at: now() };
         for (const k of ["title", "terms", "currency", "status", "title_en", "terms_en"]) {
           if (k in u) clean[k] = u[k] == null ? null : String(u[k]);
+        }
+        if ("contract_type" in u && CONTRACT_TYPES.includes(String(u.contract_type || ""))) {
+          clean.contract_type = String(u.contract_type);
         }
         if ("value" in u && u.value != null) clean.value = u.value;
         if ("contact_id" in u) clean.contact_id = u.contact_id || null;

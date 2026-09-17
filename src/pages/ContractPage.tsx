@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "../lib/i18n";
 import { useThemeStore } from "../stores/useThemeStore";
 import CanvasBackground from "../components/features/CanvasBackground";
+import NotFound from "./NotFound";
 
 const inputCls =
   "w-full rounded-lg border border-gray-300 dark:border-white/15 bg-white dark:bg-white/5 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-500 outline-none focus:border-[#8c52ff]";
@@ -216,6 +217,9 @@ export default function ContractPage() {
     </span>
   );
 
+  // Link eliminado: 404 estándar de siempre.
+  if (gone) return <NotFound />;
+
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4 py-12 relative overflow-hidden">
       <AnimatePresence>
@@ -242,15 +246,7 @@ export default function ContractPage() {
           </div>
         )}
 
-        {gone ? (
-          <div className="text-center py-8 space-y-3">
-            <p className="text-5xl">🔗</p>
-            <h2 className="text-lg font-semibold">{t("contracts.goneTitle")}</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t("contracts.goneDesc")}
-            </p>
-          </div>
-        ) : !contract ? (
+        {!contract ? (
           <form onSubmit={handleUnlock} className="space-y-3">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {t("contracts.lockedDesc")}
@@ -274,7 +270,12 @@ export default function ContractPage() {
         ) : (
           <div className="space-y-5">
             <div className={cardCls}>
-              <h2 className="text-lg font-semibold">{title}</h2>
+              <div className="flex items-start justify-between gap-2">
+                <h2 className="text-lg font-semibold">{title}</h2>
+                <span className="shrink-0 px-2 py-0.5 text-[11px] rounded bg-[#8c52ff]/15 text-[#8c52ff] dark:text-[#c4b5fd] border border-[#8c52ff]/30">
+                  {t(`admin.crm.contractTypes.${contract.contract_type || "servicios"}`)}
+                </span>
+              </div>
               <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1 text-sm text-gray-500 dark:text-gray-400">
                 <span>
                   {t("contracts.client")}: <span className="text-gray-900 dark:text-gray-200">{contract.client_name || "—"}</span>

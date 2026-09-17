@@ -1865,6 +1865,7 @@ export function getCrmContracts() {
 export function createCrmContract(contract: {
   title: string;
   title_en?: string;
+  contract_type?: string;
   terms: string;
   terms_en?: string;
   contact_id?: string;
@@ -1959,6 +1960,7 @@ export function trackInterest(params: {
           session_id: sid,
           page:
             typeof window !== "undefined" ? window.location.pathname : "/status",
+          page_url: typeof window !== "undefined" ? window.location.href.slice(0, 500) : null,
           ...params,
         },
       })

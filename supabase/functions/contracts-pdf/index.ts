@@ -38,6 +38,16 @@ const money = (v: number | null, cur: string, lang: string) =>
         currency: cur || (lang === "en" ? "USD" : "EUR"),
       }).format(v);
 
+const HEADINGS: Record<string, { es: string; en: string }> = {
+  servicios: { es: "CONTRATO DE PRESTACIÓN DE SERVICIOS", en: "SERVICE AGREEMENT" },
+  consultoria: { es: "CONTRATO DE CONSULTORÍA", en: "CONSULTING AGREEMENT" },
+  nda: { es: "ACUERDO DE CONFIDENCIALIDAD", en: "NON-DISCLOSURE AGREEMENT" },
+  oferta: { es: "OFERTA COMERCIAL", en: "COMMERCIAL OFFER" },
+  soporte: { es: "CONTRATO DE SOPORTE Y MANTENIMIENTO", en: "SUPPORT & MAINTENANCE AGREEMENT" },
+  licencia: { es: "CONTRATO DE LICENCIAMIENTO", en: "LICENSE AGREEMENT" },
+  otro: { es: "CONTRATO", en: "AGREEMENT" },
+};
+
 const wrapText = (text: string, max: number): string[] => {
   const out: string[] = [];
   for (const rawLine of text.split("\n")) {
@@ -122,9 +132,10 @@ serve(async (req: Request) => {
     }
 
     const useEn = lang === "en" && (c.title_en || c.terms_en);
+    const typeKey = HEADINGS[c.contract_type] ? c.contract_type : "servicios";
     const L = useEn
       ? {
-          heading: "SERVICE AGREEMENT",
+          heading: HEADINGS[typeKey].en,
           contract: "Contract",
           client: "Client",
           email: "Email",
@@ -138,7 +149,7 @@ serve(async (req: Request) => {
           dateFmt: "en-US",
         }
       : {
-          heading: "CONTRATO DE SERVICIOS",
+          heading: HEADINGS[typeKey].es,
           contract: "Contrato",
           client: "Cliente",
           email: "Email",

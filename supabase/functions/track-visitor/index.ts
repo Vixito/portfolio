@@ -24,6 +24,52 @@ const getClientIp = (req: Request): string => {
   return req.headers.get("x-real-ip") || "unknown";
 };
 
+// País vía Cloudflare (best-effort, puede no venir).
+const getCountry = (req: Request): string | null => {
+  const c = req.headers.get("cf-ipcountry") || req.headers.get("x-vercel-ip-country");
+  return c && c !== "XX" && c !== "T1" ? c.slice(0, 8) : null;
+};
+
+// Parser ligero de user-agent (sin dependencias).
+const parseUa = (ua: string): { browser: string; os: string; device: string } => {
+  const u = ua.toLowerCase();
+  let browser = "—";
+  if (u.includes("edg/")) browser = "Edge";
+  else if (u.includes("opr/") || u.includes("opera")) browser = "Opera";
+  else if (u.includes("firefox")) browser = "Firefox";
+  else if (u.includes("chrome") && !u.includes("edg")) browser = "Chrome";
+  else if (u.includes("safari") && !u.includes("chrome")) browser = "Safari";
+  else if (u.includes("msie") || u.includes("trident")) browser = "IE";
+  let os = "—";
+  if (u.includes("windows")) os = "Windows";
+  else if (u.includes("iphone") || u.includes("ipad")) os = "iOS";
+  else if (u.includes("mac os")) os = "macOS";
+  else if (u.includes("android")) os = "Android";
+  else if (u.includes("linux")) os = "Linux";
+  let device = "desktop";
+  if (/ipad|tablet/i.test(ua)) device = "tablet";
+  else if (/mobile|android|iphone/i.test(ua)) device = "mobile";
+  return { browser, os, device };
+};
+
+const hostOf = (url: string): string | null => {
+  try {
+    return new URL(url).hostname.slice(0, 200);
+  } catch {
+    return null;
+  }
+};
+
+const utmOf = (url: string): Record<string, string | null> => {
+  try {
+    const q = new URL(url).searchParams;
+    const g = (k: string) => q.get(k)?.slice(0, 120) || null;
+    return { utm_source: g("utm_source"), utm_medium: g("utm_medium"), utm_campaign: g("utm_campaign") };
+  } catch {
+    return { utm_source: null, utm_medium: null, utm_campaign: null };
+  }
+};
+
 const DENY_TARGETS = ["admin", "login"];
 
 serve(async (req: Request) => {
@@ -69,6 +115,9 @@ serve(async (req: Request) => {
     const email = String(payload?.email || "").slice(0, 200).toLowerCase() || null;
     const phone = String(payload?.phone || "").slice(0, 60) || null;
     const topic = String(payload?.topic || "").slice(0, 500) || null;
+    const pageUrl = String(payload?.page_url || "").slice(0, 500) || null;
+    const parsedUa = parseUa(ua);
+    const utms = pageUrl ? utmOf(pageUrl) : { utm_source: null, utm_medium: null, utm_campaign: null };
 
     try {
       const startOfDay = new Date();
@@ -94,6 +143,15 @@ serve(async (req: Request) => {
         phone,
         topic,
         session_id,
+        page_url: pageUrl,
+        referrer_domain: referrer ? hostOf(referrer) : null,
+        country: getCountry(req),
+        device: parsedUa.device,
+        browser: parsedUa.browser,
+        os: parsedUa.os,
+        utm_source: utms.utm_source,
+        utm_medium: utms.utm_medium,
+        utm_campaign: utms.utm_campaign,
         payload: {
           page: page || null,
           referrer: referrer || null,

@@ -398,8 +398,6 @@ export const translations = {
       download: "Descargar PDF del contrato",
       generating: "Generando PDF…",
       needName: "Escribe tu nombre para firmar",
-      goneTitle: "Este enlace ya no es válido",
-      goneDesc: "El contrato fue eliminado o nunca existió. Pide un nuevo enlace al administrador.",
     },
     // Status
     status: {
@@ -774,6 +772,19 @@ export const translations = {
           noVisits: "Sin visitas registradas",
           dedupeNote: "Una visita por sesión + página + día (dedupe automático).",
           from: "desde",
+          country: "País",
+          device: "Dispositivo",
+          page: "Página",
+          campaign: "Campaña",
+        },
+        contractTypes: {
+          servicios: "Prestación de Servicios",
+          consultoria: "Consultoría",
+          nda: "Confidencialidad (NDA)",
+          oferta: "Oferta Comercial",
+          soporte: "Soporte y Mantenimiento",
+          licencia: "Licenciamiento",
+          otro: "Otro",
         },
         emailsTab: {
           hint: "Plantillas con placeholders —",
@@ -841,6 +852,7 @@ export const translations = {
           title: "Título *",
           titlePh: "Proyecto web — alcance inicial",
           titleEn: "Título en inglés (opcional)",
+          ctype: "Tipo de contrato",
           contact: "Contacto",
           noContact: "Sin contacto",
           company: "Empresa",
@@ -1511,8 +1523,6 @@ export const translations = {
       download: "Download contract PDF",
       generating: "Generating PDF…",
       needName: "Type your name to sign",
-      goneTitle: "This link is no longer valid",
-      goneDesc: "The contract was deleted or never existed. Ask the administrator for a new link.",
     },
     // Status
     status: {
@@ -1887,6 +1897,19 @@ export const translations = {
           noVisits: "No visits recorded",
           dedupeNote: "One visit per session + page + day (automatic dedupe).",
           from: "from",
+          country: "Country",
+          device: "Device",
+          page: "Page",
+          campaign: "Campaign",
+        },
+        contractTypes: {
+          servicios: "Services",
+          consultoria: "Consulting",
+          nda: "Non-Disclosure (NDA)",
+          oferta: "Commercial Offer",
+          soporte: "Support & Maintenance",
+          licencia: "Licensing",
+          otro: "Other",
         },
         emailsTab: {
           hint: "Templates with placeholders —",
@@ -1954,6 +1977,7 @@ export const translations = {
           title: "Title *",
           titlePh: "Website project — initial scope",
           titleEn: "English title (optional)",
+          ctype: "Contract type",
           contact: "Contact",
           noContact: "No contact",
           company: "Company",

@@ -633,6 +633,7 @@ export default function CrmPanel() {
       const payload = {
         title: String(fd.get("title") || "").trim(),
         title_en: String(fd.get("title_en") || "").trim() || undefined,
+        contract_type: String(fd.get("contract_type") || "servicios"),
         contact_id: String(fd.get("contact_id") || "") || undefined,
         company_id: String(fd.get("company_id") || "") || undefined,
         currency: String(fd.get("currency") || "EUR"),
@@ -1358,6 +1359,18 @@ export default function CrmPanel() {
                           </p>
                           {l.email && <p className="text-[11px] text-gray-500 truncate">{l.email}</p>}
                           {l.topic && !l.name && !l.email && <p className="text-[11px] text-gray-500 truncate">{l.topic}</p>}
+                          {(l.country || l.device || l.page_url || l.utm_source) && (
+                            <p className="text-[10px] text-gray-600 truncate">
+                              {[
+                                l.country || null,
+                                [l.device, l.browser].filter(Boolean).join("/") || null,
+                                l.page_url || null,
+                                l.utm_source ? `utm:${l.utm_source}${l.utm_medium ? `/${l.utm_medium}` : ""}` : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
                           <p className="text-[10px] text-gray-600">{fmtDate(l.created_at)}</p>
                         </div>
                         {l.converted_at ? (
@@ -1528,6 +1541,7 @@ export default function CrmPanel() {
                         <td className="px-4 py-2.5">
                           <span className="font-medium">{c.title}</span>
                           <span className="block text-[10px] text-gray-500">{t("admin.crm.contractsTab.created")} {fmtDate(c.created_at)}</span>
+                          <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] rounded bg-white/10 text-gray-300">{t(`admin.crm.contractTypes.${c.contract_type || "servicios"}`)}</span>
                           {(c.failed_24h || 0) > 0 && (
                             <span className="block text-[10px] text-red-400" title={t("admin.crm.contractsTab.failedTip")}>
                               ⚠ {c.failed_24h} {t("admin.crm.contractsTab.failedTip")}
@@ -2079,6 +2093,13 @@ export default function CrmPanel() {
           </Field>
           <Field label={t("admin.crm.contractModal.titleEn")}>
             <input name="title_en" defaultValue={contractModal?.edit?.title_en || ""} className={inputCls} placeholder="Website project — initial scope" />
+          </Field>
+          <Field label={t("admin.crm.contractModal.ctype")}>
+            <select name="contract_type" defaultValue={contractModal?.edit?.contract_type || "servicios"} className={inputCls}>
+              {(["servicios", "consultoria", "nda", "oferta", "soporte", "licencia", "otro"] as const).map((ct) => (
+                <option key={ct} value={ct}>{t(`admin.crm.contractTypes.${ct}`)}</option>
+              ))}
+            </select>
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label={t("admin.crm.contractModal.contact")}>
