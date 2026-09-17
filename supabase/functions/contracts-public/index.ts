@@ -131,8 +131,9 @@ serve(async (req: Request) => {
         .eq("slug", slug)
         .maybeSingle();
       if (error) return json(500, { error: error.message });
-      if (!data) return json(404, { error: "Contrato no encontrado" });
+      if (!data) return json(200, { exists: false });
       return json(200, {
+        exists: true,
         title: data.title,
         status: data.status,
         signed: !!data.signed_at,

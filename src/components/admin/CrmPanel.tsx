@@ -1572,7 +1572,7 @@ export default function CrmPanel() {
                             </button>
                             <button onClick={() => handleRegenPassword(c)} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">{t("admin.crm.contractsTab.key")}</button>
                             <button onClick={() => setContractModal({ edit: c })} className="text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 cursor-pointer">{t("admin.crm.edit")}</button>
-                            <button onClick={() => handleDeleteContract(c.id)} disabled={!!c.signed_at} className="text-[11px] px-2 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer disabled:opacity-40">
+                            <button onClick={() => handleDeleteContract(c.id)} className="text-[11px] px-2 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer">
                               {t("admin.crm.delete")}
                             </button>
                           </div>

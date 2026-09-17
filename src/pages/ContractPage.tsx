@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   contractUnlock,
+  contractStatus,
   contractSign,
   contractSendCode,
   contractVerifyCode,
@@ -41,12 +42,33 @@ export default function ContractPage() {
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(false);
   const [signToken, setSignToken] = useState<string | null>(null);
+  const [gone, setGone] = useState(false);
 
   useEffect(() => {
     getAppearanceSettings()
       .then((s) => setContractBg(s?.contracts_background || "default"))
       .catch(() => setContractBg("default"));
   }, []);
+
+  // Si el contrato fue eliminado, el link muere: mostrarlo sin pedir contraseña.
+  useEffect(() => {
+    if (!slug) {
+      setGone(true);
+      return;
+    }
+    let alive = true;
+    contractStatus(slug)
+      .then((res: any) => {
+        if (!alive) return;
+        if (res.data && res.data.exists === false) setGone(true);
+      })
+      .catch(() => {
+        /* error de red: se deja el formulario */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [slug]);
 
   const title = contract
     ? lang === "en" && contract.title_en
@@ -66,7 +88,14 @@ export default function ContractPage() {
     setError(null);
     try {
       const res: any = await contractUnlock(slug, password);
-      if (res.error) throw new Error(res.error.message);
+      if (res.error) {
+        const msg = res.error.message || "";
+        if (/no encontrado|not found|deleted/i.test(msg)) {
+          setGone(true);
+          return;
+        }
+        throw new Error(msg);
+      }
       setContract(res.data);
       setVerified(false);
       setSignToken(null);
@@ -213,7 +242,15 @@ export default function ContractPage() {
           </div>
         )}
 
-        {!contract ? (
+        {gone ? (
+          <div className="text-center py-8 space-y-3">
+            <p className="text-5xl">🔗</p>
+            <h2 className="text-lg font-semibold">{t("contracts.goneTitle")}</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t("contracts.goneDesc")}
+            </p>
+          </div>
+        ) : !contract ? (
           <form onSubmit={handleUnlock} className="space-y-3">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {t("contracts.lockedDesc")}

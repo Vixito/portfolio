@@ -398,6 +398,8 @@ export const translations = {
       download: "Descargar PDF del contrato",
       generating: "Generando PDF…",
       needName: "Escribe tu nombre para firmar",
+      goneTitle: "Este enlace ya no es válido",
+      goneDesc: "El contrato fue eliminado o nunca existió. Pide un nuevo enlace al administrador.",
     },
     // Status
     status: {
@@ -586,7 +588,7 @@ export const translations = {
         errRegen: "Error al regenerar",
         errImport: "Error al importar CSV",
         confirmDeleteTemplate: "¿Eliminar plantilla? Los envíos previos se conservan.",
-        confirmDeleteContract: "¿Eliminar contrato? Esta acción es irreversible.",
+        confirmDeleteContract: "¿Eliminar contrato? El enlace público dejará de funcionar de inmediato. Esta acción es irreversible.",
         confirmDeleteContact: "¿Eliminar contacto? Sus actividades se borrarán y sus deals quedarán sin persona.",
         confirmDeleteCompany: "¿Eliminar empresa? Sus contactos y deals quedarán sin empresa.",
         confirmDeleteDeal: "¿Eliminar deal? Sus actividades se borrarán.",
@@ -1509,6 +1511,8 @@ export const translations = {
       download: "Download contract PDF",
       generating: "Generating PDF…",
       needName: "Type your name to sign",
+      goneTitle: "This link is no longer valid",
+      goneDesc: "The contract was deleted or never existed. Ask the administrator for a new link.",
     },
     // Status
     status: {
@@ -1697,7 +1701,7 @@ export const translations = {
         errRegen: "Error regenerating",
         errImport: "Error importing CSV",
         confirmDeleteTemplate: "Delete template? Past sends are kept.",
-        confirmDeleteContract: "Delete contract? This cannot be undone.",
+        confirmDeleteContract: "Delete contract? The public link will stop working immediately. This cannot be undone.",
         confirmDeleteContact: "Delete contact? Their activities will be removed and deals left unassigned.",
         confirmDeleteCompany: "Delete company? Its contacts and deals will be left without company.",
         confirmDeleteDeal: "Delete deal? Its activities will be removed.",
