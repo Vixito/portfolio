@@ -104,6 +104,28 @@ serve(async (req: Request) => {
     return json(200, { ok: true, skipped: "admin" });
   }
 
+  // Rate limit por IP: anti-bots que inflan visitas o leads.
+  const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  if (payload?.type === "interest") {
+    const { count: leadsHour } = await supabase
+      .from("bos_leads")
+      .select("id", { count: "exact", head: true })
+      .filter("payload->>ip", "eq", ip)
+      .gte("created_at", hourAgo);
+    if ((leadsHour || 0) >= 10) {
+      return json(429, { error: "Demasiadas solicitudes. Inténtalo más tarde." });
+    }
+  } else {
+    const { count: visitsHour } = await supabase
+      .from("portfolio_visitors")
+      .select("id", { count: "exact", head: true })
+      .eq("ip", ip)
+      .gte("created_at", hourAgo);
+    if ((visitsHour || 0) >= 200) {
+      return json(429, { error: "Demasiadas solicitudes. Inténtalo más tarde." });
+    }
+  }
+
   // ============ INTERESADOS (leads calientes) ============
   if (payload?.type === "interest") {
     const source = String(payload?.source || "").slice(0, 60);

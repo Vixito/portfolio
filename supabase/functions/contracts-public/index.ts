@@ -9,6 +9,7 @@
 // Rate limit: 5 fallos por slug+IP cada 15 min → 429.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getBrand, brandShell, escHtml } from "../_shared/email_brand.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -218,6 +219,18 @@ serve(async (req: Request) => {
       if (insErr) return json(500, { error: insErr.message });
 
       const subject = `Tu código de firma: ${code} / Your signature code: ${code}`;
+      const brand = await getBrand(supabase);
+      const codeHtml = brandShell({
+        brand,
+        lang: "es",
+        title: subject,
+        bodyHtml:
+          `<p style="margin:0 0 12px;">Hola,</p>` +
+          `<p style="margin:0 0 12px;">Tu código para firmar el contrato «${escHtml(contract.title)}» es:</p>` +
+          `<p style="margin:0 0 12px; font-size:1.6em; font-weight:800; letter-spacing:0.3em; text-align:center;">${code}</p>` +
+          `<p style="margin:0 0 12px;">Caduca en 15 minutos. Si no lo pediste, ignora este mensaje.</p>` +
+          `<p style="margin:12px 0 0; color:#666;">Hello — your code to sign "${escHtml(contract.title_en || contract.title)}" is <strong>${code}</strong> (expires in 15 minutes).</p>`,
+      });
       const text =
         `Hola,\n\nTu código para firmar el contrato «${contract.title}» es: ${code}\n` +
         `Caduca en 15 minutos. Si no lo pediste, ignora este mensaje.\n\n` +
@@ -230,7 +243,7 @@ serve(async (req: Request) => {
           Authorization: `Bearer ${resendKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ from, to: [contract.client_email], subject, text }),
+        body: JSON.stringify({ from, to: [contract.client_email], subject, text, html: codeHtml }),
       });
       if (!res.ok) {
         await logEvent(supabase, contract.id, slug, "code_fail", req);

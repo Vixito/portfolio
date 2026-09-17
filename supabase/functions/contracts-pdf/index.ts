@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { getBrand } from "../_shared/email_brand.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -175,6 +176,8 @@ serve(async (req: Request) => {
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
+    const brand = await getBrand(supabase);
+
     const page = doc.addPage([595.28, 841.89]); // A4
     const margin = 56;
     let y = 780;
@@ -189,6 +192,20 @@ serve(async (req: Request) => {
       });
       y -= opts?.gap ?? 16;
     };
+    const rule = (thickness = 1) => {
+      if (y < 60) return;
+      page.drawRectangle({
+        x: margin,
+        y: y - 2,
+        width: 595.28 - margin * 2,
+        height: thickness,
+        color: rgb(0, 0, 0),
+      });
+      y -= thickness + 10;
+    };
+
+    line(brand.name.toUpperCase().slice(0, 60), 10, { bold: true, gap: 4 });
+    rule(1);
 
     line(L.heading, 20, { bold: true, gap: 6 });
     line(c.signed_at ? fmtDate(c.signed_at) : "", 10, { gap: 20 });

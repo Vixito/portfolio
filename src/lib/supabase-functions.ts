@@ -78,6 +78,7 @@ export async function createRequest(params: {
   phone?: string;
   currency?: string;
   investmentRange?: string;
+  website?: string;
 }) {
   // Preparar los parámetros, convirtiendo strings vacíos a null
   const phoneValue = params.phone?.trim() || null;
@@ -99,11 +100,17 @@ export async function createRequest(params: {
           investmentRange: investmentRangeValue,
         }
       : null,
+    // Honeypot anti-bots: los humanos lo dejan vacío. Si viene lleno, el
+    // RPC devuelve null (trampa silenciosa, sin insertar).
+    p_website: params.website?.trim() || null,
   });
 
   if (error) {
     throw new Error(`Error al crear petición: ${error.message}`);
   }
+
+  // Trampa de honeypot: éxito fingido, sin webhook ni nada más.
+  if (!data) return null;
 
   // Llamar al webhook de Make.com para enviar email y notificar a Slack (no bloquea si falla)
   const webhookUrl =
@@ -2337,7 +2344,11 @@ export async function getAppearanceSettings() {
         hero_background: "default",
         radio_background: "default",
         contracts_background: "default",
-        home_scroll_transition: "default"
+        home_scroll_transition: "default",
+        brand_name: "Vixis Studio",
+        brand_logo: "https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp",
+        brand_color: "#0d0d0d",
+        brand_footer: "Vixis Studio — vixis.dev",
       };
     }
 
@@ -2345,7 +2356,11 @@ export async function getAppearanceSettings() {
       hero_background: data.project_data?.hero_background || "default",
       radio_background: data.project_data?.radio_background || "default",
       contracts_background: data.project_data?.contracts_background || "default",
-      home_scroll_transition: data.project_data?.home_scroll_transition || "default"
+      home_scroll_transition: data.project_data?.home_scroll_transition || "default",
+      brand_name: data.project_data?.brand_name || "Vixis Studio",
+      brand_logo: data.project_data?.brand_logo || "https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp",
+      brand_color: data.project_data?.brand_color || "#0d0d0d",
+      brand_footer: data.project_data?.brand_footer || "Vixis Studio — vixis.dev",
     };
   } catch (error) {
     console.error("Error al obtener configuraciones de apariencia:", error);
@@ -2353,7 +2368,11 @@ export async function getAppearanceSettings() {
       hero_background: "default",
       radio_background: "default",
       contracts_background: "default",
-      home_scroll_transition: "default"
+      home_scroll_transition: "default",
+      brand_name: "Vixis Studio",
+      brand_logo: "https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp",
+      brand_color: "#0d0d0d",
+      brand_footer: "Vixis Studio — vixis.dev",
     };
   }
 }

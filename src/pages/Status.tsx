@@ -45,6 +45,8 @@ const createRequestSchema = (t: (key: string) => string) =>
       error: t("status.selectCurrency"),
     }),
     investmentRange: z.string().min(1, t("status.selectRange")),
+    // Honeypot anti-bots: campo trampa invisible, los humanos lo dejan vacío.
+    website: z.string().optional(),
   });
 
 function Status() {
@@ -201,7 +203,7 @@ function Status() {
 
   const onSubmit = async (data: RequestFormData) => {
     try {
-      await createRequest({
+      const requestId = await createRequest({
         name: data.name,
         email: data.email,
         request_type: data.requestType,
@@ -209,7 +211,15 @@ function Status() {
         phone: data.phone,
         currency: data.currency,
         investmentRange: data.investmentRange,
+        website: data.website,
       });
+
+      // requestId null = honeypot (bot): éxito fingido, sin tracking ni nada.
+      if (!requestId) {
+        setShowToast(true);
+        reset();
+        return;
+      }
 
       // Persona interesada → BOS/CRM (best-effort, no bloquea el toast)
       trackInterest({
@@ -541,6 +551,21 @@ function Status() {
             {/* Formulario */}
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                {/* Honeypot anti-bots: invisible para humanos */}
+                <div
+                  aria-hidden="true"
+                  style={{ position: "absolute", left: "-9999px", top: "auto", width: "1px", height: "1px", overflow: "hidden" }}
+                >
+                  <label>
+                    Website
+                    <input
+                      type="text"
+                      {...register("website")}
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
+                  </label>
+                </div>
                 {/* Nombre */}
                 <div>
                   <label className="block text-gray-900 dark:text-gray-100 text-sm font-medium mb-2">

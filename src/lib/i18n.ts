@@ -528,6 +528,11 @@ export const translations = {
       appearanceContractsBg: "Fondo de Contratos",
       appearanceDefault: "Por defecto",
       appearanceStarry: "Starry Night (Canvas Animado)",
+      appearanceBrand: "Marca (emails y documentos)",
+      brandName: "Nombre de marca",
+      brandLogo: "Logo (URL)",
+      brandColor: "Color principal (botones)",
+      brandFooter: "Pie de email",
       jobOffers: "Ofertas de Trabajo",
       crm: {
         label: "CRM",
@@ -1653,6 +1658,11 @@ export const translations = {
       appearanceContractsBg: "Contracts background",
       appearanceDefault: "Default",
       appearanceStarry: "Starry Night (Animated Canvas)",
+      appearanceBrand: "Brand (emails & documents)",
+      brandName: "Brand name",
+      brandLogo: "Logo (URL)",
+      brandColor: "Primary color (buttons)",
+      brandFooter: "Email footer",
       jobOffers: "Job Offers",
       crm: {
         label: "CRM",

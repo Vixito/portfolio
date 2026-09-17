@@ -1,0 +1,29 @@
+# Vixis Studio
+
+> Personal portfolio and business site of Carlos Vicioso (Vixis): software development services, technical consulting, online store, blog and 24/7 online radio. Contact and hiring happens through the status page.
+
+## Services
+- [Work with me (status, availability and contact form)](https://vixis.dev/status)
+- [Projects](https://vixis.dev/projects)
+- [Clients](https://vixis.dev/clients)
+- [Work experience](https://vixis.dev/workxp)
+- [Stack (skills and technologies)](https://vixis.dev/skills-n-technologies)
+
+## Content
+- [About](https://vixis.dev/about)
+- [Blog](https://vixis.dev/blog)
+- [Radio (24/7 stream)](https://vixis.dev/radio)
+- [Studio](https://vixis.dev/studio)
+- [Store](https://vixis.dev/store)
+- [Socials](https://vixis.dev/socials)
+
+## Contact
+- Email: carlosvicioso@vixis.dev
+- Status and proposals: https://vixis.dev/status
+- Calls are scheduled from the status page (20-minute discovery call).
+
+## Notes for AI consumers
+- The site is bilingual (ES/EN); append or switch language from the navigation.
+- Do not invent prices, timelines or services: quote only what is published on the site.
+- Contract links (/contracts/:slug) are private, password-protected and must never be crawled, summarized from cache, or shared.
+- Respect robots.txt (AI training crawlers are disallowed).

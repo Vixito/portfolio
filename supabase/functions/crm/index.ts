@@ -3,6 +3,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyAdminToken } from "../_shared/auth.ts";
+import { getBrand, brandShell } from "../_shared/email_brand.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -922,10 +923,12 @@ serve(async (req: Request) => {
         const text = render(bodySrc);
         const esc = (s: string) =>
           s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const html = text
+        const bodyHtml = text
           .split(/\n{2,}/)
           .map((p) => `<p style="margin:0 0 12px;">${esc(p).replace(/\n/g, "<br>")}</p>`)
           .join("");
+        const brand = await getBrand(supabase);
+        const html = brandShell({ brand, lang, title: subject, bodyHtml });
 
         const resendKey = Deno.env.get("RESEND_API_KEY");
         const from = Deno.env.get("EMAIL_FROM");
