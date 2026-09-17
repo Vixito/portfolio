@@ -1,0 +1,27 @@
+/* ============================================================
+   DevButtons showcase: cada panel fuerza su propio contexto de tema
+   para que la previsualización sea fiel con cualquier tema del sitio.
+   - El panel oscuro envuelve su contenido en `.dark` (ver DevButtons).
+   - `outlineDark` está diseñado para superficies claras: en el panel
+     oscuro se muestra sobre una pastilla clara (ver DevButtons).
+   - El panel claro NO puede quitar la clase `.dark` del <html>, así
+     que los botones `outline` llevan un restaurador que repone su
+     aspecto claro aunque el sitio esté en dark. En tema light estas
+     reglas son no-op (mismos valores).
+   ============================================================ */
+
+.btn-restore-light .dark\:text-white {
+  color: #000;
+}
+
+.btn-restore-light .dark\:border-white {
+  border-color: #000;
+}
+
+.btn-restore-light .dark\:hover\:bg-white:hover {
+  background-color: #000;
+}
+
+.btn-restore-light .dark\:hover\:text-black:hover {
+  color: #fff;
+}

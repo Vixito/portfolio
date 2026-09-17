@@ -1,8 +1,9 @@
 import Button from "../components/ui/Button";
+import "./DevButtons.css";
 
 function DevButtons() {
   const variants = ["primary", "secondary", "outline", "outlineDark"] as const;
-  
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 py-16 px-4 transition-colors duration-300">
       <div className="max-w-5xl mx-auto space-y-12">
@@ -39,25 +40,39 @@ function DevButtons() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant={variant}>
-                      {variant} Button
-                    </Button>
-                    <Button variant={variant} disabled>
-                      Disabled
-                    </Button>
+                    {variant === "outline" ? (
+                      <span className="btn-restore-light flex items-center gap-2">
+                        <Button variant={variant}>
+                          {variant} Button
+                        </Button>
+                        <Button variant={variant} disabled>
+                          Disabled
+                        </Button>
+                      </span>
+                    ) : (
+                      <>
+                        <Button variant={variant}>
+                          {variant} Button
+                        </Button>
+                        <Button variant={variant} disabled>
+                          Disabled
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Dark Theme Panel */}
+          {/* Dark Theme Panel (fuerza contexto dark para previsualizar fiel) */}
           <div className="bg-zinc-900 rounded-2xl p-8 border border-zinc-800 shadow-2xl space-y-8 text-white">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
               <h2 className="text-xl font-bold text-zinc-100">Dark Mode Preview</h2>
               <span className="bg-zinc-800 text-zinc-300 text-xs px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider">Active</span>
             </div>
-            
+
+            <div className="dark">
             <div className="space-y-6">
               {variants.map((variant) => (
                 <div key={variant} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl hover:bg-zinc-800/50 transition-colors border border-transparent hover:border-zinc-800">
@@ -67,19 +82,31 @@ function DevButtons() {
                       {variant === "primary" && "Vibrant purple gradient with hover adjustments."}
                       {variant === "secondary" && "Sky blue outline with glowing interactions."}
                       {variant === "outline" && "Clean white outline, transparent, smooth inversion."}
-                      {variant === "outlineDark" && "Bold border with dark-slate high-contrast background."}
+                      {variant === "outlineDark" && "Dark outline for light surfaces — shown on its intended surface."}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant={variant}>
-                      {variant} Button
-                    </Button>
-                    <Button variant={variant} disabled>
-                      Disabled
-                    </Button>
-                  </div>
+                  {variant === "outlineDark" ? (
+                    <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2">
+                      <Button variant={variant}>
+                        {variant} Button
+                      </Button>
+                      <Button variant={variant} disabled>
+                        Disabled
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Button variant={variant}>
+                        {variant} Button
+                      </Button>
+                      <Button variant={variant} disabled>
+                        Disabled
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
+            </div>
             </div>
           </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useTranslation } from "../lib/i18n";
 import { useSEO } from "../hooks/useSEO";
+import VixisLogo from "../components/brand/VixisLogo";
 
 function Studio() {
   const { t } = useTranslation();
@@ -10,6 +11,8 @@ function Studio() {
     description: t("studio.description"),
   });
   const containerRef = useRef<HTMLDivElement>(null);
+  const [studioLogoAnim, setStudioLogoAnim] = useState<"draw-flash" | "draw">("draw-flash");
+  const [studioLogoKey, setStudioLogoKey] = useState(0);
   const logoRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState<number | null>(0); // Misión abierta por defecto
@@ -217,8 +220,6 @@ function Studio() {
     return () => observer.disconnect();
   }, []);
 
-  const logoUrl = "https://cdn.vixis.dev/Vixis+Studio+-+Small+Logo.webp";
-
   return (
     <div
       ref={containerRef}
@@ -241,18 +242,24 @@ function Studio() {
           {/* Header con Logo, Título y Descripción (Alineados a la izquierda, sin card) */}
           <div className="flex justify-start">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6 max-w-4xl">
-              {/* Logo */}
+              {/* Logo (círculo): el draw-flash corre al entrar; al hover, draw */}
               <div ref={logoRef} className="shrink-0">
-                <img
-                  src={logoUrl}
-                  alt="Vixis Studio Logo"
-                  className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border-2 shadow-lg"
+                <div
+                  className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-2 shadow-lg cursor-pointer"
                   style={{ borderColor: "#19BFB7" }}
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      "https://cdn.vixis.dev/Vixis+Studio+-+Logo.webp";
+                  title="Vixis Studio"
+                  onMouseEnter={() => {
+                    setStudioLogoAnim("draw");
+                    setStudioLogoKey((k) => k + 1);
                   }}
-                />
+                >
+                  <VixisLogo
+                    key={studioLogoKey}
+                    size={112}
+                    animation={studioLogoAnim}
+                    className="h-full w-full block"
+                  />
+                </div>
               </div>
               {/* Título y Slogan */}
               <div className="text-center md:text-left space-y-4">

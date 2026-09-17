@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "../lib/i18n";
 import { useThemeStore } from "../stores/useThemeStore";
 import CanvasBackground from "../components/features/CanvasBackground";
+import VixisLogo from "../components/brand/VixisLogo";
 import NotFound from "./NotFound";
 
 const inputCls =
@@ -222,24 +223,39 @@ export default function ContractPage() {
 
   // Link eliminado: 404 estándar de siempre.
   if (gone) return <NotFound />;
-  // Mientras se verifica el slug no se pinta nada: ni formulario ni avisos.
-  if (checking) return null;
+
+  const bgLayer = (
+    <AnimatePresence>
+      {contractBg === "starry_night" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1 }}
+          className="absolute inset-0 z-0 pointer-events-none"
+        >
+          <CanvasBackground mode={theme as "light" | "dark"} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  // Verificando el slug: fondo + nav normales, draw-loop y texto localizado.
+  if (checking) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 px-4 py-12 relative overflow-hidden">
+        {bgLayer}
+        <div className="relative z-10 flex flex-col items-center gap-4">
+          <VixisLogo size={110} animation="draw-loop" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t("common.loading")}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      <AnimatePresence>
-        {contractBg === "starry_night" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1 }}
-            className="absolute inset-0 z-0 pointer-events-none"
-          >
-            <CanvasBackground mode={theme as "light" | "dark"} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {bgLayer}
       <div className="w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#15171a] p-6 md:p-8 text-gray-900 dark:text-white relative z-10 shadow-xl">
         <div className="mb-5 text-center">
           <h1 className="text-2xl font-bold mb-1">{t("contracts.title")}</h1>
