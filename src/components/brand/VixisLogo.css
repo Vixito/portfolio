@@ -69,7 +69,6 @@
 
 /* ---------- DRAW: el trazo se dibuja estilo Lasso ---------- */
 .vixis-logo--draw .vixis-tile,
-.vixis-logo--draw-comet .vixis-tile,
 .vixis-logo--draw-full .vixis-tile {
   animation: vixis-fade-in 0.4s ease-out backwards;
 }
@@ -147,41 +146,6 @@
   }
 }
 
-/* ---------- DRAW-ZOOM: draw + zoom que se asienta ---------- */
-.vixis-logo--draw-zoom .vixis-tile {
-  animation: vixis-fade-in 0.4s ease-out backwards;
-}
-.vixis-logo--draw-zoom .vixis-tri {
-  fill-opacity: 1;
-  stroke: #46e8e4;
-  stroke-width: 4;
-  stroke-linejoin: round;
-  stroke-dasharray: 100;
-  stroke-dashoffset: 0;
-  stroke-opacity: 0;
-  animation: vixis-draw 1.4s ease-in-out backwards;
-}
-.vixis-logo--draw-zoom .vixis-tri-bottom {
-  animation-delay: 0.4s;
-}
-.vixis-logo--draw-zoom {
-  animation: vixis-zoom-settle 2.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  transform-origin: center;
-}
-
-@keyframes vixis-zoom-settle {
-  0%,
-  64% {
-    transform: scale(1);
-  }
-  78% {
-    transform: scale(1.12);
-  }
-  92%,
-  100% {
-    transform: scale(1);
-  }
-}
 /* ---------- DRAW-LOOP: el draw exacto, en loop de loading ---------- */
 .vixis-logo--draw-loop .vixis-tile {
   animation: vixis-fade-in 0.4s ease-out backwards;

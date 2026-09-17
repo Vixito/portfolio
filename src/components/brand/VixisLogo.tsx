@@ -6,8 +6,7 @@ export type VixisLogoAnimation =
   | "draw"
   | "draw-loop"
   | "draw-full"
-  | "draw-flash"
-  | "draw-zoom";
+  | "draw-flash";
 
 interface VixisLogoProps {
   /** px del lado (el SVG es cuadrado) */
