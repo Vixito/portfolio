@@ -7,6 +7,10 @@ interface CanvasBackgroundProps {
 function CanvasBackground({ mode }: CanvasBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Color sólido del cielo: se aplica también como CSS del canvas para que el
+  // primer pintado ya cubra el fondo por defecto de la página (sin flash).
+  const skyColor = mode === 'dark' ? '#110E19' : '#EBF5FB';
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -205,14 +209,12 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
     updateSize();
 
     const animate = () => {
+      ctx!.fillStyle = skyColor;
+      ctx!.fillRect(0, 0, width, height);
       if (mode === 'dark') {
-        ctx!.fillStyle = '#110E19';
-        ctx!.fillRect(0, 0, width, height);
         ctx!.fillStyle = '#ffffff';
         ctx!.strokeStyle = '#ffffff';
       } else {
-        ctx!.fillStyle = '#EBF5FB'; // Soft Light Sky
-        ctx!.fillRect(0, 0, width, height);
         ctx!.fillStyle = '#D6EAF8'; // Soft blue for light mode stars
         ctx!.strokeStyle = '#D6EAF8';
       }
@@ -236,6 +238,7 @@ function CanvasBackground({ mode }: CanvasBackgroundProps) {
     <canvas 
       ref={canvasRef} 
       className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
+      style={{ backgroundColor: skyColor }}
     />
   );
 }
