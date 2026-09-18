@@ -3277,6 +3277,17 @@ function Admin() {
                     <option value="starry_night">{t("admin.appearanceStarry")}</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">{t("admin.appearanceLegalBg")}</label>
+                  <select
+                    value={appearanceSettings.legal_background || "default"}
+                    onChange={(e) => setAppearanceSettings({...appearanceSettings, legal_background: e.target.value})}
+                    className="w-full bg-[#1A1A1A] text-white rounded-md p-3 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#8c52ff]"
+                  >
+                    <option value="default">{t("admin.appearanceDefault")}</option>
+                    <option value="starry_night">{t("admin.appearanceStarry")}</option>
+                  </select>
+                </div>
                 <div className="border-t border-white/10 pt-6">
                   <h3 className="text-base font-bold mb-4">{t("admin.appearanceBrand")}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

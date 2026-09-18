@@ -18,9 +18,10 @@ const UPDATED_ES = "Última actualización: septiembre de 2026";
 const UPDATED_EN = "Last updated: September 2026";
 
 const CONTROLLER_ES =
-  "Responsable del tratamiento: Carlos Vicioso — Vixis Studio. Contacto: carlosvicioso@vixis.dev.";
-const CONTROLLER_EN =
-  "Data controller: Carlos Vicioso — Vixis Studio. Contact: carlosvicioso@vixis.dev.";
+  "Responsable del tratamiento: Carlos Vicioso - Vixis Studio.";
+const CONTROLLER_EN = "Data controller: Carlos Vicioso - Vixis Studio.";
+const CONTACT_ES = "Contacto: carlosvicioso@vixis.dev.";
+const CONTACT_EN = "Contact: carlosvicioso@vixis.dev.";
 
 export const PRIVACY: { es: LegalDoc; en: LegalDoc } = {
   es: {
@@ -31,7 +32,7 @@ export const PRIVACY: { es: LegalDoc; en: LegalDoc } = {
     sections: [
       {
         title: "1. Responsable del tratamiento",
-        paragraphs: [CONTROLLER_ES],
+        paragraphs: [CONTROLLER_ES, CONTACT_ES],
       },
       {
         title: "2. Datos que recogemos",
@@ -123,7 +124,7 @@ export const PRIVACY: { es: LegalDoc; en: LegalDoc } = {
     sections: [
       {
         title: "1. Data controller",
-        paragraphs: [CONTROLLER_EN],
+        paragraphs: [CONTROLLER_EN, CONTACT_EN],
       },
       {
         title: "2. Data we collect",
@@ -219,7 +220,8 @@ export const TERMS: { es: LegalDoc; en: LegalDoc } = {
       {
         title: "1. Identificación",
         paragraphs: [
-          "El Sitio es operado por Carlos Vicioso — Vixis Studio. Contacto: carlosvicioso@vixis.dev.",
+          "El Sitio es operado por Carlos Vicioso - Vixis Studio.",
+          "Contacto: carlosvicioso@vixis.dev.",
         ],
       },
       {
@@ -298,7 +300,8 @@ export const TERMS: { es: LegalDoc; en: LegalDoc } = {
       {
         title: "1. Identification",
         paragraphs: [
-          "The Site is operated by Carlos Vicioso — Vixis Studio. Contact: carlosvicioso@vixis.dev.",
+          "The Site is operated by Carlos Vicioso - Vixis Studio.",
+          "Contact: carlosvicioso@vixis.dev.",
         ],
       },
       {

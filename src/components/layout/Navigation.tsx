@@ -410,7 +410,7 @@ function Navigation({ externalBase }: { externalBase?: string }) {
               </div>
               <InternalLink
                 path="/privacy"
-                className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors text-black dark:text-white cursor-pointer ${
+                className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors text-black dark:text-white cursor-pointer whitespace-nowrap ${
                   isActive("/privacy")
                     ? "bg-purple/20 dark:bg-purple/30 text-purple font-semibold"
                     : ""
@@ -422,7 +422,7 @@ function Navigation({ externalBase }: { externalBase?: string }) {
               </InternalLink>
               <InternalLink
                 path="/terms"
-                className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors text-black dark:text-white cursor-pointer ${
+                className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors text-black dark:text-white cursor-pointer whitespace-nowrap ${
                   isActive("/terms")
                     ? "bg-purple/20 dark:bg-purple/30 text-purple font-semibold"
                     : ""
