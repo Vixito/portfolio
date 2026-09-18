@@ -30,11 +30,24 @@ import {
   signContractProvider,
   importCrmContacts,
   importCrmCompanies,
+  getCrmGoogleStatus,
+  startCrmGoogleOAuth,
+  syncCrmGoogleContacts,
+  disconnectCrmGoogle,
   deleteCrmContact,
   deleteCrmCompany,
   deleteCrmDeal,
   deleteCrmActivity,
 } from "../../lib/supabase-functions";
+import {
+  autoMapHeaders,
+  dedupeRecords,
+  isVCard,
+  nameFromEmail,
+  parseVCards,
+  splitFullName,
+  type ImportKind,
+} from "../../lib/contactImport";
 
 // ============ helpers de UI ============
 
@@ -165,7 +178,7 @@ const btnDanger =
 
 // ============ panel principal ============
 
-type SubTab = "contacts" | "companies" | "pipeline" | "activities" | "leads" | "emails" | "contracts";
+type SubTab = "contacts" | "companies" | "pipeline" | "activities" | "leads" | "emails" | "contracts" | "integrations";
 
 export default function CrmPanel() {
   const { t } = useTranslation();
@@ -198,8 +211,17 @@ export default function CrmPanel() {
   const [contractModal, setContractModal] = useState<any>(null);
   const [contractPassword, setContractPassword] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState<{
+    kind: ImportKind;
+    headers: string[];
+    grid: string[][];
+    mapping: Record<string, number>;
+    unmatched: string[];
+  } | null>(null);
   const contactsFileRef = useRef<HTMLInputElement>(null);
   const companiesFileRef = useRef<HTMLInputElement>(null);
+  const [googleStatus, setGoogleStatus] = useState<any>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const [search, setSearch] = useState("");
   const [actFilterContact, setActFilterContact] = useState("");
@@ -252,6 +274,79 @@ export default function CrmPanel() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadGoogleStatus = useCallback(async () => {
+    try {
+      const res = await getCrmGoogleStatus();
+      setGoogleStatus(res);
+    } catch {
+      setGoogleStatus(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (subtab === "integrations") loadGoogleStatus();
+  }, [subtab, loadGoogleStatus]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("google")) {
+      setSubtab("integrations");
+      loadGoogleStatus();
+      params.delete("google");
+      const qs = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + (qs ? `?${qs}` : "")
+      );
+    }
+  }, [loadGoogleStatus]);
+
+  const handleGoogleConnect = async () => {
+    setGoogleBusy(true);
+    try {
+      const res: any = await startCrmGoogleOAuth();
+      if (res?.url) window.location.href = res.url;
+    } catch (e) {
+      alert(e instanceof Error ? e.message : t("admin.crm.integrationsTab.err"));
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
+
+  const handleGoogleSync = async () => {
+    setGoogleBusy(true);
+    try {
+      const res: any = await syncCrmGoogleContacts();
+      const r = res?.result || {};
+      alert(
+        `${t("admin.crm.integrationsTab.syncDone")}: +${r.inserted ?? 0} · ${
+          r.linked ?? 0
+        } ${t("admin.crm.integrationsTab.linked")} · ${r.skipped ?? 0} ${t(
+          "admin.crm.integrationsTab.skipped"
+        )}`
+      );
+      await Promise.all([loadGoogleStatus(), load()]);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : t("admin.crm.integrationsTab.err"));
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
+
+  const handleGoogleDisconnect = async () => {
+    if (!confirm(t("admin.crm.integrationsTab.confirmDisconnect"))) return;
+    setGoogleBusy(true);
+    try {
+      await disconnectCrmGoogle();
+      await loadGoogleStatus();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : t("admin.crm.integrationsTab.err"));
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
 
   const companyMap = useMemo(
     () => new Map(companies.map((c) => [c.id, c])),
@@ -763,8 +858,6 @@ export default function CrmPanel() {
     return rows.filter((r) => r.some((c) => c.trim() !== ""));
   };
 
-  const normHeader = (h: string) => h.trim().toLowerCase();
-
   const handleExportContacts = () => {
     downloadCsv(
       "crm-contactos.csv",
@@ -793,103 +886,235 @@ export default function CrmPanel() {
     );
   };
 
-  const handleImportFile = async (e: ChangeEvent<HTMLInputElement>, kind: "contacts" | "companies") => {
+  const sanitizeDate = (v: string): string => {
+    if (!v) return "";
+    const parsed = new Date(v);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+    const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : "";
+  };
+
+  const cellAt = (row: string[], i: number) =>
+    i >= 0 && i !== undefined ? (row[i] || "").trim() : "";
+
+  const hasField = (mapping: Record<string, number>, f: string) =>
+    mapping[f] !== undefined && mapping[f] >= 0;
+
+  const buildContactRecords = (
+    grid: string[][],
+    mapping: Record<string, number>
+  ) => {
+    const has = (f: string) => hasField(mapping, f);
+    return grid.slice(1).map((row) => {
+      let first_name = has("first_name")
+        ? cellAt(row, mapping.first_name)
+        : "";
+      let last_name = has("last_name") ? cellAt(row, mapping.last_name) : "";
+      if (!first_name && has("full_name")) {
+        const split = splitFullName(cellAt(row, mapping.full_name));
+        first_name = split.first_name;
+        last_name = last_name || split.last_name;
+      }
+      const email = has("email") ? cellAt(row, mapping.email) : "";
+      if (!first_name && email) first_name = nameFromEmail(email);
+      const rawTags = has("tags") ? cellAt(row, mapping.tags) : "";
+      const rawExp = has("experience_years")
+        ? cellAt(row, mapping.experience_years)
+        : "";
+      const expNum = rawExp ? Number(rawExp.replace(/[^\d.]/g, "")) : NaN;
+      return {
+        first_name,
+        last_name,
+        email,
+        phone: has("phone") ? cellAt(row, mapping.phone) : "",
+        phone2: has("phone2") ? cellAt(row, mapping.phone2) : "",
+        company: has("company") ? cellAt(row, mapping.company) : "",
+        job_title: has("job_title") ? cellAt(row, mapping.job_title) : "",
+        source: (has("source") ? cellAt(row, mapping.source) : "") || "import",
+        tags: rawTags
+          .split(/[;|,]/)
+          .map((s) => s.trim())
+          .filter(Boolean),
+        notes: has("notes") ? cellAt(row, mapping.notes) : "",
+        linkedin: has("linkedin") ? cellAt(row, mapping.linkedin) : "",
+        github: has("github") ? cellAt(row, mapping.github) : "",
+        x_handle: has("x_handle") ? cellAt(row, mapping.x_handle) : "",
+        website: has("website") ? cellAt(row, mapping.website) : "",
+        address: has("address") ? cellAt(row, mapping.address) : "",
+        birthdate: has("birthdate")
+          ? sanitizeDate(cellAt(row, mapping.birthdate))
+          : "",
+        gender: has("gender") ? cellAt(row, mapping.gender) : "",
+        experience_years: Number.isFinite(expNum) ? expNum : null,
+        owner: has("owner") ? cellAt(row, mapping.owner) : "",
+      };
+    });
+  };
+
+  const buildCompanyRecords = (
+    grid: string[][],
+    mapping: Record<string, number>
+  ) =>
+    grid.slice(1).map((row) => ({
+      name: hasField(mapping, "name") ? cellAt(row, mapping.name) : "",
+      domain: hasField(mapping, "domain") ? cellAt(row, mapping.domain) : "",
+      industry: hasField(mapping, "industry")
+        ? cellAt(row, mapping.industry)
+        : "",
+      notes: hasField(mapping, "notes") ? cellAt(row, mapping.notes) : "",
+    }));
+
+  const runImport = async (
+    records: any[],
+    kind: ImportKind,
+    localDuplicates = 0
+  ) => {
+    const { unique, duplicates } = dedupeRecords(records, kind);
+    const totalDuplicates = localDuplicates + duplicates;
+
+    if (kind === "contacts") {
+      const valid = unique.filter(
+        (r: any) => r.first_name || r.email || r.phone
+      );
+      const empty = unique.length - valid.length;
+
+      const byName = new Map(
+        (companies || []).map((c: any) => [
+          String(c.name || "").toLowerCase(),
+          c.id,
+        ])
+      );
+      let createdCompanies = 0;
+      for (const m of valid) {
+        const nm = (m.company || "").trim();
+        if (nm && !byName.has(nm.toLowerCase())) {
+          try {
+            const nc: any = await createCrmCompany({ name: nm });
+            const id = nc?.id ?? nc?.company?.id;
+            if (id) {
+              byName.set(nm.toLowerCase(), id);
+              createdCompanies++;
+            }
+          } catch {
+            /* el contacto queda sin empresa */
+          }
+        }
+      }
+      const payload = valid.map((m: any) => ({
+        ...m,
+        company_id:
+          byName.get((m.company || "").trim().toLowerCase()) || undefined,
+      }));
+      const res: any = await importCrmContacts(payload);
+      await load();
+      alert(
+        `${t("admin.crm.imported")} ${res?.inserted ?? 0} ${t("admin.crm.contacts")}` +
+          (createdCompanies
+            ? ` (+${createdCompanies} ${t("admin.crm.createdCompanies")})`
+            : "") +
+          (totalDuplicates + (res?.skipped || 0) + empty
+            ? ` (${totalDuplicates} ${t("admin.crm.duplicatesSkipped")}, ${
+                (res?.skipped || 0) + empty
+              } ${t("admin.crm.rowsSkipped")})`
+            : "")
+      );
+      return;
+    }
+
+    const valid = unique.filter((r: any) => r.name && r.name.trim());
+    const empty = unique.length - valid.length;
+    const res: any = await importCrmCompanies(valid);
+    await load();
+    alert(
+      `${t("admin.crm.importedF")} ${res?.inserted ?? 0} ${t("admin.crm.companies")}` +
+        (totalDuplicates + (res?.skipped || 0) + empty
+          ? ` (${totalDuplicates} ${t("admin.crm.duplicatesSkipped")}, ${
+              (res?.skipped || 0) + empty
+            } ${t("admin.crm.rowsSkipped")})`
+          : "")
+    );
+  };
+
+  const handleImportFile = async (
+    e: ChangeEvent<HTMLInputElement>,
+    kind: ImportKind
+  ) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    setImporting(true);
     try {
-      const grid = parseCsv(await file.text());
-      if (grid.length < 2) throw new Error(t("admin.crm.emptyCsv"));
-      const headers = grid[0].map(normHeader);
-      const idx = (names: string[]) => {
-        for (const n of names) {
-          const i = headers.indexOf(n);
-          if (i >= 0) return i;
-        }
-        return -1;
-      };
-      const cell = (row: string[], i: number) => (i >= 0 ? (row[i] || "").trim() : "");
-
-      if (kind === "contacts") {
-        const iFirst = idx(["first_name", "nombre", "name", "firstname"]);
-        const iLast = idx(["last_name", "apellido", "lastname"]);
-        const iEmail = idx(["email", "correo", "e-mail"]);
-        const iPhone = idx(["phone", "telefono", "teléfono", "tel"]);
-        const iCompany = idx(["company", "empresa", "compania", "compañía"]);
-        const iSource = idx(["source", "origen"]);
-        const iTags = idx(["tags", "etiquetas"]);
-        const iNotes = idx(["notes", "notas"]);
-        if (iFirst < 0) throw new Error(`${t("admin.crm.missingColumn")} first_name / nombre`);
-        const mapped = grid.slice(1).map((row) => ({
-          first_name: cell(row, iFirst),
-          last_name: cell(row, iLast),
-          email: cell(row, iEmail),
-          phone: cell(row, iPhone),
-          company: cell(row, iCompany),
-          source: cell(row, iSource) || "import",
-          tags: cell(row, iTags)
-            .split(/[;|]/)
-            .map((s) => s.trim())
-            .filter(Boolean),
-          notes: cell(row, iNotes),
-        }));
-        // Resolver/crear empresas por nombre
-        const byName = new Map(
-          (companies || []).map((c: any) => [String(c.name || "").toLowerCase(), c.id])
-        );
-        let createdCompanies = 0;
-        for (const m of mapped) {
-          const nm = (m.company || "").trim();
-          if (nm && !byName.has(nm.toLowerCase())) {
-            try {
-              const nc: any = await createCrmCompany({ name: nm });
-              const id = nc?.id ?? nc?.company?.id;
-              if (id) {
-                byName.set(nm.toLowerCase(), id);
-                createdCompanies++;
-              }
-            } catch {
-              /* si falla, el contacto queda sin empresa */
-            }
-          }
-        }
-        const payload = mapped.map((m) => ({
-          ...m,
-          company_id: byName.get((m.company || "").trim().toLowerCase()) || undefined,
-        }));
-        const res: any = await importCrmContacts(payload);
-        await load();
-        alert(
-          `${t("admin.crm.imported")} ${res?.inserted ?? 0} ${t("admin.crm.contacts")}` +
-            (createdCompanies ? ` (+${createdCompanies} ${t("admin.crm.createdCompanies")})` : "") +
-            (res?.skipped ? ` (${res.skipped} ${t("admin.crm.rowsSkipped")})` : "")
-        );
-      } else {
-        const iName = idx(["name", "nombre", "empresa"]);
-        const iDomain = idx(["domain", "dominio"]);
-        const iIndustry = idx(["industry", "industria", "sector"]);
-        const iNotes = idx(["notes", "notas"]);
-        if (iName < 0) throw new Error(`${t("admin.crm.missingColumn")} name / nombre`);
-        const payload = grid.slice(1).map((row) => ({
-          name: cell(row, iName),
-          domain: cell(row, iDomain),
-          industry: cell(row, iIndustry),
-          notes: cell(row, iNotes),
-        }));
-        const res: any = await importCrmCompanies(payload);
-        await load();
-        alert(
-          `${t("admin.crm.importedF")} ${res?.inserted ?? 0} ${t("admin.crm.companies")}` +
-            (res?.skipped ? ` (${res.skipped} ${t("admin.crm.rowsSkipped")})` : "")
-        );
+      const text = await file.text();
+      if (isVCard(text)) {
+        const records = parseVCards(text);
+        if (records.length === 0) throw new Error(t("admin.crm.emptyCsv"));
+        setImporting(true);
+        await runImport(records, "contacts");
+        return;
       }
+      const grid = parseCsv(text);
+      if (grid.length < 2) throw new Error(t("admin.crm.emptyCsv"));
+      const headers = grid[0].map((h) => h.trim());
+      const { mapping, unmatched } = autoMapHeaders(headers, kind);
+      setImportPreview({ kind, headers, grid, mapping, unmatched });
     } catch (err) {
       alert(err instanceof Error ? err.message : t("admin.crm.errImport"));
     } finally {
       setImporting(false);
     }
   };
+
+  const confirmImport = async () => {
+    if (!importPreview) return;
+    const { kind, grid, mapping } = importPreview;
+    setImporting(true);
+    try {
+      const records =
+        kind === "contacts"
+          ? buildContactRecords(grid, mapping)
+          : buildCompanyRecords(grid, mapping);
+      await runImport(records, kind);
+      setImportPreview(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t("admin.crm.errImport"));
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const importFields: {
+    key: string;
+    label: string;
+    kind: ImportKind;
+  }[] = [
+    { key: "first_name", label: t("admin.crm.fieldFirstName"), kind: "contacts" },
+    { key: "last_name", label: t("admin.crm.fieldLastName"), kind: "contacts" },
+    { key: "full_name", label: t("admin.crm.fieldFullName"), kind: "contacts" },
+    { key: "email", label: t("admin.crm.fieldEmail"), kind: "contacts" },
+    { key: "phone", label: t("admin.crm.fieldPhone"), kind: "contacts" },
+    { key: "phone2", label: t("admin.crm.fieldPhone2"), kind: "contacts" },
+    { key: "company", label: t("admin.crm.fieldCompany"), kind: "contacts" },
+    { key: "job_title", label: t("admin.crm.fieldJobTitle"), kind: "contacts" },
+    { key: "linkedin", label: t("admin.crm.fieldLinkedin"), kind: "contacts" },
+    { key: "github", label: t("admin.crm.fieldGithub"), kind: "contacts" },
+    { key: "x_handle", label: t("admin.crm.fieldXHandle"), kind: "contacts" },
+    { key: "website", label: t("admin.crm.fieldWebsite"), kind: "contacts" },
+    { key: "address", label: t("admin.crm.fieldAddress"), kind: "contacts" },
+    { key: "birthdate", label: t("admin.crm.fieldBirthdate"), kind: "contacts" },
+    { key: "gender", label: t("admin.crm.fieldGender"), kind: "contacts" },
+    {
+      key: "experience_years",
+      label: t("admin.crm.fieldExperience"),
+      kind: "contacts",
+    },
+    { key: "owner", label: t("admin.crm.fieldOwner"), kind: "contacts" },
+    { key: "tags", label: t("admin.crm.fieldTags"), kind: "contacts" },
+    { key: "source", label: t("admin.crm.fieldSource"), kind: "contacts" },
+    { key: "notes", label: t("admin.crm.fieldNotes"), kind: "contacts" },
+    { key: "name", label: t("admin.crm.fieldName"), kind: "companies" },
+    { key: "domain", label: t("admin.crm.fieldDomain"), kind: "companies" },
+    { key: "industry", label: t("admin.crm.fieldIndustry"), kind: "companies" },
+    { key: "notes", label: t("admin.crm.fieldNotes"), kind: "companies" },
+  ];
 
   const subTabs: { id: SubTab; label: string }[] = [
     { id: "contacts", label: t("admin.crm.tabs.contacts") },
@@ -899,6 +1124,7 @@ export default function CrmPanel() {
     { id: "leads", label: t("admin.crm.tabs.leads") },
     { id: "emails", label: t("admin.crm.tabs.emails") },
     { id: "contracts", label: t("admin.crm.tabs.contracts") },
+    { id: "integrations", label: t("admin.crm.tabs.integrations") },
   ];
 
   return (
@@ -986,7 +1212,7 @@ export default function CrmPanel() {
                   <input
                     ref={contactsFileRef}
                     type="file"
-                    accept=".csv,text/csv,text/plain"
+                    accept=".csv,.vcf,.vcard,text/csv,text/vcard,text/plain"
                     className="hidden"
                     onChange={(e) => handleImportFile(e, "contacts")}
                   />
@@ -1094,7 +1320,7 @@ export default function CrmPanel() {
                   <input
                     ref={companiesFileRef}
                     type="file"
-                    accept=".csv,text/csv,text/plain"
+                    accept=".csv,.vcf,.vcard,text/csv,text/vcard,text/plain"
                     className="hidden"
                     onChange={(e) => handleImportFile(e, "companies")}
                   />
@@ -1332,6 +1558,138 @@ export default function CrmPanel() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* ============ INTEGRACIONES ============ */}
+          {subtab === "integrations" && (
+            <div className="space-y-4">
+              <p className="text-xs text-gray-400">
+                {t("admin.crm.integrationsTab.desc")}
+              </p>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">Google Contacts (People API)</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      {googleStatus?.google?.account_email ||
+                        t("admin.crm.integrationsTab.notConnected")}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {googleStatus?.google ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleGoogleSync}
+                          disabled={googleBusy}
+                          className={btnPrimary}
+                        >
+                          {googleBusy
+                            ? t("admin.crm.integrationsTab.working")
+                            : t("admin.crm.integrationsTab.sync")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleGoogleDisconnect}
+                          disabled={googleBusy}
+                          className={btnGhost}
+                        >
+                          {t("admin.crm.integrationsTab.disconnect")}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleGoogleConnect}
+                        disabled={googleBusy || !googleStatus?.configured}
+                        title={
+                          googleStatus?.configured
+                            ? ""
+                            : t("admin.crm.integrationsTab.notConfigured")
+                        }
+                        className={`${btnPrimary} disabled:opacity-50`}
+                      >
+                        {t("admin.crm.integrationsTab.connect")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {googleStatus?.google && (
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] text-gray-400">
+                    <div>
+                      <span className="block text-gray-500">
+                        {t("admin.crm.integrationsTab.lastSync")}
+                      </span>
+                      {googleStatus.google.last_sync_at
+                        ? fmtDate(googleStatus.google.last_sync_at)
+                        : "—"}
+                    </div>
+                    <div>
+                      <span className="block text-gray-500">
+                        {t("admin.crm.integrationsTab.status")}
+                      </span>
+                      {googleStatus.google.status}
+                    </div>
+                    <div>
+                      <span className="block text-gray-500">
+                        {t("admin.crm.integrationsTab.imported")}
+                      </span>
+                      {googleStatus.google.last_sync_result?.inserted ?? 0}
+                    </div>
+                    <div>
+                      <span className="block text-gray-500">
+                        {t("admin.crm.integrationsTab.linked")}
+                      </span>
+                      {googleStatus.google.last_sync_result?.linked ?? 0}
+                    </div>
+                  </div>
+                )}
+
+                {!googleStatus?.configured && (
+                  <p className="mt-3 text-[11px] text-amber-400/90">
+                    {t("admin.crm.integrationsTab.notConfigured")}
+                  </p>
+                )}
+
+                {googleStatus?.configured && !googleStatus?.google && (
+                  <p className="mt-3 text-[11px] text-gray-500 break-all">
+                    Redirect URI: <span className="font-mono">{googleStatus.redirect_uri}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                <p className="font-semibold">
+                  {t("admin.crm.integrationsTab.fileTitle")}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {t("admin.crm.integrationsTab.fileDesc")}
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => contactsFileRef.current?.click()}
+                    disabled={importing}
+                    className={btnPrimary}
+                  >
+                    {t("admin.crm.integrationsTab.importContacts")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => companiesFileRef.current?.click()}
+                    disabled={importing}
+                    className={btnGhost}
+                  >
+                    {t("admin.crm.integrationsTab.importCompanies")}
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-2">
+                  {t("admin.crm.integrationsTab.fileFormats")}
+                </p>
               </div>
             </div>
           )}
@@ -2151,6 +2509,98 @@ export default function CrmPanel() {
             <button type="submit" disabled={saving} className={btnPrimary}>{saving ? t("admin.crm.saving") : t("admin.crm.save")}</button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={!!importPreview}
+        title={t("admin.crm.mapTitle")}
+        onClose={() => setImportPreview(null)}
+      >
+        {importPreview && (
+          <div className="space-y-3">
+            <p className="text-xs text-gray-400">{t("admin.crm.mapHint")}</p>
+            <div className="rounded-lg border border-white/10 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-[#18181b] text-gray-400">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium">
+                      {t("admin.crm.mapTitle")}
+                    </th>
+                    <th className="text-left px-3 py-2 font-medium">
+                      {t("admin.crm.mapSourceCol")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {importFields
+                    .filter((f) => f.kind === importPreview.kind)
+                    .map((f) => {
+                      const current = importPreview.mapping[f.key];
+                      return (
+                        <tr key={`${f.kind}-${f.key}`}>
+                          <td className="px-3 py-2 text-gray-300">{f.label}</td>
+                          <td className="px-3 py-2">
+                            <select
+                              value={current ?? -1}
+                              onChange={(e) => {
+                                const v = Number(e.target.value);
+                                setImportPreview((p) =>
+                                  p
+                                    ? {
+                                        ...p,
+                                        mapping: { ...p.mapping, [f.key]: v },
+                                      }
+                                    : p
+                                );
+                              }}
+                              className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm cursor-pointer"
+                            >
+                              <option value={-1}>
+                                {t("admin.crm.mapIgnore")}
+                              </option>
+                              {importPreview.headers.map((h, i) => (
+                                <option key={i} value={i}>
+                                  {h || `Columna ${i + 1}`}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+            {importPreview.unmatched.length > 0 && (
+              <p className="text-[11px] text-gray-500">
+                {t("admin.crm.mapUnmatched")}:{" "}
+                {importPreview.unmatched.join(", ")}
+              </p>
+            )}
+            <p className="text-[11px] text-gray-500">
+              {importPreview.grid.length - 1} {t("admin.crm.contacts")}
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setImportPreview(null)}
+                className={btnGhost}
+              >
+                {t("admin.crm.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={confirmImport}
+                disabled={importing}
+                className={btnPrimary}
+              >
+                {importing
+                  ? t("admin.crm.importing")
+                  : t("admin.crm.mapImport")}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

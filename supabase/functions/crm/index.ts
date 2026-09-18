@@ -696,20 +696,39 @@ serve(async (req: Request) => {
         const rows = Array.isArray(payload?.contacts) ? payload.contacts : [];
         if (rows.length === 0) return json(400, { error: "contacts vacío" });
         if (rows.length > 500) return json(400, { error: "máximo 500 filas por importación" });
-        const clean = [];
+
+        const nameFromEmail = (email: string) =>
+          (email || "")
+            .split("@")[0]
+            .replace(/[._\-+]+/g, " ")
+            .replace(/\d+/g, "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+            .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(" ");
+
+        const clean: any[] = [];
         let skipped = 0;
         for (const c of rows) {
-          if (!c || !String(c.first_name || "").trim()) {
+          let first = String(c?.first_name || "").trim();
+          const email = c?.email
+            ? String(c.email).trim().toLowerCase().slice(0, 200)
+            : "";
+          const phone = c?.phone ? String(c.phone).trim().slice(0, 60) : "";
+          if (!first && email) first = nameFromEmail(email);
+          if (!first && !email && !phone) {
             skipped++;
             continue;
           }
+          if (!first) first = "Sin nombre";
           clean.push({
             company_id: c.company_id || null,
-            first_name: String(c.first_name).trim().slice(0, 120),
+            first_name: first.slice(0, 120),
             last_name: c.last_name ? String(c.last_name).trim().slice(0, 120) : null,
-            email: c.email ? String(c.email).trim().toLowerCase().slice(0, 200) : null,
-            phone: c.phone ? String(c.phone).trim().slice(0, 60) : null,
-            photo_url: c.photo_url || gravatarUrl(c.email || null),
+            email: email || null,
+            phone: phone || null,
+            photo_url: c.photo_url || gravatarUrl(email || null),
             source: c.source ? String(c.source).slice(0, 40) : "import",
             lead_id: c.lead_id || null,
             tags: Array.isArray(c.tags) ? c.tags.map(String).slice(0, 20) : [],
@@ -727,13 +746,60 @@ serve(async (req: Request) => {
             owner: c.owner ? String(c.owner).slice(0, 150) : null,
           });
         }
-        let inserted = 0;
-        if (clean.length > 0) {
-          const { error } = await supabase.from("crm_contacts").insert(clean);
-          if (error) return json(500, { error: error.message });
-          inserted = clean.length;
+
+        const nameKey = (first: string, last: string) =>
+          `${(first || "").toLowerCase()}|${(last || "").toLowerCase()}`;
+
+        const emails = [...new Set(clean.map((c) => c.email).filter(Boolean))];
+        const firsts = [...new Set(clean.map((c) => c.first_name).filter(Boolean))];
+        const dbEmails = new Set<string>();
+        const dbNames = new Set<string>();
+
+        if (emails.length > 0) {
+          const { data } = await supabase
+            .from("crm_contacts")
+            .select("email")
+            .in("email", emails);
+          (data || []).forEach((r: any) => {
+            if (r.email) dbEmails.add(String(r.email).toLowerCase());
+          });
         }
-        return json(200, { inserted, skipped });
+        if (firsts.length > 0) {
+          const { data } = await supabase
+            .from("crm_contacts")
+            .select("first_name, last_name")
+            .in("first_name", firsts);
+          (data || []).forEach((r: any) =>
+            dbNames.add(nameKey(r.first_name, r.last_name || ""))
+          );
+        }
+
+        const seenEmails = new Set<string>();
+        const seenNames = new Set<string>();
+        const toInsert: any[] = [];
+        let duplicates = 0;
+        for (const c of clean) {
+          const key = nameKey(c.first_name, c.last_name || "");
+          if (c.email && (seenEmails.has(c.email) || dbEmails.has(c.email))) {
+            duplicates++;
+            continue;
+          }
+          if (seenNames.has(key) || dbNames.has(key)) {
+            duplicates++;
+            continue;
+          }
+          if (c.email) seenEmails.add(c.email);
+          seenNames.add(key);
+          toInsert.push(c);
+        }
+
+        let inserted = 0;
+        if (toInsert.length > 0) {
+          const { error } = await supabase.from("crm_contacts").insert(toInsert);
+          if (error) return json(500, { error: error.message });
+          inserted = toInsert.length;
+        }
+        return json(200, { inserted, skipped, duplicates });
       }
 
       case "companies-import": {
@@ -768,13 +834,59 @@ serve(async (req: Request) => {
             owner: c.owner ? String(c.owner).slice(0, 150) : null,
           });
         }
-        let inserted = 0;
-        if (clean.length > 0) {
-          const { error } = await supabase.from("crm_companies").insert(clean);
-          if (error) return json(500, { error: error.message });
-          inserted = clean.length;
+
+        const names = [...new Set(clean.map((c) => c.name.toLowerCase()))];
+        const domains = [
+          ...new Set(clean.map((c) => c.domain).filter(Boolean) as string[]),
+        ];
+        const dbNames = new Set<string>();
+        const dbDomains = new Set<string>();
+        if (names.length > 0) {
+          const { data } = await supabase
+            .from("crm_companies")
+            .select("name")
+            .in("name", clean.map((c) => c.name));
+          (data || []).forEach((r: any) => {
+            if (r.name) dbNames.add(String(r.name).toLowerCase());
+          });
         }
-        return json(200, { inserted, skipped });
+        if (domains.length > 0) {
+          const { data } = await supabase
+            .from("crm_companies")
+            .select("domain")
+            .in("domain", domains);
+          (data || []).forEach((r: any) => {
+            if (r.domain) dbDomains.add(String(r.domain).toLowerCase());
+          });
+        }
+
+        const seenNames = new Set<string>();
+        const seenDomains = new Set<string>();
+        const toInsert: any[] = [];
+        let duplicates = 0;
+        for (const c of clean) {
+          const nm = c.name.toLowerCase();
+          const dm = (c.domain || "").toLowerCase();
+          if (seenNames.has(nm) || dbNames.has(nm)) {
+            duplicates++;
+            continue;
+          }
+          if (dm && (seenDomains.has(dm) || dbDomains.has(dm))) {
+            duplicates++;
+            continue;
+          }
+          seenNames.add(nm);
+          if (dm) seenDomains.add(dm);
+          toInsert.push(c);
+        }
+
+        let inserted = 0;
+        if (toInsert.length > 0) {
+          const { error } = await supabase.from("crm_companies").insert(toInsert);
+          if (error) return json(500, { error: error.message });
+          inserted = toInsert.length;
+        }
+        return json(200, { inserted, skipped, duplicates });
       }
 
       // ============ PLANTILLAS DE EMAIL ============

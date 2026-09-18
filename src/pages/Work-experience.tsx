@@ -5,6 +5,17 @@ import { getWorkExperiences } from "../lib/supabase-functions";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
 import { useSEO } from "../hooks/useSEO";
 import { useLanguageStore } from "../stores/useLanguageStore";
+import {
+  EXPERIENCE_CATEGORIES,
+  normalizeCategories,
+  type ExperienceCategory,
+} from "../lib/experienceCategories";
+
+interface EvidenceItem {
+  type: "image" | "video" | "document" | "link";
+  url: string;
+  label?: string;
+}
 
 interface WorkExperience {
   id: string;
@@ -21,10 +32,79 @@ interface WorkExperience {
   description: string;
   description_translations?: { es?: string; en?: string } | null;
   responsibilities: string[];
+  achievements: string[];
   technologies: string[];
+  evidence: EvidenceItem[];
+  categories: ExperienceCategory[];
+  category: ExperienceCategory;
   type: "full-time" | "part-time" | "contract" | "freelance";
   status: "current" | "past";
 }
+
+const parseEvidence = (value: any): EvidenceItem[] => {
+  if (!value) return [];
+  let list: any[] = [];
+  if (Array.isArray(value)) {
+    list = value;
+  } else if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) list = parsed;
+    } catch {
+      list = trimmed
+        .split(/[\n,]/)
+        .map((s) => ({ type: "link", url: s.trim() }))
+        .filter((e) => e.url);
+    }
+  }
+  return list
+    .map((item: any) => {
+      if (typeof item === "string") {
+        return { type: "link" as const, url: item, label: "" };
+      }
+      if (item && typeof item === "object" && item.url) {
+        const type = ["image", "video", "document", "link"].includes(item.type)
+          ? item.type
+          : "link";
+        return { type, url: String(item.url), label: item.label || "" };
+      }
+      return null;
+    })
+    .filter((e): e is EvidenceItem => e !== null && e.url.trim() !== "");
+};
+
+const parseTranslatedList = (value: any, language: string): string[] => {
+  if (!value) return [];
+  let list: any[] = [];
+  if (Array.isArray(value)) {
+    list = value;
+  } else if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) list = parsed;
+        else if (parsed && typeof parsed === "object")
+          list = Object.values(parsed);
+      } catch {
+        list = trimmed.split(/[,\n]/);
+      }
+    } else {
+      list = trimmed.split(/[,\n]/);
+    }
+  }
+  return list
+    .map((item: any) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object" && (item.es || item.en))
+        return getTranslatedText(item, language);
+      return "";
+    })
+    .filter((s: string) => s && s.trim() !== "");
+};
 
 function WorkExperience() {
   const { t } = useTranslation();
@@ -34,6 +114,9 @@ function WorkExperience() {
   const [loading, setLoading] = useState(true);
   const [selectedExperience, setSelectedExperience] =
     useState<WorkExperience | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<
+    "all" | ExperienceCategory
+  >("all");
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -157,6 +240,18 @@ function WorkExperience() {
               }
             }
 
+            const achievements = parseTranslatedList(
+              exp.achievements,
+              language
+            );
+            const evidence = parseEvidence(exp.evidence);
+            const storedCategories = normalizeCategories(exp.categories);
+            const categories: ExperienceCategory[] =
+              storedCategories.length > 0
+                ? storedCategories
+                : normalizeCategories([exp.category]);
+            const category: ExperienceCategory = categories[0] || "laboral";
+
             return {
               id: exp.id,
               position: exp.position,
@@ -172,7 +267,11 @@ function WorkExperience() {
               description: exp.description,
               description_translations: exp.description_translations,
               responsibilities,
+              achievements,
               technologies,
+              evidence,
+              categories,
+              category,
               type: exp.type,
               status: exp.status,
             };
@@ -209,7 +308,7 @@ function WorkExperience() {
         ease: "power2.out",
       }
     );
-  }, [loading]);
+  }, [loading, categoryFilter]);
 
   const getTypeLabel = (type: WorkExperience["type"]) => {
     const labels = {
@@ -220,6 +319,35 @@ function WorkExperience() {
     };
     return labels[type];
   };
+
+  const categoryLabels: Record<ExperienceCategory, string> = {
+    laboral: t("workExperience.categoryLaboral"),
+    profesional: t("workExperience.categoryProfesional"),
+    freelance: t("workExperience.categoryFreelance"),
+    practicas: t("workExperience.categoryPracticas"),
+    docencia: t("workExperience.categoryDocencia"),
+    investigacion: t("workExperience.categoryInvestigacion"),
+    voluntariado: t("workExperience.categoryVoluntariado"),
+  };
+
+  const getCategoryLabel = (category: ExperienceCategory) =>
+    categoryLabels[category];
+
+  const categoryFilters: {
+    id: "all" | ExperienceCategory;
+    label: string;
+  }[] = [
+    { id: "all", label: t("workExperience.allCategories") },
+    ...EXPERIENCE_CATEGORIES.map((cat) => ({
+      id: cat,
+      label: categoryLabels[cat],
+    })),
+  ];
+
+  const filteredExperiences = experiences.filter(
+    (exp) =>
+      categoryFilter === "all" || exp.categories.includes(categoryFilter)
+  );
 
   if (loading) {
     return (
@@ -232,14 +360,35 @@ function WorkExperience() {
   return (
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-12">
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-center mb-8">
           {t("workExperience.title")}
         </h1>
 
-        {experiences.length === 0 ? (
+        {experiences.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2 mb-10">
+            {categoryFilters.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setCategoryFilter(cat.id)}
+                className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors cursor-pointer ${
+                  categoryFilter === cat.id
+                    ? "bg-purple text-white border-purple"
+                    : "bg-white text-gray-700 border-gray-300 hover:border-purple hover:text-purple"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {filteredExperiences.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-2xl text-gray-600 mb-4">
-              {t("workExperience.noExperiences")}
+              {experiences.length === 0
+                ? t("workExperience.noExperiences")
+                : t("workExperience.noResults")}
             </p>
             <p className="text-gray-500">
               {t("workExperience.noExperiencesDescription")}
@@ -247,7 +396,7 @@ function WorkExperience() {
           </div>
         ) : (
           <div ref={containerRef} className="space-y-8">
-            {experiences.map((experience) => (
+            {filteredExperiences.map((experience) => (
               <div
                 key={experience.id}
                 className="experience-card bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-xl transition-shadow"
@@ -315,6 +464,14 @@ function WorkExperience() {
                                 {t("workExperience.current")}
                               </span>
                             )}
+                            {experience.categories.map((cat) => (
+                              <span
+                                key={cat}
+                                className="px-3 py-1 rounded-full text-xs font-medium bg-purple/10 text-purple border border-purple/20"
+                              >
+                                {getCategoryLabel(cat)}
+                              </span>
+                            ))}
                           </div>
                           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                             <div className="flex items-center gap-1">
@@ -429,6 +586,21 @@ function WorkExperience() {
                           </div>
                         )}
 
+                      {/* Logros - Solo mostrar si hay logros */}
+                      {experience.achievements &&
+                        experience.achievements.length > 0 && (
+                          <div className="mb-4">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                              {t("workExperience.achievements")}:
+                            </h3>
+                            <ul className="list-disc list-inside space-y-1 text-gray-600 text-sm">
+                              {experience.achievements.map((item, index) => (
+                                <li key={index}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
                       {/* Tecnologías - Solo mostrar si hay tecnologías */}
                       {experience.technologies &&
                         experience.technologies.length > 0 &&
@@ -453,6 +625,75 @@ function WorkExperience() {
                             </div>
                           </div>
                         )}
+
+                      {/* Evidencias - Solo mostrar si hay evidencias */}
+                      {experience.evidence && experience.evidence.length > 0 && (
+                        <div className="mt-4">
+                          <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                            {t("workExperience.evidence")}:
+                          </h3>
+                          <div className="flex flex-wrap gap-3">
+                            {experience.evidence.map((ev, index) => {
+                              const label =
+                                ev.label ||
+                                t(
+                                  ev.type === "image"
+                                    ? "workExperience.evidenceImage"
+                                    : ev.type === "video"
+                                    ? "workExperience.evidenceVideo"
+                                    : ev.type === "document"
+                                    ? "workExperience.evidenceDocument"
+                                    : "workExperience.evidenceLink"
+                                );
+                              if (ev.type === "image") {
+                                return (
+                                  <a
+                                    key={index}
+                                    href={ev.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block w-28 h-28 rounded-lg overflow-hidden border border-gray-200 hover:border-purple transition-colors cursor-pointer"
+                                    title={ev.label || t("workExperience.viewEvidence")}
+                                  >
+                                    <img
+                                      src={ev.url}
+                                      alt={ev.label || t("workExperience.evidenceImage")}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+                                      }}
+                                    />
+                                  </a>
+                                );
+                              }
+                              return (
+                                <a
+                                  key={index}
+                                  href={ev.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-purple/10 hover:text-purple transition-colors cursor-pointer"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                                    />
+                                  </svg>
+                                  {label}
+                                </a>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

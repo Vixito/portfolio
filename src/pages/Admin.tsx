@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { optimizeAndUpload } from "../lib/storage-functions";
 import { useTranslation } from "../lib/i18n";
+import {
+  EXPERIENCE_CATEGORIES,
+  normalizeCategories,
+  type ExperienceCategory,
+} from "../lib/experienceCategories";
 import { useSEO } from "../hooks/useSEO";
 import { useStatusStore } from "../stores/useStatusStore";
 import { useLanguageStore } from "../stores/useLanguageStore";
@@ -286,6 +291,15 @@ function ExternalToolsCard() {
 
 function Admin() {
   const { t } = useTranslation();
+  const experienceCategoryLabels: Record<ExperienceCategory, string> = {
+    laboral: t("workExperience.categoryLaboral"),
+    profesional: t("workExperience.categoryProfesional"),
+    freelance: t("workExperience.categoryFreelance"),
+    practicas: t("workExperience.categoryPracticas"),
+    docencia: t("workExperience.categoryDocencia"),
+    investigacion: t("workExperience.categoryInvestigacion"),
+    voluntariado: t("workExperience.categoryVoluntariado"),
+  };
   useSEO({ title: t("admin.title") });
   const navigate = useNavigate();
   const { theme } = useThemeStore();
@@ -973,8 +987,12 @@ function Admin() {
     } else if (activeTab === "work_experiences") {
       defaultFormData.status = "past";
       defaultFormData.type = "full-time";
+      defaultFormData.category = "laboral";
+      defaultFormData.categories = ["laboral"];
       defaultFormData.responsibilities = "[]";
       defaultFormData.technologies = "[]";
+      defaultFormData.achievements = "[]";
+      defaultFormData.evidence = "[]";
     } else if (activeTab === "technologies") {
       defaultFormData.level = "beginner";
       defaultFormData.category = "other";
@@ -1541,6 +1559,32 @@ function Admin() {
       }
       formData.technologies_list =
         technologiesList.length > 0 ? technologiesList : [{ es: "", en: "" }];
+
+      // Logros a formato de lista ES/EN
+      const achievementsList = Array.isArray(currentItem.achievements)
+        ? currentItem.achievements
+        : [];
+      formData.achievements_list =
+        achievementsList.length > 0
+          ? achievementsList.map((item: any) =>
+              typeof item === "string"
+                ? { es: item, en: item }
+                : { es: item?.es || "", en: item?.en || "" }
+            )
+          : [{ es: "", en: "" }];
+
+      // Evidencias: { type, url, label }
+      const evidenceList = Array.isArray(currentItem.evidence)
+        ? currentItem.evidence
+        : [];
+      formData.evidence_list = evidenceList;
+
+      // Categorías múltiples (modelo nuevo); si aún no existen, derivar del campo antiguo
+      const storedCategories = normalizeCategories(currentItem.categories);
+      formData.categories =
+        storedCategories.length > 0
+          ? storedCategories
+          : normalizeCategories([currentItem.category]);
     }
     setCrudFormData(formData);
     setEventUrl(currentItem.passline_url || "");
@@ -2164,6 +2208,45 @@ function Admin() {
               }
             }
             delete workExpData.technologies_list;
+
+            // Logros: lista ES/EN -> array de objetos {es, en}
+            if (
+              workExpData.achievements_list &&
+              Array.isArray(workExpData.achievements_list)
+            ) {
+              workExpData.achievements = workExpData.achievements_list
+                .filter(
+                  (item: { es?: string; en?: string }) =>
+                    (item.es && item.es.trim() !== "") ||
+                    (item.en && item.en.trim() !== "")
+                )
+                .map((item: { es?: string; en?: string }) => ({
+                  es: item.es || "",
+                  en: item.en || "",
+                }));
+            }
+            delete workExpData.achievements_list;
+
+            // Evidencias: array de {type, url, label}
+            if (
+              workExpData.evidence_list &&
+              Array.isArray(workExpData.evidence_list)
+            ) {
+              workExpData.evidence = workExpData.evidence_list
+                .filter((item: any) => item && String(item.url || "").trim() !== "")
+                .map((item: any) => ({
+                  type: ["image", "video", "document", "link"].includes(item.type)
+                    ? item.type
+                    : "link",
+                  url: String(item.url).trim(),
+                  label: item.label ? String(item.label).trim() : "",
+                }));
+            }
+            delete workExpData.evidence_list;
+
+            const updateCategories = normalizeCategories(workExpData.categories);
+            workExpData.categories = updateCategories;
+            workExpData.category = updateCategories[0] || workExpData.category || "laboral";
             await updateWorkExperience(editingItem.id, workExpData);
             break;
           case "technologies":
@@ -2742,6 +2825,41 @@ function Admin() {
               }
             }
             delete newWorkExpData.technologies_list;
+
+            // Logros
+            if (
+              newWorkExpData.achievements_list &&
+              Array.isArray(newWorkExpData.achievements_list)
+            ) {
+              newWorkExpData.achievements = newWorkExpData.achievements_list
+                .map((item: { es?: string; en?: string }) => {
+                  const lang = useLanguageStore.getState().language;
+                  return item[lang] || item.es || item.en || "";
+                })
+                .filter((s: string) => s.trim() !== "");
+            }
+            delete newWorkExpData.achievements_list;
+
+            // Evidencias: {type, url, label}
+            if (
+              newWorkExpData.evidence_list &&
+              Array.isArray(newWorkExpData.evidence_list)
+            ) {
+              newWorkExpData.evidence = newWorkExpData.evidence_list
+                .filter((item: any) => item && String(item.url || "").trim() !== "")
+                .map((item: any) => ({
+                  type: ["image", "video", "document", "link"].includes(item.type)
+                    ? item.type
+                    : "link",
+                  url: String(item.url).trim(),
+                  label: item.label ? String(item.label).trim() : "",
+                }));
+            }
+            delete newWorkExpData.evidence_list;
+
+            const newCategories = normalizeCategories(newWorkExpData.categories);
+            newWorkExpData.categories = newCategories;
+            newWorkExpData.category = newCategories[0] || newWorkExpData.category || "laboral";
             await createWorkExperience(newWorkExpData);
             break;
           case "technologies":
@@ -6462,6 +6580,263 @@ function Admin() {
                           <option value="current">Actual</option>
                         </select>
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Clasificación de Experiencia * (una o varias)
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {EXPERIENCE_CATEGORIES.map((cat) => {
+                          const selected = normalizeCategories(
+                            crudFormData.categories
+                          ).includes(cat);
+                          return (
+                            <button
+                              type="button"
+                              key={cat}
+                              onClick={() => {
+                                const current = normalizeCategories(
+                                  crudFormData.categories
+                                );
+                                const next = selected
+                                  ? current.filter((c) => c !== cat)
+                                  : [...current, cat];
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  categories: next,
+                                });
+                              }}
+                              className={
+                                "px-3 py-1.5 rounded-full text-sm border transition-colors " +
+                                (selected
+                                  ? "bg-purple text-white border-purple"
+                                  : "bg-gray-800 text-gray-300 border-gray-700 hover:border-purple")
+                              }
+                            >
+                              {experienceCategoryLabels[cat]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Logros
+                      </label>
+                      {(crudFormData.achievements_list || [{ es: "", en: "" }]).map(
+                        (item: { es: string; en: string }, index: number) => (
+                          <div
+                            key={index}
+                            className="mb-3 p-3 bg-gray-800 rounded-lg border border-gray-700"
+                          >
+                            <div className="grid grid-cols-2 gap-3 mb-2">
+                              <div>
+                                <label className="block text-gray-400 text-xs mb-1">
+                                  Español
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.es || ""}
+                                  onChange={(e) => {
+                                    const newList = [
+                                      ...(crudFormData.achievements_list || [
+                                        { es: "", en: "" },
+                                      ]),
+                                    ];
+                                    newList[index] = {
+                                      ...newList[index],
+                                      es: e.target.value,
+                                    };
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      achievements_list: newList,
+                                    });
+                                  }}
+                                  className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm"
+                                  placeholder="Ej: Reduje el tiempo de carga un 40%"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-gray-400 text-xs mb-1">
+                                  English
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.en || ""}
+                                  onChange={(e) => {
+                                    const newList = [
+                                      ...(crudFormData.achievements_list || [
+                                        { es: "", en: "" },
+                                      ]),
+                                    ];
+                                    newList[index] = {
+                                      ...newList[index],
+                                      en: e.target.value,
+                                    };
+                                    setCrudFormData({
+                                      ...crudFormData,
+                                      achievements_list: newList,
+                                    });
+                                  }}
+                                  className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm"
+                                  placeholder="Ej: Cut load time by 40%"
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newList = [
+                                  ...(crudFormData.achievements_list || [
+                                    { es: "", en: "" },
+                                  ]),
+                                ];
+                                newList.splice(index, 1);
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  achievements_list:
+                                    newList.length > 0
+                                      ? newList
+                                      : [{ es: "", en: "" }],
+                                });
+                              }}
+                              className="text-red-400 hover:text-red-300 text-xs"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        )
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCrudFormData({
+                            ...crudFormData,
+                            achievements_list: [
+                              ...(crudFormData.achievements_list || [
+                                { es: "", en: "" },
+                              ]),
+                              { es: "", en: "" },
+                            ],
+                          });
+                        }}
+                        className="mt-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded"
+                      >
+                        + Agregar Logro
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">
+                        Evidencias (fotos, videos, documentos o enlaces)
+                      </label>
+                      {(crudFormData.evidence_list || []).map(
+                        (
+                          item: { type: string; url: string; label: string },
+                          index: number
+                        ) => (
+                          <div
+                            key={index}
+                            className="mb-3 p-3 bg-gray-800 rounded-lg border border-gray-700"
+                          >
+                            <div className="grid grid-cols-3 gap-3 mb-2">
+                              <select
+                                value={item.type || "link"}
+                                onChange={(e) => {
+                                  const newList = [
+                                    ...(crudFormData.evidence_list || []),
+                                  ];
+                                  newList[index] = {
+                                    ...newList[index],
+                                    type: e.target.value,
+                                  };
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    evidence_list: newList,
+                                  });
+                                }}
+                                className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm"
+                              >
+                                <option value="link">Enlace</option>
+                                <option value="image">Foto</option>
+                                <option value="video">Video</option>
+                                <option value="document">Documento</option>
+                              </select>
+                              <input
+                                type="text"
+                                value={item.label || ""}
+                                onChange={(e) => {
+                                  const newList = [
+                                    ...(crudFormData.evidence_list || []),
+                                  ];
+                                  newList[index] = {
+                                    ...newList[index],
+                                    label: e.target.value,
+                                  };
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    evidence_list: newList,
+                                  });
+                                }}
+                                className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm"
+                                placeholder="Título (opcional)"
+                              />
+                              <input
+                                type="url"
+                                value={item.url || ""}
+                                onChange={(e) => {
+                                  const newList = [
+                                    ...(crudFormData.evidence_list || []),
+                                  ];
+                                  newList[index] = {
+                                    ...newList[index],
+                                    url: e.target.value,
+                                  };
+                                  setCrudFormData({
+                                    ...crudFormData,
+                                    evidence_list: newList,
+                                  });
+                                }}
+                                className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm"
+                                placeholder="https://..."
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newList = [
+                                  ...(crudFormData.evidence_list || []),
+                                ];
+                                newList.splice(index, 1);
+                                setCrudFormData({
+                                  ...crudFormData,
+                                  evidence_list: newList,
+                                });
+                              }}
+                              className="text-red-400 hover:text-red-300 text-xs"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        )
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCrudFormData({
+                            ...crudFormData,
+                            evidence_list: [
+                              ...(crudFormData.evidence_list || []),
+                              { type: "link", url: "", label: "" },
+                            ],
+                          });
+                        }}
+                        className="mt-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded"
+                      >
+                        + Agregar Evidencia
+                      </button>
                     </div>
                   </>
                 )}

@@ -20,7 +20,7 @@ function Navigation({ externalBase }: { externalBase?: string }) {
     { path: "/clients", label: language === "es" ? "Abonadores" : "Payers" },
     {
       path: "/workxp",
-      label: language === "es" ? "Experiencia Laboral" : "Work Experience",
+      label: language === "es" ? "Experiencia" : "Experience",
     },
     {
       path: "/skills-n-technologies",
@@ -400,6 +400,38 @@ function Navigation({ externalBase }: { externalBase?: string }) {
               >
                 {language === "es" ? "Estado" : "Status"}
               </a>
+            </div>
+
+            {/* Sección Legal */}
+            <div>
+              <div className="px-4 py-2 text-xs font-semibold text-black dark:text-white uppercase flex items-center gap-2">
+                <span>⚖️</span>
+                <span>{language === "es" ? "Legal" : "Legal"}</span>
+              </div>
+              <InternalLink
+                path="/privacy"
+                className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors text-black dark:text-white cursor-pointer ${
+                  isActive("/privacy")
+                    ? "bg-purple/20 dark:bg-purple/30 text-purple font-semibold"
+                    : ""
+                }`}
+              >
+                {language === "es"
+                  ? "Política de Privacidad"
+                  : "Privacy Policy"}
+              </InternalLink>
+              <InternalLink
+                path="/terms"
+                className={`dropdown-item block px-4 py-2 text-left hover:bg-purple/10 dark:hover:bg-purple/80 transition-colors text-black dark:text-white cursor-pointer ${
+                  isActive("/terms")
+                    ? "bg-purple/20 dark:bg-purple/30 text-purple font-semibold"
+                    : ""
+                }`}
+              >
+                {language === "es"
+                  ? "Términos y Condiciones"
+                  : "Terms of Service"}
+              </InternalLink>
             </div>
           </div>
         </li>

@@ -27,6 +27,8 @@ import {
   DevButtons,
   Checkout,
   ContractPage,
+  Privacy,
+  Terms,
 } from "./pages";
 import Layout from "./components/layout/Layout";
 import TrackVisitor from "./components/TrackVisitor";
@@ -224,6 +226,22 @@ function App() {
           element={
             <Layout>
               <ContractPage />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/privacy"
+          element={
+            <Layout>
+              <Privacy />
+            </Layout>
+          }
+        ></Route>
+        <Route
+          path="/terms"
+          element={
+            <Layout>
+              <Terms />
             </Layout>
           }
         ></Route>

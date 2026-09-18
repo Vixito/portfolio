@@ -942,6 +942,10 @@ export async function createWorkExperience(experience: {
   description_translations?: { es?: string; en?: string } | null;
   responsibilities: string[]; // JSON array
   technologies: string[]; // JSON array
+  achievements?: any[];
+  evidence?: any[];
+  categories?: string[];
+  category?: string;
   type: "full-time" | "part-time" | "contract" | "freelance";
   status: "current" | "past";
 }) {
@@ -979,6 +983,10 @@ export async function updateWorkExperience(
     description_translations?: { es?: string; en?: string } | null;
     responsibilities: string[];
     technologies: string[];
+    achievements?: any[];
+    evidence?: any[];
+    categories?: string[];
+    category?: string;
     type: "full-time" | "part-time" | "contract" | "freelance";
     status: "current" | "past";
     is_active?: boolean;
@@ -1759,6 +1767,35 @@ async function invokeCRM(payload: any): Promise<any> {
     throw new Error(String(data.error));
   }
   return data;
+}
+
+async function invokeCrmOauth(action: string): Promise<any> {
+  const { data, error } = await supabase.functions.invoke("crm-oauth", {
+    body: { action },
+    headers: adminAuthHeaders(),
+  });
+  if (error) {
+    handleAdminUnauthorized((error as any)?.context?.status);
+    throw new Error(await getEdgeErrorMessage(error));
+  }
+  if (data?.error) {
+    throw new Error(String(data.error));
+  }
+  return data;
+}
+
+// --- Integraciones (OAuth Google People API) ---
+export function getCrmGoogleStatus() {
+  return invokeCrmOauth("status");
+}
+export function startCrmGoogleOAuth() {
+  return invokeCrmOauth("start");
+}
+export function syncCrmGoogleContacts() {
+  return invokeCrmOauth("sync");
+}
+export function disconnectCrmGoogle() {
+  return invokeCrmOauth("disconnect");
 }
 
 // --- Empresas ---

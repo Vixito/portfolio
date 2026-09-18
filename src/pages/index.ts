@@ -18,6 +18,8 @@ import WorkExperience from "./Work-experience";
 import PayInvoice from "./PayInvoice";
 import DevButtons from "./DevButtons";
 import ContractPage from "./ContractPage";
+import Privacy from "./Privacy";
+import Terms from "./Terms";
 
 export {
   About,
@@ -40,4 +42,6 @@ export {
   PayInvoice,
   DevButtons,
   ContractPage,
+  Privacy,
+  Terms,
 };

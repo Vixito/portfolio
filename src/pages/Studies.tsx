@@ -32,6 +32,7 @@ function Studies() {
     status: "all" as Study["status"] | "all",
     hasCertificate: "all" as "all" | "yes" | "no",
   });
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -136,11 +137,13 @@ function Studies() {
   const getStudyTitle = (study: Study) =>
     getTranslatedText(study.title_translations || study.title);
 
-  const sortedStudies = [...filteredStudies].sort((a, b) =>
-    getStudyTitle(a).localeCompare(getStudyTitle(b), undefined, {
-      sensitivity: "base",
-    })
-  );
+  const sortedStudies = [...filteredStudies].sort((a, b) => {
+    const timeA = new Date(a.startDate).getTime();
+    const timeB = new Date(b.startDate).getTime();
+    const valA = Number.isNaN(timeA) ? 0 : timeA;
+    const valB = Number.isNaN(timeB) ? 0 : timeB;
+    return sortDir === "desc" ? valB - valA : valA - valB;
+  });
 
   const getTypeLabel = (type: Study["type"]) => {
     const labels = {
@@ -314,7 +317,15 @@ function Studies() {
                   </div>
                 </th>
                 <th className="px-6 py-4 text-left">
-                  <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSortDir((d) => (d === "desc" ? "asc" : "desc"))
+                    }
+                    title={t("studies.sortByPeriod")}
+                    aria-label={t("studies.sortByPeriod")}
+                    className="flex items-center gap-2 cursor-pointer group"
+                  >
                     <svg
                       className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0"
                       fill="none"
@@ -331,7 +342,22 @@ function Studies() {
                     <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
                       {t("studies.period")}
                     </span>
-                  </div>
+                    <svg
+                      className={`w-3.5 h-3.5 transition-transform text-purple ${
+                        sortDir === "asc" ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
                 </th>
                 <th className="px-6 py-4 text-left min-w-[180px]">
                   <div className="flex items-center gap-2">
