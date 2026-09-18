@@ -8,7 +8,10 @@ import HomeSection from "./HomeSection";
 import { useTranslation } from "../../lib/i18n";
 import CanvasBackground from "./CanvasBackground";
 import ScrollTransitionWrapper from "./ScrollTransitionWrapper";
-import { getAppearanceSettings } from "../../lib/supabase-functions";
+import {
+  getCachedBackground,
+  loadAppearanceSettings,
+} from "../../lib/appearance";
 import { useThemeStore } from "../../stores/useThemeStore";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -17,23 +20,27 @@ function Hero({ transitionType }: { transitionType?: any }) {
   const { t } = useTranslation();
   const { theme } = useThemeStore();
   const heroRef = useRef<HTMLDivElement>(null);
-  const [heroBg, setHeroBg] = useState("default");
-  
+  const [heroBg, setHeroBg] = useState(
+    () => getCachedBackground("hero_background") || "default"
+  );
+
   useEffect(() => {
-    const fetchSettings = async () => {
-      const settings = await getAppearanceSettings();
-      setHeroBg(settings?.hero_background || "default");
+    let alive = true;
+    const fetchSettings = async (force = false) => {
+      const settings = await loadAppearanceSettings(force);
+      if (alive) setHeroBg(settings?.hero_background || "default");
     };
     fetchSettings();
 
     const channel = new BroadcastChannel('appearance_updates');
     channel.onmessage = (event) => {
       if (event.data === 'updated') {
-        fetchSettings();
+        fetchSettings(true);
       }
     };
 
     return () => {
+      alive = false;
       channel.close();
     };
   }, []);
@@ -176,7 +183,7 @@ function Hero({ transitionType }: { transitionType?: any }) {
         {heroBg === "starry_night" && (
           <motion.div
             key="starry_night"
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1 }}

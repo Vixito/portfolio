@@ -8,8 +8,8 @@ import {
   contractSendCode,
   contractVerifyCode,
   contractDownloadPdf,
-  getAppearanceSettings,
 } from "../lib/supabase-functions";
+import { loadAppearanceSettings } from "../lib/appearance";
 import { useTranslation } from "../lib/i18n";
 import { useSEO } from "../hooks/useSEO";
 import { useThemeStore } from "../stores/useThemeStore";
@@ -54,7 +54,7 @@ export default function ContractPage() {
   useEffect(() => {
     let alive = true;
     Promise.all([
-      getAppearanceSettings()
+      loadAppearanceSettings()
         .then((s) => (s?.contracts_background || "default"))
         .catch(() => "default"),
       !slug
@@ -226,7 +226,7 @@ export default function ContractPage() {
     <AnimatePresence>
       {contractBg === "starry_night" && (
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 1 }}

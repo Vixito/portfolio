@@ -3,7 +3,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useSEO } from "../../hooks/useSEO";
 import { useLanguageStore } from "../../stores/useLanguageStore";
 import { useThemeStore } from "../../stores/useThemeStore";
-import { getAppearanceSettings } from "../../lib/supabase-functions";
+import {
+  getCachedBackground,
+  loadAppearanceSettings,
+} from "../../lib/appearance";
 import CanvasBackground from "../features/CanvasBackground";
 import type { LegalDoc } from "../../lib/legalText";
 
@@ -19,11 +22,13 @@ export default function LegalPage({
   const content = doc[language === "en" ? "en" : "es"];
   useSEO({ title: seoTitle });
 
-  const [background, setBackground] = useState("default");
+  const [background, setBackground] = useState(
+    () => getCachedBackground("legal_background") || "default"
+  );
 
   useEffect(() => {
     let alive = true;
-    getAppearanceSettings()
+    loadAppearanceSettings()
       .then((settings) => {
         if (alive) setBackground(settings?.legal_background || "default");
       })
@@ -38,7 +43,7 @@ export default function LegalPage({
       <AnimatePresence>
         {background === "starry_night" && (
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1 }}

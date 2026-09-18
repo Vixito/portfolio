@@ -32,7 +32,9 @@ import {
 } from "./pages";
 import Layout from "./components/layout/Layout";
 import TrackVisitor from "./components/TrackVisitor";
-import { useEffect } from "react";
+import Loading from "./components/ui/Loading";
+import { getCachedAppearance, loadAppearanceSettings } from "./lib/appearance";
+import { useEffect, useState } from "react";
 
 // Componente interno que maneja el scroll (debe estar dentro del Router)
 function ScrollToTop() {
@@ -75,6 +77,37 @@ function RootRoute() {
 }
 
 function App() {
+  // Si ya conocemos la apariencia (memoria/localStorage) pintamos al instante.
+  // Si no, esperamos a cargarla para no mostrar nunca el fondo por defecto
+  // antes del configurado en el Admin.
+  const [appearanceReady, setAppearanceReady] = useState(
+    () => getCachedAppearance() !== null
+  );
+
+  useEffect(() => {
+    let alive = true;
+    if (appearanceReady) {
+      // Ya hay valor cacheado: refresco silencioso en segundo plano.
+      loadAppearanceSettings(true).catch(() => {});
+      return;
+    }
+    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 3000));
+    Promise.race([loadAppearanceSettings().catch(() => {}), timeout]).finally(
+      () => {
+        if (alive) setAppearanceReady(true);
+      }
+    );
+    return () => {
+      alive = false;
+    };
+    // Solo en el montaje: el valor inicial de appearanceReady decide el camino.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!appearanceReady) {
+    return <Loading />;
+  }
+
   return (
     <BrowserRouter>
       <ScrollToTop />

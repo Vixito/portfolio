@@ -5,8 +5,11 @@ import {
   getUpcomingEvents,
   getPlaylist,
   getRadioSettings,
-  getAppearanceSettings,
 } from "../lib/supabase-functions";
+import {
+  getCachedBackground,
+  loadAppearanceSettings,
+} from "../lib/appearance";
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/supabase";
 import { useTranslation, getTranslatedText } from "../lib/i18n";
@@ -29,7 +32,9 @@ function Radio() {
   const { t, language } = useTranslation();
   useSEO({ title: t("radio.title") });
   const { theme } = useThemeStore();
-  const [radioBg, setRadioBg] = useState("default");
+  const [radioBg, setRadioBg] = useState(
+    () => getCachedBackground("radio_background") || "default"
+  );
 
   // Log de montaje solo una vez en desarrollo
   useEffect(() => {
@@ -973,10 +978,11 @@ function Radio() {
 
   // Cargar configuración de apariencia
   useEffect(() => {
-    const loadAppearance = async () => {
+    let alive = true;
+    const loadAppearance = async (force = false) => {
       try {
-        const settings = await getAppearanceSettings();
-        setRadioBg(settings?.radio_background || "default");
+        const settings = await loadAppearanceSettings(force);
+        if (alive) setRadioBg(settings?.radio_background || "default");
       } catch (error) {
         console.error("Error cargando appearanceSettings:", error);
       }
@@ -986,11 +992,12 @@ function Radio() {
     const channel = new BroadcastChannel('appearance_updates');
     channel.onmessage = (event) => {
       if (event.data === 'updated') {
-        loadAppearance();
+        loadAppearance(true);
       }
     };
 
     return () => {
+      alive = false;
       channel.close();
     };
   }, []);
@@ -2417,7 +2424,7 @@ function Radio() {
       <AnimatePresence>
         {radioBg === "starry_night" && (
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1 }}
