@@ -38,6 +38,14 @@ import {
   deleteCrmCompany,
   deleteCrmDeal,
   deleteCrmActivity,
+  getCrmFields,
+  createCrmField,
+  updateCrmField,
+  deleteCrmField,
+  createCrmContactByFields,
+  updateCrmContactByFields,
+  createCrmCompanyByFields,
+  updateCrmCompanyByFields,
 } from "../../lib/supabase-functions";
 import {
   autoMapHeaders,
@@ -48,6 +56,12 @@ import {
   splitFullName,
   type ImportKind,
 } from "../../lib/contactImport";
+import RecordGrid from "./crm/RecordGrid";
+import { AvatarView } from "./crm/RecordGrid";
+import FieldManager from "./crm/FieldManager";
+import RecordDrawer, { type ExtraRow } from "./crm/RecordDrawer";
+import type { CrmEntity, CrmField, RecordRow } from "./crm/types";
+import { setRecordField } from "./crm/types";
 
 // ============ helpers de UI ============
 
@@ -223,11 +237,7 @@ export default function CrmPanel() {
   const [googleStatus, setGoogleStatus] = useState<any>(null);
   const [googleBusy, setGoogleBusy] = useState(false);
 
-  const [search, setSearch] = useState("");
   const [actFilterContact, setActFilterContact] = useState("");
-  const [contactSort, setContactSort] = useState("name");
-  const [contactSourceFilter, setContactSourceFilter] = useState("");
-  const [companySort, setCompanySort] = useState("name");
 
   // modales
   const [contactModal, setContactModal] = useState<any>(null); // {edit?: any} | null
@@ -238,11 +248,26 @@ export default function CrmPanel() {
 
   const [saving, setSaving] = useState(false);
 
+  // ---- grid editable (estilo Notion) ----
+  const [fieldsPerson, setFieldsPerson] = useState<CrmField[]>([]);
+  const [fieldsCompany, setFieldsCompany] = useState<CrmField[]>([]);
+  const [fieldsPanel, setFieldsPanel] = useState<CrmEntity | null>(null);
+  const [newRowContact, setNewRowContact] = useState(false);
+  const [newRowCompany, setNewRowCompany] = useState(false);
+  const [creatingContact, setCreatingContact] = useState(false);
+  const [creatingCompany, setCreatingCompany] = useState(false);
+  const [drawerContact, setDrawerContact] = useState<RecordRow | null>(null);
+  const [drawerCompany, setDrawerCompany] = useState<RecordRow | null>(null);
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
+  const [savingCells, setSavingCells] = useState<Record<string, boolean>>({});
+  const [notice, setNotice] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [comps, cons, stgs, dls, acts, lds, vst, tmps, emls, ctrs] = await Promise.all([
+      const [comps, cons, stgs, dls, acts, lds, vst, tmps, emls, ctrs, fp, fc] = await Promise.all([
         getCrmCompanies(),
         getCrmContacts(),
         getCrmStages(),
@@ -253,6 +278,8 @@ export default function CrmPanel() {
         getCrmEmailTemplates(),
         getCrmEmails(),
         getCrmContracts(),
+        getCrmFields("person"),
+        getCrmFields("company"),
       ]);
       setCompanies(comps || []);
       setContacts(cons || []);
@@ -264,6 +291,8 @@ export default function CrmPanel() {
       setEmailTemplates(tmps?.items || []);
       setEmailLog(emls?.items || []);
       setContracts(ctrs || []);
+      setFieldsPerson(fp?.fields || []);
+      setFieldsCompany(fc?.fields || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar el CRM");
     } finally {
@@ -357,45 +386,6 @@ export default function CrmPanel() {
     [contacts]
   );
 
-  const filteredContacts = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    let rows = contacts;
-    if (contactSourceFilter) {
-      rows = rows.filter((c) => (c.source || "manual") === contactSourceFilter);
-    }
-    if (s) {
-      rows = rows.filter((c) =>
-        [c.first_name, c.last_name, c.email, c.phone, c.job_title, c.owner, (c.tags || []).join(" ")]
-          .join(" ")
-          .toLowerCase()
-          .includes(s)
-      );
-    }
-    const sorted = [...rows];
-    const nameOf = (c: any) => `${c.first_name || ""} ${c.last_name || ""}`.trim().toLowerCase();
-    if (contactSort === "name") sorted.sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
-    else if (contactSort === "company") {
-      sorted.sort((a, b) =>
-        String(a.company?.name || "zzz").toLowerCase().localeCompare(String(b.company?.name || "zzz").toLowerCase()) ||
-        nameOf(a).localeCompare(nameOf(b))
-      );
-    } else if (contactSort === "recent") sorted.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
-    else if (contactSort === "oldest") sorted.sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
-    return sorted;
-  }, [contacts, search, contactSort, contactSourceFilter]);
-
-  const sortedCompanies = useMemo(() => {
-    const rows = [...companies];
-    if (companySort === "contacts") rows.sort((a: any, b: any) => (b.contact_count ?? 0) - (a.contact_count ?? 0));
-    else rows.sort((a: any, b: any) => String(a.name || "").toLowerCase().localeCompare(String(b.name || "").toLowerCase()));
-    return rows;
-  }, [companies, companySort]);
-
-  const contactSources = useMemo(() => {
-    const set = new Set((contacts || []).map((c: any) => c.source || "manual"));
-    return [...set].sort();
-  }, [contacts]);
-
   const filteredActivities = useMemo(() => {
     if (!actFilterContact) return activities;
     return activities.filter((a) => a.contact_id === actFilterContact);
@@ -411,6 +401,200 @@ export default function CrmPanel() {
     });
     return map;
   }, [deals, stages]);
+
+  // ============ grid editable (estilo Notion) ============
+
+  const showNotice = (msg: string) => {
+    setNotice(msg);
+    window.setTimeout(() => setNotice(null), 4000);
+  };
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    contacts.forEach((c) => (c.tags || []).forEach((tg: string) => set.add(tg)));
+    companies.forEach((c) => (c.tags || []).forEach((tg: string) => set.add(tg)));
+    return [...set].sort();
+  }, [contacts, companies]);
+
+  const markCellBusy = (recId: string, fieldName: string, on: boolean) =>
+    setSavingCells((s) => ({ ...s, [`${recId}|${fieldName}`]: on }));
+
+  const toggleSelect = (cur: Set<string>, setter: (n: Set<string>) => void, id: string) => {
+    const n = new Set(cur);
+    if (n.has(id)) n.delete(id);
+    else n.add(id);
+    setter(n);
+  };
+
+  // Guardado optimista de una celda: actualiza el estado al instante y revierte si falla.
+  const commitCell = async (entity: CrmEntity, rec: RecordRow, field: CrmField, value: any) => {
+    const setter = entity === "person" ? setContacts : setCompanies;
+    const before = entity === "person" ? contacts : companies;
+    setter(before.map((r) => (r.id === rec.id ? setRecordField(r, field, value) : r)));
+    markCellBusy(rec.id, field.name, true);
+    try {
+      const res =
+        entity === "person"
+          ? await updateCrmContactByFields(rec.id, { [field.name]: value })
+          : await updateCrmCompanyByFields(rec.id, { [field.name]: value });
+      if (res?.id) {
+        setter((cur) =>
+          cur.map((r) =>
+            r.id === res.id
+              ? {
+                  ...res,
+                  contact_count: r.contact_count ?? res.contact_count,
+                  deal_count: r.deal_count ?? res.deal_count,
+                }
+              : r
+          )
+        );
+      }
+    } catch (e) {
+      setter(before);
+      showNotice(e instanceof Error ? e.message : t("admin.crm.grid.saveError"));
+    } finally {
+      markCellBusy(rec.id, field.name, false);
+    }
+  };
+
+  // Creación de fila nueva en el grid (no optimista: necesita el id del servidor).
+  const handleCreateRow = async (entity: CrmEntity, values: Record<string, any>) => {
+    const fn = entity === "person" ? createCrmContactByFields : createCrmCompanyByFields;
+    const setter = entity === "person" ? setContacts : setCompanies;
+    const setBusy = entity === "person" ? setCreatingContact : setCreatingCompany;
+    const setNewRow = entity === "person" ? setNewRowContact : setNewRowCompany;
+    setBusy(true);
+    try {
+      const created = await fn(values);
+      if (created?.id) {
+        setter((cur) => [created, ...cur]);
+        if (entity === "person") setDrawerContact(created);
+        else setDrawerCompany(created);
+      }
+      setNewRow(false);
+    } catch (e) {
+      showNotice(e instanceof Error ? e.message : t("admin.crm.grid.createError"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Eliminación optimista de una fila desde el grid o el drawer.
+  const handleRowDelete = async (entity: CrmEntity, rec: RecordRow) => {
+    const msg =
+      entity === "person" ? t("admin.crm.confirmDeleteContact") : t("admin.crm.confirmDeleteCompany");
+    if (!window.confirm(msg)) return;
+    const setter = entity === "person" ? setContacts : setCompanies;
+    const before = entity === "person" ? contacts : companies;
+    setter(before.filter((r) => r.id !== rec.id));
+    if (entity === "person") setDrawerContact((d) => (d?.id === rec.id ? null : d));
+    else setDrawerCompany((d) => (d?.id === rec.id ? null : d));
+    try {
+      await (entity === "person" ? deleteCrmContact(rec.id) : deleteCrmCompany(rec.id));
+    } catch (e) {
+      setter(before);
+      showNotice(e instanceof Error ? e.message : t("admin.crm.errDelete"));
+    }
+  };
+
+  // Eliminación masiva (checkboxes).
+  const handleBulkDelete = async (entity: CrmEntity, ids: string[]) => {
+    const label =
+      entity === "person" ? t("admin.crm.contacts") : t("admin.crm.companiesTab.count");
+    if (!window.confirm(`${t("admin.crm.grid.deleteSelectedConfirm", { n: ids.length })} ${label}?`)) return;
+    const setter = entity === "person" ? setContacts : setCompanies;
+    const before = entity === "person" ? contacts : companies;
+    setter(before.filter((r) => !ids.includes(r.id)));
+    if (entity === "person") {
+      setSelectedContacts(new Set());
+      setDrawerContact((d) => (d && ids.includes(d.id) ? null : d));
+    } else {
+      setSelectedCompanies(new Set());
+      setDrawerCompany((d) => (d && ids.includes(d.id) ? null : d));
+    }
+    try {
+      await Promise.all(ids.map((id) => (entity === "person" ? deleteCrmContact(id) : deleteCrmCompany(id))));
+    } catch (e) {
+      setter(before);
+      showNotice(e instanceof Error ? e.message : t("admin.crm.errDelete"));
+    }
+  };
+
+  // Campo nuevo en el panel de campos (propaga el error al formulario).
+  const handleFieldCreate = async (entity: CrmEntity, values: Record<string, unknown>) => {
+    const created = await createCrmField({ entity_type: entity, ...values });
+    const setter = entity === "person" ? setFieldsPerson : setFieldsCompany;
+    setter((cur) => [...cur, created]);
+  };
+
+  const handleFieldUpdate = async (id: string, patch: Partial<CrmField>) => {
+    const applyTo = (setter: (updater: (cur: CrmField[]) => CrmField[]) => void) =>
+      setter((cur: CrmField[]) => cur.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+    const prevP = fieldsPerson;
+    const prevC = fieldsCompany;
+    applyTo(setFieldsPerson);
+    applyTo(setFieldsCompany);
+    try {
+      const res = await updateCrmField(id, patch);
+      if (res?.id) {
+        const setter = res.entity_type === "company" ? setFieldsCompany : setFieldsPerson;
+        setter((cur: CrmField[]) =>
+          cur.map((f) => (f.id === id ? { ...f, ...res } : f))
+        );
+      }
+    } catch (e) {
+      setFieldsPerson(prevP);
+      setFieldsCompany(prevC);
+      showNotice(e instanceof Error ? e.message : t("admin.crm.grid.saveError"));
+    }
+  };
+
+  const handleFieldDelete = async (id: string) => {
+    try {
+      await deleteCrmField(id);
+      setFieldsPerson((cur) => cur.filter((f) => f.id !== id));
+      setFieldsCompany((cur) => cur.filter((f) => f.id !== id));
+    } catch (e) {
+      showNotice(e instanceof Error ? e.message : t("admin.crm.fields.error"));
+    }
+  };
+
+  // Relación persona ↔ empresa desde el drawer.
+  const handleSetContactCompany = async (rec: RecordRow, value: any) => {
+    const before = contacts;
+    setContacts(
+      before.map((r) =>
+        r.id === rec.id
+          ? {
+              ...r,
+              company_id: value || null,
+              company: value ? companies.find((c) => c.id === value) || r.company : null,
+            }
+          : r
+      )
+    );
+    try {
+      const res = await updateCrmContact(rec.id, { company_id: value || null });
+      if (res?.id) setContacts((cur) => cur.map((r) => (r.id === res.id ? { ...r, ...res } : r)));
+    } catch (e) {
+      setContacts(before);
+      showNotice(e instanceof Error ? e.message : t("admin.crm.grid.saveError"));
+    }
+  };
+
+  // Origen de un contacto desde el drawer.
+  const handleSetContactSource = async (rec: RecordRow, value: any) => {
+    const before = contacts;
+    setContacts(before.map((r) => (r.id === rec.id ? { ...r, source: value || "manual" } : r)));
+    try {
+      const res = await updateCrmContact(rec.id, { source: value || "manual" });
+      if (res?.id) setContacts((cur) => cur.map((r) => (r.id === res.id ? { ...r, ...res } : r)));
+    } catch (e) {
+      setContacts(before);
+      showNotice(e instanceof Error ? e.message : t("admin.crm.grid.saveError"));
+    }
+  };
 
   // ============ acciones ============
 
@@ -1138,8 +1322,8 @@ export default function CrmPanel() {
           </p>
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          <button className={btnPrimary} onClick={() => setCompanyModal({})}>{t("admin.crm.newCompany")}</button>
-          <button className={btnPrimary} onClick={() => setContactModal({})}>{t("admin.crm.newContact")}</button>
+          <button className={btnPrimary} onClick={() => { setSubtab("companies"); setNewRowCompany(true); }}>{t("admin.crm.newCompany")}</button>
+          <button className={btnPrimary} onClick={() => { setSubtab("contacts"); setNewRowContact(true); }}>{t("admin.crm.newContact")}</button>
           <button className={btnPrimary} onClick={() => setDealModal({})}>{t("admin.crm.newDeal")}</button>
           <button className={btnPrimary} onClick={() => setContractModal({})}>{t("admin.crm.newContract")}</button>
         </div>
@@ -1177,217 +1361,139 @@ export default function CrmPanel() {
         <>
           {/* ============ CONTACTOS ============ */}
           {subtab === "contacts" && (
-            <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t("admin.crm.contactsTab.searchPh")}
-                  className={inputCls + " sm:max-w-sm"}
-                />
-                <div className="flex items-center gap-2 flex-wrap">
-                  <label className="text-[11px] text-gray-500">{t("admin.crm.contactsTab.filterSource")}:</label>
-                  <select value={contactSourceFilter} onChange={(e) => setContactSourceFilter(e.target.value)} className="text-[11px] rounded bg-white/10 px-2 py-1.5 cursor-pointer">
-                    <option value="">{t("admin.crm.contactsTab.allSources")}</option>
-                    {contactSources.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                  <label className="text-[11px] text-gray-500">{t("admin.crm.contactsTab.sortBy")}:</label>
-                  <select value={contactSort} onChange={(e) => setContactSort(e.target.value)} className="text-[11px] rounded bg-white/10 px-2 py-1.5 cursor-pointer">
-                    <option value="name">{t("admin.crm.contactsTab.sortName")}</option>
-                    <option value="company">{t("admin.crm.contactsTab.sortCompany")}</option>
-                    <option value="recent">{t("admin.crm.contactsTab.sortRecent")}</option>
-                    <option value="oldest">{t("admin.crm.contactsTab.sortOldest")}</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">{filteredContacts.length} {t("admin.crm.contacts")}</span>
-                  <button onClick={handleExportContacts} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
-                    {t("admin.crm.exportCsv")}
-                  </button>
-                  <button onClick={() => contactsFileRef.current?.click()} disabled={importing} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer disabled:opacity-50">
-                    {importing ? t("admin.crm.importing") : t("admin.crm.importCsv")}
-                  </button>
-                  <input
-                    ref={contactsFileRef}
-                    type="file"
-                    accept=".csv,.vcf,.vcard,text/csv,text/vcard,text/plain"
-                    className="hidden"
-                    onChange={(e) => handleImportFile(e, "contacts")}
-                  />
-                </div>
-              </div>
-              <div className="overflow-x-auto rounded-lg border border-white/10">
-                <table className="w-full min-w-[720px] text-left text-sm">
-                  <thead className="bg-[#18181b] text-gray-400 border-b border-white/10">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">{t("admin.crm.contactsTab.thContact")}</th>
-                      <th className="px-4 py-3 font-medium">{t("admin.crm.contactsTab.thCompany")}</th>
-                      <th className="px-4 py-3 font-medium">{t("admin.crm.contactsTab.thEmailPhone")}</th>
-                      <th className="px-4 py-3 font-medium">{t("admin.crm.contactsTab.thTags")}</th>
-                      <th className="px-4 py-3 font-medium">{t("admin.crm.contactsTab.thOrigin")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {filteredContacts.map((c: any) => (
-                      <tr
-                        key={c.id}
-                        onClick={() => setDetailContact(c)}
-                        className="hover:bg-white/5 transition-colors cursor-pointer"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <Avatar url={c.photo_url} name={`${c.first_name} ${c.last_name || ""}`} />
-                            <div className="min-w-0">
-                              <p className="font-semibold truncate">{c.first_name} {c.last_name || ""}</p>
-                              {c.source && (
-                                <p className="text-[11px] text-gray-500">{c.source}</p>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {c.company ? (
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Avatar url={c.company.logo_url} name={c.company.name} className="h-6 w-6 text-[10px]" />
-                              <span className="truncate text-gray-300">{c.company.name}</span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-gray-300">
-                          {c.email ? (
-                            <a href={`mailto:${c.email}`} className="hover:text-[#2093c4]" onClick={(e) => e.stopPropagation()}>{c.email}</a>
-                          ) : "—"}
-                          {c.phone && <span className="block text-xs text-gray-400">{c.phone}</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {(c.tags || []).map((tg: string, i: number) => (
-                              <span key={i} className="px-1.5 py-0.5 text-[11px] rounded bg-[#8c52ff]/15 text-[#c4b5fd] border border-[#8c52ff]/25">
-                                {tg}
-                              </span>
-                            ))}
-                            {(c.tags || []).length === 0 && <span className="text-gray-500">—</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-1">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setContactModal({ edit: c }); }}
-                              className="px-2 py-1 text-[11px] rounded border border-white/10 text-gray-300 hover:bg-white/5 cursor-pointer"
-                            >
-                              Editar
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredContacts.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                          No hay contactos. Crea uno con "+ Contacto".
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+            <div className="h-[640px] min-h-[400px]">
+              <RecordGrid
+                entity="person"
+                fields={fieldsPerson}
+                records={contacts}
+                onOpen={(c) => setDrawerContact(c)}
+                onCellCommit={(rec, f, v) => commitCell("person", rec, f, v)}
+                onHide={(f) => handleFieldUpdate(f.id, { is_visible: false })}
+                rowMenu={[
+                  {
+                    id: "open",
+                    label: t("admin.crm.grid.open"),
+                    onClick: (c) => setDrawerContact(c),
+                  },
+                  {
+                    id: "delete",
+                    label: t("admin.crm.grid.deleteRow"),
+                    danger: true,
+                    onClick: (c) => handleRowDelete("person", c),
+                  },
+                ]}
+                creating={newRowContact}
+                creatingBusy={creatingContact}
+                onCreate={(vals) => handleCreateRow("person", vals)}
+                onCreateCancel={() => setNewRowContact(false)}
+                onOpenFields={() => setFieldsPanel("person")}
+                selection={selectedContacts}
+                onToggleSelect={(id) => toggleSelect(selectedContacts, setSelectedContacts, id)}
+                onToggleAll={(ids) =>
+                  ids.length ? setSelectedContacts(new Set(ids)) : setSelectedContacts(new Set())
+                }
+                onClearSelection={() => setSelectedContacts(new Set())}
+                onBulkDelete={(ids) => handleBulkDelete("person", ids)}
+                entityLabel={t("admin.crm.tabContact")}
+                suggestions={allTags}
+                busyCell={(rid, fn) => !!savingCells[`${rid}|${fn}`]}
+                actions={
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">
+                      {contacts.length} {t("admin.crm.contacts")}
+                    </span>
+                    <button
+                      onClick={handleExportContacts}
+                      className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer"
+                    >
+                      {t("admin.crm.exportCsv")}
+                    </button>
+                    <button
+                      onClick={() => contactsFileRef.current?.click()}
+                      disabled={importing}
+                      className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer disabled:opacity-50"
+                    >
+                      {importing ? t("admin.crm.importing") : t("admin.crm.importCsv")}
+                    </button>
+                    <input
+                      ref={contactsFileRef}
+                      type="file"
+                      accept=".csv,.vcf,.vcard,text/csv,text/vcard,text/plain"
+                      className="hidden"
+                      onChange={(e) => handleImportFile(e, "contacts")}
+                    />
+                  </div>
+                }
+              />
             </div>
           )}
 
           {/* ============ EMPRESAS ============ */}
           {subtab === "companies" && (
-            <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">{companies.length} {t("admin.crm.companiesTab.count")}</span>
-                  <label className="text-[11px] text-gray-500">{t("admin.crm.companiesTab.sortBy")}:</label>
-                  <select value={companySort} onChange={(e) => setCompanySort(e.target.value)} className="text-[11px] rounded bg-white/10 px-2 py-1.5 cursor-pointer">
-                    <option value="name">{t("admin.crm.companiesTab.sortName")}</option>
-                    <option value="contacts">{t("admin.crm.companiesTab.sortContacts")}</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={handleExportCompanies} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer">
-                    {t("admin.crm.exportCsv")}
-                  </button>
-                  <button onClick={() => companiesFileRef.current?.click()} disabled={importing} className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer disabled:opacity-50">
-                    {importing ? t("admin.crm.importing") : t("admin.crm.importCsv")}
-                  </button>
-                  <input
-                    ref={companiesFileRef}
-                    type="file"
-                    accept=".csv,.vcf,.vcard,text/csv,text/vcard,text/plain"
-                    className="hidden"
-                    onChange={(e) => handleImportFile(e, "companies")}
-                  />
-                </div>
-              </div>
-              <div className="overflow-x-auto rounded-lg border border-white/10">
-              <table className="w-full min-w-[680px] text-left text-sm">
-                <thead className="bg-[#18181b] text-gray-400 border-b border-white/10">
-                  <tr>
-<th className="px-4 py-3 font-medium">{t("admin.crm.companiesTab.thCompany")}</th>
-                      <th className="px-4 py-3 font-medium">{t("admin.crm.companiesTab.thIndustry")}</th>
-                      <th className="px-4 py-3 font-medium">{t("admin.crm.companiesTab.thContacts")}</th>
-                      <th className="px-4 py-3 font-medium">{t("admin.crm.companiesTab.thDeals")}</th>
-                      <th className="px-4 py-3 font-medium">{t("admin.crm.companiesTab.thDomain")}</th>
-                    <th className="px-4 py-3 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-{sortedCompanies.map((c: any) => (
-                      <tr key={c.id} className="hover:bg-white/5 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <Avatar url={c.logo_url} name={c.name} />
-                          <div className="min-w-0">
-                            <p className="font-semibold truncate">{c.name}</p>
-                            {c.notes && <p className="text-[11px] text-gray-500 truncate max-w-[240px]">{c.notes}</p>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-300">{c.industry || "—"}</td>
-                      <td className="px-4 py-3 tabular-nums">{c.contact_count ?? 0}</td>
-                      <td className="px-4 py-3 tabular-nums">{c.deal_count ?? 0}</td>
-                      <td className="px-4 py-3 text-gray-400">
-                        {c.domain ? (
-                          <a href={`https://${c.domain}`} target="_blank" rel="noreferrer" className="hover:text-[#2093c4]">
-                            {c.domain}
-                          </a>
-                        ) : "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1.5">
-                          <button
-                            onClick={() => setCompanyModal({ edit: c })}
-                            className="px-2 py-1 text-[11px] rounded border border-white/10 text-gray-300 hover:bg-white/5 cursor-pointer"
-                          >
-                            {t("admin.crm.edit")}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCompany(c.id)}
-                            className="px-2 py-1 text-[11px] rounded border border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer"
-                          >
-                            {t("admin.crm.delete")}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {companies.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                        {t("admin.crm.companiesTab.empty")}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <div className="h-[640px] min-h-[400px]">
+              <RecordGrid
+                entity="company"
+                fields={fieldsCompany}
+                records={companies}
+                onOpen={(c) => setDrawerCompany(c)}
+                onCellCommit={(rec, f, v) => commitCell("company", rec, f, v)}
+                onHide={(f) => handleFieldUpdate(f.id, { is_visible: false })}
+                rowMenu={[
+                  {
+                    id: "open",
+                    label: t("admin.crm.grid.open"),
+                    onClick: (c) => setDrawerCompany(c),
+                  },
+                  {
+                    id: "delete",
+                    label: t("admin.crm.grid.deleteRow"),
+                    danger: true,
+                    onClick: (c) => handleRowDelete("company", c),
+                  },
+                ]}
+                creating={newRowCompany}
+                creatingBusy={creatingCompany}
+                onCreate={(vals) => handleCreateRow("company", vals)}
+                onCreateCancel={() => setNewRowCompany(false)}
+                onOpenFields={() => setFieldsPanel("company")}
+                selection={selectedCompanies}
+                onToggleSelect={(id) => toggleSelect(selectedCompanies, setSelectedCompanies, id)}
+                onToggleAll={(ids) =>
+                  ids.length ? setSelectedCompanies(new Set(ids)) : setSelectedCompanies(new Set())
+                }
+                onClearSelection={() => setSelectedCompanies(new Set())}
+                onBulkDelete={(ids) => handleBulkDelete("company", ids)}
+                entityLabel={t("admin.crm.tabCompany")}
+                suggestions={allTags}
+                busyCell={(rid, fn) => !!savingCells[`${rid}|${fn}`]}
+                actions={
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">
+                      {companies.length} {t("admin.crm.companiesTab.count")}
+                    </span>
+                    <button
+                      onClick={handleExportCompanies}
+                      className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer"
+                    >
+                      {t("admin.crm.exportCsv")}
+                    </button>
+                    <button
+                      onClick={() => companiesFileRef.current?.click()}
+                      disabled={importing}
+                      className="text-[11px] px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 cursor-pointer disabled:opacity-50"
+                    >
+                      {importing ? t("admin.crm.importing") : t("admin.crm.importCsv")}
+                    </button>
+                    <input
+                      ref={companiesFileRef}
+                      type="file"
+                      accept=".csv,.vcf,.vcard,text/csv,text/vcard,text/plain"
+                      className="hidden"
+                      onChange={(e) => handleImportFile(e, "companies")}
+                    />
+                  </div>
+                }
+              />
             </div>
           )}
 
@@ -2602,6 +2708,76 @@ export default function CrmPanel() {
           </div>
         )}
       </Modal>
+
+      {/* ============ TOAST / DRAWERS / GESTIÓN DE CAMPOS ============ */}
+      {notice && (
+        <div className="fixed bottom-5 right-5 z-[60] max-w-sm rounded-lg border border-red-500/30 bg-[#2a1216] px-4 py-3 text-sm text-red-200 shadow-2xl">
+          {notice}
+        </div>
+      )}
+
+      {drawerContact && (
+        <RecordDrawer
+          entity="person"
+          rec={drawerContact}
+          fields={fieldsPerson}
+          avatar={<AvatarView rec={drawerContact} entity="person" />}
+          extras={[
+            {
+              key: "company",
+              label: t("admin.crm.contactModal.company"),
+              type: "select",
+              options: [
+                { value: null, label: t("admin.crm.contactModal.noCompany") },
+                ...companies.map((c) => ({ value: c.id, label: c.name })),
+              ],
+              value: drawerContact.company_id || null,
+              onCommit: (v) => handleSetContactCompany(drawerContact, v),
+            },
+            {
+              key: "source",
+              label: t("admin.crm.contactsTab.thOrigin"),
+              type: "select",
+              options: [
+                { value: null, label: t("admin.crm.contactModal.srcManual") },
+                ...["manual", "tally", "whatsapp", "portfolio", "web", "form", "import", "status"].map(
+                  (s) => ({ value: s, label: s })
+                ),
+              ],
+              value: drawerContact.source || "manual",
+              onCommit: (v) => handleSetContactSource(drawerContact, v),
+            },
+          ]}
+          onClose={() => setDrawerContact(null)}
+          onCommit={(f, v) => commitCell("person", drawerContact, f, v)}
+          onDelete={(c) => handleRowDelete("person", c)}
+          suggestions={allTags}
+        />
+      )}
+
+      {drawerCompany && (
+        <RecordDrawer
+          entity="company"
+          rec={drawerCompany}
+          fields={fieldsCompany}
+          avatar={<AvatarView rec={drawerCompany} entity="company" />}
+          onClose={() => setDrawerCompany(null)}
+          onCommit={(f, v) => commitCell("company", drawerCompany, f, v)}
+          onDelete={(c) => handleRowDelete("company", c)}
+          suggestions={allTags}
+        />
+      )}
+
+      {fieldsPanel && (
+        <FieldManager
+          entity={fieldsPanel}
+          fields={fieldsPanel === "person" ? fieldsPerson : fieldsCompany}
+          onClose={() => setFieldsPanel(null)}
+          onCreate={(v) => handleFieldCreate(fieldsPanel, v)}
+          onUpdate={(id, p) => handleFieldUpdate(id, p)}
+          onDelete={(id) => handleFieldDelete(id)}
+        />
+      )}
     </div>
   );
 }

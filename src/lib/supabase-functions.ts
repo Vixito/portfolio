@@ -1826,6 +1826,34 @@ export function deleteCrmContact(id: string) {
   return invokeCRM({ action: "contacts-delete", id });
 }
 
+// --- Campos personalizados (estilo Notion) ---
+export function getCrmFields(entity_type: "person" | "company") {
+  return invokeCRM({ action: "fields-list", entity_type });
+}
+export function createCrmField(field: Record<string, unknown>) {
+  return invokeCRM({ action: "fields-create", ...field });
+}
+export function updateCrmField(id: string, patch: Record<string, unknown>) {
+  return invokeCRM({ action: "fields-update", id, ...patch });
+}
+export function deleteCrmField(id: string) {
+  return invokeCRM({ action: "fields-delete", id });
+}
+
+// Crea/actualiza registros usando valores por nombre de campo (grid editable).
+export function createCrmContactByFields(fields: Record<string, unknown>) {
+  return invokeCRM({ action: "contacts-create", fields });
+}
+export function updateCrmContactByFields(id: string, fields: Record<string, unknown>) {
+  return invokeCRM({ action: "contacts-update", id, fields });
+}
+export function createCrmCompanyByFields(fields: Record<string, unknown>) {
+  return invokeCRM({ action: "companies-create", fields });
+}
+export function updateCrmCompanyByFields(id: string, fields: Record<string, unknown>) {
+  return invokeCRM({ action: "companies-update", id, fields });
+}
+
 // --- Etapas y Deals ---
 export function getCrmStages() {
   return invokeCRM({ action: "stages-list" });

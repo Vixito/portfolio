@@ -156,6 +156,275 @@ const activitySelect = `
   deal:crm_deals(id, title, stage_id)
 `;
 
+// --- Campos personalizados (estilo Notion/Twenty) ---
+
+const FIELD_TYPES = [
+  "text", "textarea", "number", "date", "select", "multi_select",
+  "emails", "phones", "tags", "url", "image", "boolean",
+];
+
+// campos cuyo valor vive en una columna de la tabla (el resto va en `data`)
+const PERSON_COLUMNS: Record<string, string> = {
+  apellidos: "last_name",
+  anios_experiencia: "experience_years",
+  estado: "status",
+  fecha_creacion: "created_at",
+  fecha_cumpleanos: "birthdate",
+  foto_perfil: "photo_url",
+  genero: "gender",
+  github: "github",
+  linkedin: "linkedin",
+  nombres: "first_name",
+  notas: "notes",
+  rol_trabajo: "job_title",
+  tags: "tags",
+  x: "x_handle",
+};
+const COMPANY_COLUMNS: Record<string, string> = {
+  direccion: "address",
+  estado: "status",
+  fecha_fundacion: "founded_year",
+  github: "github",
+  linkedin: "linkedin",
+  logotipo: "logo_url",
+  nit: "nit",
+  nombre: "name",
+  notas: "notes",
+  rango_empleados: "employee_range",
+  tags: "tags",
+  x: "x_handle",
+};
+
+// columnas que no son campos (se persisten tal cual desde el payload legado)
+const PERSON_EXTRA_COLS = new Set([
+  "source", "owner", "company_id", "lead_id", "website", "phone", "phone2", "address",
+]);
+const COMPANY_EXTRA_COLS = new Set([
+  "domain", "industry", "website", "owner", "phone",
+]);
+
+// alias de columnas legadas -> nombres de campos
+const PERSON_ALIAS: Record<string, string> = {
+  first_name: "nombres",
+  last_name: "apellidos",
+  email: "correos_electronicos",
+  phone: "telefonos",
+  phone2: "telefonos",
+  photo_url: "foto_perfil",
+  job_title: "rol_trabajo",
+  birthdate: "fecha_cumpleanos",
+  gender: "genero",
+  linkedin: "linkedin",
+  github: "github",
+  x_handle: "x",
+  experience_years: "anios_experiencia",
+  notes: "notas",
+  tags: "tags",
+  status: "estado",
+};
+const COMPANY_ALIAS: Record<string, string> = {
+  name: "nombre",
+  domain: "dominios",
+  logo_url: "logotipo",
+  notes: "notas",
+  tags: "tags",
+  founded_year: "fecha_fundacion",
+  employee_range: "rango_empleados",
+  nit: "nit",
+  address: "direccion",
+  phone: "telefonos",
+  linkedin: "linkedin",
+  github: "github",
+  x_handle: "x",
+  status: "estado",
+};
+
+// Ciclo de vida: estado -> tag automático
+const PERSON_STATUS_TAG: Record<string, string> = {
+  nuevo: "Nuevo",
+  interesado: "Interesado/a",
+  lead: "Lead",
+  cliente: "Cliente",
+  "ex-cliente": "Ex-cliente",
+  inactivo: "Inactivo",
+};
+const COMPANY_STATUS_TAG: Record<string, string> = {
+  nuevo: "Nuevo",
+  prospecto: "Prospecto",
+  cliente: "Cliente",
+  "ex-cliente": "Ex-cliente",
+};
+
+const WEB_LEAD_SOURCES = ["tally", "whatsapp", "portfolio", "status", "web", "form"];
+
+const defaultStatusForSource = (source?: string | null, entityType = "person") =>
+  entityType === "company" ? "nuevo"
+  : WEB_LEAD_SOURCES.includes(String(source || "").toLowerCase()) ? "lead" : "nuevo";
+
+const fieldKey = (s: string) =>
+  String(s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "campo";
+
+const normText = (v: any, max = 2000) => {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s.slice(0, max) || null;
+};
+
+const normNumber = (v: any) => {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+const normDate = (v: any) => {
+  if (!v) return null;
+  const d = new Date(String(v));
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+};
+
+const normArray = (v: any, max = 60) => {
+  if (v == null) return null;
+  const arr = Array.isArray(v) ? v : [v];
+  return [...new Set(arr.map((x) => String(x).trim()).filter(Boolean))].slice(0, max);
+};
+
+const cleanDomain = (d: string) =>
+  String(d)
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "")
+    .toLowerCase()
+    .trim() || null;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Normaliza el valor crudo de un campo según su tipo.
+function normalizeFieldValue(field: any, raw: any) {
+  if (raw === undefined || raw === null) return null;
+  switch (field.type) {
+    case "number": return normNumber(raw);
+    case "date": return normDate(raw);
+    case "multi_select":
+    case "emails":
+    case "phones":
+    case "tags": return normArray(raw);
+    case "boolean": return raw === true || raw === "true" || raw === 1;
+    case "select": {
+      const opts = Array.isArray(field.options) ? field.options.map(String) : [];
+      const v = normText(raw, 120);
+      if (!v) return null;
+      return opts.length && !opts.includes(v) ? null : v;
+    }
+    default: return normText(raw);
+  }
+}
+
+function normalizeExtra(name: string, raw: any) {
+  if (raw == null) return null;
+  if (name === "company_id" || name === "lead_id") {
+    const s = String(raw).trim();
+    return UUID_RE.test(s) ? s : null;
+  }
+  if (name === "source") return String(raw).trim().slice(0, 40) || null;
+  if (name === "tags") return normArray(raw);
+  return String(raw).trim().slice(0, 400) || null;
+}
+
+async function loadFields(supabase: any, entityType: string): Promise<Map<string, any>> {
+  const { data } = await supabase
+    .from("crm_fields")
+    .select("*")
+    .eq("entity_type", entityType);
+  return new Map((data || []).map((f: any) => [f.name, f]));
+}
+
+// Mezcla payload legado (columnas) con valores por nombre de campo.
+// Alias reasignan columnas legadas a nombres de campos; varios a un
+// mismo campo (ej. phone + phone2 -> telefonos) se concatenan.
+function resolveValues(legacy: Record<string, any>, rawValues: Record<string, any>, alias: Record<string, string>) {
+  const src = { ...(legacy || {}), ...(rawValues || {}) };
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(src)) {
+    if (v === undefined) continue;
+    const key = alias[k] || k;
+    if (key in out && Array.isArray(out[key]) && Array.isArray(v)) {
+      out[key] = [...(out[key] as any[]), ...v];
+    } else if (key in out && Array.isArray(out[key]) && !Array.isArray(v)) {
+      out[key].push(String(v));
+    } else {
+      out[key] = v;
+    }
+  }
+  return out;
+}
+
+// Separa valores de campos en { columns, data, providedData }.
+function fieldsToRow(fields: Map<string, any>, entityType: string, values: Record<string, any>) {
+  const colMap = entityType === "company" ? COMPANY_COLUMNS : PERSON_COLUMNS;
+  const extra = entityType === "company" ? COMPANY_EXTRA_COLS : PERSON_EXTRA_COLS;
+  const columns: Record<string, any> = {};
+  const data: Record<string, any> = {};
+  const providedData: string[] = [];
+  for (const [name, raw] of Object.entries(values || {})) {
+    if (raw === undefined) continue;
+    const field = fields.get(name);
+    if (field) {
+      const v = normalizeFieldValue(field, raw);
+      if (field.storage === "column" && colMap[name]) columns[colMap[name]] = v;
+      else if (field.storage === "data") {
+        providedData.push(name);
+        if (v === null) delete data[name];
+        else data[name] = v;
+      }
+    } else if (extra.has(name)) {
+      const v = normalizeExtra(name, raw);
+      if (v !== null) columns[name] = v;
+      else if (name === "source") columns.source = null;
+    }
+  }
+  return { columns, data, providedData };
+}
+
+// Sincroniza el tag de ciclo de vida con el estado del registro.
+function syncStatusTags(entityType: string, values: Record<string, any>, existingTags: string[] | null, existingStatus: string | null) {
+  const tagMap = entityType === "company" ? COMPANY_STATUS_TAG : PERSON_STATUS_TAG;
+  const rawStatus = values.estado ?? existingStatus ?? null;
+  const status = rawStatus && tagMap[String(rawStatus)] ? String(rawStatus) : defaultStatusForSource(values.source ?? null, entityType);
+  const lifeTag = tagMap[status];
+  let tags = Array.isArray(values.tags)
+    ? values.tags.map(String)
+    : values.tags != null
+      ? [String(values.tags)]
+      : [...(existingTags || [])];
+  const cycleTags = new Set(Object.values(tagMap));
+  tags = tags.filter((t) => !cycleTags.has(t));
+  if (lifeTag && !tags.includes(lifeTag)) tags.push(lifeTag);
+  return { status, tags };
+}
+
+// Mantiene columnas legadas sincronizadas con los arrays de `data`.
+function backfillColumns(entityType: string, columns: Record<string, any>, data: Record<string, any>) {
+  if (entityType === "person") {
+    const emails = Array.isArray(data.correos_electronicos) ? data.correos_electronicos : [];
+    if (emails.length && columns.email === undefined) columns.email = normText(emails[0], 200);
+    const tels = Array.isArray(data.telefonos) ? data.telefonos : [];
+    if (tels.length) {
+      if (columns.phone === undefined && tels[0] != null) columns.phone = normText(tels[0], 60);
+      if (tels.length > 1 && tels[1] != null && columns.phone2 === undefined) columns.phone2 = normText(tels[1], 60);
+    }
+  } else {
+    const doms = Array.isArray(data.dominios) ? data.dominios : [];
+    if (doms.length && columns.domain === undefined) columns.domain = cleanDomain(String(doms[0]));
+    const tels = Array.isArray(data.telefonos) ? data.telefonos : [];
+    if (tels.length && columns.phone === undefined && tels[0] != null) columns.phone = normText(tels[0], 60);
+  }
+}
+
 // --- server ---
 
 serve(async (req: Request) => {
@@ -198,57 +467,69 @@ serve(async (req: Request) => {
       }
 
       case "companies-create": {
-        const company = payload?.company;
-        if (!company?.name) return json(400, { error: "company.name es requerido" });
-        const logo_url =
-          company.logo_url ||
-          (await fetchCompanyLogo(company.domain || null));
-        const { data, error } = await supabase
+        const fields = await loadFields(supabase, "company");
+        const values = resolveValues(payload?.company || {}, payload?.fields || {}, COMPANY_ALIAS);
+        const { columns, data } = fieldsToRow(fields, "company", values);
+        if (columns.name == null) return json(400, { error: "el campo Nombre es requerido" });
+        const st = syncStatusTags("company", values, null, null);
+        columns.status = st.status;
+        columns.tags = st.tags;
+        backfillColumns("company", columns, data);
+        if (!("logo_url" in columns) && columns.domain) {
+          columns.logo_url = await fetchCompanyLogo(columns.domain);
+        }
+        const { data: created, error } = await supabase
           .from("crm_companies")
-          .insert({
-            name: company.name,
-            domain: company.domain || null,
-            industry: company.industry || null,
-            notes: company.notes || null,
-            logo_url,
-            tags: Array.isArray(company.tags) ? company.tags : (company.tags ? [String(company.tags)] : []),
-            founded_year: company.founded_year != null && company.founded_year !== "" ? Number(company.founded_year) : null,
-            employee_range: company.employee_range || null,
-            nit: company.nit || null,
-            address: company.address || null,
-            phone: company.phone || null,
-            linkedin: company.linkedin || null,
-            github: company.github || null,
-            x_handle: company.x_handle || null,
-            website: company.website || null,
-            owner: company.owner || null,
-          })
+          .insert({ ...columns, data })
           .select()
           .single();
         if (error) return json(500, { error: error.message });
-        return json(200, data);
+        const { data: contacts } = await supabase.from("crm_contacts").select("company_id, id");
+        const { data: deals } = await supabase.from("crm_deals").select("company_id, id");
+        const countOf = (rows: any[] | null, key: string, id: string) =>
+          (rows || []).filter((r) => r[key] === id).length;
+        return json(200, {
+          ...created,
+          contact_count: countOf(contacts, "company_id", created.id),
+          deal_count: countOf(deals, "company_id", created.id),
+        });
       }
 
       case "companies-update": {
         const id = payload?.id;
-        const updates = payload?.updates || {};
         if (!id) return json(400, { error: "id es requerido" });
-        const clean: any = {};
-        for (const k of ["name", "domain", "industry", "notes", "tags", "founded_year", "employee_range", "nit", "address", "phone", "linkedin", "github", "x_handle", "website", "owner"]) {
-          if (k in updates) clean[k] = updates[k];
-        }
-        if ("logo_url" in updates) clean.logo_url = updates.logo_url;
-        else if ("domain" in updates && updates.domain) {
-          clean.logo_url = await fetchCompanyLogo(updates.domain);
-        }
-        const { data, error } = await supabase
+        const fields = await loadFields(supabase, "company");
+        const values = resolveValues(payload?.updates || {}, payload?.fields || {}, COMPANY_ALIAS);
+        if (!Object.keys(values).length) return json(400, { error: "sin cambios" });
+        const { data: existing } = await supabase
           .from("crm_companies")
-          .update({ ...clean, updated_at: now() })
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
+        if (!existing) return json(404, { error: "Empresa no encontrada" });
+        const { columns, data, providedData } = fieldsToRow(fields, "company", values);
+        const finalData = { ...(existing.data || {}) };
+        for (const k of providedData) {
+          if (k in data) finalData[k] = data[k];
+          else delete finalData[k];
+        }
+        backfillColumns("company", columns, finalData);
+        const st = syncStatusTags("company", values, existing.tags || [], existing.status);
+        const clean: any = { ...columns, status: st.status, tags: st.tags, data: finalData, updated_at: now() };
+        if (clean.name == null) delete clean.name;
+        if (clean.domain === undefined) delete clean.domain;
+        if (clean.company_id === undefined) delete clean.company_id;
+        if (!("logo_url" in columns) && clean.domain && clean.domain !== String(existing.domain || "")) {
+          clean.logo_url = await fetchCompanyLogo(clean.domain);
+        }
+        const { data: updated, error } = await supabase
+          .from("crm_companies")
+          .update(clean)
           .eq("id", id)
           .select()
           .single();
         if (error) return json(500, { error: error.message });
-        return json(200, data);
+        return json(200, updated);
       }
 
       case "companies-delete": {
@@ -273,59 +554,62 @@ serve(async (req: Request) => {
       }
 
       case "contacts-create": {
-        const c = payload?.contact;
-        if (!c?.first_name) return json(400, { error: "contact.first_name es requerido" });
-        const photo_url = c.photo_url || gravatarUrl(c.email || null);
-        const lead_id = c.lead_id || null;
-        const { data, error } = await supabase
+        const fields = await loadFields(supabase, "person");
+        const values = resolveValues(payload?.contact || {}, payload?.fields || {}, PERSON_ALIAS);
+        const { columns, data } = fieldsToRow(fields, "person", values);
+        if (columns.first_name == null) return json(400, { error: "el campo Nombres es requerido" });
+        const st = syncStatusTags("person", values, null, null);
+        columns.status = st.status;
+        columns.tags = st.tags;
+        backfillColumns("person", columns, data);
+        if (!("photo_url" in columns) && columns.email) {
+          columns.photo_url = gravatarUrl(columns.email);
+        }
+        const { data: created, error } = await supabase
           .from("crm_contacts")
-          .insert({
-            company_id: c.company_id || null,
-            first_name: c.first_name,
-            last_name: c.last_name || null,
-            email: c.email || null,
-            phone: c.phone || null,
-            phone2: c.phone2 || null,
-            photo_url,
-            source: c.source || "manual",
-            lead_id,
-            tags: Array.isArray(c.tags) ? c.tags : (c.tags ? [String(c.tags)] : []),
-            notes: c.notes || null,
-            job_title: c.job_title || null,
-            birthdate: c.birthdate || null,
-            gender: c.gender || null,
-            linkedin: c.linkedin || null,
-            github: c.github || null,
-            x_handle: c.x_handle || null,
-            website: c.website || null,
-            address: c.address || null,
-            experience_years: c.experience_years != null && c.experience_years !== "" ? Number(c.experience_years) : null,
-            owner: c.owner || null,
-          })
+          .insert({ ...columns, data })
           .select(contactSelect)
           .single();
         if (error) return json(500, { error: error.message });
-        return json(200, data);
+        return json(200, created);
       }
 
       case "contacts-update": {
         const id = payload?.id;
-        const updates = payload?.updates || {};
         if (!id) return json(400, { error: "id es requerido" });
-        const clean: any = {};
-        for (const k of ["company_id", "first_name", "last_name", "email", "phone", "phone2", "source", "lead_id", "tags", "notes", "job_title", "birthdate", "gender", "linkedin", "github", "x_handle", "website", "address", "experience_years", "owner"]) {
-          if (k in updates) clean[k] = updates[k];
-        }
-        if ("photo_url" in updates) clean.photo_url = updates.photo_url;
-        else if ("email" in updates) clean.photo_url = gravatarUrl(updates.email || null);
-        const { data, error } = await supabase
+        const fields = await loadFields(supabase, "person");
+        const values = resolveValues(payload?.updates || {}, payload?.fields || {}, PERSON_ALIAS);
+        if (!Object.keys(values).length) return json(400, { error: "sin cambios" });
+        const { data: existing } = await supabase
           .from("crm_contacts")
-          .update({ ...clean, updated_at: now() })
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
+        if (!existing) return json(404, { error: "Contacto no encontrado" });
+        const { columns, data, providedData } = fieldsToRow(fields, "person", values);
+        const finalData = { ...(existing.data || {}) };
+        for (const k of providedData) {
+          if (k in data) finalData[k] = data[k];
+          else delete finalData[k];
+        }
+        backfillColumns("person", columns, finalData);
+        const st = syncStatusTags("person", values, existing.tags || [], existing.status);
+        const clean: any = { ...columns, status: st.status, tags: st.tags, data: finalData, updated_at: now() };
+        if (clean.first_name == null) delete clean.first_name;
+        if (clean.company_id === undefined) delete clean.company_id;
+        if (clean.lead_id === undefined) delete clean.lead_id;
+        if (!("photo_url" in columns) && "email" in clean &&
+            String(clean.email || "").toLowerCase() !== String(existing.email || "").toLowerCase() && clean.email) {
+          clean.photo_url = gravatarUrl(clean.email);
+        }
+        const { data: updated, error } = await supabase
+          .from("crm_contacts")
+          .update(clean)
           .eq("id", id)
           .select(contactSelect)
           .single();
         if (error) return json(500, { error: error.message });
-        return json(200, data);
+        return json(200, updated);
       }
 
       case "contacts-delete": {
@@ -333,6 +617,175 @@ serve(async (req: Request) => {
         if (!id) return json(400, { error: "id es requerido" });
         const { error } = await supabase.from("crm_contacts").delete().eq("id", id);
         if (error) return json(500, { error: error.message });
+        return json(200, { ok: true });
+      }
+
+      // ============ CAMPOS PERSONALIZADOS ============
+      case "fields-list": {
+        const entityType = payload?.entity_type;
+        if (entityType && !["person", "company"].includes(entityType)) {
+          return json(400, { error: "entity_type inválido (person|company)" });
+        }
+        let q = supabase.from("crm_fields").select("*").order("entity_type").order("position", { ascending: true });
+        if (entityType) q = q.eq("entity_type", entityType);
+        const { data, error } = await q;
+        if (error) return json(500, { error: error.message });
+        return json(200, { fields: data || [] });
+      }
+
+      case "fields-create": {
+        const entityType = payload?.entity_type;
+        if (!["person", "company"].includes(entityType)) {
+          return json(400, { error: "entity_type es requerido (person|company)" });
+        }
+        const label = normText(payload?.label, 120);
+        if (!label) return json(400, { error: "label es requerido" });
+        const name = payload?.name ? fieldKey(payload.name) : fieldKey(label);
+        const type = FIELD_TYPES.includes(payload?.type) ? payload.type : "text";
+        const icon = normText(payload?.icon, 40);
+        let options: string[] = [];
+        if (type === "select" || type === "multi_select") {
+          if (Array.isArray(payload?.options)) {
+            options = payload.options.map(String).filter(Boolean).slice(0, 100);
+          }
+        }
+        const { data: found } = await supabase
+          .from("crm_fields")
+          .select("id")
+          .eq("entity_type", entityType)
+          .eq("name", name)
+          .maybeSingle();
+        if (found) return json(409, { error: "Ya existe un campo con ese nombre" });
+        const { data: maxPos } = await supabase
+          .from("crm_fields")
+          .select("position")
+          .eq("entity_type", entityType)
+          .order("position", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const { data, error } = await supabase
+          .from("crm_fields")
+          .insert({
+            entity_type: entityType,
+            name,
+            label,
+            label_en: normText(payload?.label_en, 120),
+            type,
+            icon,
+            options,
+            storage: "data",
+            position: (maxPos?.position ?? 0) + 10,
+            is_system: false,
+            is_visible: payload?.is_visible === false ? false : true,
+            description: normText(payload?.description, 500),
+          })
+          .select()
+          .single();
+        if (error) return json(500, { error: error.message });
+        return json(200, data);
+      }
+
+      case "fields-update": {
+        const id = payload?.id;
+        if (!id) return json(400, { error: "id es requerido" });
+        const { data: field, error: fErr } = await supabase
+          .from("crm_fields")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
+        if (fErr) return json(500, { error: fErr.message });
+        if (!field) return json(404, { error: "Campo no encontrado" });
+        const patch: Record<string, any> = { updated_at: now() };
+        if (payload?.label !== undefined) patch.label = normText(payload.label, 120);
+        if (payload?.label_en !== undefined) patch.label_en = normText(payload.label_en, 120);
+        if (payload?.icon !== undefined) patch.icon = normText(payload.icon, 40);
+        if (payload?.description !== undefined) patch.description = normText(payload.description, 500);
+        if (payload?.is_visible !== undefined) patch.is_visible = !!payload.is_visible;
+        if (payload?.position !== undefined && Number.isFinite(Number(payload.position))) {
+          patch.position = Number(payload.position);
+        }
+        if (payload?.settings !== undefined && payload.settings && typeof payload.settings === "object") {
+          patch.settings = payload.settings;
+        }
+        if (!field.is_system) {
+          if (!["person", "company"].includes(field.entity_type)) field.entity_type = "person";
+          const table = field.entity_type === "company" ? "crm_companies" : "crm_contacts";
+          if (payload?.name !== undefined) {
+            const newName = fieldKey(payload.name);
+            const hasNameChange = newName && newName !== field.name;
+            if (hasNameChange && field.storage === "data") {
+              const { data: dup } = await supabase
+                .from("crm_fields")
+                .select("id")
+                .eq("entity_type", field.entity_type)
+                .eq("name", newName)
+                .maybeSingle();
+              if (dup) return json(409, { error: "Ya existe un campo con ese nombre" });
+              patch.name = newName;
+              const { data: rows } = await supabase.from(table).select("id, data");
+              for (const r of rows || []) {
+                if (r.data && Object.prototype.hasOwnProperty.call(r.data, field.name)) {
+                  const d = { ...r.data };
+                  d[newName] = d[field.name];
+                  delete d[field.name];
+                  await supabase.from(table).update({ data: d }).eq("id", r.id);
+                }
+              }
+            } else if (hasNameChange) {
+              const { data: dup } = await supabase
+                .from("crm_fields")
+                .select("id")
+                .eq("entity_type", field.entity_type)
+                .eq("name", newName)
+                .maybeSingle();
+              if (dup) return json(409, { error: "Ya existe un campo con ese nombre" });
+              patch.name = newName;
+            }
+          }
+          if (payload?.type !== undefined) {
+            const t = FIELD_TYPES.includes(payload.type) ? payload.type : "text";
+            if (t !== field.type) {
+              if (t === "select" || t === "multi_select") {
+                if (!Array.isArray(payload?.options)) return json(400, { error: "options es requerido para campos de selección" });
+                patch.options = payload.options.map(String).filter(Boolean).slice(0, 100);
+              } else if (!Array.isArray(payload?.options)) {
+                patch.options = [];
+              }
+              patch.type = t;
+            }
+          }
+        }
+        if (payload?.options !== undefined && Array.isArray(payload.options) && field.type !== "select" && field.type !== "multi_select") {
+          return json(400, { error: "options solo aplica a campos de selección" });
+        }
+        const { data, error } = await supabase.from("crm_fields").update(patch).eq("id", id).select().single();
+        if (error) return json(500, { error: error.message });
+        return json(200, data);
+      }
+
+      case "fields-delete": {
+        const id = payload?.id;
+        if (!id) return json(400, { error: "id es requerido" });
+        const { data: field, error: fErr } = await supabase
+          .from("crm_fields")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
+        if (fErr) return json(500, { error: fErr.message });
+        if (!field) return json(404, { error: "Campo no encontrado" });
+        if (field.is_system) return json(400, { error: "Los campos de sistema no se pueden eliminar" });
+        await supabase.from("crm_fields").delete().eq("id", id);
+        if (field.storage === "data") {
+          const table = field.entity_type === "company" ? "crm_companies" : "crm_contacts";
+          const { data: rows } = await supabase.from(table).select("id, data");
+          for (const r of rows || []) {
+            if (r.data && Object.prototype.hasOwnProperty.call(r.data, field.name)) {
+              const d = { ...r.data };
+              delete d[field.name];
+              await supabase.from(table).update({ data: d }).eq("id", r.id);
+            }
+          }
+        }
         return json(200, { ok: true });
       }
 
@@ -514,19 +967,28 @@ serve(async (req: Request) => {
           lead.topic || null,
           enrichBits.length > 0 ? `[${enrichBits.join(" · ")}]` : null,
         ].filter(Boolean).join("\n");
+        const fields = await loadFields(supabase, "person");
+        const values: Record<string, any> = {
+          nombres: firstName,
+          apellidos: lastName,
+          source: lead.source || "manual",
+          tags: [lead.source || "unknown"],
+          notas: enrichedNotes || null,
+        };
+        if (lead.email) values.correos_electronicos = [lead.email];
+        if (lead.phone) values.telefonos = [lead.phone];
+        const { columns, data } = fieldsToRow(fields, "person", values);
+        const st = syncStatusTags("person", values, null, null);
+        columns.status = st.status;
+        columns.tags = st.tags;
+        columns.lead_id = leadId;
+        backfillColumns("person", columns, data);
+        if (!("photo_url" in columns) && columns.email) {
+          columns.photo_url = gravatarUrl(columns.email);
+        }
         const { data: contact, error: cErr } = await supabase
           .from("crm_contacts")
-          .insert({
-            first_name: firstName,
-            last_name: lastName,
-            email: lead.email || null,
-            phone: lead.phone || null,
-            photo_url: gravatarUrl(lead.email || null),
-            source: lead.source || "manual",
-            lead_id: leadId,
-            tags: [lead.source || "unknown"],
-            notes: enrichedNotes || null,
-          })
+          .insert({ ...columns, data })
           .select(contactSelect)
           .single();
         if (cErr) return json(500, { error: cErr.message });
@@ -708,46 +1170,34 @@ serve(async (req: Request) => {
             .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
             .join(" ");
 
+        const fields = await loadFields(supabase, "person");
         const clean: any[] = [];
         let skipped = 0;
         for (const c of rows) {
-          let first = String(c?.first_name || "").trim();
-          const email = c?.email
-            ? String(c.email).trim().toLowerCase().slice(0, 200)
-            : "";
+          const email = c?.email ? String(c.email).trim().toLowerCase().slice(0, 200) : "";
           const phone = c?.phone ? String(c.phone).trim().slice(0, 60) : "";
+          const values: Record<string, any> = resolveValues(c || {}, {}, PERSON_ALIAS);
+          if (!values.source) values.source = "import";
+          let first = normText(values.nombres, 120) || "";
           if (!first && email) first = nameFromEmail(email);
           if (!first && !email && !phone) {
             skipped++;
             continue;
           }
           if (!first) first = "Sin nombre";
-          clean.push({
-            company_id: c.company_id || null,
-            first_name: first.slice(0, 120),
-            last_name: c.last_name ? String(c.last_name).trim().slice(0, 120) : null,
-            email: email || null,
-            phone: phone || null,
-            photo_url: c.photo_url || gravatarUrl(email || null),
-            source: c.source ? String(c.source).slice(0, 40) : "import",
-            lead_id: c.lead_id || null,
-            tags: Array.isArray(c.tags) ? c.tags.map(String).slice(0, 20) : [],
-            notes: c.notes ? String(c.notes).slice(0, 2000) : null,
-            job_title: c.job_title ? String(c.job_title).slice(0, 150) : null,
-            phone2: c.phone2 ? String(c.phone2).slice(0, 60) : null,
-            birthdate: c.birthdate || null,
-            gender: c.gender ? String(c.gender).slice(0, 30) : null,
-            linkedin: c.linkedin ? String(c.linkedin).slice(0, 300) : null,
-            github: c.github ? String(c.github).slice(0, 300) : null,
-            x_handle: c.x_handle ? String(c.x_handle).slice(0, 120) : null,
-            website: c.website ? String(c.website).slice(0, 300) : null,
-            address: c.address ? String(c.address).slice(0, 300) : null,
-            experience_years: c.experience_years != null && c.experience_years !== "" ? Number(c.experience_years) : null,
-            owner: c.owner ? String(c.owner).slice(0, 150) : null,
-          });
+          values.nombres = first;
+          if (email) values.correos_electronicos = [email];
+          else if (values.correos_electronicos == null) delete values.correos_electronicos;
+          const { columns, data } = fieldsToRow(fields, "person", values);
+          const st = syncStatusTags("person", values, null, null);
+          columns.status = st.status;
+          columns.tags = st.tags;
+          backfillColumns("person", columns, data);
+          if (!("photo_url" in columns) && columns.email) columns.photo_url = gravatarUrl(columns.email);
+          clean.push({ ...columns, data });
         }
 
-        const nameKey = (first: string, last: string) =>
+        const nameKey = (first: string | null, last: string | null) =>
           `${(first || "").toLowerCase()}|${(last || "").toLowerCase()}`;
 
         const emails = [...new Set(clean.map((c) => c.email).filter(Boolean))];
@@ -806,33 +1256,25 @@ serve(async (req: Request) => {
         const rows = Array.isArray(payload?.companies) ? payload.companies : [];
         if (rows.length === 0) return json(400, { error: "companies vacío" });
         if (rows.length > 500) return json(400, { error: "máximo 500 filas por importación" });
-        const clean = [];
+        const fields = await loadFields(supabase, "company");
+        const clean: any[] = [];
         let skipped = 0;
         for (const c of rows) {
-          if (!c || !String(c.name || "").trim()) {
+          const name = normText(c?.name, 200);
+          if (!name) {
             skipped++;
             continue;
           }
-          clean.push({
-            name: String(c.name).trim().slice(0, 200),
-            domain: c.domain
-              ? String(c.domain).replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase().trim().slice(0, 200) || null
-              : null,
-            industry: c.industry ? String(c.industry).slice(0, 120) : null,
-            logo_url: null,
-            notes: c.notes ? String(c.notes).slice(0, 2000) : null,
-            tags: Array.isArray(c.tags) ? c.tags.map(String).slice(0, 20) : [],
-            founded_year: c.founded_year != null && c.founded_year !== "" ? Number(c.founded_year) : null,
-            employee_range: c.employee_range ? String(c.employee_range).slice(0, 60) : null,
-            nit: c.nit ? String(c.nit).slice(0, 60) : null,
-            address: c.address ? String(c.address).slice(0, 300) : null,
-            phone: c.phone ? String(c.phone).slice(0, 60) : null,
-            linkedin: c.linkedin ? String(c.linkedin).slice(0, 300) : null,
-            github: c.github ? String(c.github).slice(0, 300) : null,
-            x_handle: c.x_handle ? String(c.x_handle).slice(0, 120) : null,
-            website: c.website ? String(c.website).slice(0, 300) : null,
-            owner: c.owner ? String(c.owner).slice(0, 150) : null,
-          });
+          const values: Record<string, any> = resolveValues(c || {}, {}, COMPANY_ALIAS);
+          values.nombre = name;
+          if (!values.source) values.source = "import";
+          const { columns, data } = fieldsToRow(fields, "company", values);
+          const st = syncStatusTags("company", values, null, null);
+          columns.status = st.status;
+          columns.tags = st.tags;
+          backfillColumns("company", columns, data);
+          if (!("logo_url" in columns)) columns.logo_url = null;
+          clean.push({ ...columns, data });
         }
 
         const names = [...new Set(clean.map((c) => c.name.toLowerCase()))];
@@ -845,7 +1287,7 @@ serve(async (req: Request) => {
           const { data } = await supabase
             .from("crm_companies")
             .select("name")
-            .in("name", clean.map((c) => c.name));
+            .in("name", clean.map((c) => c.name).filter(Boolean).map(String));
           (data || []).forEach((r: any) => {
             if (r.name) dbNames.add(String(r.name).toLowerCase());
           });
