@@ -79,7 +79,7 @@ export default function FieldManager({ entity, fields, onClose, onCreate, onUpda
       <div className="relative flex h-full w-full max-w-[380px] flex-col border-l border-white/10 bg-[#131316] shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <h3 className="text-sm font-semibold text-white">
-            ⚙️ {t("admin.crm.fields.title", { entity: entity === "person" ? t("admin.crm.tabContact") : t("admin.crm.tabCompany") })}
+            <span className="grayscale opacity-70">⚙️</span> {t("admin.crm.fields.title", { entity: entity === "person" ? t("admin.crm.tabContact") : t("admin.crm.tabCompany") })}
           </h3>
           <div className="flex items-center gap-2">
             <button
@@ -169,7 +169,7 @@ export default function FieldManager({ entity, fields, onClose, onCreate, onUpda
                 className="cursor-pointer text-gray-500 hover:text-white"
                 title={f.is_visible ? t("admin.crm.fields.hide") : t("admin.crm.fields.show")}
               >
-                {f.is_visible ? "👁" : "🚫"}
+                <span className="grayscale opacity-70">{f.is_visible ? "👁" : "🚫"}</span>
               </button>
               {!f.is_system && (
                 <button

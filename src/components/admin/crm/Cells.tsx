@@ -12,9 +12,15 @@ export function FieldIcon({ field, className = "h-3.5 w-3.5 text-[13px]" }: { fi
   const icon = field.icon;
   if (!icon) return <span className={className} />;
   if (icon.startsWith("http")) {
-    return <img src={icon} alt="" className={`${className} shrink-0 object-contain`} />;
+    return <img src={icon} alt="" className={`${className} shrink-0 object-contain grayscale opacity-60`} />;
   }
-  return <span className={`${className} shrink-0 flex items-center justify-center leading-none`}>{icon}</span>;
+  return (
+    <span
+      className={`${className} shrink-0 flex items-center justify-center leading-none grayscale opacity-60`}
+    >
+      {icon}
+    </span>
+  );
 }
 
 // ---------- pills / chips ----------

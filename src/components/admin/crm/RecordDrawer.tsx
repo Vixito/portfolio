@@ -68,7 +68,7 @@ export default function RecordDrawer({
           {avatar}
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-sm font-semibold text-white">
-              {entity === "person" ? "👤 " : "🏢 "}
+              <span className="grayscale opacity-60">{entity === "person" ? "👤 " : "🏢 "}</span>
               {t("admin.crm.drawer.title")}
             </h3>
           </div>
@@ -78,7 +78,7 @@ export default function RecordDrawer({
             className="cursor-pointer rounded px-2 py-1 text-sm text-gray-500 hover:bg-red-500/10 hover:text-red-300"
             title={t("admin.crm.drawer.delete")}
           >
-            🗑
+            <span className="grayscale opacity-70">🗑</span>
           </button>
           <button
             type="button"

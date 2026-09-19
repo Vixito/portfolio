@@ -280,7 +280,7 @@ export default function RecordGrid(props: RecordGridProps) {
       {/* barra de herramientas */}
       <div className="flex flex-wrap items-center gap-2 px-1 pb-2">
         <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 focus-within:border-[#2093c4]">
-          <span className="text-sm text-gray-500">🔍</span>
+          <span className="text-sm text-gray-500 grayscale opacity-70">🔍</span>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -305,7 +305,7 @@ export default function RecordGrid(props: RecordGridProps) {
           onClick={onOpenFields}
           className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10 cursor-pointer"
         >
-          ⚙️ {t("admin.crm.grid.fields")}
+          <span className="grayscale opacity-70">⚙️</span> {t("admin.crm.grid.fields")}
         </button>
         {actions}
         <div className="flex-1" />
@@ -331,7 +331,7 @@ export default function RecordGrid(props: RecordGridProps) {
       {/* tabla */}
       {records.length === 0 && !creating ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-sm text-gray-500">
-          <span className="text-4xl">{entity === "person" ? "👤" : "🏢"}</span>
+          <span className="text-4xl grayscale opacity-50">{entity === "person" ? "👤" : "🏢"}</span>
           {t("admin.crm.grid.empty", { entity: entityLabel })}
           <button
             type="button"
