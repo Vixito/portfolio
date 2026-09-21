@@ -41,7 +41,8 @@ export default function RecordDrawer({
   suggestions,
 }: RecordDrawerProps) {
   const { t } = useTranslation();
-  const sorted = useMemo(() => sortFields(fields), [fields]);
+  // Solo campos visibles: lo oculto en Campos no muestra su dato aquí tampoco.
+  const sorted = useMemo(() => sortFields(fields).filter((f) => f.is_visible), [fields]);
   const [busy, setBusy] = useState<string | null>(null);
 
   if (!rec) return null;
