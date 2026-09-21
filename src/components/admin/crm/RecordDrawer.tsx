@@ -127,7 +127,7 @@ export default function RecordDrawer({
           )}
 
           {sorted.map((f) => {
-            if (f.is_readonly) {
+            if (f.is_readonly || f.name === "estado") {
               return (
                 <div key={f.name} className="flex items-center gap-2 border-b border-white/5 py-2 text-sm">
                   <FieldIcon field={f} />

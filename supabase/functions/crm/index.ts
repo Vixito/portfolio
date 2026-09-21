@@ -390,39 +390,70 @@ function fieldsToRow(fields: Map<string, any>, entityType: string, values: Recor
   return { columns, data, providedData };
 }
 
-// Sincroniza el tag de ciclo de vida con el estado del registro.
-// - Creación (isNew): default por origen + tag (comportamiento original).
-// - Actualización: solo toca estado/tags si `estado` viene explícito y válido;
-//   null lo limpia; ausente no toca nada (no auto-sella ni re-agrega tags).
+// Ciclo de vida: la fuente de verdad son los TAGS (el Estado es derivado y
+// no editable en UI). `estado` explícito solo se honra en llamadores legados.
+// - Creación (isNew): si trae tag de ciclo se respeta; si no, default por
+//   origen + tag (comportamiento original).
+// - Actualización: si cambia el set de tags de ciclo, el Estado sigue al
+//   último agregado (vacío => limpieza); si no cambia, no se toca nada.
 function syncStatusTags(entityType: string, values: Record<string, any>, existingTags: string[] | null, existingStatus: string | null, isNew = false) {
   const tagMap = entityType === "company" ? COMPANY_STATUS_TAG : PERSON_STATUS_TAG;
   const cycleTags = new Set(Object.values(tagMap));
+  const statusOfTag: Record<string, string> = {};
+  for (const [st, tg] of Object.entries(tagMap)) statusOfTag[tg] = st;
   const asArray = (t: any): string[] =>
     Array.isArray(t) ? t.map(String) : t != null ? [String(t)] : [...(existingTags || [])];
+  const stripCycle = (arr: string[]): string[] => arr.filter((t) => !cycleTags.has(t));
+  const sameSet = (a: string[], b: string[]): boolean =>
+    a.length === b.length && a.every((t) => b.includes(t));
+
+  // Estado explícito (legado): manda como antes.
+  if (values.estado !== undefined) {
+    if (values.estado === null) {
+      return { status: null, tags: stripCycle(asArray(values.tags)) };
+    }
+    const provided = String(values.estado);
+    if (tagMap[provided] && (isNew || provided !== (existingStatus ?? null))) {
+      const tags = stripCycle(asArray(values.tags));
+      const lifeTag = tagMap[provided];
+      if (lifeTag && !tags.includes(lifeTag)) tags.push(lifeTag);
+      return { status: provided, tags };
+    }
+    if (isNew) {
+      const status = defaultStatusForSource(values.source ?? null, entityType);
+      const tags = stripCycle(asArray(values.tags));
+      const lifeTag = tagMap[status];
+      if (lifeTag && !tags.includes(lifeTag)) tags.push(lifeTag);
+      return { status, tags };
+    }
+    return { status: existingStatus ?? null, tags: asArray(values.tags) };
+  }
+
+  const incoming = values.tags !== undefined ? asArray(values.tags) : [...(existingTags || [])];
+  const incomingCycle = incoming.filter((t) => cycleTags.has(t));
+  const existingCycle = (existingTags || []).map(String).filter((t) => cycleTags.has(t));
 
   if (isNew) {
-    const raw = values.estado ?? null;
-    const status = raw && tagMap[String(raw)] ? String(raw) : defaultStatusForSource(values.source ?? null, entityType);
-    const tags = asArray(values.tags).filter((t) => !cycleTags.has(t));
+    const picked = incomingCycle.length ? incomingCycle[incomingCycle.length - 1] : null;
+    const status = (picked && statusOfTag[picked]) || defaultStatusForSource(values.source ?? null, entityType);
+    const tags = stripCycle(incoming);
     const lifeTag = tagMap[status];
     if (lifeTag && !tags.includes(lifeTag)) tags.push(lifeTag);
     return { status, tags };
   }
 
-  if (values.estado === null) {
-    // Limpieza explícita del Estado: sin estado y sin tags de ciclo.
-    return { status: null, tags: asArray(values.tags).filter((t) => !cycleTags.has(t)) };
+  if (!sameSet(incomingCycle, existingCycle)) {
+    const added = incomingCycle.filter((t) => !existingCycle.includes(t));
+    const picked = added.length ? added[added.length - 1] : null;
+    const status = picked ? statusOfTag[picked] ?? null : null;
+    const tags = stripCycle(incoming);
+    if (status) {
+      const lifeTag = tagMap[status];
+      if (lifeTag && !tags.includes(lifeTag)) tags.push(lifeTag);
+    }
+    return { status, tags };
   }
-  const provided = values.estado !== undefined ? String(values.estado) : null;
-  if (provided && tagMap[provided] && provided !== (existingStatus ?? null)) {
-    // Cambio real de estado: resincronizar tags de ciclo al nuevo estado.
-    const tags = asArray(values.tags).filter((t) => !cycleTags.has(t));
-    const lifeTag = tagMap[provided];
-    if (lifeTag && !tags.includes(lifeTag)) tags.push(lifeTag);
-    return { status: provided, tags };
-  }
-  // Sin cambio de estado: se respeta lo enviado/existente tal cual.
-  return { status: existingStatus ?? null, tags: asArray(values.tags) };
+  return { status: existingStatus ?? null, tags: incoming };
 }
 
 // Mantiene columnas legadas sincronizadas con los arrays de `data`.

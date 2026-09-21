@@ -229,13 +229,18 @@ export default function RecordGrid(props: RecordGridProps) {
     }
   };
 
-  // Campos editables en masa: escalares, sin primario ni solo-lectura.
+  // Campos editables en masa: escalares, sin primario, sin solo-lectura
+  // y sin Estado (el ciclo lo mandan los tags).
   // Los arrays (tags, correos, teléfonos) se excluyen: reemplazo total
   // sería destructivo y anexar, ambiguo.
   const bulkFields = useMemo(
     () =>
       sortFields(fields).filter(
-        (f) => !f.is_readonly && f.name !== PRIMARY_FIELD[entity] && !ARRAY_TYPES.has(f.type)
+        (f) =>
+          !f.is_readonly &&
+          f.name !== PRIMARY_FIELD[entity] &&
+          f.name !== "estado" &&
+          !ARRAY_TYPES.has(f.type)
       ),
     [fields, entity]
   );
@@ -300,6 +305,15 @@ export default function RecordGrid(props: RecordGridProps) {
     const active = editing?.recId === rec.id && editing?.fieldName === field.name;
     const value = cellValue(rec, field);
     const busy = busyCell?.(rec.id, field.name) || false;
+
+    // Estado: visible pero no editable (el ciclo lo mandan los tags).
+    if (field.name === "estado") {
+      return (
+        <div className="px-2 py-1" title={field.label}>
+          <CellView field={field} value={value} />
+        </div>
+      );
+    }
 
     if (active) {
       return (
@@ -559,7 +573,9 @@ export default function RecordGrid(props: RecordGridProps) {
                     {tp(t("admin.crm.grid.required"), { label: primary?.label ?? "" })}
                   </div>
                 </div>
-                {visible.map((f) => renderNewRowCell(f))}
+                {visible.map((f) =>
+                  f.name === "estado" ? <div key={`new-${f.name}`} /> : renderNewRowCell(f)
+                )}
                 <div className="px-1 py-1" />
                 <div className="flex flex-col items-center justify-center gap-1 px-1">
                   <button
