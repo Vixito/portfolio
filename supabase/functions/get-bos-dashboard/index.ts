@@ -201,7 +201,7 @@ serve(async (req: Request) => {
     }
 
     const analyticsSources = ["ga4"];
-    const paymentSources = ["nowpayments", "dlocalgo", "dlocal"];
+    const paymentSources = ["nowpayments", "dlocalgo", "dlocal", "gumroad"];
 
     const isAnalyticsSource = (source: string) => analyticsSources.includes(source);
 

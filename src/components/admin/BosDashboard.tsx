@@ -129,6 +129,7 @@ const gatewayLabel = (g?: string | null) => {
   if (g === "dlocalgo") return "Tarjeta (dLocal Go)";
   if (g === "dlocal") return "Tarjeta (dLocal)";
   if (g === "paypal") return "PayPal";
+  if (g === "gumroad") return "Gumroad";
   return g || "—";
 };
 

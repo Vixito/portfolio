@@ -993,6 +993,19 @@ export const translations = {
           importCompanies: "Importar empresas",
           fileFormats: "Formatos: .vcf, .vcard, .csv",
         },
+        gumroad: {
+          title: "Gumroad (Ventas)",
+          connected: "Conectado",
+          sync: "Sincronizar ventas",
+          products: "Productos",
+          sales: "ventas",
+          invoices: "facturas nuevas",
+          justNow: "ahora mismo",
+          notConfigured:
+            "Falta GUMROAD_ACCESS_TOKEN en los secretos de Supabase (generalo en Gumroad → Settings → Advanced → Applications).",
+          pingHint:
+            "Ping de ventas (Settings → Advanced → Ping en Gumroad):",
+        },
         contractModal: {
           new: "Nuevo contrato",
           edit: "Editar contrato",
@@ -2275,6 +2288,19 @@ export const translations = {
           importContacts: "Import contacts",
           importCompanies: "Import companies",
           fileFormats: "Formats: .vcf, .vcard, .csv",
+        },
+        gumroad: {
+          title: "Gumroad (Sales)",
+          connected: "Connected",
+          sync: "Sync sales",
+          products: "Products",
+          sales: "sales",
+          invoices: "new invoices",
+          justNow: "just now",
+          notConfigured:
+            "GUMROAD_ACCESS_TOKEN is missing from Supabase secrets (generate it in Gumroad → Settings → Advanced → Applications).",
+          pingHint:
+            "Sales ping (Settings → Advanced → Ping in Gumroad):",
         },
         contractModal: {
           new: "New contract",

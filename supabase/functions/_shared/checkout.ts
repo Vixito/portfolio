@@ -2,6 +2,9 @@
  * Helpers compartidos para el checkout propio (PayPal + NowPayments)
  * Reutilizados por: create-paypal-order, capture-paypal-order,
  * create-nowpayments-invoice, nowpayments-webhook y get-checkout-invoice.
+ * Gumroad (merchant-of-record, compra off-site) reutiliza la conciliación:
+ * gumroad-webhook, gumroad-sync. No tiene flujo on-site: NO va en
+ * normalizeCheckoutSettings ni en las listas de gateways del checkout.
  */
 
 export const corsCheckoutHeaders = {
@@ -18,6 +21,13 @@ export const jsonCheckoutResponse = (status: number, body: unknown) =>
       "Content-Type": "application/json",
     },
   });
+
+import {
+  buildGumroadPaymentMeta,
+  gumroadBuyerName,
+  gumroadSaleIsFinal,
+  gumroadSaleTotals,
+} from "./gumroad.ts";
 
 /**
  * Consulta el estado de una invoice de NowPayments (sandbox o producción).
@@ -378,7 +388,7 @@ export async function createCheckoutInvoice(
     amount: number;
     user_name: string;
     user_email: string;
-    gateway: "paypal" | "nowpayments" | "dlocalgo";
+    gateway: "paypal" | "nowpayments" | "dlocalgo" | "gumroad";
     delivery_time?: string;
     extra_custom_fields?: Record<string, unknown>;
   }
@@ -526,7 +536,9 @@ export async function notifyCheckoutDiscord(
             ? "PayPal"
             : payload.gateway === "dlocalgo"
               ? "DLocal (Tarjeta)"
-              : "NowPayments (Crypto)",
+              : payload.gateway === "gumroad"
+                ? "Gumroad"
+                : "NowPayments (Crypto)",
         inline: true,
       },
       {
@@ -597,7 +609,7 @@ export async function deliverCheckoutOrder(
   supabase: any,
   params: {
     invoice: any;
-    gateway: "paypal" | "nowpayments" | "dlocalgo";
+    gateway: "paypal" | "nowpayments" | "dlocalgo" | "gumroad";
     transactionId: string;
     paidAt?: string;
     paymentMeta?: Record<string, unknown>;
@@ -710,4 +722,158 @@ export function buildDeliveryPayload(invoice: any) {
       success_message: resolveMessage(customFields.success_message, lang),
     },
   };
+}
+
+/**
+ * Resuelve un producto local desde identificadores de Gumroad.
+ * Convención: el permalink de Gumroad == public_id local, o el campo
+ * checkout_settings.gumroad_permalink del producto.
+ */
+export async function resolveGumroadProduct(
+  supabase: any,
+  identifiers: { permalink?: string | null; productId?: string | null }
+): Promise<any | null> {
+  const candidates = [identifiers.permalink, identifiers.productId].filter(
+    (v): v is string => !!v && typeof v === "string"
+  );
+  for (const cand of candidates) {
+    const { data } = await supabase
+      .from("products")
+      .select("id")
+      .eq("is_active", true)
+      .eq("checkout_settings->>gumroad_permalink", cand)
+      .maybeSingle();
+    if (data?.id) {
+      const full = await resolveCheckoutProduct(supabase, String(data.id));
+      if (full) return full;
+    }
+  }
+  for (const cand of candidates) {
+    const full = await resolveCheckoutProduct(supabase, cand);
+    if (full) return full;
+  }
+  return null;
+}
+
+/**
+ * Concilia una venta de Gumroad (objeto de la API v2) con el BOS:
+ * busca factura existente por gumroad_sale_id, reutiliza pendiente del
+ * mismo email+producto, o crea la factura y la marca como pagada.
+ * Idempotente: re-procesar la misma venta devuelve la entrega existente.
+ */
+export async function reconcileGumroadSale(
+  supabase: any,
+  sale: any
+): Promise<Record<string, unknown>> {
+  const saleId = String(sale?.id || "");
+  if (!saleId) throw new Error("Venta sin id");
+
+  const existing = await getCheckoutInvoiceByCustomField(
+    supabase,
+    "gumroad_sale_id",
+    saleId
+  );
+  if (existing) {
+    const delivered = await deliverCheckoutOrder(supabase, {
+      invoice: existing,
+      gateway: "gumroad",
+      transactionId: saleId,
+      paymentMeta: buildGumroadPaymentMeta(sale),
+    });
+    return { ok: true, invoice_id: existing.id, created: false, ...(delivered as object) };
+  }
+
+  if (!gumroadSaleIsFinal(sale)) {
+    return { ok: true, ignored: true, reason: "no-final" };
+  }
+
+  const email = String(sale?.email || "").trim().toLowerCase();
+  if (!email) throw new Error("Venta sin email de comprador");
+
+  const product = await resolveGumroadProduct(supabase, {
+    permalink:
+      sale?.product_permalink || sale?.custom_permalink || sale?.short_product_id || null,
+    productId: sale?.product_id || null,
+  });
+  if (!product) {
+    console.error(`Gumroad: producto sin mapear (sale=${saleId}, permalink=${sale?.product_permalink || sale?.short_product_id || "?"})`);
+    return { ok: true, warning: "producto no mapeado a public_id ni gumroad_permalink" };
+  }
+
+  const { amount, currency } = gumroadSaleTotals(sale);
+  const paidAt =
+    sale?.timestamp || sale?.created_at || new Date().toISOString();
+
+  // Reutilizar pendiente del mismo email+producto (compra sin factura previa).
+  const { data: pending } = await supabase
+    .from("invoices")
+    .select("id, custom_fields")
+    .eq("user_email", email)
+    .eq("product_id", product.id)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let invoice: any = null;
+  let created = false;
+  if (pending?.id) {
+    const cf = {
+      ...(pending.custom_fields || {}),
+      gumroad_sale_id: saleId,
+      gumroad_product_permalink:
+        sale?.product_permalink || sale?.short_product_id || null,
+      gumroad_order_number: sale?.order_number ?? null,
+    };
+    const merged = await supabase
+      .from("invoices")
+      .update({ custom_fields: cf, updated_at: new Date().toISOString() })
+      .eq("id", pending.id)
+      .select("*")
+      .single();
+    if (merged.error) throw new Error(merged.error.message);
+    invoice = await getCheckoutInvoiceWithProduct(supabase, pending.id);
+    if (!invoice) throw new Error("Factura no encontrada tras vincular");
+  } else {
+    invoice = await createCheckoutInvoice(supabase, {
+      product,
+      amount,
+      user_name: gumroadBuyerName(sale),
+      user_email: email,
+      gateway: "gumroad",
+      extra_custom_fields: {
+        gumroad_sale_id: saleId,
+        gumroad_product_permalink:
+          sale?.product_permalink || sale?.short_product_id || null,
+        gumroad_order_number: sale?.order_number ?? null,
+      },
+    });
+    created = true;
+  }
+
+  if (invoice.currency && String(invoice.currency).toLowerCase() !== currency) {
+    console.error(
+      `Gumroad: moneda no coincide factura=${invoice.currency} venta=${currency}`
+    );
+    return { ok: true, invoice_id: invoice.id, created, warning: "moneda no coincide" };
+  }
+  const incoming = Number(amount);
+  if (
+    Number.isFinite(incoming) &&
+    Math.abs(incoming - Number(invoice.amount)) > 0.01
+  ) {
+    console.error(
+      `Gumroad: monto no coincide factura=${invoice.amount} venta=${incoming}`
+    );
+    return { ok: true, invoice_id: invoice.id, created, warning: "monto no coincide" };
+  }
+
+  const delivered = await deliverCheckoutOrder(supabase, {
+    invoice,
+    gateway: "gumroad",
+    transactionId: saleId,
+    paidAt,
+    paymentMeta: buildGumroadPaymentMeta(sale),
+  });
+  return { ok: true, invoice_id: invoice.id, created, ...(delivered as object) };
 }

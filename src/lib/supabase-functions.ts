@@ -1722,6 +1722,40 @@ export async function syncBosAnalytics(): Promise<any> {
   return data;
 }
 
+async function invokeGumroad(payload: any): Promise<any> {
+  const { data, error } = await supabase.functions.invoke("gumroad-sync", {
+    body: payload,
+    headers: adminAuthHeaders(),
+  });
+  if (error) {
+    handleAdminUnauthorized((error as any)?.context?.status);
+    throw new Error(await getEdgeErrorMessage(error));
+  }
+  if (data?.error) {
+    throw new Error(String(data.error));
+  }
+  return data;
+}
+
+/**
+ * Estado de la conexión Gumroad (token + productos).
+ */
+export async function getGumroadStatus(): Promise<any> {
+  return invokeGumroad({ action: "status" });
+}
+
+/**
+ * Backfill de ventas de Gumroad hacia invoices (facturas pagadas).
+ */
+export async function syncGumroadSales(params: {
+  after?: string;
+  before?: string;
+  email?: string;
+  product_id?: string;
+} = {}): Promise<any> {
+  return invokeGumroad({ action: "sync", ...params });
+}
+
 /**
  * Sincroniza las respuestas de Tally.so hacia bos_leads.
  */

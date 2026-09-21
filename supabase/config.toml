@@ -25,6 +25,12 @@ verify_jwt = false
 [functions.contracts-pdf]
 verify_jwt = false
 
+[functions.gumroad-webhook]
+verify_jwt = false
+
+[functions.gumroad-sync]
+verify_jwt = false
+
 [functions.whatsapp-bot]
 enabled = true
 verify_jwt = true

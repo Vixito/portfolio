@@ -34,6 +34,8 @@ import {
   startCrmGoogleOAuth,
   syncCrmGoogleContacts,
   disconnectCrmGoogle,
+  getGumroadStatus,
+  syncGumroadSales,
   deleteCrmContact,
   deleteCrmCompany,
   deleteCrmDeal,
@@ -56,6 +58,7 @@ import {
   splitFullName,
   type ImportKind,
 } from "../../lib/contactImport";
+import { getSupabaseUrl } from "../../lib/supabase";
 import RecordGrid from "./crm/RecordGrid";
 import { AvatarView } from "./crm/RecordGrid";
 import FieldManager from "./crm/FieldManager";
@@ -236,6 +239,9 @@ export default function CrmPanel() {
   const companiesFileRef = useRef<HTMLInputElement>(null);
   const [googleStatus, setGoogleStatus] = useState<any>(null);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [gumroadStatus, setGumroadStatus] = useState<any>(null);
+  const [gumroadBusy, setGumroadBusy] = useState(false);
+  const [gumroadResult, setGumroadResult] = useState<any>(null);
 
   const [actFilterContact, setActFilterContact] = useState("");
 
@@ -313,9 +319,21 @@ export default function CrmPanel() {
     }
   }, []);
 
+  const loadGumroadStatus = useCallback(async () => {
+    try {
+      const res = await getGumroadStatus();
+      setGumroadStatus(res);
+    } catch {
+      setGumroadStatus(null);
+    }
+  }, []);
+
   useEffect(() => {
-    if (subtab === "integrations") loadGoogleStatus();
-  }, [subtab, loadGoogleStatus]);
+    if (subtab === "integrations") {
+      loadGoogleStatus();
+      loadGumroadStatus();
+    }
+  }, [subtab, loadGoogleStatus, loadGumroadStatus]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -374,6 +392,26 @@ export default function CrmPanel() {
       alert(e instanceof Error ? e.message : t("admin.crm.integrationsTab.err"));
     } finally {
       setGoogleBusy(false);
+    }
+  };
+
+  const handleGumroadSync = async () => {
+    setGumroadBusy(true);
+    try {
+      const res: any = await syncGumroadSales();
+      setGumroadResult(res);
+      alert(
+        `${t("admin.crm.integrationsTab.syncDone")}: +${res?.created ?? 0} ${t(
+          "admin.crm.gumroad.invoices"
+        )} · ${res?.synced ?? 0} ${t("admin.crm.gumroad.sales")} · ${res?.skipped ?? 0} ${t(
+          "admin.crm.integrationsTab.skipped"
+        )}`
+      );
+      await Promise.all([loadGumroadStatus(), load()]);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : t("admin.crm.integrationsTab.err"));
+    } finally {
+      setGumroadBusy(false);
     }
   };
 
@@ -1799,6 +1837,79 @@ export default function CrmPanel() {
                     Redirect URI: <span className="font-mono">{googleStatus.redirect_uri}</span>
                   </p>
                 )}
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{t("admin.crm.gumroad.title")}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      {gumroadStatus?.connected
+                        ? gumroadStatus.account || t("admin.crm.gumroad.connected")
+                        : t("admin.crm.integrationsTab.notConnected")}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleGumroadSync}
+                      disabled={gumroadBusy || !gumroadStatus?.connected}
+                      className={`${btnPrimary} disabled:opacity-50`}
+                      title={
+                        gumroadStatus?.connected
+                          ? ""
+                          : t("admin.crm.gumroad.notConfigured")
+                      }
+                    >
+                      {gumroadBusy
+                        ? t("admin.crm.integrationsTab.working")
+                        : t("admin.crm.gumroad.sync")}
+                    </button>
+                  </div>
+                </div>
+
+                {gumroadStatus?.connected && (
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] text-gray-400">
+                    <div>
+                      <span className="block text-gray-500">
+                        {t("admin.crm.gumroad.products")}
+                      </span>
+                      {gumroadStatus.products ?? 0}
+                    </div>
+                    <div>
+                      <span className="block text-gray-500">
+                        {t("admin.crm.integrationsTab.lastSync")}
+                      </span>
+                      {gumroadResult
+                        ? t("admin.crm.gumroad.justNow")
+                        : "—"}
+                    </div>
+                    <div>
+                      <span className="block text-gray-500">
+                        {t("admin.crm.gumroad.sales")}
+                      </span>
+                      {gumroadResult?.synced ?? 0}
+                    </div>
+                    <div>
+                      <span className="block text-gray-500">
+                        {t("admin.crm.gumroad.invoices")}
+                      </span>
+                      {gumroadResult?.created ?? 0}
+                    </div>
+                  </div>
+                )}
+
+                {!gumroadStatus?.connected && (
+                  <p className="mt-3 text-[11px] text-amber-400/90">
+                    {t("admin.crm.gumroad.notConfigured")}
+                  </p>
+                )}
+                <p className="mt-3 text-[11px] text-gray-500 break-all">
+                  {t("admin.crm.gumroad.pingHint")}{" "}
+                  <span className="font-mono">
+                    {getSupabaseUrl()}/functions/v1/gumroad-webhook?key=…
+                  </span>
+                </p>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
