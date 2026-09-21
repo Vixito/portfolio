@@ -34,9 +34,27 @@ export default function FieldManager({ entity, fields, onClose, onCreate, onUpda
   const [icon, setIcon] = useState("");
   const [optionsRaw, setOptionsRaw] = useState("");
   const [saving, setSaving] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const isSelect = type === "select" || type === "multi_select";
+  const visibleCount = sorted.filter((f) => f.is_visible).length;
+  const allVisible = sorted.length > 0 && visibleCount === sorted.length;
+
+  const toggleAll = async () => {
+    const target = !allVisible;
+    const pending = sorted.filter((f) => f.is_visible !== target);
+    if (!pending.length || bulkBusy) return;
+    setBulkBusy(true);
+    setErr(null);
+    try {
+      await Promise.all(pending.map((f) => onUpdate(f.id, { is_visible: target })));
+    } catch (e: any) {
+      setErr(e?.message || t("admin.crm.fields.error"));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const save = async () => {
     const l = label.trim();
@@ -96,6 +114,28 @@ export default function FieldManager({ entity, fields, onClose, onCreate, onUpda
             </button>
           </div>
         </div>
+
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+          <span className="text-[11px] text-gray-500">
+            {tp(t("admin.crm.fields.visibleOf"), { v: visibleCount, n: sorted.length })}
+          </span>
+          <button
+            type="button"
+            onClick={toggleAll}
+            disabled={bulkBusy || sorted.length === 0}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1 text-xs text-gray-300 hover:bg-white/10 hover:text-white disabled:opacity-40"
+          >
+            {allVisible ? (
+              <EyeOffIcon className="h-3.5 w-3.5 text-gray-400" />
+            ) : (
+              <EyeIcon className="h-3.5 w-3.5 text-gray-400" />
+            )}
+            {bulkBusy ? "…" : allVisible ? t("admin.crm.fields.hideAll") : t("admin.crm.fields.showAll")}
+          </button>
+        </div>
+        {err && !showForm && (
+          <p className="border-b border-white/10 px-4 py-2 text-xs text-red-400">{err}</p>
+        )}
 
         {showForm && (
           <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3">
