@@ -529,12 +529,33 @@ export default function CrmPanel() {
 
   // Edición masiva: aplica el mismo campo/valor a los seleccionados.
   // Reutiliza commitCell por fila (optimista + busy + revert individual).
-  const handleBulkEdit = async (entity: CrmEntity, ids: string[], field: CrmField, value: any) => {
+  // Tags con modo add/remove: unión o diferencia contra los tags actuales.
+  const handleBulkEdit = async (
+    entity: CrmEntity,
+    ids: string[],
+    field: CrmField,
+    value: any,
+    mode: "set" | "add" | "remove" = "set"
+  ) => {
     const list = entity === "person" ? contacts : companies;
     const targets = ids
       .map((id) => list.find((r) => r.id === id))
       .filter((r) => r !== undefined);
-    await Promise.all(targets.map((rec) => commitCell(entity, rec, field, value)));
+    if (field.name === "tags" && (mode === "add" || mode === "remove")) {
+      const incoming = Array.isArray(value) ? value.map(String) : [];
+      await Promise.all(
+        targets.map((rec) => {
+          const cur = Array.isArray(rec.tags) ? rec.tags.map(String) : [];
+          const next =
+            mode === "add"
+              ? [...new Set([...cur, ...incoming])]
+              : cur.filter((tg: string) => !incoming.includes(tg));
+          return commitCell(entity, rec, field, next);
+        })
+      );
+    } else {
+      await Promise.all(targets.map((rec) => commitCell(entity, rec, field, value)));
+    }
     if (entity === "person") setSelectedContacts(new Set());
     else setSelectedCompanies(new Set());
   };
@@ -1403,7 +1424,7 @@ export default function CrmPanel() {
                 }
                 onClearSelection={() => setSelectedContacts(new Set())}
                 onBulkDelete={(ids) => handleBulkDelete("person", ids)}
-                onBulkEdit={(ids, f, v) => handleBulkEdit("person", ids, f, v)}
+                onBulkEdit={(ids, f, v, m) => handleBulkEdit("person", ids, f, v, m)}
                 entityLabel={t("admin.crm.tabContact")}
                 suggestions={allTags}
                 busyCell={(rid, fn) => !!savingCells[`${rid}|${fn}`]}
@@ -1474,7 +1495,7 @@ export default function CrmPanel() {
                 }
                 onClearSelection={() => setSelectedCompanies(new Set())}
                 onBulkDelete={(ids) => handleBulkDelete("company", ids)}
-                onBulkEdit={(ids, f, v) => handleBulkEdit("company", ids, f, v)}
+                onBulkEdit={(ids, f, v, m) => handleBulkEdit("company", ids, f, v, m)}
                 entityLabel={t("admin.crm.tabCompany")}
                 suggestions={allTags}
                 busyCell={(rid, fn) => !!savingCells[`${rid}|${fn}`]}

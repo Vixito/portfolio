@@ -46,7 +46,12 @@ export interface RecordGridProps {
   onToggleAll: (ids: string[]) => void;
   onClearSelection: () => void;
   onBulkDelete: (ids: string[]) => void;
-  onBulkEdit: (ids: string[], field: CrmField, value: any) => Promise<void> | void;
+  onBulkEdit: (
+    ids: string[],
+    field: CrmField,
+    value: any,
+    mode?: "set" | "add" | "remove"
+  ) => Promise<void> | void;
   entityLabel: string;
   suggestions?: string[];
   busyCell?: (recId: string, fieldName: string) => boolean;
@@ -229,10 +234,9 @@ export default function RecordGrid(props: RecordGridProps) {
     }
   };
 
-  // Campos editables en masa: escalares, sin primario, sin solo-lectura
-  // y sin Estado (el ciclo lo mandan los tags).
-  // Los arrays (tags, correos, teléfonos) se excluyen: reemplazo total
-  // sería destructivo y anexar, ambiguo.
+  // Campos editables en masa: escalares + tags (con modo añadir/quitar),
+  // sin primario, sin solo-lectura y sin Estado (el ciclo lo mandan los tags).
+  // Correos y teléfonos se excluyen: no tiene sentido masivo.
   const bulkFields = useMemo(
     () =>
       sortFields(fields).filter(
@@ -240,16 +244,18 @@ export default function RecordGrid(props: RecordGridProps) {
           !f.is_readonly &&
           f.name !== PRIMARY_FIELD[entity] &&
           f.name !== "estado" &&
-          !ARRAY_TYPES.has(f.type)
+          (!ARRAY_TYPES.has(f.type) || f.type === "tags")
       ),
     [fields, entity]
   );
   const bulkField = bulkFields.find((f) => f.name === bulkFieldName) ?? null;
+  const [bulkTagsMode, setBulkTagsMode] = useState<"add" | "remove">("add");
 
   const openBulk = () => {
     setBulkFieldName(bulkFields.length ? bulkFields[0].name : "");
     bulkValueRef.current = undefined;
     setBulkValue(undefined);
+    setBulkTagsMode("add");
     setBulkBusy(false);
     setBulkOpen(true);
   };
@@ -259,16 +265,23 @@ export default function RecordGrid(props: RecordGridProps) {
     setBulkValue(v);
   };
 
-  const canApplyBulk =
-    !!bulkField && !bulkBusy && bulkValue !== undefined && bulkValue !== null && bulkValue !== "";
+  const bulkHasValue = Array.isArray(bulkValue)
+    ? bulkValue.length > 0
+    : bulkValue !== undefined && bulkValue !== null && bulkValue !== "";
+
+  const canApplyBulk = !!bulkField && !bulkBusy && bulkHasValue;
 
   const applyBulk = async () => {
-    if (!bulkField || bulkBusy) return;
+    if (!bulkField || bulkBusy || !bulkHasValue) return;
     const v = bulkValueRef.current;
-    if (v === undefined || v === null || v === "") return;
     setBulkBusy(true);
     try {
-      await onBulkEdit([...selection], bulkField, v);
+      await onBulkEdit(
+        [...selection],
+        bulkField,
+        v,
+        bulkField.type === "tags" ? bulkTagsMode : "set"
+      );
       setBulkOpen(false);
     } finally {
       setBulkBusy(false);
@@ -558,26 +571,7 @@ export default function RecordGrid(props: RecordGridProps) {
                 className="grid border-b border-[#2093c4]/20 bg-[#2093c4]/[0.04]"
                 style={{ gridTemplateColumns: template }}
               >
-                <div className="flex items-center justify-center px-2">
-                  <span className="text-xs text-[#7cc7e0]">+</span>
-                </div>
-                <div className="px-1 py-1">
-                  <CellEditor
-                    field={primary}
-                    value={draft[primary.name] ?? null}
-                    suggestions={suggestions}
-                    autoFocus
-                    onCommit={(v) => setDraft((d) => ({ ...d, [primary.name]: v }))}
-                  />
-                  <div className="px-1 text-[10px] text-gray-600">
-                    {tp(t("admin.crm.grid.required"), { label: primary?.label ?? "" })}
-                  </div>
-                </div>
-                {visible.map((f) =>
-                  f.name === "estado" ? <div key={`new-${f.name}`} /> : renderNewRowCell(f)
-                )}
-                <div className="px-1 py-1" />
-                <div className="flex flex-col items-center justify-center gap-1 px-1">
+                <div className="flex flex-col items-center justify-center gap-1 px-1 py-1">
                   <button
                     type="button"
                     onClick={() => onCreate(draft)}
@@ -597,6 +591,23 @@ export default function RecordGrid(props: RecordGridProps) {
                     ✕
                   </button>
                 </div>
+                <div className="px-1 py-1">
+                  <CellEditor
+                    field={primary}
+                    value={draft[primary.name] ?? null}
+                    suggestions={suggestions}
+                    autoFocus
+                    onCommit={(v) => setDraft((d) => ({ ...d, [primary.name]: v }))}
+                  />
+                  <div className="px-1 text-[10px] text-gray-600">
+                    {tp(t("admin.crm.grid.required"), { label: primary?.label ?? "" })}
+                  </div>
+                </div>
+                {visible.map((f) =>
+                  f.name === "estado" ? <div key={`new-${f.name}`} /> : renderNewRowCell(f)
+                )}
+                <div className="px-1 py-1" />
+                <div className="px-1 py-1" />
               </div>
             )}
 
@@ -712,6 +723,24 @@ export default function RecordGrid(props: RecordGridProps) {
                 </option>
               ))}
             </select>
+            {bulkField?.type === "tags" && (
+              <div className="mb-2 flex gap-2">
+                {(["add", "remove"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setBulkTagsMode(m)}
+                    className={`flex-1 rounded-lg border px-2 py-1 text-xs font-medium cursor-pointer ${
+                      bulkTagsMode === m
+                        ? "border-[#2093c4]/50 bg-[#2093c4]/15 text-[#7cc7e0]"
+                        : "border-white/10 text-gray-400 hover:bg-white/5"
+                    }`}
+                  >
+                    {m === "add" ? t("admin.crm.grid.bulkAdd") : t("admin.crm.grid.bulkRemove")}
+                  </button>
+                ))}
+              </div>
+            )}
             {bulkField && (
               <div className="rounded-lg border border-white/10 bg-[#1A1A1A] px-2.5 py-2">
                 <CellEditor
