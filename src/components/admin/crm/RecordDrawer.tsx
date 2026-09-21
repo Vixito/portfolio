@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "../../../lib/i18n";
 import { cellValue, sortFields, type CrmEntity, type CrmField, type RecordRow } from "./types";
 import { CellEditor, FieldIcon } from "./Cells";
+import { TrashIcon } from "./icons";
 
 export interface ExtraOption {
   value: string | null;
@@ -30,7 +31,6 @@ export interface RecordDrawerProps {
 }
 
 export default function RecordDrawer({
-  entity,
   rec,
   fields,
   avatar,
@@ -62,23 +62,22 @@ export default function RecordDrawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative flex h-full w-full max-w-[460px] flex-col border-l border-white/10 bg-[#131316] shadow-2xl">
+      <div className="relative flex h-full w-full max-w-[460px] flex-col border-l border-white/10 bg-[#121212] shadow-2xl">
         {/* cabecera */}
         <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
           {avatar}
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-sm font-semibold text-white">
-              <span className="grayscale opacity-60">{entity === "person" ? "👤 " : "🏢 "}</span>
               {t("admin.crm.drawer.title")}
             </h3>
           </div>
           <button
             type="button"
             onClick={() => onDelete(rec)}
-            className="cursor-pointer rounded px-2 py-1 text-sm text-gray-500 hover:bg-red-500/10 hover:text-red-300"
+            className="cursor-pointer rounded px-2 py-1 text-gray-500 hover:bg-red-500/10 hover:text-red-300"
             title={t("admin.crm.drawer.delete")}
           >
-            <span className="grayscale opacity-70">🗑</span>
+            <TrashIcon className="h-4 w-4" />
           </button>
           <button
             type="button"
@@ -106,7 +105,7 @@ export default function RecordDrawer({
                     <select
                       value={x.value ? String(x.value) : ""}
                       onChange={(e) => handleCommit(x.key, () => x.onCommit(e.target.value || null))}
-                      className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm outline-none focus:border-[#2093c4] cursor-pointer"
+                      className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#1A1A1A] px-2 py-1.5 text-sm text-white outline-none focus:border-[#2093c4] cursor-pointer"
                     >
                       {(x.options || []).map((o) => (
                         <option key={o.value ?? ""} value={o.value ?? ""}>
@@ -118,7 +117,7 @@ export default function RecordDrawer({
                     <input
                       defaultValue={x.value ?? ""}
                       onBlur={(e) => handleCommit(x.key, () => x.onCommit(e.target.value || null))}
-                      className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm outline-none focus:border-[#2093c4]"
+                      className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#1A1A1A] px-2 py-1.5 text-sm text-white outline-none focus:border-[#2093c4]"
                     />
                   )}
                 </div>

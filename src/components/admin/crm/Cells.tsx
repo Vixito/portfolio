@@ -46,7 +46,7 @@ export function TagPill({ tag, active = false }: { tag: string; active?: boolean
 
 function Chip({ children, onRemove }: { children: ReactNode; onRemove?: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium border border-white/15 bg-white/10">
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium border border-white/15 bg-white/10 text-gray-200">
       {children}
       {onRemove && (
         <button type="button" onClick={onRemove} className="opacity-60 hover:opacity-100 cursor-pointer leading-none">✕</button>
@@ -59,7 +59,7 @@ function Chip({ children, onRemove }: { children: ReactNode; onRemove?: () => vo
 
 export function CellView({ field, value }: { field: CrmField; value: any }) {
   if (value === null || value === undefined || value === "") {
-    return <span className="text-gray-600 select-none">—</span>;
+    return <span className="text-gray-500 select-none">—</span>;
   }
   switch (field.type) {
     case "boolean":
@@ -145,6 +145,8 @@ export interface EditorProps {
   autoFocus?: boolean;
   suggestions?: string[];
   className?: string;
+  placeholder?: string;
+  allowFree?: boolean;
 }
 
 function useAutofocus(ref: React.RefObject<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, on: boolean | undefined) {
@@ -175,7 +177,7 @@ function TextEditor({ value, onCommit, onCancel, autoFocus, type = "text", place
       onKeyDown={onKey}
       placeholder={placeholder}
       onClick={(e) => e.stopPropagation()}
-      className={`w-full min-w-[120px] rounded bg-black/30 px-1.5 py-0.5 text-sm outline-none ring-1 ring-[#2093c4]/60 ${className ?? ""}`}
+      className={`w-full min-w-[120px] rounded bg-[#1A1A1A] px-1.5 py-0.5 text-sm text-white outline-none ring-1 ring-[#2093c4]/60 ${className ?? ""}`}
     />
   );
 }
@@ -209,13 +211,13 @@ function DateEditor(props: EditorProps) {
       onBlur={done}
       onKeyDown={(e) => e.key === "Escape" && props.onCancel?.()}
       onClick={(e) => e.stopPropagation()}
-      className="w-full rounded bg-black/30 px-1.5 py-0.5 text-sm outline-none ring-1 ring-[#2093c4]/60"
+      className="w-full rounded bg-[#1A1A1A] px-1.5 py-0.5 text-sm text-white outline-none ring-1 ring-[#2093c4]/60"
     />
   );
 }
 
 function SelectEditor({ value, onCommit, onCancel, autoFocus, options, className }: EditorProps & { options: string[] }) {
-  const [draft, setDraft] = useState(value ? String(value) : "");
+  const [draft] = useState(value ? String(value) : "");
   const ref = useRef<HTMLSelectElement>(null);
   useAutofocus(ref, autoFocus);
   const commit = (v: string) => onCommit(v || null);
@@ -230,7 +232,7 @@ function SelectEditor({ value, onCommit, onCancel, autoFocus, options, className
         else e.stopPropagation();
       }}
       onClick={(e) => e.stopPropagation()}
-      className={`w-full min-w-[140px] rounded bg-black/40 px-1.5 py-0.5 text-sm outline-none ring-1 ring-[#2093c4]/60 cursor-pointer ${className ?? ""}`}
+      className={`w-full min-w-[140px] rounded bg-[#1A1A1A] px-1.5 py-0.5 text-sm text-white outline-none ring-1 ring-[#2093c4]/60 cursor-pointer ${className ?? ""}`}
     >
       <option value="">—</option>
       {options.map((o) => (
@@ -250,7 +252,7 @@ function BooleanEditor({ value, onCommit }: EditorProps) {
         onCommit(!on);
       }}
       className={`h-5 w-5 rounded border flex items-center justify-center text-sm cursor-pointer ${
-        on ? "bg-emerald-500/30 border-emerald-400 text-emerald-300" : "bg-black/30 border-white/20 text-gray-500"
+        on ? "bg-emerald-500/30 border-emerald-400 text-emerald-300" : "bg-[#1A1A1A] border-white/20 text-gray-500"
       }`}
     >
       {on ? "✓" : ""}
@@ -258,7 +260,7 @@ function BooleanEditor({ value, onCommit }: EditorProps) {
   );
 }
 
-function ArrayEditor({ value, onCommit, autoFocus, suggestions, placeholder, allowFree = true }: EditorProps) {
+function ArrayEditor({ value, onCommit, autoFocus, suggestions, placeholder }: EditorProps) {
   const [items, setItems] = useState<string[]>(Array.isArray(value) ? value.filter(Boolean) : []);
   const [draft, setDraft] = useState("");
   const [open, setOpen] = useState(false);
@@ -311,10 +313,10 @@ function ArrayEditor({ value, onCommit, autoFocus, suggestions, placeholder, all
           } else e.stopPropagation();
         }}
         placeholder={placeholder || "Añadir…"}
-        className="min-w-[70px] flex-1 bg-transparent text-sm outline-none placeholder:text-gray-600"
+        className="min-w-[70px] flex-1 bg-transparent text-sm text-white outline-none placeholder:text-gray-500"
       />
       {open && suggs.length > 0 && (
-        <div className="sugg absolute z-20 mt-7 max-h-32 overflow-auto rounded-lg border border-white/10 bg-[#161619] p-1 shadow-xl">
+        <div className="sugg absolute z-20 mt-7 max-h-32 overflow-auto rounded-lg border border-white/10 bg-[#121212] p-1 shadow-xl">
           {suggs.map((s) => (
             <button
               key={s}
@@ -350,7 +352,7 @@ function TextareaEditor({ value, onCommit, onCancel, autoFocus }: EditorProps) {
         else e.stopPropagation();
       }}
       onClick={(e) => e.stopPropagation()}
-      className="w-full rounded bg-black/30 px-1.5 py-0.5 text-sm outline-none ring-1 ring-[#2093c4]/60 resize-y"
+      className="w-full rounded bg-[#1A1A1A] px-1.5 py-0.5 text-sm text-white outline-none ring-1 ring-[#2093c4]/60 resize-y"
     />
   );
 }
@@ -374,7 +376,7 @@ function ImageEditor(props: EditorProps) {
           else e.stopPropagation();
         }}
         placeholder="https://…"
-        className="w-full min-w-[160px] rounded bg-black/30 px-1.5 py-0.5 text-sm outline-none ring-1 ring-[#2093c4]/60"
+        className="w-full min-w-[160px] rounded bg-[#1A1A1A] px-1.5 py-0.5 text-sm text-white outline-none ring-1 ring-[#2093c4]/60"
       />
     </div>
   );

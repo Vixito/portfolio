@@ -59,9 +59,9 @@ import {
 import RecordGrid from "./crm/RecordGrid";
 import { AvatarView } from "./crm/RecordGrid";
 import FieldManager from "./crm/FieldManager";
-import RecordDrawer, { type ExtraRow } from "./crm/RecordDrawer";
+import RecordDrawer from "./crm/RecordDrawer";
 import type { CrmEntity, CrmField, RecordRow } from "./crm/types";
-import { setRecordField } from "./crm/types";
+import { setRecordField, tp } from "./crm/types";
 
 // ============ helpers de UI ============
 
@@ -377,15 +377,6 @@ export default function CrmPanel() {
     }
   };
 
-  const companyMap = useMemo(
-    () => new Map(companies.map((c) => [c.id, c])),
-    [companies]
-  );
-  const contactMap = useMemo(
-    () => new Map(contacts.map((c) => [c.id, c])),
-    [contacts]
-  );
-
   const filteredActivities = useMemo(() => {
     if (!actFilterContact) return activities;
     return activities.filter((a) => a.contact_id === actFilterContact);
@@ -502,7 +493,7 @@ export default function CrmPanel() {
   const handleBulkDelete = async (entity: CrmEntity, ids: string[]) => {
     const label =
       entity === "person" ? t("admin.crm.contacts") : t("admin.crm.companiesTab.count");
-    if (!window.confirm(`${t("admin.crm.grid.deleteSelectedConfirm", { n: ids.length })} ${label}?`)) return;
+    if (!window.confirm(`${tp(t("admin.crm.grid.deleteSelectedConfirm"), { n: ids.length })} ${label}?`)) return;
     const setter = entity === "person" ? setContacts : setCompanies;
     const before = entity === "person" ? contacts : companies;
     setter(before.filter((r) => !ids.includes(r.id)));
@@ -694,16 +685,6 @@ export default function CrmPanel() {
       alert(err instanceof Error ? err.message : t("admin.crm.errSaveCompany"));
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDeleteCompany = async (id: string) => {
-    if (!window.confirm(t("admin.crm.confirmDeleteCompany"))) return;
-    try {
-      await deleteCrmCompany(id);
-      await load();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : t("admin.crm.errDelete"));
     }
   };
 

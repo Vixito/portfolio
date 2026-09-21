@@ -6,9 +6,16 @@ import {
   recordName,
   recordSearchText,
   sortFields,
+  tp,
   visibleFields,
 } from "./types";
 import { CellEditor, CellView, FieldIcon } from "./Cells";
+import {
+  BuildingIcon,
+  SearchIcon,
+  SlidersIcon,
+  UserIcon,
+} from "./icons";
 import { useTranslation } from "../../../lib/i18n";
 
 export interface RowMenuAction {
@@ -276,16 +283,16 @@ export default function RecordGrid(props: RecordGridProps) {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col rounded-xl border border-white/10 bg-[#09090b] text-white">
       {/* barra de herramientas */}
-      <div className="flex flex-wrap items-center gap-2 px-1 pb-2">
-        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 focus-within:border-[#2093c4]">
-          <span className="text-sm text-gray-500 grayscale opacity-70">🔍</span>
+      <div className="flex flex-wrap items-center gap-2 px-3 py-3">
+        <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-[#1A1A1A] px-2.5 py-1.5 focus-within:border-[#2093c4]">
+          <SearchIcon className="h-4 w-4 shrink-0 text-gray-500" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("admin.crm.grid.search", { entity: entityLabel.toLowerCase() })}
-            className="w-44 bg-transparent text-sm outline-none placeholder:text-gray-600 sm:w-56"
+            placeholder={tp(t("admin.crm.grid.search"), { entity: entityLabel.toLowerCase() })}
+            className="w-44 bg-transparent text-sm text-white outline-none placeholder:text-gray-500 sm:w-56"
           />
           {search && (
             <button type="button" onClick={() => setSearch("")} className="text-xs text-gray-500 hover:text-white cursor-pointer">✕</button>
@@ -297,22 +304,22 @@ export default function RecordGrid(props: RecordGridProps) {
             onClick={() => onBulkDelete([...selection])}
             className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-300 hover:bg-red-500/20 cursor-pointer"
           >
-            {t("admin.crm.grid.deleteSelected", { n: selection.size })}
+            {tp(t("admin.crm.grid.deleteSelected"), { n: selection.size })}
           </button>
         )}
         <button
           type="button"
           onClick={onOpenFields}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10 cursor-pointer"
+          className="flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white cursor-pointer"
         >
-          <span className="grayscale opacity-70">⚙️</span> {t("admin.crm.grid.fields")}
+          <SlidersIcon className="h-4 w-4 text-gray-400" /> {t("admin.crm.grid.fields")}
         </button>
         {actions}
         <div className="flex-1" />
         {creating ? (
           <div className="flex items-center gap-1.5 text-xs text-emerald-300">
             {creatingBusy && <SaveSpinner />}
-            {t("admin.crm.grid.creatingLabel", { entity: entityLabel })}
+            {tp(t("admin.crm.grid.creatingLabel"), { entity: entityLabel })}
           </div>
         ) : (
           <button
@@ -323,7 +330,7 @@ export default function RecordGrid(props: RecordGridProps) {
             }}
             className="rounded-lg bg-[#2093c4] px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-[#22a5db] cursor-pointer"
           >
-            + {t("admin.crm.grid.new", { entity: entityLabel })}
+            {tp(t("admin.crm.grid.new"), { entity: entityLabel })}
           </button>
         )}
       </div>
@@ -331,22 +338,26 @@ export default function RecordGrid(props: RecordGridProps) {
       {/* tabla */}
       {records.length === 0 && !creating ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-sm text-gray-500">
-          <span className="text-4xl grayscale opacity-50">{entity === "person" ? "👤" : "🏢"}</span>
-          {t("admin.crm.grid.empty", { entity: entityLabel })}
+          {entity === "person" ? (
+            <UserIcon className="h-10 w-10 text-gray-600" />
+          ) : (
+            <BuildingIcon className="h-10 w-10 text-gray-600" />
+          )}
+          {tp(t("admin.crm.grid.empty"), { entity: entityLabel })}
           <button
             type="button"
             onClick={() => setDraft({})}
             className="rounded-lg bg-[#2093c4] px-3 py-1.5 text-sm font-semibold text-white cursor-pointer"
           >
-            + {t("admin.crm.grid.new", { entity: entityLabel })}
+            {tp(t("admin.crm.grid.new"), { entity: entityLabel })}
           </button>
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-white/10 bg-[#121215]">
+        <div className="min-h-0 flex-1 overflow-auto border-t border-white/10">
           <div className="w-max min-w-full">
             {/* header */}
             <div
-              className="grid border-b border-white/10 bg-[#1a1a1f] text-[11px] font-semibold uppercase tracking-wider text-gray-500"
+              className="grid border-b border-white/10 bg-[#18181b] text-[11px] font-semibold uppercase tracking-wider text-gray-400"
               style={{ gridTemplateColumns: template }}
             >
               <div className="flex items-center justify-center px-2 py-2">
@@ -361,19 +372,23 @@ export default function RecordGrid(props: RecordGridProps) {
                   {allSelected ? "✓" : ""}
                 </span>
               </div>
-              <div className="flex items-center gap-1 px-3 py-2">
-                <FieldIcon field={primary} className="h-3.5 w-3.5" />
-                <button
-                  type="button"
-                  onClick={() => primary && toggleSort(primary)}
-                  className="cursor-pointer hover:text-white"
-                >
-                  {primary?.label}
-                </button>
-                {sortKey === primary?.name && (
-                  <span className="text-[#2093c4]">{sortDir === 1 ? "▲" : "▼"}</span>
-                )}
-              </div>
+              {primary ? (
+                <div className="flex items-center gap-1 px-3 py-2">
+                  <FieldIcon field={primary} className="h-3.5 w-3.5" />
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(primary)}
+                    className="cursor-pointer hover:text-white"
+                  >
+                    {primary.label}
+                  </button>
+                  {sortKey === primary.name && (
+                    <span className="text-[#2093c4]">{sortDir === 1 ? "▲" : "▼"}</span>
+                  )}
+                </div>
+              ) : (
+                <div className="px-3 py-2" />
+              )}
               {visible.map((f) => (
                 <div key={f.name} className="group flex items-center gap-1 px-3 py-2">
                   <FieldIcon field={f} className="h-3.5 w-3.5" />
@@ -416,7 +431,7 @@ export default function RecordGrid(props: RecordGridProps) {
             {colMenu && colMenuRef && (
               <div
                 ref={colMenuRef}
-                className="absolute z-30 mt-1 w-48 rounded-lg border border-white/10 bg-[#1d1d22] p-1 shadow-xl"
+                className="absolute z-30 mt-1 w-48 rounded-lg border border-white/10 bg-[#121212] p-1 shadow-xl"
               >
                 {fields
                   .filter((f) => f.name === colMenu)
@@ -454,7 +469,7 @@ export default function RecordGrid(props: RecordGridProps) {
             )}
 
             {/* fila nueva */}
-            {creating && (
+            {creating && primary && (
               <div
                 className="grid border-b border-[#2093c4]/20 bg-[#2093c4]/[0.04]"
                 style={{ gridTemplateColumns: template }}
@@ -471,7 +486,7 @@ export default function RecordGrid(props: RecordGridProps) {
                     onCommit={(v) => setDraft((d) => ({ ...d, [primary.name]: v }))}
                   />
                   <div className="px-1 text-[10px] text-gray-600">
-                    {t("admin.crm.grid.required", { label: primary?.label })}
+                    {tp(t("admin.crm.grid.required"), { label: primary?.label ?? "" })}
                   </div>
                 </div>
                 {visible.map((f) => renderNewRowCell(f))}
@@ -503,7 +518,7 @@ export default function RecordGrid(props: RecordGridProps) {
             {sorted.map((rec) => (
               <div
                 key={rec.id}
-                className={`grid border-b border-white/5 last:border-0 hover:bg-[#16161a] ${
+                className={`grid border-b border-white/5 last:border-0 hover:bg-white/5 ${
                   selection.has(rec.id) ? "bg-[#2093c4]/[0.07]" : ""
                 }`}
                 style={{ gridTemplateColumns: template }}
@@ -540,7 +555,7 @@ export default function RecordGrid(props: RecordGridProps) {
                   {rowMenuRec === rec.id && (
                     <div
                       ref={rowMenuRef}
-                      className="absolute right-0 top-5 z-30 w-44 rounded-lg border border-white/10 bg-[#1d1d22] p-1 shadow-xl"
+                      className="absolute right-0 top-5 z-30 w-44 rounded-lg border border-white/10 bg-[#121212] p-1 shadow-xl"
                     >
                       {rowMenu.map((a) => (
                         <button
@@ -573,8 +588,8 @@ export default function RecordGrid(props: RecordGridProps) {
         </div>
       )}
 
-      <div className="flex items-center gap-2 px-1 pt-2 text-[11px] text-gray-600">
-        <span>{t("admin.crm.grid.count", { n: sorted.length })}</span>
+      <div className="flex items-center gap-2 border-t border-white/5 px-3 py-2 text-[11px] text-gray-500">
+        <span>{tp(t("admin.crm.grid.count"), { n: sorted.length })}</span>
         {someSelected && (
           <>
             <span className="text-gray-500">·</span>

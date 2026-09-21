@@ -47,6 +47,13 @@ export const FIELD_TYPE_LABELS: Record<string, string> = {
 // Tipos que se editan como lista de valores
 export const ARRAY_TYPES = new Set(["multi_select", "emails", "phones", "tags"]);
 
+// Interpolación local {{var}} (el t() del proyecto no acepta parámetros).
+export function tp(template: string, vars: Record<string, string | number>): string {
+  return String(template ?? "").replace(/\{\{\s*([\w.]+)\s*\}\}/g, (m, k: string) =>
+    vars[k] !== undefined ? String(vars[k]) : m
+  );
+}
+
 // Campo de identidad de cada entidad (primer columna congelada)
 export const PRIMARY_FIELD: Record<CrmEntity, string> = {
   person: "nombres",

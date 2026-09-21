@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "../../../lib/i18n";
-import { FIELD_TYPE_LABELS, sortFields, type CrmEntity, type CrmField } from "./types";
+import { FIELD_TYPE_LABELS, sortFields, tp, type CrmEntity, type CrmField } from "./types";
 import { FieldIcon } from "./Cells";
+import { EyeIcon, EyeOffIcon, SlidersIcon } from "./icons";
 
 export interface FieldManagerProps {
   entity: CrmEntity;
@@ -76,10 +77,11 @@ export default function FieldManager({ entity, fields, onClose, onCreate, onUpda
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative flex h-full w-full max-w-[380px] flex-col border-l border-white/10 bg-[#131316] shadow-2xl">
+      <div className="relative flex h-full w-full max-w-[380px] flex-col border-l border-white/10 bg-[#121212] shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <h3 className="text-sm font-semibold text-white">
-            <span className="grayscale opacity-70">⚙️</span> {t("admin.crm.fields.title", { entity: entity === "person" ? t("admin.crm.tabContact") : t("admin.crm.tabCompany") })}
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+            <SlidersIcon className="h-4 w-4 text-gray-400" />
+            {tp(t("admin.crm.fields.title"), { entity: entity === "person" ? t("admin.crm.tabContact") : t("admin.crm.tabCompany") })}
           </h3>
           <div className="flex items-center gap-2">
             <button
@@ -102,13 +104,13 @@ export default function FieldManager({ entity, fields, onClose, onCreate, onUpda
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder={t("admin.crm.fields.labelPh")}
-              className="mb-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-sm outline-none focus:border-[#2093c4]"
+              className="mb-2 w-full rounded-lg border border-white/10 bg-[#1A1A1A] px-2.5 py-1.5 text-sm text-white outline-none focus:border-[#2093c4]"
             />
             <div className="mb-2 grid grid-cols-[1fr_64px] gap-2">
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-sm outline-none focus:border-[#2093c4] cursor-pointer"
+                className="w-full rounded-lg border border-white/10 bg-[#1A1A1A] px-2.5 py-1.5 text-sm text-white outline-none focus:border-[#2093c4] cursor-pointer"
               >
                 {TYPE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -118,7 +120,7 @@ export default function FieldManager({ entity, fields, onClose, onCreate, onUpda
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
                 placeholder="emoji"
-                className="w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-center text-sm outline-none focus:border-[#2093c4]"
+                className="w-full rounded-lg border border-white/10 bg-[#1A1A1A] px-2 py-1.5 text-center text-sm text-white outline-none focus:border-[#2093c4]"
               />
             </div>
             {isSelect && (
@@ -126,7 +128,7 @@ export default function FieldManager({ entity, fields, onClose, onCreate, onUpda
                 value={optionsRaw}
                 onChange={(e) => setOptionsRaw(e.target.value)}
                 placeholder={t("admin.crm.fields.optionsPh")}
-                className="mb-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-sm outline-none focus:border-[#2093c4]"
+                className="mb-2 w-full rounded-lg border border-white/10 bg-[#1A1A1A] px-2.5 py-1.5 text-sm text-white outline-none focus:border-[#2093c4]"
               />
             )}
             {err && <p className="mb-2 text-xs text-red-400">{err}</p>}
@@ -169,7 +171,11 @@ export default function FieldManager({ entity, fields, onClose, onCreate, onUpda
                 className="cursor-pointer text-gray-500 hover:text-white"
                 title={f.is_visible ? t("admin.crm.fields.hide") : t("admin.crm.fields.show")}
               >
-                <span className="grayscale opacity-70">{f.is_visible ? "👁" : "🚫"}</span>
+                {f.is_visible ? (
+                  <EyeIcon className="h-4 w-4" />
+                ) : (
+                  <EyeOffIcon className="h-4 w-4" />
+                )}
               </button>
               {!f.is_system && (
                 <button
