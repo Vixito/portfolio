@@ -527,6 +527,18 @@ export default function CrmPanel() {
     }
   };
 
+  // Edición masiva: aplica el mismo campo/valor a los seleccionados.
+  // Reutiliza commitCell por fila (optimista + busy + revert individual).
+  const handleBulkEdit = async (entity: CrmEntity, ids: string[], field: CrmField, value: any) => {
+    const list = entity === "person" ? contacts : companies;
+    const targets = ids
+      .map((id) => list.find((r) => r.id === id))
+      .filter((r) => r !== undefined);
+    await Promise.all(targets.map((rec) => commitCell(entity, rec, field, value)));
+    if (entity === "person") setSelectedContacts(new Set());
+    else setSelectedCompanies(new Set());
+  };
+
   // Campo nuevo en el panel de campos (propaga el error al formulario).
   const handleFieldCreate = async (entity: CrmEntity, values: Record<string, unknown>) => {
     const created = await createCrmField({ entity_type: entity, ...values });
@@ -1390,6 +1402,7 @@ export default function CrmPanel() {
                 }
                 onClearSelection={() => setSelectedContacts(new Set())}
                 onBulkDelete={(ids) => handleBulkDelete("person", ids)}
+                onBulkEdit={(ids, f, v) => handleBulkEdit("person", ids, f, v)}
                 entityLabel={t("admin.crm.tabContact")}
                 suggestions={allTags}
                 busyCell={(rid, fn) => !!savingCells[`${rid}|${fn}`]}
@@ -1459,6 +1472,7 @@ export default function CrmPanel() {
                 }
                 onClearSelection={() => setSelectedCompanies(new Set())}
                 onBulkDelete={(ids) => handleBulkDelete("company", ids)}
+                onBulkEdit={(ids, f, v) => handleBulkEdit("company", ids, f, v)}
                 entityLabel={t("admin.crm.tabCompany")}
                 suggestions={allTags}
                 busyCell={(rid, fn) => !!savingCells[`${rid}|${fn}`]}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CrmEntity, CrmField, RecordRow } from "./types";
 import {
+  ARRAY_TYPES,
   cellValue,
   PRIMARY_FIELD,
   recordName,
@@ -12,6 +13,7 @@ import {
 import { CellEditor, CellView, FieldIcon } from "./Cells";
 import {
   BuildingIcon,
+  PencilIcon,
   SearchIcon,
   SlidersIcon,
   UserIcon,
@@ -43,6 +45,7 @@ export interface RecordGridProps {
   onToggleAll: (ids: string[]) => void;
   onClearSelection: () => void;
   onBulkDelete: (ids: string[]) => void;
+  onBulkEdit: (ids: string[], field: CrmField, value: any) => Promise<void> | void;
   entityLabel: string;
   suggestions?: string[];
   busyCell?: (recId: string, fieldName: string) => boolean;
@@ -149,6 +152,7 @@ export default function RecordGrid(props: RecordGridProps) {
     onToggleAll,
     onClearSelection,
     onBulkDelete,
+    onBulkEdit,
     entityLabel,
     suggestions,
     busyCell,
@@ -181,6 +185,11 @@ export default function RecordGrid(props: RecordGridProps) {
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [colMenu, setColMenu] = useState<string | null>(null);
   const [rowMenuRec, setRowMenuRec] = useState<string | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkFieldName, setBulkFieldName] = useState("");
+  const [bulkValue, setBulkValue] = useState<any>(undefined);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const bulkValueRef = useRef<any>(undefined);
   const colMenuRef = useRef<HTMLDivElement>(null);
   const rowMenuRef = useRef<HTMLDivElement>(null);
   useClickAway(colMenuRef, () => setColMenu(null));
@@ -215,6 +224,47 @@ export default function RecordGrid(props: RecordGridProps) {
     else {
       setSortKey(field.name);
       setSortDir(1);
+    }
+  };
+
+  // Campos editables en masa: escalares, sin primario ni solo-lectura.
+  // Los arrays (tags, correos, teléfonos) se excluyen: reemplazo total
+  // sería destructivo y anexar, ambiguo.
+  const bulkFields = useMemo(
+    () =>
+      sortFields(fields).filter(
+        (f) => !f.is_readonly && f.name !== PRIMARY_FIELD[entity] && !ARRAY_TYPES.has(f.type)
+      ),
+    [fields, entity]
+  );
+  const bulkField = bulkFields.find((f) => f.name === bulkFieldName) ?? null;
+
+  const openBulk = () => {
+    setBulkFieldName(bulkFields.length ? bulkFields[0].name : "");
+    bulkValueRef.current = undefined;
+    setBulkValue(undefined);
+    setBulkBusy(false);
+    setBulkOpen(true);
+  };
+
+  const stageBulk = (v: any) => {
+    bulkValueRef.current = v;
+    setBulkValue(v);
+  };
+
+  const canApplyBulk =
+    !!bulkField && !bulkBusy && bulkValue !== undefined && bulkValue !== null && bulkValue !== "";
+
+  const applyBulk = async () => {
+    if (!bulkField || bulkBusy) return;
+    const v = bulkValueRef.current;
+    if (v === undefined || v === null || v === "") return;
+    setBulkBusy(true);
+    try {
+      await onBulkEdit([...selection], bulkField, v);
+      setBulkOpen(false);
+    } finally {
+      setBulkBusy(false);
     }
   };
 
@@ -299,13 +349,23 @@ export default function RecordGrid(props: RecordGridProps) {
           )}
         </div>
         {someSelected && (
-          <button
-            type="button"
-            onClick={() => onBulkDelete([...selection])}
-            className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-300 hover:bg-red-500/20 cursor-pointer"
-          >
-            {tp(t("admin.crm.grid.deleteSelected"), { n: selection.size })}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={openBulk}
+              className="flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white cursor-pointer"
+            >
+              <PencilIcon className="h-4 w-4 text-gray-400" />
+              {tp(t("admin.crm.grid.bulkEdit"), { n: selection.size })}
+            </button>
+            <button
+              type="button"
+              onClick={() => onBulkDelete([...selection])}
+              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-300 hover:bg-red-500/20 cursor-pointer"
+            >
+              {tp(t("admin.crm.grid.deleteSelected"), { n: selection.size })}
+            </button>
+          </>
         )}
         <button
           type="button"
@@ -599,6 +659,64 @@ export default function RecordGrid(props: RecordGridProps) {
           </>
         )}
       </div>
+
+      {/* edición masiva */}
+      {bulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => !bulkBusy && setBulkOpen(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#121212] p-5 text-white shadow-2xl">
+            <h3 className="mb-3 text-sm font-semibold">
+              {tp(t("admin.crm.grid.bulkTitle"), { n: selection.size })}
+            </h3>
+            <label className="mb-1 block text-[11px] font-medium text-gray-500">
+              {t("admin.crm.grid.bulkField")}
+            </label>
+            <select
+              value={bulkFieldName}
+              onChange={(e) => {
+                setBulkFieldName(e.target.value);
+                bulkValueRef.current = undefined;
+                setBulkValue(undefined);
+              }}
+              className="mb-3 w-full rounded-lg border border-white/10 bg-[#1A1A1A] px-2.5 py-1.5 text-sm text-white outline-none focus:border-[#2093c4] cursor-pointer"
+            >
+              {bulkFields.map((f) => (
+                <option key={f.name} value={f.name}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            {bulkField && (
+              <div className="rounded-lg border border-white/10 bg-[#1A1A1A] px-2.5 py-2">
+                <CellEditor
+                  key={bulkField.name}
+                  field={bulkField}
+                  value={null}
+                  onCommit={stageBulk}
+                />
+              </div>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setBulkOpen(false)}
+                disabled={bulkBusy}
+                className="rounded-lg border border-white/20 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white cursor-pointer disabled:opacity-40"
+              >
+                {t("admin.crm.grid.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={applyBulk}
+                disabled={!canApplyBulk}
+                className="rounded-lg bg-[#2093c4] px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-[#22a5db] cursor-pointer disabled:opacity-40"
+              >
+                {tp(t("admin.crm.grid.bulkApply"), { n: selection.size })}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
