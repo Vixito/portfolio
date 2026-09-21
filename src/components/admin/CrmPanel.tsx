@@ -407,6 +407,15 @@ export default function CrmPanel() {
     return [...set].sort();
   }, [contacts, companies]);
 
+  // El drawer debe renderizar el registro VIVO (no la foto tomada al abrirlo);
+  // si no, ningún campo editado se vería "en vivo y en directo".
+  const liveContact = drawerContact
+    ? contacts.find((c) => c.id === drawerContact.id) ?? drawerContact
+    : null;
+  const liveCompany = drawerCompany
+    ? companies.find((c) => c.id === drawerCompany.id) ?? drawerCompany
+    : null;
+
   const markCellBusy = (recId: string, fieldName: string, on: boolean) =>
     setSavingCells((s) => ({ ...s, [`${recId}|${fieldName}`]: on }));
 
@@ -2703,12 +2712,12 @@ export default function CrmPanel() {
         </div>
       )}
 
-      {drawerContact && (
+      {liveContact && (
         <RecordDrawer
           entity="person"
-          rec={drawerContact}
+          rec={liveContact}
           fields={fieldsPerson}
-          avatar={<AvatarView rec={drawerContact} entity="person" />}
+          avatar={<AvatarView rec={liveContact} entity="person" />}
           extras={[
             {
               key: "company",
@@ -2718,8 +2727,8 @@ export default function CrmPanel() {
                 { value: null, label: t("admin.crm.contactModal.noCompany") },
                 ...companies.map((c) => ({ value: c.id, label: c.name })),
               ],
-              value: drawerContact.company_id || null,
-              onCommit: (v) => handleSetContactCompany(drawerContact, v),
+              value: liveContact.company_id || null,
+              onCommit: (v) => handleSetContactCompany(liveContact, v),
             },
             {
               key: "source",
@@ -2731,25 +2740,25 @@ export default function CrmPanel() {
                   (s) => ({ value: s, label: s })
                 ),
               ],
-              value: drawerContact.source || "manual",
-              onCommit: (v) => handleSetContactSource(drawerContact, v),
+              value: liveContact.source || "manual",
+              onCommit: (v) => handleSetContactSource(liveContact, v),
             },
           ]}
           onClose={() => setDrawerContact(null)}
-          onCommit={(f, v) => commitCell("person", drawerContact, f, v)}
+          onCommit={(f, v) => commitCell("person", liveContact, f, v)}
           onDelete={(c) => handleRowDelete("person", c)}
           suggestions={allTags}
         />
       )}
 
-      {drawerCompany && (
+      {liveCompany && (
         <RecordDrawer
           entity="company"
-          rec={drawerCompany}
+          rec={liveCompany}
           fields={fieldsCompany}
-          avatar={<AvatarView rec={drawerCompany} entity="company" />}
+          avatar={<AvatarView rec={liveCompany} entity="company" />}
           onClose={() => setDrawerCompany(null)}
-          onCommit={(f, v) => commitCell("company", drawerCompany, f, v)}
+          onCommit={(f, v) => commitCell("company", liveCompany, f, v)}
           onDelete={(c) => handleRowDelete("company", c)}
           suggestions={allTags}
         />
