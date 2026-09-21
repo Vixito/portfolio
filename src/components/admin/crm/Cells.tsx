@@ -226,7 +226,9 @@ function SelectEditor({ value, onCommit, onCancel, autoFocus, options, className
       ref={ref}
       value={draft}
       onChange={(e) => commit(e.target.value)}
-      onBlur={() => onCommit(draft || null)}
+      // Leer el valor vivo del DOM: `draft` queda congelado tras un onChange
+      // y un blur posterior (desmontaje/remontaje) revertiría al valor viejo.
+      onBlur={(e) => onCommit(e.currentTarget.value || null)}
       onKeyDown={(e) => {
         if (e.key === "Escape") onCancel?.();
         else e.stopPropagation();

@@ -418,10 +418,12 @@ export default function CrmPanel() {
   };
 
   // Guardado optimista de una celda: actualiza el estado al instante y revierte si falla.
+  // Al conciliar con la respuesta se re-aplica el valor guardado para que la
+  // celda nunca muestre un dato viejo aunque la respuesta venga incompleta.
   const commitCell = async (entity: CrmEntity, rec: RecordRow, field: CrmField, value: any) => {
     const setter = entity === "person" ? setContacts : setCompanies;
     const before = entity === "person" ? contacts : companies;
-    setter(before.map((r) => (r.id === rec.id ? setRecordField(r, field, value) : r)));
+    setter((cur) => cur.map((r) => (r.id === rec.id ? setRecordField(r, field, value) : r)));
     markCellBusy(rec.id, field.name, true);
     try {
       const res =
@@ -432,11 +434,15 @@ export default function CrmPanel() {
         setter((cur) =>
           cur.map((r) =>
             r.id === res.id
-              ? {
-                  ...res,
-                  contact_count: r.contact_count ?? res.contact_count,
-                  deal_count: r.deal_count ?? res.deal_count,
-                }
+              ? setRecordField(
+                  {
+                    ...res,
+                    contact_count: r.contact_count ?? res.contact_count,
+                    deal_count: r.deal_count ?? res.deal_count,
+                  },
+                  field,
+                  value
+                )
               : r
           )
         );
