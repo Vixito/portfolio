@@ -689,9 +689,9 @@ export default function RecordGrid(props: RecordGridProps) {
             {bulkField && (
               <div className="rounded-lg border border-white/10 bg-[#1A1A1A] px-2.5 py-2">
                 <CellEditor
-                  key={bulkField.name}
+                  key={`${bulkField.name}-${String(bulkValue ?? "")}`}
                   field={bulkField}
-                  value={null}
+                  value={bulkValue ?? null}
                   onCommit={stageBulk}
                 />
               </div>
