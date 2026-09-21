@@ -31,6 +31,9 @@ verify_jwt = false
 [functions.gumroad-sync]
 verify_jwt = false
 
+[functions.calcom-webhook]
+verify_jwt = false
+
 [functions.whatsapp-bot]
 enabled = true
 verify_jwt = true
