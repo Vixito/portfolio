@@ -112,7 +112,8 @@ serve(async (req: Request) => {
     const p = body?.payload && typeof body.payload === "object" ? body.payload : {};
     const uid = String(p.uid || "");
     if (!uid) {
-      return jsonCheckoutResponse(400, { error: "booking uid requerido" });
+      // Ping de prueba del dashboard (sin reserva real): ack sin procesar.
+      return jsonCheckoutResponse(200, { ok: true, test: true });
     }
 
     const supabase = createClient(

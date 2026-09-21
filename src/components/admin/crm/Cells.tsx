@@ -88,42 +88,74 @@ export function CellView({ field, value }: { field: CrmField; value: any }) {
     }
     case "emails": {
       const arr = (value as string[]).filter(Boolean);
+      const shown = arr.slice(0, 2);
+      const rest = arr.length - shown.length;
       return (
         <span className="inline-flex flex-col gap-0.5">
-          {arr.map((e) => (
+          {shown.map((e) => (
             <a key={e} href={`mailto:${e}`} onClick={(e2) => e2.stopPropagation()} className="truncate max-w-[240px] text-[#7cc7e0] hover:underline">
               {e}
             </a>
           ))}
+          {rest > 0 && (
+            <span className="text-[10px] leading-none text-gray-500" title={arr.join(", ")}>
+              +{rest}
+            </span>
+          )}
         </span>
       );
     }
     case "phones": {
       const arr = (value as string[]).filter(Boolean);
+      const shown = arr.slice(0, 2);
+      const rest = arr.length - shown.length;
       return (
         <span className="inline-flex flex-col gap-0.5">
-          {arr.map((p) => (
+          {shown.map((p) => (
             <span key={p} className="truncate max-w-[200px]">{p}</span>
           ))}
+          {rest > 0 && (
+            <span className="text-[10px] leading-none text-gray-500" title={arr.join(", ")}>
+              +{rest}
+            </span>
+          )}
         </span>
       );
     }
-    case "tags":
+    case "tags": {
+      const arr = value as string[];
+      const shown = arr.slice(0, 3);
+      const rest = arr.length - shown.length;
       return (
-        <span className="inline-flex flex-wrap gap-1">
-          {(value as string[]).map((t) => (
+        <span className="inline-flex max-h-6 flex-wrap items-center gap-1 overflow-hidden">
+          {shown.map((t) => (
             <TagPill key={t} tag={t} active />
           ))}
+          {rest > 0 && (
+            <span className="text-[10px] text-gray-500" title={arr.join(", ")}>
+              +{rest}
+            </span>
+          )}
         </span>
       );
-    case "multi_select":
+    }
+    case "multi_select": {
+      const arr = value as string[];
+      const shown = arr.slice(0, 3);
+      const rest = arr.length - shown.length;
       return (
-        <span className="inline-flex flex-wrap gap-1">
-          {(value as string[]).map((t) => (
+        <span className="inline-flex max-h-6 flex-wrap items-center gap-1 overflow-hidden">
+          {shown.map((t) => (
             <TagPill key={t} tag={t} />
           ))}
+          {rest > 0 && (
+            <span className="text-[10px] text-gray-500" title={arr.join(", ")}>
+              +{rest}
+            </span>
+          )}
         </span>
       );
+    }
     case "image": {
       const s = String(value).trim();
       if (!/^https?:/i.test(s)) return <span className="truncate max-w-[220px]">{s}</span>;
@@ -137,7 +169,13 @@ export function CellView({ field, value }: { field: CrmField; value: any }) {
     case "number":
       return <span className="tabular-nums">{String(value)}</span>;
     default:
-      return <span className="block max-w-[260px] truncate whitespace-pre-line">{String(value)}</span>;
+      // Una sola línea con elipsis: las filas mantienen altura uniforme;
+      // el texto completo se ve en el drawer y en el tooltip.
+      return (
+        <span className="block max-w-[260px] truncate" title={String(value)}>
+          {String(value)}
+        </span>
+      );
   }
 }
 
