@@ -70,6 +70,22 @@ export const STATUS_COLORS: Record<string, string> = {
   Inactivo: "bg-zinc-500/15 text-zinc-400 border-zinc-400/30",
 };
 
+// Etiqueta canónica de cada estado (la que guardan los tags automáticos).
+export const STATUS_TAG: Record<string, string> = {
+  nuevo: "Nuevo",
+  interesado: "Interesado/a",
+  lead: "Lead",
+  prospecto: "Prospecto",
+  cliente: "Cliente",
+  "ex-cliente": "Ex-cliente",
+  inactivo: "Inactivo",
+};
+
+export function statusTagLabel(status: unknown): string {
+  const s = String(status ?? "");
+  return STATUS_TAG[s] ?? s;
+}
+
 const TAG_HUES: Array<[string, string]> = [
   ["#2093c4", "text-[#7cc7e0]"],
   ["#8c52ff", "text-[#c4b5fd]"],

@@ -38,6 +38,7 @@ export interface RecordGridProps {
   creating?: boolean;
   creatingBusy?: boolean;
   onCreate: (values: Record<string, any>) => void | Promise<void>;
+  onCreateStart: () => void;
   onCreateCancel: () => void;
   onOpenFields: () => void;
   selection: Set<string>;
@@ -145,6 +146,7 @@ export default function RecordGrid(props: RecordGridProps) {
     creating,
     creatingBusy,
     onCreate,
+    onCreateStart,
     onCreateCancel,
     onOpenFields,
     selection,
@@ -274,6 +276,17 @@ export default function RecordGrid(props: RecordGridProps) {
     setEditing({ recId: rec.id, fieldName: field.name });
   };
 
+  const startCreate = () => {
+    setDraft({});
+    setSearch("");
+    onCreateStart();
+  };
+
+  const cancelCreate = () => {
+    setDraft({});
+    onCreateCancel();
+  };
+
   const commitEdit = async (rec: RecordRow, field: CrmField, value: any) => {
     setEditing(null);
     try {
@@ -384,10 +397,7 @@ export default function RecordGrid(props: RecordGridProps) {
         ) : (
           <button
             type="button"
-            onClick={() => {
-              setDraft({});
-              setSearch("");
-            }}
+            onClick={startCreate}
             className="rounded-lg bg-[#2093c4] px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-[#22a5db] cursor-pointer"
           >
             {tp(t("admin.crm.grid.new"), { entity: entityLabel })}
@@ -406,7 +416,7 @@ export default function RecordGrid(props: RecordGridProps) {
           {tp(t("admin.crm.grid.empty"), { entity: entityLabel })}
           <button
             type="button"
-            onClick={() => setDraft({})}
+            onClick={startCreate}
             className="rounded-lg bg-[#2093c4] px-3 py-1.5 text-sm font-semibold text-white cursor-pointer"
           >
             {tp(t("admin.crm.grid.new"), { entity: entityLabel })}
@@ -563,7 +573,7 @@ export default function RecordGrid(props: RecordGridProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={onCreateCancel}
+                    onClick={cancelCreate}
                     disabled={creatingBusy}
                     className="flex h-6 w-6 items-center justify-center rounded border border-white/10 text-gray-400 hover:text-white cursor-pointer disabled:opacity-30"
                     title={t("admin.crm.grid.cancel")}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import {
   ARRAY_TYPES,
   STATUS_COLORS,
+  statusTagLabel,
   tagAccent,
   type CrmField,
 } from "./types";
@@ -60,6 +61,10 @@ function Chip({ children, onRemove }: { children: ReactNode; onRemove?: () => vo
 export function CellView({ field, value }: { field: CrmField; value: any }) {
   if (value === null || value === undefined || value === "") {
     return <span className="text-gray-500 select-none">—</span>;
+  }
+  if (field.name === "estado") {
+    const label = statusTagLabel(value);
+    if (STATUS_COLORS[label]) return <TagPill tag={label} active />;
   }
   switch (field.type) {
     case "boolean":

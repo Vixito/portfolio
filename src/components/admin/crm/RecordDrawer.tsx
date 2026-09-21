@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "../../../lib/i18n";
 import { cellValue, sortFields, type CrmEntity, type CrmField, type RecordRow } from "./types";
-import { CellEditor, FieldIcon } from "./Cells";
+import { CellEditor, CellView, FieldIcon } from "./Cells";
 import { TrashIcon } from "./icons";
 
 export interface ExtraOption {
@@ -132,7 +132,7 @@ export default function RecordDrawer({
                 <div key={f.name} className="flex items-center gap-2 border-b border-white/5 py-2 text-sm">
                   <FieldIcon field={f} />
                   <span className="w-28 shrink-0 text-[11px] text-gray-500">{f.label}</span>
-                  <span className="truncate text-gray-400">{cellValue(rec, f) ? String(cellValue(rec, f)) : "—"}</span>
+                  <span className="truncate text-gray-400"><CellView field={f} value={cellValue(rec, f)} /></span>
                 </div>
               );
             }

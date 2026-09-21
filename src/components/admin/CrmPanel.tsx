@@ -1393,6 +1393,7 @@ export default function CrmPanel() {
                 creating={newRowContact}
                 creatingBusy={creatingContact}
                 onCreate={(vals) => handleCreateRow("person", vals)}
+                onCreateStart={() => setNewRowContact(true)}
                 onCreateCancel={() => setNewRowContact(false)}
                 onOpenFields={() => setFieldsPanel("person")}
                 selection={selectedContacts}
@@ -1463,6 +1464,7 @@ export default function CrmPanel() {
                 creating={newRowCompany}
                 creatingBusy={creatingCompany}
                 onCreate={(vals) => handleCreateRow("company", vals)}
+                onCreateStart={() => setNewRowCompany(true)}
                 onCreateCancel={() => setNewRowCompany(false)}
                 onOpenFields={() => setFieldsPanel("company")}
                 selection={selectedCompanies}

@@ -391,20 +391,38 @@ function fieldsToRow(fields: Map<string, any>, entityType: string, values: Recor
 }
 
 // Sincroniza el tag de ciclo de vida con el estado del registro.
-function syncStatusTags(entityType: string, values: Record<string, any>, existingTags: string[] | null, existingStatus: string | null) {
+// - Creación (isNew): default por origen + tag (comportamiento original).
+// - Actualización: solo toca estado/tags si `estado` viene explícito y válido;
+//   null lo limpia; ausente no toca nada (no auto-sella ni re-agrega tags).
+function syncStatusTags(entityType: string, values: Record<string, any>, existingTags: string[] | null, existingStatus: string | null, isNew = false) {
   const tagMap = entityType === "company" ? COMPANY_STATUS_TAG : PERSON_STATUS_TAG;
-  const rawStatus = values.estado ?? existingStatus ?? null;
-  const status = rawStatus && tagMap[String(rawStatus)] ? String(rawStatus) : defaultStatusForSource(values.source ?? null, entityType);
-  const lifeTag = tagMap[status];
-  let tags = Array.isArray(values.tags)
-    ? values.tags.map(String)
-    : values.tags != null
-      ? [String(values.tags)]
-      : [...(existingTags || [])];
   const cycleTags = new Set(Object.values(tagMap));
-  tags = tags.filter((t) => !cycleTags.has(t));
-  if (lifeTag && !tags.includes(lifeTag)) tags.push(lifeTag);
-  return { status, tags };
+  const asArray = (t: any): string[] =>
+    Array.isArray(t) ? t.map(String) : t != null ? [String(t)] : [...(existingTags || [])];
+
+  if (isNew) {
+    const raw = values.estado ?? null;
+    const status = raw && tagMap[String(raw)] ? String(raw) : defaultStatusForSource(values.source ?? null, entityType);
+    const tags = asArray(values.tags).filter((t) => !cycleTags.has(t));
+    const lifeTag = tagMap[status];
+    if (lifeTag && !tags.includes(lifeTag)) tags.push(lifeTag);
+    return { status, tags };
+  }
+
+  if (values.estado === null) {
+    // Limpieza explícita del Estado: sin estado y sin tags de ciclo.
+    return { status: null, tags: asArray(values.tags).filter((t) => !cycleTags.has(t)) };
+  }
+  const provided = values.estado !== undefined ? String(values.estado) : null;
+  if (provided && tagMap[provided] && provided !== (existingStatus ?? null)) {
+    // Cambio real de estado: resincronizar tags de ciclo al nuevo estado.
+    const tags = asArray(values.tags).filter((t) => !cycleTags.has(t));
+    const lifeTag = tagMap[provided];
+    if (lifeTag && !tags.includes(lifeTag)) tags.push(lifeTag);
+    return { status: provided, tags };
+  }
+  // Sin cambio de estado: se respeta lo enviado/existente tal cual.
+  return { status: existingStatus ?? null, tags: asArray(values.tags) };
 }
 
 // Mantiene columnas legadas sincronizadas con los arrays de `data`.
@@ -471,7 +489,7 @@ serve(async (req: Request) => {
         const values = resolveValues(payload?.company || {}, payload?.fields || {}, COMPANY_ALIAS);
         const { columns, data } = fieldsToRow(fields, "company", values);
         if (columns.name == null) return json(400, { error: "el campo Nombre es requerido" });
-        const st = syncStatusTags("company", values, null, null);
+        const st = syncStatusTags("company", values, null, null, true);
         columns.status = st.status;
         columns.tags = st.tags;
         backfillColumns("company", columns, data);
@@ -558,7 +576,7 @@ serve(async (req: Request) => {
         const values = resolveValues(payload?.contact || {}, payload?.fields || {}, PERSON_ALIAS);
         const { columns, data } = fieldsToRow(fields, "person", values);
         if (columns.first_name == null) return json(400, { error: "el campo Nombres es requerido" });
-        const st = syncStatusTags("person", values, null, null);
+        const st = syncStatusTags("person", values, null, null, true);
         columns.status = st.status;
         columns.tags = st.tags;
         backfillColumns("person", columns, data);
@@ -978,7 +996,7 @@ serve(async (req: Request) => {
         if (lead.email) values.correos_electronicos = [lead.email];
         if (lead.phone) values.telefonos = [lead.phone];
         const { columns, data } = fieldsToRow(fields, "person", values);
-        const st = syncStatusTags("person", values, null, null);
+        const st = syncStatusTags("person", values, null, null, true);
         columns.status = st.status;
         columns.tags = st.tags;
         columns.lead_id = leadId;
@@ -1189,7 +1207,7 @@ serve(async (req: Request) => {
           if (email) values.correos_electronicos = [email];
           else if (values.correos_electronicos == null) delete values.correos_electronicos;
           const { columns, data } = fieldsToRow(fields, "person", values);
-          const st = syncStatusTags("person", values, null, null);
+          const st = syncStatusTags("person", values, null, null, true);
           columns.status = st.status;
           columns.tags = st.tags;
           backfillColumns("person", columns, data);
@@ -1269,7 +1287,7 @@ serve(async (req: Request) => {
           values.nombre = name;
           if (!values.source) values.source = "import";
           const { columns, data } = fieldsToRow(fields, "company", values);
-          const st = syncStatusTags("company", values, null, null);
+          const st = syncStatusTags("company", values, null, null, true);
           columns.status = st.status;
           columns.tags = st.tags;
           backfillColumns("company", columns, data);
