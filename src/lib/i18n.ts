@@ -372,7 +372,7 @@ export const translations = {
       status: "Estado:",
       client: "Abonador:",
       active: "En desarrollo",
-      comingSoon: "Próximamente...",
+      comingSoon: "En desarrollo",
       activeStatus: "Status: Activo",
       highPriority: "Prioridad: Alta",
       socialNetworks: "Redes Sociales",
@@ -383,6 +383,7 @@ export const translations = {
       facebookDesc: "Comunidad y actualizaciones",
       telegramDesc: "Canal oficial y anuncios",
       xDesc: "Actualizaciones rápidas y conversaciones",
+      emailDesc: "Correo oficial de contacto: carlosvicioso@vixis.dev",
     },
     // Contratos públicos
     contracts: {
@@ -1278,6 +1279,11 @@ export const translations = {
         "El pago con tarjeta no está disponible en este momento.",
       secureNote:
         "Los datos de tu tarjeta se procesan de forma segura por dLocal (PCI DSS).",
+      termsNotePre: "Al pagar aceptas los",
+      termsNoteTerms: "Términos y Condiciones",
+      termsNoteAnd: "y la",
+      termsNoteRefunds: "política de reembolsos",
+      termsNoteEnd: "de Vixis Studio.",
       payWithCrypto: "Pagar con criptomonedas",
       cryptoInfo:
         "Acepto BTC, ETH, USDT y más de 300 criptomonedas. Recibirás un enlace de pago seguro.",
@@ -1668,7 +1674,7 @@ export const translations = {
       status: "Status:",
       client: "Payer:",
       active: "In development",
-      comingSoon: "Coming soon...",
+      comingSoon: "In development",
       activeStatus: "Status: Active",
       highPriority: "Priority: High",
       socialNetworks: "Social Networks",
@@ -1679,6 +1685,7 @@ export const translations = {
       facebookDesc: "Community and updates",
       telegramDesc: "Official channel and announcements",
       xDesc: "Quick updates and conversations",
+      emailDesc: "Official contact email: carlosvicioso@vixis.dev",
     },
     // Public contracts
     contracts: {
@@ -2572,6 +2579,11 @@ export const translations = {
       cardUnavailable: "Card payments are not available right now.",
       secureNote:
         "Your card details are processed securely by dLocal (PCI DSS compliant).",
+      termsNotePre: "By paying you accept the",
+      termsNoteTerms: "Terms and Conditions",
+      termsNoteAnd: "and the",
+      termsNoteRefunds: "refund policy",
+      termsNoteEnd: "of Vixis Studio.",
       payWithCrypto: "Pay with cryptocurrencies",
       cryptoInfo:
         "I accept BTC, ETH, USDT and 300+ cryptocurrencies. You'll get a secure payment link.",

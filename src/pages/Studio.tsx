@@ -155,6 +155,14 @@ function Studio() {
       url: "https://threads.com/vixis_studio",
       color: "#000000",
     },
+    {
+      id: 7,
+      platform: "Email",
+      logo: "https://cdn.simpleicons.org/gmail/white",
+      description: t("studio.emailDesc") || "Correo oficial de contacto",
+      url: "mailto:carlosvicioso@vixis.dev",
+      color: "#EA4335",
+    },
   ];
 
   // Datos del slider (puedes personalizarlos)

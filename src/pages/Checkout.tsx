@@ -559,6 +559,19 @@ function Checkout() {
                 </p>
               </div>
             )}
+
+            {/* Aceptación de términos: visible antes de pagar (requisito pasarela) */}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+              {t("checkout.termsNotePre") || "Al pagar aceptas los"}{" "}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">
+                {t("checkout.termsNoteTerms") || "Términos y Condiciones"}
+              </a>{" "}
+              {t("checkout.termsNoteAnd") || "y la"}{" "}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">
+                {t("checkout.termsNoteRefunds") || "política de reembolsos"}
+              </a>{" "}
+              {t("checkout.termsNoteEnd") || "de Vixis Studio."}
+            </p>
             </>)}
           </>
         )}
