@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import { useTranslation } from "../lib/i18n";
 import { useSEO } from "../hooks/useSEO";
 import VixisStudioLogo from "../components/brand/VixisStudioLogo";
+import FlexCarousel from "../components/FlexCarousel";
 
 function Studio() {
   const { t } = useTranslation();
@@ -163,7 +164,27 @@ function Studio() {
       url: "mailto:carlosvicioso@vixis.dev",
       color: "#EA4335",
     },
+    {
+      id: 8,
+      platform: "LinkedIn",
+      logo: "https://www.svgrepo.com/show/157006/linkedin.svg",
+      description: t("studio.linkedinDesc") || "Red profesional y novedades del estudio",
+      url: "https://www.linkedin.com/company/vixis-studio/",
+      color: "#0A66C2",
+    },
   ];
+
+  // Slug de simpleicons por plataforma (fallback si un logo externo falla).
+  const SIMPLEICONS_SLUG: Record<string, string> = {
+    Instagram: "instagram",
+    TikTok: "tiktok",
+    WhatsApp: "whatsapp",
+    Facebook: "facebook",
+    Telegram: "telegram",
+    Threads: "threads",
+    Email: "gmail",
+    LinkedIn: "linkedin",
+  };
 
   // Datos del slider (puedes personalizarlos)
   const slides = [
@@ -368,6 +389,52 @@ function Studio() {
             </button>
           </div>
 
+          {/* Tienda online + Opiniones */}
+          <div className="w-full max-w-7xl mx-auto px-4 mt-12">
+            <div className="h-[440px] md:h-[560px] w-full relative">
+              <FlexCarousel
+                items={[
+                  {
+                    src: "/github-repos.svg",
+                    alt: t("studio.reposTitle"),
+                    title: t("studio.reposTitle"),
+                    subtitle: "github.com/vixis-studio",
+                  },
+                  {
+                    src: "https://rshlpiottljwhyxmcxjn.supabase.co/storage/v1/object/public/general-assets/general-assets-1790625874486-dj2u74.webp",
+                    alt: t("studio.storeTitle"),
+                    title: t("studio.storeTitle"),
+                    subtitle: "vixis.store",
+                  },
+                  {
+                    src: "/qr-resenas-google.png",
+                    alt: t("studio.reviewsTitle"),
+                    title: t("studio.reviewsTitle"),
+                  },
+                ]}
+                preset="liquid"
+                intro="rise"
+                cardHeight={0.5}
+                gap={12}
+                radius={20}
+                squeeze={0.2}
+                focusOnClick
+                captions
+                tilt={-1}
+                roundness={0}
+                bend={0}
+                reach={0.1}
+                loop={false}
+                initialIndex={1}
+                onSelect={(index) => {
+                  if (index === 0) window.open("https://github.com/vixis-studio", "_blank", "noopener");
+                  else if (index === 1) window.open("https://vixis.store/", "_blank", "noopener");
+                  else window.open("https://share.google/tdEYAXXGNKpMayTgv", "_blank", "noopener");
+                }}
+              />
+            </div>
+          </div>
+
           {/* Sección de Redes Sociales */}
           <div ref={socialSectionRef} className="w-full max-w-7xl mx-auto px-4 py-16 mt-12">
             <h2
@@ -399,7 +466,14 @@ function Studio() {
                       <img
                         src={network.logo}
                         alt={network.platform}
-                        className="w-16 h-16 object-contain"
+                        className={`w-16 h-16 object-contain${network.platform === "LinkedIn" ? " linkedin-logo" : ""}`}
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          if (!img.dataset.fbk) {
+                            img.dataset.fbk = "1";
+                            img.src = `https://cdn.simpleicons.org/${SIMPLEICONS_SLUG[network.platform] ?? "link"}/white`;
+                          }
+                        }}
                       />
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">{network.platform}</h3>
@@ -408,7 +482,9 @@ function Studio() {
                 </a>
               ))}
             </div>
+
           </div>
+
         </div>
       </div>
 
@@ -814,6 +890,13 @@ function Studio() {
         }
 
         .social-card:hover img {
+          filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(159, 255, 107, 0.8));
+        }
+        .social-card img.linkedin-logo {
+          border-radius: 50%;
+          filter: brightness(0) invert(1);
+        }
+        .social-card:hover img.linkedin-logo {
           filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(159, 255, 107, 0.8));
         }
 

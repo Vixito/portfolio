@@ -384,6 +384,10 @@ export const translations = {
       telegramDesc: "Canal oficial y anuncios",
       xDesc: "Actualizaciones rápidas y conversaciones",
       emailDesc: "Correo oficial de contacto: carlosvicioso@vixis.dev",
+      linkedinDesc: "Red profesional y novedades del estudio",
+      storeTitle: "Tienda Online",
+      reviewsTitle: "Opiniones en Google",
+      reposTitle: "Nuestros repositorios",
     },
     // Contratos públicos
     contracts: {
@@ -1686,6 +1690,10 @@ export const translations = {
       telegramDesc: "Official channel and announcements",
       xDesc: "Quick updates and conversations",
       emailDesc: "Official contact email: carlosvicioso@vixis.dev",
+      linkedinDesc: "Professional network and studio updates",
+      storeTitle: "Online Store",
+      reviewsTitle: "Google Reviews",
+      reposTitle: "Our repositories",
     },
     // Public contracts
     contracts: {
