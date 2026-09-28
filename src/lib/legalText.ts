@@ -246,10 +246,12 @@ export const TERMS: { es: LegalDoc; en: LegalDoc } = {
         ],
       },
       {
-        title: "5. Pagos, productos y reembolsos",
+        title: "5. Pagos, productos, envíos y reembolsos",
         bullets: [
           "Los pagos se procesan a través de proveedores externos (por ejemplo PayPal, DLOCAL u otros enlaces de pago) bajo sus propias condiciones.",
           "Los productos digitales de la tienda, una vez entregados o descargados, no son reembolsables salvo lo exigido por la ley aplicable o por defecto del producto.",
+          "Los productos físicos se envían por dropshipping desde nuestros proveedores: los costos y plazos estimados de envío se indican en cada producto antes de pagar y recibirás el seguimiento en tu email de compra.",
+          "Si un producto físico llega defectuoso, equivocado o no llega dentro del plazo máximo indicado, tienes derecho a reposición o reembolso solicitándolo a carlosvicioso@vixis.dev dentro de los 30 días naturales. Los gastos de devolución por desistimiento corren por tu cuenta, salvo defecto o error nuestro.",
           "Los servicios profesionales se rigen por el contrato o propuesta aceptada; los anticipos y pagos parciales pueden no ser reembolsables si el trabajo ya ha comenzado.",
         ],
       },
@@ -326,10 +328,12 @@ export const TERMS: { es: LegalDoc; en: LegalDoc } = {
         ],
       },
       {
-        title: "5. Payments, products and refunds",
+        title: "5. Payments, products, shipping and refunds",
         bullets: [
           "Payments are processed through external providers (e.g. PayPal, DLOCAL or other payment links) under their own terms.",
           "Digital products in the store, once delivered or downloaded, are non-refundable except as required by applicable law or in the event of a product defect.",
+          "Physical products are shipped via dropshipping from our suppliers: shipping costs and estimated times are shown on each product before checkout, and tracking is sent to your purchase email.",
+          "If a physical product arrives defective, wrong or does not arrive within the stated maximum term, you are entitled to a replacement or refund by writing to carlosvicioso@vixis.dev within 30 calendar days. Return shipping for change of mind is at your expense, except in case of defect or our error.",
           "Professional services are governed by the accepted contract or proposal; deposits and partial payments may be non-refundable once work has started.",
         ],
       },

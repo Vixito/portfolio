@@ -194,14 +194,14 @@ function Studio() {
       brand: "Vixis Studio",
       name: t("studio.mission"),
       subtitle: t("studio.missionDescription"),
-      specs: [
-        {
-          label: t("studio.technologies"),
-          value: "Next.js + Python + React + TypeScript",
-        },
-        { label: t("studio.status"), value: t("studio.active") },
-        { label: t("studio.client"), value: "C2B Communities" },
-      ],
+        specs: [
+          {
+            label: t("studio.technologies"),
+            value: t("studio.focus1"),
+          },
+          { label: t("studio.status"), value: t("studio.state1") },
+          { label: t("studio.client"), value: t("studio.clients1") },
+        ],
       badges: [
         { text: t("studio.activeStatus") },
         { text: t("studio.highPriority") },
@@ -213,14 +213,14 @@ function Studio() {
       brand: "Vixis Studio",
       name: t("studio.vision"),
       subtitle: t("studio.visionDescription"),
-      specs: [
-        {
-          label: t("studio.technologies"),
-          value: "Deno + Tailwind CSS + IaaS + Supabase",
-        },
-        { label: t("studio.status"), value: t("studio.comingSoon") },
-        { label: t("studio.client"), value: "B2B" },
-      ],
+        specs: [
+          {
+            label: t("studio.technologies"),
+            value: t("studio.focus2"),
+          },
+          { label: t("studio.status"), value: t("studio.state2") },
+          { label: t("studio.client"), value: t("studio.clients2") },
+        ],
       badges: [],
     },
     // Agregar más slides...
