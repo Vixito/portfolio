@@ -7,38 +7,40 @@ interface SEOProps {
     omitSuffix?: boolean;
 }
 
+function upsertMeta(attr: 'name' | 'property', key: string, value: string) {
+    let el = document.querySelector(`meta[${attr}="${key}"]`);
+    if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+    }
+    el.setAttribute('content', value);
+}
+
 export function useSEO({ title, description, omitSuffix = false }: SEOProps = {}) {
     const { t } = useTranslation();
 
     useEffect(() => {
-        // Título
         const baseTitle = "Vixis | Portfolio";
         const finalTitle = title ? (omitSuffix ? title : `${title} | ${baseTitle}`) : baseTitle;
         document.title = finalTitle;
 
-        // Meta Descripción
-        let metaDescription = document.querySelector('meta[name="description"]');
         const finalDescription = description || t('contactSection.description') || "Portfolio de Carlos Andrés Vicioso Lara (Vixis). Ingeniero de Sistemas especializado en desarrollo backend, automatización e IA.";
+        upsertMeta('name', 'description', finalDescription);
 
-        if (metaDescription) {
-            metaDescription.setAttribute('content', finalDescription);
-        } else {
-            metaDescription = document.createElement('meta');
-            metaDescription.setAttribute('name', 'description');
-            metaDescription.setAttribute('content', finalDescription);
-            document.head.appendChild(metaDescription);
-        }
-
-        // Canonical link
+        const cleanUrl = `${window.location.origin}${window.location.pathname}`;
         let linkCanonical = document.querySelector('link[rel="canonical"]');
-        const currentUrl = window.location.href;
-        if (linkCanonical) {
-            linkCanonical.setAttribute('href', currentUrl);
-        } else {
+        if (!linkCanonical) {
             linkCanonical = document.createElement('link');
             linkCanonical.setAttribute('rel', 'canonical');
-            linkCanonical.setAttribute('href', currentUrl);
             document.head.appendChild(linkCanonical);
         }
+        linkCanonical.setAttribute('href', cleanUrl);
+
+        upsertMeta('property', 'og:title', finalTitle);
+        upsertMeta('property', 'og:description', finalDescription);
+        upsertMeta('property', 'og:url', cleanUrl);
+        upsertMeta('name', 'twitter:title', finalTitle);
+        upsertMeta('name', 'twitter:description', finalDescription);
     }, [title, description, t, omitSuffix]);
 }

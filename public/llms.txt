@@ -14,7 +14,8 @@
 - [Blog](https://vixis.dev/blog)
 - [Radio (24/7 stream)](https://vixis.dev/radio)
 - [Studio](https://vixis.dev/studio)
-- [Store](https://vixis.dev/store)
+- [Store (Portfolio)](https://vixis.dev/store)
+- [Vixis Studio - SecureShop (E-commerce Storefront)](https://vixis.store)
 - [Socials](https://vixis.dev/socials)
 
 ## Contact
